@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 
-import { z } from 'zod'
+// import { z } from 'zod'
 // import { FormDataSchema } from '@/lib/schema'
 // import { zodResolver } from '@hookform/resolvers/zod'
 // import { useForm, SubmitHandler } from 'react-hook-form'
@@ -14,12 +14,12 @@ const steps = [
   {
     id: 'Step 1',
     name: 'Personal Information',
-    fields: ['firstName', 'lastName', 'email']
+    // fields: ['firstName', 'lastName', 'email']
   },
   {
     id: 'Step 2',
     name: 'Address',
-    fields: ['country', 'state', 'city', 'street', 'zip']
+    // fields: ['country', 'state', 'city', 'street', 'zip']
   },
   { id: 'Step 3', name: 'Complete' }
 ]
@@ -101,9 +101,6 @@ export default function CreateForm() {
                     autoComplete='given-name'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
                   />
-                    <p className='mt-2 text-sm text-red-400'>
-                        error
-                    </p>
                 </div>
               </div>
 
@@ -122,8 +119,6 @@ export default function CreateForm() {
                     autoComplete='family-name'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
                   />
-                    <p className='mt-2 text-sm text-red-400'>
-                    </p>
                 </div>
               </div>
 
@@ -177,9 +172,6 @@ export default function CreateForm() {
                     <option>Canada</option>
                     <option>Mexico</option>
                   </select>
-                    <p className='mt-2 text-sm text-red-400'>
-                        errors
-                    </p>
                 </div>
               </div>
 
@@ -217,7 +209,6 @@ export default function CreateForm() {
                     autoComplete='address-level2'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
                   />
-                    <p className='mt-2 text-sm text-red-400'>errors</p>
                 </div>
               </div>
 
@@ -236,7 +227,6 @@ export default function CreateForm() {
                     autoComplete='address-level1'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
                   />
-                    <p className='mt-2 text-sm text-red-400'>error</p>
                 </div>
               </div>
 
@@ -255,7 +245,6 @@ export default function CreateForm() {
                     autoComplete='postal-code'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
                   />
-                    <p className='mt-2 text-sm text-red-400'>errors</p>
                 </div>
               </div>
             </div>
@@ -277,6 +266,7 @@ export default function CreateForm() {
       {/* Navigation */}
       <div className='mt-8 pt-5'>
         <div className='flex justify-between'>
+          {/* previous */}
           <button
             type='button'
             onClick={prev}
@@ -298,6 +288,7 @@ export default function CreateForm() {
               />
             </svg>
           </button>
+          {/* next */}
           <button
             type='button'
             onClick={next}
