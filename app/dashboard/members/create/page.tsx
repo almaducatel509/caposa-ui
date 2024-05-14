@@ -1,8 +1,8 @@
-import "@/app/components/members/create-form"
+import CreateForm from "@/app/components/members/form"
 
-export default function CreateForm() {
+export default function MemberForm() {
     return(
-    <main>
+    <main className="w-full bg-white">
         <div>CreateForm</div>
         <div className="bg-white">
             <CreateForm />
