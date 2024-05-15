@@ -1,4 +1,4 @@
-import CreateForm from "@/app/components/members/form"
+import CreateForm from "@/app/components/members/createform"
 
 export default function MemberForm() {
     return(
