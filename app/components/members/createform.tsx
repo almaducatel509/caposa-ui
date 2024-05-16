@@ -65,32 +65,32 @@ export default function CreateForm() {
   }
 
   return (
-    <section className=' inset-0 flex flex-col justify-between p-24'>
+    <section className=' inset-0 flex flex-col justify-between'>
       {/* steps */}
       <nav aria-label='Progress'>
         <ol role='list' className='space-y-4 md:flex md:space-x-8 md:space-y-0'>
           {steps.map((step, index) => (
             <li key={step.name} className='md:flex-1'>
               {currentStep > index ? (
-                <div className='group flex w-full flex-col border-l-4 border-sky-600 py-2 pl-4 transition-colors md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4'>
-                  <span className='text-sm font-medium text-sky-600 transition-colors '>
+                <div className='group flex w-full flex-col border-l-4 border-pirncipalGreen py-2 pl-4 transition-colors md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4'>
+                  <span className='text-sm font-medium text-pirncipalGreen transition-colors '>
                     {step.id}
                   </span>
-                  <span className='text-sm font-medium'>{step.name}</span>
+                  <span className='text-sm font-medium '>{step.name}</span>
                 </div>
               ) : currentStep === index ? (
                 <div
-                  className='flex w-full flex-col border-l-4 border-sky-600 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4'
+                  className='flex w-full flex-col border-l-4 border-pirncipalGreen py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4'
                   aria-current='step'
                 >
-                  <span className='text-sm font-medium text-sky-600'>
+                  <span className='text-sm font-medium pb-[5px]  text-pirncipalGreen'>
                     {step.id}
                   </span>
                   <span className='text-sm font-medium'>{step.name}</span>
                 </div>
               ) : (
                 <div className='group flex w-full flex-col border-l-4 border-gray-200 py-2 pl-4 transition-colors md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4'>
-                  <span className='text-sm font-medium text-gray-500 transition-colors'>
+                  <span className='text-sm font-medium text-gray-500 transition-colors pb-[5px] '>
                     {step.id}
                   </span>
                   <span className='text-sm font-medium'>{step.name}</span>
@@ -125,7 +125,7 @@ export default function CreateForm() {
                     id='firstName'
                     {...register('firstName')}
                     autoComplete='given-name'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                   {errors.firstName?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -148,7 +148,7 @@ export default function CreateForm() {
                     id='lastName'
                     {...register('lastName')}
                     autoComplete='family-name'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                   {errors.lastName?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -171,7 +171,7 @@ export default function CreateForm() {
                     type='email'
                     {...register('email')}
                     autoComplete='email'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                     {errors.email?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -206,7 +206,7 @@ export default function CreateForm() {
                     id='country'
                     {...register('country')}
                     autoComplete='country-name'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:max-w-xs sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:max-w-xs sm:text-sm sm:leading-6'
                   >
                     <option>United States</option>
                     <option>Canada</option>
@@ -233,7 +233,7 @@ export default function CreateForm() {
                     id='street'
                     {...register('street')}
                     autoComplete='street-address'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                   {errors.street?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -256,7 +256,7 @@ export default function CreateForm() {
                     id='city'
                     {...register('city')}
                     autoComplete='address-level2'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                   {errors.city?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -279,7 +279,7 @@ export default function CreateForm() {
                     id='state' 
                     {...register('state')}
                     autoComplete='address-level1'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                   {errors.state?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -302,7 +302,7 @@ export default function CreateForm() {
                     id='zip'
                     {...register('zip')}
                     autoComplete='postal-code'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
                   {errors.zip?.message && (
                     <p className='mt-2 text-sm text-red-400'>
@@ -335,7 +335,7 @@ export default function CreateForm() {
             type='button'
             onClick={prev}
             disabled={currentStep === 0}
-            className='rounded bg-white px-2 py-1 text-sm font-semibold text-sky-900 shadow-sm ring-1 ring-inset ring-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50'
+            className='rounded bg-white px-2 py-1 text-sm font-semibold text-darkGreen shadow-sm ring-1 ring-inset ring-gray-200 hover:bg-secGreen disabled:cursor-not-allowed disabled:opacity-50'
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -357,7 +357,7 @@ export default function CreateForm() {
             type='button'
             onClick={next}
             disabled={currentStep === steps.length - 1}
-            className='rounded bg-white px-2 py-1 text-sm font-semibold text-sky-900 shadow-sm ring-1 ring-inset ring-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50'
+            className='rounded bg-white px-2 py-1 text-sm font-semibold text-darkGreen shadow-sm ring-1 ring-inset ring-gray-200 hover:bg-secGreen disabled:cursor-not-allowed disabled:opacity-50'
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'

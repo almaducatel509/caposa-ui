@@ -12,13 +12,24 @@ const config: Config = {
     extend: {
       gridTemplateColumns: {
         '13': 'repeat(13, minmax(0, 1fr))',
-      },
+      },fontFamily: {
+                sans: ['Montserrat', 'ui-sans-serif', 'system-ui'],
+            },
       colors: {
-        blue: {
-          400: '#2589FE',
-          500: '#0070F3',
-          600: '#2F6FEB',
-        },
+        pirncipalGreen: '#17A948', // Votre couleur principale
+        secGreen: '#ECFFE4', // Votre couleur grise #0A4D20
+        darkGreen:'#0A4D20' //la couleur fonce
+      },
+      fontSize: {
+        '2xl': '1.5rem', // Taille de police pour les titres de niveau 1
+        'xl': '1.25rem', // Taille de police pour les titres de niveau 2
+        'lg': '1.125rem', // Taille de police pour les titres de niveau 3
+        'base': '1rem', // Taille de police pour les titres de niveau 4
+        'sm': '0.875rem', // Taille de police pour les titres de niveau 5
+        'xs': '0.75rem', // Taille de police pour les titres de niveau 6
+      },
+      fontWeight: {
+        'bold': '600', // Poids de police bold
       },
     },
     keyframes: {
