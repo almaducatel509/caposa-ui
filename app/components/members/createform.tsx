@@ -5,22 +5,32 @@ import { z } from 'zod'
 import { FormDataSchema } from '@/app/lib/schema'
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, SubmitHandler } from 'react-hook-form'
+import {create} from '@/app/lib/create'
+import {RadioGroup, Radio} from "@nextui-org/radio";
+import {Select, SelectItem} from "@nextui-org/react";
+import { departments } from "@/app/lib/actions"; 
+
 
 type Inputs = z.infer<typeof FormDataSchema>
+
 
 const steps = [
   {
     id: 'Step 1',
     name: 'Personal Information',
-    fields: ['firstName', 'lastName', 'email']
+    fields: ['firstName', 'lastName', 'email', 'dob', 'gender', 'phone', 'address', 'ville', 'departement', 'image'] 
   },
   {
     id: 'Step 2',
-    name: 'Address',
-    fields: ['country', 'state', 'city', 'street', 'zip']
+    name: 'Caisse Info',
+    fields: ['accountType', 'accountNumber', 'currentBalance', 'demandeSpecifique']
   },
-  { id: 'Step 3', name: 'Complete' }
-]
+  {
+    id: 'Step 3',
+    name: 'Complete'
+  }
+];
+
 
 export default function CreateForm() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -37,8 +47,26 @@ export default function CreateForm() {
   })
 
   const processForm: SubmitHandler<Inputs> = data => {
-    console.log(data) 
-    reset()
+   console.log(data) 
+    const formData = new FormData()
+        formData.append('dob', data.dob)
+        formData.append('firstName', data.firstName)
+        formData.append('lastName', data.lastName)
+        formData.append('email', data.email)
+        formData.append('gender', data.gender || 'Unknown')
+        formData.append('addresse', data.address)
+        formData.append('ville', data.ville)
+        formData.append('phone', data.phone)
+        formData.append('departement', data.department)
+        formData.append('accountType', data.accountType)
+        formData.append('accountNumber', data.accountNumber)
+        //change formData.append('demandeSpecifique', data.demandeSpecifique)
+        if (data.identityPhoto) {
+          formData.append('identityPhoto', data.identityPhoto);
+        }
+        console.log(formData)
+        create(data)
+        // reset()
     // call api
   }
 
@@ -62,6 +90,7 @@ export default function CreateForm() {
         if (currentStep > 0) {
         setCurrentStep(step => step - 1)
     }
+  
   }
 
   return (
@@ -100,27 +129,27 @@ export default function CreateForm() {
           ))}
         </ol>
       </nav>
-
       {/* Form */}
-      <form className='mt-12 py-12'>
+      <form action={create} className='mt-2 py-12'>
         {currentStep === 0 && (
           <>
             <h2 className='text-base font-semibold leading-7 text-gray-900'>
               Personal Information
             </h2>
-            <p className='mt-1 text-sm leading-6 text-gray-600'>
+            <p className='text-sm leading-6 text-gray-600'>
               Provide your personal details.
             </p>
-            <div className='mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6'>
+            <div className='mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-9'>
               <div className='sm:col-span-3'>
                 <label
                   htmlFor='firstName'
                   className='block text-sm font-medium leading-6 text-gray-900'
                 >
-                  First name
+                  First name 1
                 </label>
                 <div className='mt-2'>
                   <input
+                    required
                     type='text'
                     id='firstName'
                     {...register('firstName')}
@@ -140,12 +169,13 @@ export default function CreateForm() {
                   htmlFor='lastName'
                   className='block text-sm font-medium leading-6 text-gray-900'
                 >
-                  Last name
+                  Last name 2
                 </label>
                 <div className='mt-2'>
                   <input
                     type='text'
                     id='lastName'
+                    required
                     {...register('lastName')}
                     autoComplete='family-name'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
@@ -157,18 +187,124 @@ export default function CreateForm() {
                   )}
                 </div>
               </div>
-
-              <div className='sm:col-span-4'>
+              {/* 3 */}
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='gender'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  Gender 3
+                </label>
+                <div className='mt-2'>
+                  <div className="flex  ">
+                    <RadioGroup
+                      {...register('gender')}
+                      orientation="horizontal"
+                      className="flex space-x-4"
+                      isRequired
+                    >
+                      <Radio value="male">M</Radio>
+                      <Radio value="femal">F</Radio>
+                    </RadioGroup>
+                  </div>  
+                    {errors.gender?.message && (
+                      <p className='mt-2 text-sm text-red-400'>
+                        {errors.gender.message}
+                      </p>
+                    )}
+                </div>
+              </div>
+              {/* 4 */}
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='dob'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  DOB 4
+                </label>  
+                <div className='mt-2'>
+                  <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
+                    <input 
+                      type='date'
+                      id='dob'
+                      {...register('dob')}
+                      className='max-w-[284px] block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6'
+                      required
+                    />
+                  </div>
+                  {errors.dob?.message && (
+                    <p className='mt-2 text-sm text-red-400'>
+                      {errors.dob.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* 5 */}
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='idNumber'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  ID number 5
+                </label>
+                <div className='mt-2'>
+                  <input
+                    id='idNumber'
+                    type='text'
+                    required
+                    {...register('memberId')}
+                    autoComplete='idNumber'
+                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
+                  />
+                    {errors.memberId?.message && (
+                    <p className='mt-2 text-sm text-red-400'>
+                      {errors.memberId.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* 6 */}
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='phone'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  Phone 6
+                </label>
+                <div className='mt-2'>
+                  <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
+                    <input 
+                      type='text'
+                      id='phone'
+                      name='phone'
+                      placeholder='Phone number'
+                      className='max-w-[284px] block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6'
+                      required
+                    />
+                  </div>
+                    {errors.phone?.message && (
+                      <p className='mt-2 text-sm text-red-400'>
+                        {errors.phone.message}
+                      </p>
+                    )}
+                </div>
+              </div>
+              
+              {/* 7 */}
+              <div className='sm:col-span-3'>
                 <label
                   htmlFor='email'
                   className='block text-sm font-medium leading-6 text-gray-900'
                 >
-                  Email address
+                  Email address 7
                 </label>
                 <div className='mt-2'>
                   <input
                     id='email'
                     type='email'
+                    required
                     {...register('email')}
                     autoComplete='email'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
@@ -180,6 +316,108 @@ export default function CreateForm() {
                   )}
                 </div>
               </div>
+              
+              {/* 8 */}
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='address'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  Address 8
+                </label>
+                <div className='mt-2'>
+                  <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
+                    <input 
+                      type='text'
+                      id='address'
+                      name='address'
+                      placeholder='Enter your address'
+                      className='max-w-[284px] block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6'
+                      required
+                    />
+                  </div>
+                  {errors.address?.message && (
+                    <p className='mt-2 text-sm text-red-400'>
+                      {errors.address.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label
+                    htmlFor='departement'
+                    className='block text-sm font-medium leading-6 text-gray-900'
+                  >
+                    Departement 9
+                  </label>
+                <select
+                  id='department'
+                  name='department'
+                  className='max-w-[284px] block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6'
+                  required
+                >
+                  <option value=''>Select a department</option>
+                  {departments.map((department) => (
+                    <option key={department.key} value={department.key}>
+                      {department.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='ville'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  Ville 10
+                </label>
+                <div className='mt-2'>
+                  <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
+                    <input 
+                      type='text'
+                      id='ville'
+                      name='ville'
+                      placeholder='Enter your city'
+                      className='max-w-[284px] block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6'
+                      required
+                    />
+                  </div>
+                  {errors.ville?.message && (
+                    <p className='mt-2 text-sm text-red-400'>
+                      {errors.ville.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className='sm:col-span-3'>
+                <label
+                  htmlFor='identityPhoto'
+                  className='block text-sm font-medium leading-6 text-gray-900'
+                >
+                  Identity Photo 11
+                </label>
+                <div className='mt-2 '>
+                  <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
+                    <input
+                      type='file'
+                      id='identityPhoto'
+                      name='identityPhoto'
+                      accept='image/*'
+                      className='max-w-[184px] h-[8rem] block w-full rounded-md py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6 border-dotted border-2 border-grey-800'
+                      required
+                    />
+                  </div>
+                  {errors.identityPhoto?.message && (
+                    <p className='mt-2 text-sm text-red-400'>
+                      {errors.identityPhoto.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
             </div>
           </>
         )}
@@ -187,34 +425,34 @@ export default function CreateForm() {
         {currentStep === 1 && (
           <>
             <h2 className='text-base font-semibold leading-7 text-gray-900'>
-              Address
+              Caisse Info
             </h2>
             <p className='mt-1 text-sm leading-6 text-gray-600'>
-              Address where you can receive mail.
+              Informations concernant la caisse populaire
             </p>
 
             <div className='mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6'>
               <div className='sm:col-span-3'>
                 <label
-                  htmlFor='country'
+                  htmlFor='accountType'
                   className='block text-sm font-medium leading-6 text-gray-900'
                 >
-                  Country
+                  accountType
                 </label>
                 <div className='mt-2'>
                   <select
-                    id='country'
-                    {...register('country')}
+                    id='accountType'
+                    {...register('accountType')}
                     autoComplete='country-name'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:max-w-xs sm:text-sm sm:leading-6'
                   >
-                    <option>United States</option>
-                    <option>Canada</option>
-                    <option>Mexico</option>
+                    <option>type 1</option>
+                    <option>type 2</option>
+                    <option>type 3</option>
                   </select>
-                  {errors.country?.message && (
+                  {errors.accountType?.message && (
                     <p className='mt-2 text-sm text-red-400'>
-                      {errors.country.message}
+                      {errors.accountType.message}
                     </p>
                   )}
                 </div>
@@ -222,7 +460,7 @@ export default function CreateForm() {
 
               <div className='col-span-full'>
                 <label
-                  htmlFor='street'
+                  htmlFor='accountNumber'
                   className='block text-sm font-medium leading-6 text-gray-900'
                 >
                   Street address
@@ -230,14 +468,14 @@ export default function CreateForm() {
                 <div className='mt-2'>
                   <input
                     type='text'
-                    id='street'
-                    {...register('street')}
+                    id='accountNumber'
+                    {...register('accountNumber')}
                     autoComplete='street-address'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
-                  {errors.street?.message && (
+                  {errors.accountNumber?.message && (
                     <p className='mt-2 text-sm text-red-400'>
-                      {errors.street.message}
+                      {errors.accountNumber.message}
                     </p>
                   )}
                 </div>
@@ -253,14 +491,14 @@ export default function CreateForm() {
                 <div className='mt-2'>
                   <input
                     type='text'
-                    id='city'
-                    {...register('city')}
+                    id='currentBalance'
+                    {...register('currentBalance')}
                     autoComplete='address-level2'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
-                  {errors.city?.message && (
+                  {errors.currentBalance?.message && (
                     <p className='mt-2 text-sm text-red-400'>
-                      {errors.city.message}
+                      {errors.currentBalance.message}
                     </p>
                   )}
                 </div>
@@ -277,36 +515,13 @@ export default function CreateForm() {
                   <input
                     type='text'
                     id='state' 
-                    {...register('state')}
+                    {...register('demandeSpecifique')}
                     autoComplete='address-level1'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
-                  {errors.state?.message && (
+                  {errors.demandeSpecifique?.message && (
                     <p className='mt-2 text-sm text-red-400'>
-                      {errors.state.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className='sm:col-span-2'>
-                <label
-                  htmlFor='zip'
-                  className='block text-sm font-medium leading-6 text-gray-900'
-                >
-                  ZIP / Postal code
-                </label>
-                <div className='mt-2'>
-                  <input
-                    type='text'
-                    id='zip'
-                    {...register('zip')}
-                    autoComplete='postal-code'
-                    className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
-                  />
-                  {errors.zip?.message && (
-                    <p className='mt-2 text-sm text-red-400'>
-                      {errors.zip.message}
+                      {errors.demandeSpecifique.message}
                     </p>
                   )}
                 </div>
@@ -354,7 +569,7 @@ export default function CreateForm() {
           </button>
           {/* next */}
           <button
-            type='button'
+            type="submit"
             onClick={next}
             disabled={currentStep === steps.length - 1}
             className='rounded bg-white px-2 py-1 text-sm font-semibold text-darkGreen shadow-sm ring-1 ring-inset ring-gray-200 hover:bg-secGreen disabled:cursor-not-allowed disabled:opacity-50'
