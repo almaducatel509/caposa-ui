@@ -8,7 +8,7 @@ import { useForm, SubmitHandler } from 'react-hook-form'
 import {create} from '@/app/lib/create'
 import {RadioGroup, Radio} from "@nextui-org/radio";
 import {Select, SelectItem} from "@nextui-org/react";
-import { departments } from "@/app/lib/actions"; 
+import { departments } from "@/app/lib/actions";
 
 
 type Inputs = z.infer<typeof FormDataSchema>
@@ -18,7 +18,7 @@ const steps = [
   {
     id: 'Step 1',
     name: 'Personal Information',
-    fields: ['firstName', 'lastName', 'email', 'dob', 'gender', 'phone', 'address', 'ville', 'departement', 'image'] 
+    fields: ['firstName', 'lastName', 'email', 'dob', 'gender', 'phone', 'address', 'ville', 'departement', 'image']
   },
   {
     id: 'Step 2',
@@ -47,7 +47,7 @@ export default function CreateForm() {
   })
 
   const processForm: SubmitHandler<Inputs> = data => {
-   console.log(data) 
+   console.log(data)
     const formData = new FormData()
         formData.append('dob', data.dob)
         formData.append('firstName', data.firstName)
@@ -90,7 +90,7 @@ export default function CreateForm() {
         if (currentStep > 0) {
         setCurrentStep(step => step - 1)
     }
-  
+
   }
 
   return (
@@ -152,7 +152,8 @@ export default function CreateForm() {
                     required
                     type='text'
                     id='firstName'
-                    {...register('firstName')}
+                    name="firstName"
+                    // {...register('firstName')}
                     autoComplete='given-name'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
@@ -176,7 +177,8 @@ export default function CreateForm() {
                     type='text'
                     id='lastName'
                     required
-                    {...register('lastName')}
+                    name='lastName'
+                    // {...register('lastName')}
                     autoComplete='family-name'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
                   />
@@ -198,7 +200,8 @@ export default function CreateForm() {
                 <div className='mt-2'>
                   <div className="flex  ">
                     <RadioGroup
-                      {...register('gender')}
+                      // {...register('gender')}
+                      name='gender'
                       orientation="horizontal"
                       className="flex space-x-4"
                       isRequired
@@ -206,7 +209,7 @@ export default function CreateForm() {
                       <Radio value="male">M</Radio>
                       <Radio value="femal">F</Radio>
                     </RadioGroup>
-                  </div>  
+                  </div>
                     {errors.gender?.message && (
                       <p className='mt-2 text-sm text-red-400'>
                         {errors.gender.message}
@@ -221,13 +224,14 @@ export default function CreateForm() {
                   className='block text-sm font-medium leading-6 text-gray-900'
                 >
                   DOB 4
-                </label>  
+                </label>
                 <div className='mt-2'>
                   <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
-                    <input 
+                    <input
                       type='date'
                       id='dob'
-                      {...register('dob')}
+                      name='dob'
+                      // {...register('dob')}
                       className='max-w-[284px] block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-principalGreen sm:text-sm sm:leading-6'
                       required
                     />
@@ -239,7 +243,7 @@ export default function CreateForm() {
                   )}
                 </div>
               </div>
-              
+
               {/* 5 */}
               <div className='sm:col-span-3'>
                 <label
@@ -264,7 +268,7 @@ export default function CreateForm() {
                   )}
                 </div>
               </div>
-              
+
               {/* 6 */}
               <div className='sm:col-span-3'>
                 <label
@@ -275,7 +279,7 @@ export default function CreateForm() {
                 </label>
                 <div className='mt-2'>
                   <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
-                    <input 
+                    <input
                       type='text'
                       id='phone'
                       name='phone'
@@ -291,7 +295,7 @@ export default function CreateForm() {
                     )}
                 </div>
               </div>
-              
+
               {/* 7 */}
               <div className='sm:col-span-3'>
                 <label
@@ -316,7 +320,7 @@ export default function CreateForm() {
                   )}
                 </div>
               </div>
-              
+
               {/* 8 */}
               <div className='sm:col-span-3'>
                 <label
@@ -327,7 +331,7 @@ export default function CreateForm() {
                 </label>
                 <div className='mt-2'>
                   <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
-                    <input 
+                    <input
                       type='text'
                       id='address'
                       name='address'
@@ -365,7 +369,7 @@ export default function CreateForm() {
                   ))}
                 </select>
               </div>
-              
+
               <div className='sm:col-span-3'>
                 <label
                   htmlFor='ville'
@@ -375,7 +379,7 @@ export default function CreateForm() {
                 </label>
                 <div className='mt-2'>
                   <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
-                    <input 
+                    <input
                       type='text'
                       id='ville'
                       name='ville'
@@ -391,7 +395,7 @@ export default function CreateForm() {
                   )}
                 </div>
               </div>
-              
+
               <div className='sm:col-span-3'>
                 <label
                   htmlFor='identityPhoto'
@@ -514,7 +518,7 @@ export default function CreateForm() {
                 <div className='mt-2'>
                   <input
                     type='text'
-                    id='state' 
+                    id='state'
                     {...register('demandeSpecifique')}
                     autoComplete='address-level1'
                     className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pirncipalGreen sm:text-sm sm:leading-6'
