@@ -48,7 +48,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
     let d: any = new Date().toLocaleDateString("fr-FR").split("/")
     d = `${d[2]}-${d[1]}-${d[0]}`;
     const handleChangeDepartment = (value:any)=>{
-        // console.log(value)
+        console.log(value)
         setFormData({ ...formData, department: value })
     }
     return (
@@ -115,12 +115,12 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                         className=""
                         selectedKey={formData.department}
                         isRequired
-                        name="department"
+                        // name="department"
                         onSelectionChange={handleChangeDepartment}
                     >
                         {(item) => <AutocompleteItem key={item.value}>{item.label}</AutocompleteItem>}
                     </Autocomplete>
-                    {errors.address && <div className='text-destructive text-red-600'>{errors.address}</div>}
+                    {errors.department && <div className='text-destructive text-red-600'>{errors.department}</div>}
                 </div>
 <div className="space-y-2 md:mt-6">
                     <Input type={'text'} name='city' value={formData.city} label={'Ville'} onChange={handleChange} isRequired />
@@ -129,7 +129,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                 <div className='space-y-2'>
                     <UploadImage name='photo_url' data={null} fallback={""} description="Photo" />
 
-                    {errors.photo_url && <div className='text-destructive'>{errors.photo_url}</div>}
+                    {errors.photo_url && <div className='text-destructive text-red-600'>{errors.photo_url}</div>}
                 </div>
             </div>
 

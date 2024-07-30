@@ -13,7 +13,7 @@ export const step1Schema = z.object({
   email: z.string().email(),
   address: z.string().min(4),
   city: z.string().min(2),
-  department: z.string().min(3),
+  department: z.string().min(4),
   photo_url: imageSchema.refine((file) => file.size > 0, "Required"),
 });
 

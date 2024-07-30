@@ -45,13 +45,14 @@ const RegisterForm = () => {
                     newErrors[key] = error.message;
                 }
             });
-            console.log(newErrors)
+            // console.log(newErrors)
             setErrors(newErrors);
             return false;
         }
     };
 
     const handleNext = () => {
+        // console.log(formData)
         if (validateStep(currentStep)) {
             setCurrentStep((prev) => prev + 1);
         }
