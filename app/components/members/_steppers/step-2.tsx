@@ -1,5 +1,6 @@
 import React from 'react';
 import { Step2Data, ErrorMessages } from '../validations';
+import TitleDetails from './title-details';
 
 interface Step2Props {
     formData: Step2Data;

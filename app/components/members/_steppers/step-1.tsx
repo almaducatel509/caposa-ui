@@ -112,7 +112,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                         // variant="bordered"
                         defaultItems={options}
                         placeholder="Choisir un département"
-                        className="max-w-xs"
+                        className=""
                         selectedKey={formData.department}
                         isRequired
                         name="department"
