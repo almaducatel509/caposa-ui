@@ -47,7 +47,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
     }
     let d: any = new Date().toLocaleDateString("fr-FR").split("/")
     d = `${d[2]}-${d[1]}-${d[0]}`;
-    const handleChangeDepartment = (value:any)=>{
+    const handleChangeDepartment = (value: any) => {
         console.log(value)
         setFormData({ ...formData, department: value })
     }
@@ -122,7 +122,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     </Autocomplete>
                     {errors.department && <div className='text-destructive text-red-600'>{errors.department}</div>}
                 </div>
-<div className="space-y-2 md:mt-6">
+                <div className="space-y-2 md:mt-6">
                     <Input type={'text'} name='city' value={formData.city} label={'Ville'} onChange={handleChange} isRequired />
                     {errors.city && <div className='text-destructive text-red-600'>{errors.city}</div>}
                 </div>

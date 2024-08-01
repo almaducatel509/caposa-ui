@@ -4,19 +4,19 @@ const imageSchema = fileSchema.refine(
   (file) => file.size === 0 || file.type.startsWith("image/")
 );
 export const step1Schema = z.object({
-  first_name: z.string().min(1),
-  last_name: z.string().min(1),
-  gender: z.string().min(1),
-  date_of_birthday: z.string().min(1).date(),
-  id_number: z.string().min(1),
-  phone_number: z.string().min(6),
-  email: z.string().email(),
-  address: z.string().min(4),
-  city: z.string().min(2),
-  department: z.string().min(4),
-  photo_url: imageSchema.refine((file) => file.size > 0, "Required"),
+  first_name: z.string().min(1, "Prénom est requis"),
+  last_name: z.string().min(1,"Nom est requis"),
+  gender: z.string().min(1, "Sélection du sexe est requise"),
+  date_of_birthday: z.string().min(1, "Date de naissance est requise").date(),
+  id_number: z.string().min(1, "Numéro d'identité est requis"),
+  phone_number: z.string().min(6,"Téléphone est requis"),
+  email: z.string().email("Email invalide"),
+  address: z.string().min(4,"Adresse est requise"),
+  city: z.string().min(2, "Ville est requise"),
+  department: z.string().min(4, "Département est requis"),
+  photo_url: imageSchema.refine((file ) => file.size > 0, "Une photo est requise"),
 });
-
+// ["accountType", "accountNumber", "currentBalance", "demandeSpecifique"];
 export const step2Schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
