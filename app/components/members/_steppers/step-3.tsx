@@ -15,26 +15,12 @@ const Step2: React.FC<Step3Props> = ({ formData, setFormData, errors }) => {
 
     return (
         <div>
-            <div>
-                <label>City</label>
-                <input
-                    name="city"
-                    type="text"
-                    value={formData.city}
-                    onChange={handleChange}
-                />
-                {errors.city && <p>{errors.city}</p>}
-            </div>
-            <div>
-                <label>address</label>
-                <input
-                    name="address"
-                    type="text"
-                    value={formData.address}
-                    onChange={handleChange}
-                />
-                {errors.address && <p>{errors.address}</p>}
-            </div>
+           <h2 className='text-base font-semibold leading-7 text-gray-900'>
+              Complete
+            </h2>
+            <p className='mt-1 text-sm leading-6 text-gray-600'>
+              Thank you for your submission.
+            </p>
         </div>
     );
 };

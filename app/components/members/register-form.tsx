@@ -12,9 +12,40 @@ const steps = [Step1, Step2, Step3];
 const RegisterForm = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<FormData | any>({
-        step1: { first_name: '', last_name: '', gender: '', date_of_birthday: null, photo_url:null, email:'', address:'', id_number:'', phone_number:'', city:'', department:'' },
-        step2: { email: '', password: '' },
-        step3: { address: '', city: '' },
+        step1: {
+            first_name: '',
+            last_name: '',
+            gender: '',
+            date_of_birthday: null,
+            photo_url: null,
+            address: '',
+            id_number: '',
+            phone_number: '',
+            city: '',
+            department: ''
+          },
+          step2: {
+            email: '',
+            password: '',
+            account_type: '',
+            account_number: '',
+            current_balance: 0,
+            loan_type: '',
+            loan_amount: 0,
+            interest_rate: 0,
+            loan_duration: '',
+            payment_frequency: '',
+            security_question: '',
+            security_answer: '',
+            additional_accounts: '',
+            monthly_income: 0,
+            monthly_expenses: 0
+        },
+
+        step3: {
+            id: 'Step 3',
+            name: 'Complete'
+        },
     });
     const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 

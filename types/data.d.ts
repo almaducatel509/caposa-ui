@@ -28,13 +28,9 @@ export interface Option {
     member_id: string; 
     first_name: string; 
     last_name: string; 
-    date_of_birth: string; 
+    date_of_birthday: string; 
     address: string; 
     phone_number: string; 
-    account_type: string; 
-    account_number: string; 
-    current_balance: number; 
-    security_info: string; 
     preferences: string[]; 
     status: 'active' | 'desactive';
 }
@@ -66,8 +62,16 @@ export interface Loan extends Base {
 export interface Account extends Base {
     account_number: string; 
     balance: number;
+    account_type: string; 
+    current_balance: number; 
+    email: number;
     member_id: string;
     employee_id: string;
+    security_question: string;
+    security_answer: string;
+    additional_accounts: string;
+    monthly_income: number;
+    monthly_expenses: number;  
 }
 
 export interface Employee extends Base {
@@ -116,7 +120,7 @@ export interface Analysis extends Base {
     analysis_amount: number; 
     transaction_type: string; 
     description: string; 
-    balance: number; 
+    current_balance: number; 
     category: string; 
     status: string; 
     authorization_code: string; 
@@ -142,7 +146,7 @@ export interface Report extends Base {
     report_end_date: Date; 
     transaction_type: string; 
     description: string; 
-    balance: number; 
+    current_balance: number; 
     status: string; 
     authorization_code: string; 
     comments: string; 
