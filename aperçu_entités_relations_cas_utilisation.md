@@ -55,13 +55,13 @@
 - **Cas d'utilisation**: Utilisé pour gérer les informations au niveau des agences, y compris le personnel et les opérations.
 
 ## Analysis
-- **Description**: Implique l'analyse des transactions, des comptes, et des activités des membres au sein d'une agence.
+- **Description**: Implique l'analyse des transactions, des comptes, et des activités des membres au sein d'une branche.
 - **Relations**:
   - `transaction_id`, `member_id`, `account_id`, `branch_id`, et `employee_id` sont liés à leurs tables respectives.
 - **Cas d'utilisation**: Conformité et Audit; Utilisé pour analyser les activités financières et générer des insights sur les transactions des membres.
 
 ## Treasury
-- **Description**: Représente les activités de trésorerie liées aux comptes, aux prêts, et aux agences. 
+- **Description**: Représente les activités de trésorerie liées aux comptes, aux prêts, et aux branches. 
 - **Relations**:
   - `account_number`, `member_id`, `branch_id`, `loan_id`, et `employee_id` sont liés à leurs tables respectives.
 - **Cas d'utilisation**: Associer les prêts aux comptes des membres pour une gestion efficace; Identifier les succursales responsables de chaque compte; Identifier les succursales responsables de chaque compte; Suivre quel employé est responsable de chaque compte ou prêt.
