@@ -41,10 +41,12 @@ export interface Transaction extends Base {
     description: string;
     member_id: string;
     modele_trans: string;
+    employee_id: string; 
 }
 
 export interface Loan extends Base {
     loan_id: string; 
+    employee_id: string; 
     account_number: string; 
     loan_type: string; 
     loan_amount: number; 
@@ -138,16 +140,13 @@ export interface Treasury extends Base {
 export interface Report extends Base { 
     report_id: string; 
     transaction_id: string; 
-    member_id: string; 
     account_id: string; 
     branch_id: string; 
     employee_id: string; 
     report_start_date: Date; 
     report_end_date: Date; 
-    transaction_type: string; 
     description: string; 
     current_balance: number; 
     status: string; 
-    authorization_code: string; 
     comments: string; 
 }
