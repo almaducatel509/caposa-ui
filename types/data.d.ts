@@ -39,7 +39,10 @@ export interface Option {
     address: string; 
     phone_number: string; 
     sexe: 'F' | 'M'
-    authorized_persons: AuthorizedPerson[];
+  //énumérations spécifiques pour les personne autorise. 
+    authorized_persons: 
+    'Spouse'|'Sibling' |'Friend'|'Guardian' |'Child'| 'Partner' |'Colleague' | 'Other'
+    status: 'active' | 'desactive';    
     status: 'active' | 'desactive';
 }
 
@@ -77,7 +80,6 @@ export interface Account extends Base {
     // J'ai modifié l'interface Account pour inclure les types de comptes    
     account_type: 'checking' | 'savings';
     // current_balance peut être calculé à partir des transactions si elles sont toutes stockées du coup je ne vois pas la necessite de l'inclure.
-    current_balance: number; 
     email: string;
     member_id: string;
     // J'ai remplace securite question and answer par securityInfo 
