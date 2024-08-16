@@ -6,13 +6,18 @@ type Props = {
     fallback?: string;
     name: string;
     description: string;
-    data: any
+    data: any;
+    setFormData:any
 }
-const UploadImage: React.FC<Props> = ({ fallback, name, data, description }) => {
+const UploadImage: React.FC<Props> = ({ fallback, name, data, description, setFormData }) => {
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
+        const { name } = e.target;
+        // console.log(name, file)
+        setFormData({...data, [name]: file });
+
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -23,7 +28,8 @@ const UploadImage: React.FC<Props> = ({ fallback, name, data, description }) => 
     };
     return (
         <div>
-            <label htmlFor={name} className=''>{description} {data == null && <span className='text-sm text-red-500'>*</span>}</label>
+            {/* {data == null && <span className='text-sm text-red-500'>*</span>} */}
+            <label htmlFor={name} className=''>{description}</label>
             <div className='mt-2'>
                 <input type='file' id={name} name={name} accept="image/*" onChange={handleImageChange} className={'mb-4 w-full text-gray-400 font-semibold text-sm bg-white border file:cursor-pointer cursor-pointer file:border-0 file:py-3 file:px-4 file:mr-4 file:bg-gray-100 file:hover:bg-gray-200 file:text-gray-500 rounded'} /></div>
 

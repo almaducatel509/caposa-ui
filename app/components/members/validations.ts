@@ -1,8 +1,8 @@
 import { z } from "zod";
 const fileSchema = z.instanceof(File, { message: "Required" });
 const imageSchema = fileSchema.refine(
-  (file) => file.size === 0 || file.type.startsWith("image/")
-);
+  (file) => file.size === 0 && file.type.startsWith("image/")
+).nullable();
 export const step1Schema = z.object({
   first_name: z.string().min(1),
   last_name: z.string().min(1),
@@ -14,7 +14,7 @@ export const step1Schema = z.object({
   address: z.string().min(4),
   city: z.string().min(2),
   department: z.string().min(4),
-  photo_url: imageSchema.refine((file) => file.size > 0, "Required"),
+  // photo_url: imageSchema.refine((file) => file.size > 0, "Required"),
 });
 
 export const step2Schema = z.object({

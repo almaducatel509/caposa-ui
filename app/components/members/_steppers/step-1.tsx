@@ -127,7 +127,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     {errors.city && <div className='text-destructive text-red-600'>{errors.city}</div>}
                 </div>
                 <div className='space-y-2'>
-                    <UploadImage name='photo_url' data={null} fallback={""} description="Photo" />
+                    <UploadImage setFormData={setFormData} name='photo_url' data={formData} fallback={""} description="Photo" />
 
                     {errors.photo_url && <div className='text-destructive text-red-600'>{errors.photo_url}</div>}
                 </div>
