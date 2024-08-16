@@ -85,3 +85,8 @@
     Assurer la transparence : Fournir des rapports détaillés pour la vérification et l’audit.
     Faciliter la gestion des branches : Suivre les activités spécifiques à chaque succursale.
     Améliorer la sécurité : Utiliser des codes d’autorisation pour valider les transactions.
+  
+## interface Branch 
+ - **OpeningHours Interface**: Cette interface définit les horaires d'ouverture pour chaque jour de la semaine. Les jours optionnels (comme samedi et dimanche) sont marqués avec ? pour indiquer qu'ils peuvent être omis si la branche est fermée ces jours-là.
+
+**Holiday Interface**: Cette interface permet de spécifier des jours fériés spécifiques. Chaque jour férié est défini par une date et une description (comme "Jour de l'Indépendance").
