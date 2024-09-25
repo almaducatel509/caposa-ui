@@ -1,6 +1,5 @@
 // import Pagination from '@/app/ui/invoices/pagination';
 import Search from '@/app/components/search';
-import MemberTable from '@/app/components/members/MemberTable';
 import {User} from './columns';
 
 async function getUsers(): Promise<User[]> {
@@ -16,12 +15,11 @@ export default async function Users(){
     return (
       <div className="w-full bg-white">
         <div className="flex w-full items-center justify-between">
-          <h1 className={` text-2xl`}>Member</h1>
+          <h1 className={` text-2xl`}>Branche</h1>
         </div>
         <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
          {/* card */} 
         </div>
-        <MemberTable users={users} />
       </div>
     )
   }

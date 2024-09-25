@@ -15,9 +15,7 @@ import {
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { CreateMember } from '@/app/dashboard/members/bouttons';
-import { User, columns, renderCell } from "@/app/dashboard/members/columns";
-//import { Input } from 'postcss';
+import { User, columns, renderCell } from "@/app/dashboard/employees/columns";
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";

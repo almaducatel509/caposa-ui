@@ -21,3 +21,32 @@ export const FormDataSchema = z.object({
     message: 'Identity photo is required',
   }),
 })
+
+
+// Define the schema for branch form data
+export const BranchFormDataSchema = z.object({
+  opening_hours: z.object({
+    sunday: z.string().min(1, "Sunday hours are required"),
+    monday: z.string().min(1, "Monday hours are required"),
+    tuesday: z.string().min(1, "Tuesday hours are required"),
+    wednesday: z.string().min(1, "Wednesday hours are required"),
+    thursday: z.string().min(1, "Thursday hours are required"),
+    friday: z.string().min(1, "Friday hours are required"),
+    saturday: z.string().min(1, "Saturday hours are required"),
+  }),
+  holidays: z.object({
+    date: z.string().optional(),
+    description: z.string().optional(),
+  }).optional(),
+  branch_name: z.string().min(1, "Branch name is required"),
+  branch_address: z.string().min(1, "Branch address is required"),
+  branch_phone_number: z.string().min(1, "Branch phone number is required"),
+  branch_email: z.string().min(1, "Branch email is required").email("Invalid email format"),
+  branch_manager_id: z.string().min(1, "Branch manager ID is required"),
+  branch_code: z.string().min(1, "Branch code is required"),
+  number_of_posts: z.number().min(1, "Number of posts is required"),
+  number_of_tellers: z.number().min(1, "Number of tellers is required"),
+  number_of_clerks: z.number().min(1, "Number of clerks is required"),
+  number_of_credit_officers: z.number().min(1, "Number of credit officers is required"),
+  opening_date: z.string().min(1, "Opening date is required"),
+});
