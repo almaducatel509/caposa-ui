@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+'use client'
+import React, { useState } from 'react'
 import { employeeFormSchema, EmployeeFormData } from './validations'; // Adjust import path
 import Step1 from './_steppers/step-1'; // Adjust as needed
 import Step2 from './_steppers/step-2'; // Adjust as needed

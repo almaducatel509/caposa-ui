@@ -23,31 +23,24 @@ export interface User {
     age: string;
     avatar: string;
     email: string;
-}
-//   J'ai ajouté une section `authorized_persons` dans l'interface Account pour permettre à d'autres personnes d'effectuer des retraits sur le compte en l'absence du titulaire. Chaque personne autorisée est définie par un nom, une relation et un niveau d'autorisation (`full` ou `limited`). 
-export interface AuthorizedPerson {
-    name: string;
-    relationship: string;
-    authorization_level: 'full' | 'limited';
-}
-// Define the AuthorizedPersons interface
-export interface AuthorizedPersons {
-    authorized_persons: 'Spouse' | 'Sibling' | 'Friend' | 'Guardian' | 'Child' | 'Partner' | 'Colleague' | 'Other';
-}
-export interface Member extends Base, AuthorizedPersons{
-    imageUrl: string | undefined;
-    member_id: string; 
-    first_name: string; 
-    last_name: string; 
-    //la date etait string je l'ai modifier en date
-    date_of_birthday: Date; 
+  }
+  
+  
+  export interface Member extends Base {
+    memberId: string; 
+    firstName: string; 
+    lastName: string; 
+    dateOfBirth: Date; 
     address: string; 
-    phone_number: string; 
-    sexe: 'F' | 'M'; 
-    //J'ai ajouter avatar pour la photo ID du membre
-    avatar: string; 
-}
+    phoneNumber: string; 
+    accountType: string; 
+    accountNumber: string; 
+    currentBalance: number; 
+    securityInfo: string; 
+    preferences: string[]; 
+    status: 'active' | 'desactive';
 
+}
 export interface Transaction extends Base {
     amount: number;
     date: Date;
@@ -77,49 +70,19 @@ export interface Loan extends Base {
 }
 
 export interface Account extends Base {
-    account_number: string; 
-    balance: number;
-    // J'ai modifié l'interface Account pour inclure les types de comptes    
-    account_type: 'checking' | 'savings';
-    // current_balance peut être calculé à partir des transactions si elles sont toutes stockées du coup je ne vois pas la necessite de l'inclure.
-    current_balance: number; 
-    email: string;
-    member_id: string;
-    // J'ai remplace securite question and answer par securityInfo NIF
-    security_info: string;
-    additional_accounts: string;
-    monthly_income: number;
-    monthly_expenses: number; 
-// J'ai modifié le statut dans l'interface Account en `status: 'lock' | 'unlock'` 
-//pour permettre aux membres de verrouiller les retraits sur un compte pour une période déterminée.
-    status: 'lock' | 'unlock';
+  balance: number;
+  member_id: string;
 }
-
-// Interface pour les données du formulaire d'enregistrement d'employé
-// Elle regroupe toutes les informations nécessaires à la création d'un employé, y compris les détails utilisateur pour l'authentification.
-export interface Employee {
-  first_name: string;
-  last_name: string;
-  gender: 'M' | 'F';
-  date_of_birthday: string;
-  phone_number: string;
-  address: string;
-  user: User;
-  branch: Branch;
-  posts: Post[];
-  payment_ref: string;
-  photo_url: string;
+export interface Employee extends Base{
+  employeeId: string; 
+  firstName: string; 
+  lastName: string; 
+  dateOfBirth: Date; 
+  phoneNumber: string; 
+  address: string; 
+  transactionType: string; 
+  paymentRef: string; 
 }
-
-export interface Post {
-    post_id: string; // Unique identifier for the post
-    post_name: string; // Name of the post
-    post_description: string; // Description of the post
-    responsibilities: string[]; // List of responsibilities associated with the post
-    required_skills: string[]; // List of skills required for the post
-    is_active: boolean; // Indicates if the post is currently active
-  }
-  
 export interface Payment extends Base { 
     payment_id: string; 
     payment_ref: string; 
@@ -176,15 +139,12 @@ export interface Analysis extends Base {
 // On doit s'assurer que les champs critiques, comme les identifiants et les dates, sont toujours fournis.
  
 export interface Treasury extends Base { 
-    account_number: string; 
-    member_id: string; 
-    branch_id: string; 
-    loan_id: string; 
-    employee_id: string; 
-    //J'ai ajoute un champ amount pour suivre le montant géré par la trésorerie.
-    amount: number;
+  accountNumber: string; 
+  memberId: string; 
+  branchId: string; 
+  loanId: string; 
+  employeeId: string; 
 }
-
 export interface Report extends Base { 
     report_id: string; 
     transaction_id: string; 

@@ -4,16 +4,12 @@ import { z } from "zod";
 
 // Définition du schéma de validation pour les jours fériés
 export const holidaySchema = z.object({
-    date: z.date(),
-    description: z.string(), // Exemple : "Jour de l'Indépendance"
+    date: z.string().min(6, "La date de est requise"),
+    description: z.string().min(6, "Description est requise"), // Exemple : "Jour de l'Indépendance"
 });
 
-// Interface pour les jours fériés spécifiques
+// Interface pour les jours fériés spécifiques  
+
 export interface Holiday extends z.infer<typeof holidaySchema> {}
 
-// Utilisation du schéma pour valider un jour férié
-const exampleHoliday: Holiday = {
-    date: new Date("2024-07-04"),
-    description: "Jour de l'Indépendance",
-};
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;

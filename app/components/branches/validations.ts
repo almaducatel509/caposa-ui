@@ -18,7 +18,7 @@ export const step1Schema = z.object({
   opening_date: z.date(),
   opening_hours: openingHoursSchema, // Assuming you import this from another file
   holidays: holidaySchema, // Assuming Holiday is a string type
-});
+}); 
 export const step2Schema = z.object({
   branch_id: z.string(),
   branch_name: z.string(),
@@ -56,3 +56,6 @@ export type FormData = {
   step2: Step2Data;
   step3: Step3Data;
 };
+
+// Error messages type
+export type ErrorMessages<T> = Partial<Record<keyof T, string>>;

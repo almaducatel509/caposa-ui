@@ -5,7 +5,7 @@ const FormSchema = z.object({
   memberId: z.string().min(1, 'Member ID is required'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  dob: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid date'),
+  date_of_birthday: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid date'),
   gender: z.string().min(1, 'Gender is required'),
   phone: z.string().min(1, 'Phone number is required'),
   address: z.string().min(1, 'Address is required'),
@@ -59,22 +59,22 @@ export async function createMember(formData: FormData) {
   
     // Validate form using Zod
     const validatedFields = FormSchema.safeParse({
-      memberId: formData.get('memberId') as string, // Ajout du champ memberId
-      firstName: formData.get('firstName') as string,
+      member_id: formData.get('memberId') as string, // Ajout du champ memberId
+      first_name: formData.get('firstName') as string,
       lastName: formData.get('lastName') as string,
-      dateOfBirth: new Date(formData.get('dateOfBirth') as string), // Conversion en date
+      date_of_birthday: new Date(formData.get('dateOfBirth') as string), // Conversion en date
       address: formData.get('address') as string,
       phone: formData.get('phone') as string, // Ajout du champ phone
       gender: formData.get('gender') ? formData.get('gender') as string : '', // Ajout du champ gender avec vérification
       ville: formData.get('ville') as string, // Ajout du champ ville
-      accountType: formData.get('accountType') as string,
-      accountNumber: formData.get('accountNumber') as string,
-      currentBalance: parseFloat(formData.get('currentBalance') as string), // Conversion en nombre
-      securityInfo: formData.get('securityInfo') as string,
+      account_type: formData.get('accountType') as string,
+      account_number: formData.get('accountNumber') as string,
+      current_balance: parseFloat(formData.get('currentBalance') as string), // Conversion en nombre
+      security_info: formData.get('securityInfo') as string,
       preferences: (formData.get('preferences') as string).split(','), // Supposant que les préférences sont séparées par des virgules
       status: formData.get('status') as 'active' | 'desactive',
-      identityPhoto: formData.get('identityPhoto') as File, // Ajout du champ identityPhoto
-  // demandeSpecifique: formData.get('demandeSpecifique') as 'prêt' | 'retrait' | 'transfert', // Décommentez si nécessaire
+      identity_hoto: formData.get('identityPhoto') as File, // Ajout du champ identityPhoto
+      demande_pecifique: formData.get('demandeSpecifique') as 'prêt' | 'retrait' | 'transfert', // Décommentez si nécessaire
 });
     if (!validatedFields.success) {
         return {

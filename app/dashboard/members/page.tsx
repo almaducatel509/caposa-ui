@@ -19,7 +19,9 @@ export default async function Users(){
           <h1 className={` text-2xl`}>Member</h1>
         </div>
         <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-         {/* card */} 
+
+         {/* card */} <p>MemberTable</p>
+
         </div>
         <MemberTable users={users} />
       </div>
