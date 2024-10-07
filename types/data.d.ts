@@ -73,15 +73,15 @@ export interface Account extends Base {
   balance: number;
   member_id: string;
 }
-export interface Employee extends Base{
-  employeeId: string; 
-  firstName: string; 
-  lastName: string; 
-  dateOfBirth: Date; 
-  phoneNumber: string; 
-  address: string; 
-  transactionType: string; 
-  paymentRef: string; 
+export interface Employee extends Base {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: Date;
+  phoneNumber: string;
+  address: string;
+  transactionType: string;
+  paymentRef: string;
 }
 export interface Payment extends Base { 
     payment_id: string; 
