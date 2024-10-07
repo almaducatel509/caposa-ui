@@ -1,12 +1,14 @@
 import React from 'react';
-import { Post } from '../validations';
+import { Step3Data, ErrorMessages } from '../validations';
 
 interface Step3Props {
-    formData: Post;
+    formData: Step3Data;
+    setFormData: (data: Partial<Step3Data>) => void;
+    errors: ErrorMessages<Step3Data>;
 }
 
-const Step3: React.FC<Step3Props> = ({ formData }) => {
-    return (
+const Step4: React.FC<Step3Props> = ({ formData, setFormData, errors }) => {
+      return (
         <div>
             <h2 className='text-base font-semibold leading-7 text-gray-900'>
                 Complete
@@ -18,4 +20,5 @@ const Step3: React.FC<Step3Props> = ({ formData }) => {
     );
 };
 
-export default Step3;
+export default Step4;
+

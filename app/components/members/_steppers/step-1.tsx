@@ -2,8 +2,9 @@ import React from 'react';
 import { Step1Data, ErrorMessages } from '../validations';
 import TitleDetails from './title-details';
 import { Input, RadioGroup, Radio, DatePicker, Autocomplete, AutocompleteItem } from '@nextui-org/react'
-import UploadImage from '@/app/components/core/upload-file';
-import { parseDate } from "@internationalized/date";
+import { useDateFormatter } from "@react-aria/i18n";
+import UploadImage from '../../core/upload-file';
+import { parseDate, getLocalTimeZone } from "@internationalized/date";
 
 interface Step1Props {
     formData: Step1Data;
@@ -131,6 +132,17 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     {errors.photo_url && <div className='text-destructive text-red-600'>{errors.photo_url}</div>}
                 </div>
             </div>
+
+
+            {/* <div>
+                <label>Last Name</label>
+                <input
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                />
+                {errors.lastName && <p>{errors.lastName}</p>}
+            </div> */}
         </div>
     );
 };

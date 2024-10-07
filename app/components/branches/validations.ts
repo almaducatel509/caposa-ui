@@ -15,9 +15,9 @@ export const step1Schema = z.object({
   number_of_tellers: z.number(),
   number_of_clerks: z.number(),
   number_of_credit_officers: z.number(),
-  opening_date: z.date(),
+  opening_date: z.string().min(1, "Date d'ouverture est requise").date(),
   opening_hours: openingHoursSchema, // Assuming you import this from another file
-  holidays: holidaySchema, // Assuming Holiday is a string type
+  holidays: z.array(holidaySchema).optional(), 
 }); 
 export const step2Schema = z.object({
   branch_id: z.string(),
@@ -33,7 +33,7 @@ export const step2Schema = z.object({
   number_of_credit_officers: z.number(),
   opening_date: z.date(),
   opening_hours: openingHoursSchema, // Assuming you import this from another file
-  holidays: holidaySchema, // Assuming Holiday is a string type
+  holidays: z.array(holidaySchema).optional(), // Déclarez holidays comme un tableau de Holiday
 });
 
 export const step3Schema = z.object({})

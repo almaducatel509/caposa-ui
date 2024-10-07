@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { OpeningHours, openingHoursSchema } from './validations';
 import { create } from '@/app/lib/create';

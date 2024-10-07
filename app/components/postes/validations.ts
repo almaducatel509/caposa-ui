@@ -1,14 +1,5 @@
 import { z } from 'zod';
 
-// Define the schema for the salary range
-const salaryRangeSchema = z.object({
-  min: z.number().nonnegative("Minimum salary must be a non-negative number"),
-  max: z.number().nonnegative("Maximum salary must be a non-negative number"),
-}).refine(data => data.min <= data.max, {
-  message: "Minimum salary must be less than or equal to maximum salary",
-  path: ["min"],
-});
-
 // Define the schema for the Post interface
 export const postSchema = z.object({
   post_id: z.string().min(0,"Post ID is required"),

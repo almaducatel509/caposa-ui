@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { Holiday, holidaySchema } from './validations';
 import { create } from '@/app/lib/create';
@@ -15,11 +17,12 @@ const steps = [Step1, Step2, Step3];
 
 const RegisterForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>({
-    step1: { date: new Date(), description: '' },
-    step2: { date: new Date(), description: '' },
-    step3: { date: new Date(), description: '' },
-  });
+  
+const [formData, setFormData] = useState({
+  step1: { date: new Date().toISOString(), description: '' },
+  step2: { date: new Date().toISOString(), description: '' },
+  step3: { date: new Date().toISOString(), description: '' },
+});
   const [errors, setErrors] = useState<Partial<Record<number, string>>>({});
 
   const validateStep = (): boolean => {
@@ -78,22 +81,19 @@ const RegisterForm: React.FC = () => {
         <div className="w-1/3 space-y-2">
           <hr className="border-t-4 border-green-600" />
           <p className="text-sm text-green-600 capitalize">étape 1</p>
-          <p className="text-gray-700">Jours fériés</p>
         </div>
         <div className="w-1/3 space-y-2">
           <hr className={`border-t-4 ${currentStep > 0 && 'border-green-600'}`} />
           <p className={`text-sm capitalize ${currentStep > 0 ? 'text-green-600' : 'text-gray-600'}`}>étape 2</p>
-          <p className="text-gray-700">Vérification des informations</p>
         </div>
         <div className="w-1/3 space-y-2">
           <hr className={`border-t-4 ${currentStep === 2 && 'border-green-600'}`} />
           <p className={`text-sm capitalize ${currentStep === 2 ? 'text-green-600' : 'text-gray-600'}`}>étape 3</p>
-          <p className="text-gray-700">Finalisation</p>
         </div>
       </div>
       <CurrentStepComponent
-        formData={formData[`step${currentStep + 1}` as keyof FormData]}
-        setFormData={updateFormData}
+          formData={formData[`step${currentStep + 1}`]}
+          setFormData={updateFormData}
         errors={errors}
       />
       <hr className="border-t-2 border-gray-300 mt-4" />

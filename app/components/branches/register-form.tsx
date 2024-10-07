@@ -133,21 +133,18 @@ const RegisterForm = () => {
         <div className="w-1/3 space-y-2">
           <hr className="border-t-4 border-green-600" />
           <p className="text-sm text-green-600 capitalize">Étape 1</p>
-          <p className="text-gray-700">Horaires et Jours Fériés</p>
         </div>
 
         {/* Step 2: Branch information */}
         <div className="w-1/3 space-y-2">
           <hr className={`border-t-4 ${currentStep > 0 && "border-green-600"}`} />
           <p className={`text-sm capitalize ${currentStep > 0 ? "text-green-600" : "text-gray-600"}`}>Étape 2</p>
-          <p className="text-gray-700">Informations sur la Branche</p>
         </div>
 
         {/* Step 3: Finalization */}
         <div className="w-1/3 space-y-2">
           <hr className={`border-t-4 ${currentStep === 2 && "border-green-600"}`} />
           <p className={`text-sm capitalize ${currentStep === 2 ? "text-green-600" : "text-gray-600"}`}>Étape 3</p>
-          <p className="text-gray-700">Finalisation</p>
         </div>
       </div>
 
@@ -157,8 +154,7 @@ const RegisterForm = () => {
         setFormData={updateFormData}
         errors={errors}
         handleSubmit={handleSubmit}
-        handleChangeDate={handleChangeDate}
-      />
+        handleChangeDate={handleChangeDate} availableHolidays={[]}      />
 
       {/* Navigation buttons */}
       <hr className="border-t-2 border-gray-300 mt-4" />

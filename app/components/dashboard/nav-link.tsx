@@ -13,15 +13,48 @@ import clsx from 'clsx';
 // Depending on the size of the application, this would be stored in a database.
 const links = [
   { name: 'Home', href: '/dashboard', icon: AiOutlineHome },
-  {
-    name: 'Transaction',
-    href: '/dashboard/transaction',
-    icon: HiOutlineDocumentDuplicate,
-  },
-  { name: 'Members',
-    href: '/dasboard/members',
+  
+  { name: 'Opening Hours',
+    href: '/dashboard/openning_hours',
     icon: HiOutlineUserGroup, 
   },
+  
+  { name: 'Postes',
+    href: '/dashboard/postes',
+    icon: HiOutlineUserGroup, 
+  },
+  { name: 'Holydays',
+    href: '/dashboard/hollydays',
+    icon: HiOutlineUserGroup, 
+  },
+    { name: 'Branches',
+    href: '/dashboard/branches',
+    icon: HiOutlineUserGroup, 
+  },
+  
+  { name: 'Employees',
+    href: '/dashboard/employees',
+    icon: HiOutlineUserGroup, 
+  },
+  { name: 'Members',
+    href: '/dashboard/members',
+    icon: HiOutlineUserGroup, 
+  },
+  {
+    name: 'Transaction',
+    href: '/dashboard/transactions',
+    icon: HiOutlineDocumentDuplicate,
+  },
+  {
+    name: 'Report',
+    href: '/dashboard/reports',
+    icon: HiOutlineDocumentDuplicate,
+  },
+  { name: 'Achives',
+    href: '/dashboard/Achives',
+    icon: HiOutlineUserGroup, 
+  },
+
 ];
 
 export default function NavLinks() {

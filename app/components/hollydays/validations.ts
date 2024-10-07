@@ -1,15 +1,16 @@
-import { z } from "zod";
-// validations.ts or validations.js
+import { useState } from 'react';
+import { z } from 'zod';
 
-
-// Définition du schéma de validation pour les jours fériés
+// Define the validation schema for holidays
 export const holidaySchema = z.object({
-    date: z.string().min(6, "La date de est requise"),
-    description: z.string().min(6, "Description est requise"), // Exemple : "Jour de l'Indépendance"
+    holyday_date: z.string().min(1, "La date est requise").date(),
+    holyday_description:z.string().min(6,"date description is required"),
+
 });
 
-// Interface pour les jours fériés spécifiques  
-
+// Specific interface for holidays
 export interface Holiday extends z.infer<typeof holidaySchema> {}
 
+// Generic type for handling error messages
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
+

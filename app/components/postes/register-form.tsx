@@ -1,3 +1,5 @@
+  'use client'
+
   import React, { useState } from 'react';
   import { Post, postSchema } from './validations';
   import { create } from '@/app/lib/create';
@@ -9,13 +11,9 @@
 
   const RegisterForm: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
-    const [formData, setFormData] = useState<Post>({
-      post_id: '',
-      post_name: '',
-      post_description: '',
-      responsibilities: '',
-      is_active: false,
-    });
+    const [formData, setFormData] = useState<any>({});
+ 
+  
     const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
     const validateStep = (): boolean => {
@@ -66,6 +64,7 @@
       }));
   };
 
+
     return (
       <div>
         <div className="flex flex-row space-x-8">
@@ -86,9 +85,9 @@
           </div>
         </div>
         <CurrentStepComponent
-                  formData={formData[`step${currentStep + 1}`]}
-                  setFormData={updateFormData}
-                  errors={errors}
+          formData={formData[`step${currentStep + 1}`]}
+          setFormData={updateFormData}
+          errors={errors}
         />
         <hr className="border-t-2 border-gray-300 mt-4" />
         <div className="flex justify-between mt-8">

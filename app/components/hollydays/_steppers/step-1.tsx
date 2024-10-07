@@ -1,66 +1,62 @@
 import React from 'react';
-import { Holiday } from '../validations';
+import { parseDate, getLocalTimeZone } from "@internationalized/date";
+import {  DatePicker, Input, Textarea} from '@nextui-org/react';
 import TitleDetails from '../title-details';
+import { Holiday, ErrorMessages } from '../validations';
 
 interface Step1Props {
-  formData: Holiday[];
-  setFormData: React.Dispatch<React.SetStateAction<Holiday[]>>;
-  errors: Partial<Record<number, string>>;
+  formData: Holiday;
+  setFormData: (data: Partial<Holiday>) => void;
+
+  errors: ErrorMessages<Holiday>;
 }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prevData) => {
-      const updatedData = [...prevData];
-      updatedData[index] = { ...updatedData[index], [name]: value };
-      return updatedData;
+    setFormData({ [name]: value });
+  };
+  
+  const handleChangeDate = (value: any) => {
+    setFormData({
+      ...formData,
+      holyday_date: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}`,
     });
   };
 
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    let month = '' + (d.getMonth() + 1);
-    let day = '' + d.getDate();
-    const year = d.getFullYear();
-
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
-
-    return [year, month, day].join('-');
-  };
+  
+  let d: any = new Date().toLocaleDateString("fr-FR").split("/");
+  d = `${d[2]}-${d[1]}-${d[0]}`;
 
   return (
     <div>
-      <TitleDetails text1={'Informations personnelles'} text2={'Fournir vos informations personnelles'} />
-
-      <h2 className="text-base font-semibold leading-7 text-gray-900">Jours fériés</h2>
-      {formData.map((holiday, index) => (
-        <div key={index} className="space-y-2">
-          <label htmlFor={`date-${index}`} className="block text-sm font-medium text-gray-700">
-            Date
-          </label>
-          <input
-            type="date"
-            name={`date-${index}`}
-            value={formatDate(new Date(holiday.date))}
-            onChange={(e) => handleChange(e, index)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      <TitleDetails text1="Informations personnelles" text2="Fournir vos informations personnelles" />
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+        <div className="space-y-2">
+          <label htmlFor="post_description" className="block text-sm font-medium text-gray-700">Post Description</label>
+          <DatePicker 
+            className="max-w-[284px]" 
+            value={parseDate(formData.holyday_date || d)} 
+            label="Date" 
+            onChange={handleChangeDate}
           />
-          <label htmlFor={`description-${index}`} className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
-          <input
-            type="text"
-            name={`description-${index}`}
-            value={holiday.description}
-            onChange={(e) => handleChange(e, index)}
-            placeholder="Exemple: Jour de l'Indépendance"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-          />
-          {errors[index] && <div className="text-red-600">{errors[index]}</div>}
+          
+          {errors.holyday_date && <div className='text-destructive text-red-600'>{errors.holyday_date}</div>}
         </div>
-      ))}
+        
+        <div className="space-y-2">
+          <label htmlFor="post_description" className="block text-sm font-medium text-gray-700">Post Description</label>
+          <textarea
+            name="post_description"
+            value={formData.holyday_description}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          />
+          {errors.holyday_description && <div className="text-red-600">{errors.holyday_description}</div>}
+      </div>
+     
+  
+      </div>
     </div>
   );
 };
