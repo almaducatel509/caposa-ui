@@ -1,80 +1,88 @@
 'use client'
-
 import React, { useState } from 'react';
-import { Holiday, holidaySchema } from './validations';
+import { Holiday, holidaySchema, ErrorMessages } from './validations';
 import { create } from '@/app/lib/create';
 import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
+import { z, ZodError } from 'zod';
 
-type FormData = {
-  step1: Holiday;
-  step2: Holiday;
-  step3: Holiday;
-};
 
 const steps = [Step1, Step2, Step3];
 
-const RegisterForm: React.FC = () => {
+const RegisterForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   
-const [formData, setFormData] = useState({
-  step1: { date: new Date().toISOString(), description: '' },
-  step2: { date: new Date().toISOString(), description: '' },
-  step3: { date: new Date().toISOString(), description: '' },
+  const [formData, setFormData] = useState<FormData | any>({
+  step1: { date: '', description: '' },
+  step2: { date: '', description: '' },
+  step3: { date: '', description: '' },
 });
-  const [errors, setErrors] = useState<Partial<Record<number, string>>>({});
+const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
-  const validateStep = (): boolean => {
-    const result = holidaySchema.safeParse(formData[`step${currentStep + 1}` as keyof FormData]);
+const validateStep = (step: number): boolean => {
+  let result: z.SafeParseReturnType<any, any>;
+  switch (step) {
+      case 0:
+          result = holidaySchema.safeParse(formData.step1);
+          break;
+      case 1:
+          result = holidaySchema.safeParse(formData.step2);
+          break;
+      case 2:
+          result = holidaySchema.safeParse(formData.step3);
+          break;
+      default:
+          return false;
+  }
 
-    if (result.success) {
+  if (result.success) {
       setErrors({});
       return true;
-    } else {
-      const newErrors: Partial<Record<number, string>> = {};
+  } else {
+      const newErrors: ErrorMessages<any> = {};
       result.error.errors.forEach((error) => {
-        if (error.path.length) {
-          const key = error.path[0] as keyof Holiday;
-          newErrors[currentStep] = error.message;
-        }
+          if (error.path.length) {
+              const key = error.path[0] as string;
+              newErrors[key] = error.message;
+          }
       });
+      // console.log(newErrors)
       setErrors(newErrors);
       return false;
-    }
-  };
+  }
+};
 
-  const handleNext = () => {
-    if (validateStep()) {
+const handleNext = () => {
+  // console.log(formData)
+  if (validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1);
-    }
-  };
+  }
+};
 
-  const handlePrevious = () => {
-    setCurrentStep((prev) => prev - 1);
-  };
 
-  const handleSubmit = () => {
-    if (validateStep()) {
-      create(formData);
-      console.log('Form submitted successfully:', formData);
-    }
-  };
+const handlePrevious = () => {
+  setCurrentStep((prev) => prev - 1);
+};
 
-  const CurrentStepComponent = steps[currentStep] as unknown as React.FC<{
-    formData: Holiday;
-    setFormData: (data: Partial<Holiday>, index: number) => void;
-    errors: Partial<Record<number, string>>;
-  }>;
+const handleSubmit = () => {
+  if (validateStep(currentStep)) {
+      create({ ...formData?.step1, ...formData?.step2, ...formData?.step3 });
+      console.log(formData);
+  }
+};
 
-  const updateFormData = (data: Partial<Holiday>, index: number) => {
-    setFormData((prev) => {
-      const updatedData = { ...prev };
-      updatedData[`step${index + 1}` as keyof FormData] = { ...updatedData[`step${index + 1}` as keyof FormData], ...data };
-      return updatedData;
-    });
-  };
+const CurrentStepComponent = steps[currentStep];
 
+const updateFormData = (data: Partial<any>) => {
+  setFormData((prev: any) => ({
+      ...prev,
+      [`step${currentStep + 1}`]: {
+          ...prev[`step${currentStep + 1}`],
+          ...data,
+      },
+  }));
+};
   return (
     <div>
       <div className="flex flex-row space-x-8">

@@ -14,8 +14,8 @@ const Step2: React.FC<Step2Props> = ({ formData }) => {
       <h2 className="text-base font-semibold leading-7 text-gray-900">Vérification des informations</h2>
       {formData.map((holiday, index) => (
         <div key={index} className="space-y-2">
-          <p><strong>Date:</strong> {holiday.date.toString().split('T')[0]}</p>
-          <p><strong>Description:</strong> {holiday.description}</p>
+          <p><strong>Date:</strong> {holiday.holyday_date.toString().split('T')[0]}</p>
+          <p><strong>Description:</strong> {holiday.holyday_description}</p>
         </div>
       ))}
     </div>
