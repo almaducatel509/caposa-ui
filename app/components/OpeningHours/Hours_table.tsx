@@ -15,13 +15,14 @@ import {
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { User, columns, renderCell } from "@/app/dashboard/branches/columns";
+import { CreateMember } from '@/app/dashboard/members/bouttons';
+import{OpeningHrs,columns, renderCell} from "@/app/dashboard/openning_hours/columns"
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 
 
-export default function BranchesTable({users} : {users: User[] }) {
+export default function OpeningHoursTable({users} : {users: OpeningHrs[] }) {
   const [filterValue, setFilterValue] = useState('');
   const hasSearchFilter = Boolean(filterValue);
   
@@ -29,8 +30,8 @@ export default function BranchesTable({users} : {users: User[] }) {
     let filteredUsers = [...users];
 
     if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter(user =>
-        user.name.toLowerCase().includes(filterValue.toLowerCase())
+      filteredUsers = filteredUsers.filter(OpeningHrs =>
+        OpeningHrs.sunday.toLowerCase().includes(filterValue.toLowerCase())
       )
   }   
   
@@ -54,9 +55,9 @@ export default function BranchesTable({users} : {users: User[] }) {
   })
   
   const sortedItems = useMemo(() => {
-    return [...items].sort((a: User, b: User) => {
-      const first = a[sortDescriptor.column as keyof User] as String;
-      const second = b[sortDescriptor.column as keyof User] as String;
+    return [...items].sort((a: OpeningHrs, b: OpeningHrs) => {
+      const first = a[sortDescriptor.column as keyof OpeningHrs] as String;
+      const second = b[sortDescriptor.column as keyof OpeningHrs] as String;
       const cmp = first < second ? -1 : first > second ? 1 : 0;
 
       return sortDescriptor.direction === "descending" ? -cmp : cmp;
@@ -136,21 +137,23 @@ export default function BranchesTable({users} : {users: User[] }) {
         {column => (
           <TableColumn 
             key={column.key}
-            {...(column.key === 'name' ? {allowsSorting: true} : {})}
+            {...(column.key === 'sunday' ? {allowsSorting: true} : {})}
             >
               {column.label}
             </TableColumn>
           )}
       </TableHeader>
-      <TableBody items={sortedItems} emptyContent='No rows to display.'>
-        {user => (
-          <TableRow key={user.id}>
-            {(columnKey) => <TableCell>{renderCell(user, columnKey)}</TableCell>}
-          </TableRow>
+      <TableBody items={sortedItems} emptyContent="No rows to display.">
+        {OpeningHrs => (
+            <TableRow key={OpeningHrs.sunday}>
+            {(columnKey) => <TableCell>{renderCell(OpeningHrs, columnKey)}</TableCell>}
+            </TableRow>
         )}
-      </TableBody>
+    </TableBody>
+
     </Table>
   );
 
 }
+
 

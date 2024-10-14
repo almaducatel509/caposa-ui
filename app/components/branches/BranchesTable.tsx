@@ -15,13 +15,13 @@ import {
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { User, columns, renderCell } from "@/app/dashboard/branches/columns";
+import { Branch, columns, renderCell } from "@/app/dashboard/branches/columns";
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 
 
-export default function BranchesTable({users} : {users: User[] }) {
+export default function BranchesTable({users} : {users: Branch[] }) {
   const [filterValue, setFilterValue] = useState('');
   const hasSearchFilter = Boolean(filterValue);
   
@@ -54,9 +54,9 @@ export default function BranchesTable({users} : {users: User[] }) {
   })
   
   const sortedItems = useMemo(() => {
-    return [...items].sort((a: User, b: User) => {
-      const first = a[sortDescriptor.column as keyof User] as String;
-      const second = b[sortDescriptor.column as keyof User] as String;
+    return [...items].sort((a: Branch, b: Branch) => {
+      const first = a[sortDescriptor.column as keyof Branch] as String;
+      const second = b[sortDescriptor.column as keyof Branch] as String;
       const cmp = first < second ? -1 : first > second ? 1 : 0;
 
       return sortDescriptor.direction === "descending" ? -cmp : cmp;

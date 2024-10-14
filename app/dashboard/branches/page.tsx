@@ -1,10 +1,10 @@
 // import Pagination from '@/app/ui/invoices/pagination';
 import Search from '@/app/components/search';
 import MemberTable from '@/app/components/branches/BranchesTable';
-import {User} from './columns';
+import {Branch} from './columns';
 import BranchesTable from '@/app/components/branches/BranchesTable';
 
-async function getUsers(): Promise<User[]> {
+async function getUsers(): Promise<Branch[]> {
   const res = await fetch(
   'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
 )

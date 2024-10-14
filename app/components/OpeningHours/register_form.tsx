@@ -6,7 +6,7 @@ import { create } from '@/app/lib/create';
 import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
-
+// import createOpeningHour from '@/actions';
 type FormData = {
   [key: string]: OpeningHours;
 };
@@ -82,8 +82,7 @@ const RegisterForm: React.FC = () => {
             ...data,
         },
     }));
-};
-
+}
 
   return (
     <div>
