@@ -1,9 +1,9 @@
 // import Pagination from '@/app/ui/invoices/pagination';
 import Search from '@/app/components/search';
-import {User} from './columns';
+import {Holyday} from './columns';
 import HolydayTable from '@/app/components/hollydays/holydayTable';
 
-async function getUsers(): Promise<User[]> {
+async function getHolidays(): Promise<Holyday[]> {
   const res = await fetch(
   'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
 )
@@ -11,8 +11,8 @@ async function getUsers(): Promise<User[]> {
   return data
 }
 
-export default async function Users(){
- const users = await getUsers()
+export default async function Holydays(){
+ const hollydays = await getHolidays()
     return (
       <div className="w-full bg-white">
         <div className="flex w-full items-center justify-between">
@@ -21,7 +21,7 @@ export default async function Users(){
         <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
          {/* card */} 
         </div>
-        <HolydayTable users={users} />
+        <HolydayTable holydays={hollydays} />
       </div>
     )
   }

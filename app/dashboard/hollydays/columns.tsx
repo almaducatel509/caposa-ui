@@ -8,23 +8,21 @@ import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
 
-export type User = {
-    id: string;
-    name: string;
-    email: string;
-    image: string;
+export type Holyday = {
+    holyday_date: string;
+    holyday_description: string;
   }
   
   
 export const columns = [
     {
-      key: "name",
-      label: "NAME",
+      key: "holyday_date",
+      label: "Date",
     },
     
     {
-      key: "lastSeen",
-      label: "Last Seen",
+      key: "holyday_description",
+      label: "Description",
     }, 
     {
       key: "actions",
@@ -32,27 +30,28 @@ export const columns = [
     },
   ];
 
-  
-
 const statusColorMap = {
 active: "success",
 paused: "danger",
 vacation: "warning",
 };
 
-export const renderCell = (user:User, columnKey: React.Key) => {
-  const cellValue = user[columnKey as keyof User];
+export const renderCell = (holyday:Holyday, columnKey: React.Key) => {
+  const cellValue = holyday[columnKey as keyof Holyday];
 
   switch (columnKey) {
-    case "name":
+    case "holyday_date":
       return (
-        <User
-          avatarProps={{radius: "lg", src: user.image}}
-          description={user.email}
-          name={cellValue}
-        >
-          {user.email}
-        </User>
+        <div>
+          <strong>{holyday.holyday_date}</strong> {/* Affichage en gras de la date */}
+        </div>
+      );
+
+    case "holyday_description":
+      return (
+        <div>
+          <p>{holyday.holyday_description}</p> {/* Affichage simple de la description */}
+        </div>
       );
     
     case "actions":

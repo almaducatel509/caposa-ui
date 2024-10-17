@@ -8,24 +8,29 @@ import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
 
-export type User = {
-    id: string;
-    name: string;
-    email: string;
-    image: string;
+export type Post = {
+    post_id: string;
+    post_name: string;
+    post_description: string;
+    responsibilities: string;
   }
   
   
 export const columns = [
     {
-      key: "name",
+      key: "post_name",
       label: "NAME",
     },
     
     {
-      key: "lastSeen",
-      label: "Last Seen",
+      key: "responsibilities",
+      label: "Responsibilities",
+    },
+    {
+      key: "post_description",
+      label: "Description",
     }, 
+    
     {
       key: "actions",
       label: "Actions",
@@ -40,19 +45,29 @@ paused: "danger",
 vacation: "warning",
 };
 
-export const renderCell = (user:User, columnKey: React.Key) => {
-  const cellValue = user[columnKey as keyof User];
+export const renderCell = (post:Post, columnKey: React.Key) => {
+  const cellValue = post[columnKey as keyof Post];
 
   switch (columnKey) {
-    case "name":
+    case "post_name":
       return (
-        <User
-          avatarProps={{radius: "lg", src: user.image}}
-          description={user.email}
-          name={cellValue}
-        >
-          {user.email}
-        </User>
+        <div>
+          <strong>{post.post_name}</strong> 
+        </div>
+      );
+
+    case "responsibilities":
+      return (
+        <div>
+          <p>{post.responsibilities}</p> 
+        </div>
+      );
+
+    case "post_description":
+      return (
+        <div>
+          <p>{post.post_description}</p>
+        </div>
       );
     
     case "actions":

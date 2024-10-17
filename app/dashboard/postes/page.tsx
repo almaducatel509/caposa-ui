@@ -1,9 +1,9 @@
 // import Pagination from '@/app/ui/invoices/pagination';
 import Search from '@/app/components/search';
-import {User} from './columns';
+import {Post} from './columns';
 import PostTable from '@/app/components/postes/PostTable';
 
-async function getUsers(): Promise<User[]> {
+async function getUsers(): Promise<Post[]> {
   const res = await fetch(
   'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
 )
@@ -11,8 +11,8 @@ async function getUsers(): Promise<User[]> {
   return data
 }
 
-export default async function Users(){
- const users = await getUsers()
+export default async function Postes(){
+ const postes = await getUsers()
     return (
       <div className="w-full bg-white">
         <div className="flex w-full items-center justify-between">
@@ -21,7 +21,7 @@ export default async function Users(){
         <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
          {/* card */} 
         </div>
-        <PostTable users={users} />
+        <PostTable postes={postes} />
 
       </div>
     )

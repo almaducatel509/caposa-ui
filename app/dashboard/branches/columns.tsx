@@ -10,35 +10,39 @@ import { FaRegEye } from "react-icons/fa6";
 
 
 export type Branch = {
-  id: string; // Identifiant de la branche
-  name: string; // Nom de la branche
-  email: string; // Email de la branche ou du gestionnaire
-  avatar: string; // Image/avatar (par exemple, du gestionnaire)
-  branch_code: string; // Code de la branche
-  phone_number: string; // Numéro de téléphone
+  branch_id: string;  
+  branch_name: string; 
+  branch_email: string; 
+  branch_code: string; 
+  branch_phone_number: string,
+  branch_manager_id:string
 };
   
   
 export const columns = [
   {
-    key: "name",
-    label: "NAME", // Avatar, nom complet et email
+    key: "branch_name",
+    label: "NAME", 
   },
   {
     key: "branch_code",
-    label: "Branch Code", // Code de la branche
+    label: "Branch Code", 
   },
   {
-    key: "phone_number",
-    label: "Phone Number", // Numéro de téléphone de la branche
+    key: "branch_phone_number",
+    label: "Phone Number", 
+  },
+  {
+    key: "branch_manager_id",
+    label: "Manager", 
   },
   {
     key: "actions",
-    label: "Actions", // Les boutons (Détail, Éditer, Supprimer)
+    label: "Actions", 
+
   },
 ];
 
-  
 
 const statusColorMap = {
 active: "success",
@@ -52,15 +56,19 @@ export const renderCell = (branch: Branch, columnKey: React.Key) => {
   switch (columnKey) {
     case "name":
       return (
-        <User
-          avatarProps={{ radius: "lg", src: branch.avatar }}
-          description={branch.email}
-          name={branch.name}
-        >
-          {branch.email}
-        </User>
+        <div className="flex items-center">
+         <div>
+            <p className="font-semibold">{branch.branch_name}</p> 
+            <p className="text-sm text-gray-500">{branch.branch_email}</p> 
+          </div>
+        </div>
       );
 
+    case "branch_code":
+      return <p>{branch.branch_code}</p>; 
+
+    case "phone_number":
+      return <p>{branch.branch_phone_number}</p>; 
     case "actions":
       return (
         <div className="relative flex items-center gap-2">
