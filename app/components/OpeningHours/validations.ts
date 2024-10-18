@@ -1,16 +1,23 @@
 import { z } from "zod";
 
-// Définition du schéma de validation pour les horaires d'ouverture
+// Définition du schéma de validation pour les horaires d'ouverture et de fermeture
 export const openingHoursSchema = z.object({
-    sunday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    monday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    tuesday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    wednesday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    thursday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    friday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    saturday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
-    
-  });
+    monday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    monday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    tuesday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    tuesday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    wednesday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    wednesday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    thursday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    thursday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    friday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    friday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    saturday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    saturday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    sunday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    sunday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+});
+
 // Définition du type des horaires d'ouverture basé sur le schéma Zod
 export type OpeningHours = z.infer<typeof openingHoursSchema>;
 

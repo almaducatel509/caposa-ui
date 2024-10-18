@@ -7,7 +7,6 @@ import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
 import { z, ZodError } from 'zod';
 
-
 const steps = [Step1, Step2, Step3];
 
 const RegisterForm = () => {
