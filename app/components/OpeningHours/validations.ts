@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Définition du schéma de validation pour les horaires d'ouverture et de fermeture
 export const openingHoursSchema = z.object({
     monday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
     monday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
@@ -18,10 +17,8 @@ export const openingHoursSchema = z.object({
     sunday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
 });
 
-// Définition du type des horaires d'ouverture basé sur le schéma Zod
 export type OpeningHours = z.infer<typeof openingHoursSchema>;
 
-// Définition des messages d'erreur possibles pour chaque jour
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 export const formSchema = z.object({ 

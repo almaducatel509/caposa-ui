@@ -1,23 +1,19 @@
-// _steppers/step-2.tsx
 import React from 'react';
-import { Holiday } from '../validations';
 
 interface Step2Props {
-  formData: Holiday[];
-  setFormData: (data: Partial<Holiday>[]) => void;
-  errors: Partial<Record<number, string>>;
+  formData: { holyday_date: string; holyday_description: string };
+  setFormData: (data: Partial<{ holyday_date: string; holyday_description: string }>) => void;
+  errors: Partial<Record<string, string>>;
 }
 
-const Step2: React.FC<Step2Props> = ({ formData }) => {
+const Step2: React.FC<Step2Props> = ({ formData, errors }) => {
   return (
     <div>
-      <h2 className="text-base font-semibold leading-7 text-gray-900">Vérification des informations</h2>
-      {formData.map((holiday, index) => (
-        <div key={index} className="space-y-2">
-          <p><strong>Date:</strong> {holiday.holyday_date.toString().split('T')[0]}</p>
-          <p><strong>Description:</strong> {holiday.holyday_description}</p>
-        </div>
-      ))}
+      <h2>Étape 2</h2>
+      <p><strong>Date:</strong> {formData.holyday_date}</p>
+      <p><strong>Description:</strong> {formData.holyday_description}</p>
+      {errors.holyday_date && <p className="text-red-500">{errors.holyday_date}</p>}
+      {errors.holyday_description && <p className="text-red-500">{errors.holyday_description}</p>}
     </div>
   );
 };

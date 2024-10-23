@@ -13,17 +13,21 @@ const RegisterForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   
   const [formData, setFormData] = useState<FormData | any>({
-  step1: { date: '', description: '' },
-  step2: { date: '', description: '' },
-  step3: { date: '', description: '' },
+  step1: { holyday_date: '', holyday_description: '' },
+  step2: { holyday_date: '', holyday_description: '' },
+  step3: { holyday_date: '', holyday_description: '' },
 });
 const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
-
+  
+// Validation des étapes
 const validateStep = (step: number): boolean => {
+  console.log(`Validation de l'étape ${step + 1} avec les données :`, formData[`step${step + 1}`]);
+
   let result: z.SafeParseReturnType<any, any>;
   switch (step) {
       case 0:
           result = holidaySchema.safeParse(formData.step1);
+          console.log('the result:',result);
           break;
       case 1:
           result = holidaySchema.safeParse(formData.step2);
@@ -46,14 +50,15 @@ const validateStep = (step: number): boolean => {
               newErrors[key] = error.message;
           }
       });
-      // console.log(newErrors)
+       console.log(newErrors)
       setErrors(newErrors);
       return false;
   }
 };
 
+  // Navigation entre les étapes
 const handleNext = () => {
-  // console.log(formData)
+  console.log(formData)
   if (validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1);
   }
@@ -73,6 +78,7 @@ const handleSubmit = () => {
 
 const CurrentStepComponent = steps[currentStep];
 
+  // Mise à jour des données du formulaire
 const updateFormData = (data: Partial<any>) => {
   setFormData((prev: any) => ({
       ...prev,
