@@ -91,7 +91,13 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     {errors.date_of_birthday && <div className='text-destructive text-red-600'>{errors.date_of_birthday}</div>}
                 </div>
                 <div className="space-y-2">
-                    <Input type={'text'} name='id_number' value={formData.id_number} label={'Numero identité'} onChange={handleChange} isRequired />
+                    <Input type={'text'} 
+                        name='id_number' 
+                        value={formData.id_number} 
+                        label={'Numero identité'} 
+                        onChange={handleChange} 
+                        isRequired 
+                    />
                     {errors.id_number && <div className='text-destructive text-red-600'>{errors.id_number}</div>}
                 </div>
                 <div className="space-y-2">
@@ -133,16 +139,6 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                 </div>
             </div>
 
-
-            {/* <div>
-                <label>Last Name</label>
-                <input
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                />
-                {errors.lastName && <p>{errors.lastName}</p>}
-            </div> */}
         </div>
     );
 };

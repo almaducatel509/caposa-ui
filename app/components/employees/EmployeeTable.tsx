@@ -15,7 +15,7 @@ import {
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { User, columns, renderCell } from "@/app/dashboard/employees/columns";
+import {  columns, renderCell } from "@/app/dashboard/employees/columns";
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";

@@ -4,10 +4,9 @@ import { Holiday, holidaySchema, ErrorMessages } from './validations';
 import { create } from '@/app/lib/create';
 import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
-import Step3 from './_steppers/step-3';
 import { z, ZodError } from 'zod';
 
-const steps = [Step1, Step2, Step3];
+const steps = [Step1, Step2];
 
 const RegisterForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -25,15 +24,11 @@ const validateStep = (step: number): boolean => {
 
   let result: z.SafeParseReturnType<any, any>;
   switch (step) {
-      case 0:
+      case 0: 
           result = holidaySchema.safeParse(formData.step1);
-          console.log('the result:',result);
           break;
-      case 1:
+      case 1: 
           result = holidaySchema.safeParse(formData.step2);
-          break;
-      case 2:
-          result = holidaySchema.safeParse(formData.step3);
           break;
       default:
           return false;
@@ -41,6 +36,7 @@ const validateStep = (step: number): boolean => {
 
   if (result.success) {
       setErrors({});
+      console.log(`Validation réussie pour l'étape ${step + 1}`);
       return true;
   } else {
       const newErrors: ErrorMessages<any> = {};
@@ -50,7 +46,7 @@ const validateStep = (step: number): boolean => {
               newErrors[key] = error.message;
           }
       });
-       console.log(newErrors)
+      console.log(`Erreurs de validation pour l'étape ${step + 1} :`, newErrors);
       setErrors(newErrors);
       return false;
   }
@@ -69,12 +65,16 @@ const handlePrevious = () => {
   setCurrentStep((prev) => prev - 1);
 };
 
-const handleSubmit = () => {
-  if (validateStep(currentStep)) {
-      create({ ...formData?.step1, ...formData?.step2, ...formData?.step3 });
-      console.log(formData);
-  }
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault(); // Empêche le rechargement de la page par défaut
+
+  // Ici, tu peux ajouter la logique pour soumettre les données
+  console.log('Soumission du formulaire', formData);
+
+  // Par exemple, si tu as une API, c'est ici que tu l'appellerais :
+  // submitFormData(formData).then(...);
 };
+
 
 const CurrentStepComponent = steps[currentStep];
 
@@ -99,15 +99,11 @@ const updateFormData = (data: Partial<any>) => {
           <hr className={`border-t-4 ${currentStep > 0 && 'border-green-600'}`} />
           <p className={`text-sm capitalize ${currentStep > 0 ? 'text-green-600' : 'text-gray-600'}`}>étape 2</p>
         </div>
-        <div className="w-1/3 space-y-2">
-          <hr className={`border-t-4 ${currentStep === 2 && 'border-green-600'}`} />
-          <p className={`text-sm capitalize ${currentStep === 2 ? 'text-green-600' : 'text-gray-600'}`}>étape 3</p>
-        </div>
       </div>
       <CurrentStepComponent
           formData={formData[`step${currentStep + 1}`]}
           setFormData={updateFormData}
-        errors={errors}
+          errors={errors}
       />
       <hr className="border-t-2 border-gray-300 mt-4" />
       <div className="flex justify-between mt-8">
@@ -116,7 +112,7 @@ const updateFormData = (data: Partial<any>) => {
             className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
             onClick={handlePrevious}
           >
-            Précédent
+            Soumettre
           </button>
         )}
         {currentStep < steps.length - 1 ? (
@@ -131,7 +127,7 @@ const updateFormData = (data: Partial<any>) => {
             className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
             onClick={handleSubmit}
           >
-            Soumettre
+            Precedent
           </button>
         )}
       </div>

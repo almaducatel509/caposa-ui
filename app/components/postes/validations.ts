@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
-// Define the schema for the Post interface
+// Define the schema based on the API structure
 export const postSchema = z.object({
-  post_id: z.string().min(0,"Post ID is required"),
-  post_name: z.string().min(6,"Post name is required"),
-  post_description: z.string().min(6,"Post description is required"),
-  responsibilities: z.string(z.string()).min(10,"Responsibilities are required"),
-  is_active: z.boolean(),
+  name: z.string().min(1, "Name is required"), // Adjust as per your needs
+  description: z.string().min(1, "Description is required"), // Adjust as per your needs
+  responsibilities: z.array(z.string()).min(1, "At least one responsibility is required"),
+  deposit: z.boolean(),
+  withdrawal: z.boolean(),
+  transfer: z.boolean(),
 });
+
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // Define the type for the Post interface
