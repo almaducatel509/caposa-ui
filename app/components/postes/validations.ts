@@ -2,9 +2,8 @@ import { z } from 'zod';
 
 // Define the schema based on the API structure
 export const postSchema = z.object({
-  name: z.string().min(1, "Name is required"), // Adjust as per your needs
-  description: z.string().min(1, "Description is required"), // Adjust as per your needs
-  responsibilities: z.array(z.string()).min(1, "At least one responsibility is required"),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().min(1, "Description is required"),
   deposit: z.boolean(),
   withdrawal: z.boolean(),
   transfer: z.boolean(),
