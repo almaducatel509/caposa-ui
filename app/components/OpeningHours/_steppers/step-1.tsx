@@ -12,60 +12,63 @@ interface Step1Props {
 }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
-  const initializeTimeValue = (timeString: string | undefined) => {
+  const initializeTimeValue = (timeString: string | undefined, isOpen: boolean) => {
     if (timeString) {
-      // Assume timeString is in "HH:mm" format and construct a ZonedDateTime
-      return parseZonedDateTime(`2024-04-08T${timeString}:00[UTC]`);
+      const timePart = isOpen ? timeString.split('-')[0] : timeString.split('-')[1];
+      return parseZonedDateTime(`2024-04-08T${timePart}:00[UTC]`);
     } else {
-      // Default value if no timeString is provided
       return parseZonedDateTime("2024-04-08T08:00:00[UTC]");
     }
   };
-
-  const handleTimeChange = (day: keyof OpeningHours, timeType: "open" | "close", value: TimeValue) => {
+  
+  const handleTimeChange = (day: keyof OpeningHours, value: TimeValue, isOpen: boolean) => {
     if (value instanceof ZonedDateTime) {
       const formattedTime = `${value.hour.toString().padStart(2, '0')}:${value.minute.toString().padStart(2, '0')}`;
-      const key = `${day}_${timeType}` as keyof OpeningHours;
+      const key = day as keyof OpeningHours;
 
-      console.log(`Modification de ${key} : Nouvelle valeur = ${formattedTime}`);
+     const currentTimes = formData[key] || "08:00-17:00"; // valeur par défaut
+    const [currentOpen, currentClose] = currentTimes.split('-');
+    const newTime = isOpen ? `${formattedTime}-${currentClose}` : `${currentOpen}-${formattedTime}`;
 
-      setFormData({ [key]: formattedTime });
+      console.log(`Modification de ${key} : Nouvelle valeur = ${newTime}`);
+      setFormData({ [key]: newTime });
+      console.log("Données prêtes pour l'API:", formData);
+      console.log("Données envoyer dans Step2:", formData);
+
     }
   };
 
   return (
     <div>
-      {["monday", "tuesday", "wednesday", "thursday", "friday"].map((day) => {
-        const openKey = `${day}_open` as keyof OpeningHours;
-        const closeKey = `${day}_close` as keyof OpeningHours;
-
-        return (
-          <div key={day} className="mb-4">
-            <label className="block font-semibold mb-2">{day.charAt(0).toUpperCase() + day.slice(1)}: </label>
-            
-            <TimeInput
-              label="Open Time"
-              hideTimeZone
-              value={initializeTimeValue(formData[openKey])}
-              onChange={(value) => handleTimeChange(day as keyof OpeningHours, "open", value)}
-            />
-            {errors[openKey] && (
-              <span className="text-red-500">{errors[openKey]}</span>
-            )}
-
-            <TimeInput
-              label="Close Time"
-              hideTimeZone
-              value={initializeTimeValue(formData[closeKey])}
-              onChange={(value) => handleTimeChange(day as keyof OpeningHours, "close", value)}
-            />
-            {errors[closeKey] && (
-              <span className="text-red-500">{errors[closeKey]}</span>
-            )}
+      {(["monday", "tuesday", "wednesday", "thursday", "friday"] as Array<keyof OpeningHours>).map((day) => (
+        <div key={day} className="mb-4">
+          <label className="block font-semibold mb-2">{day.charAt(0).toUpperCase() + day.slice(1)}: </label>
+          <div className="flex space-x-4">
+            <div className="w-1/2">
+              <TimeInput
+                label="Open Time"
+                hideTimeZone
+                value={initializeTimeValue(formData[day], true)}
+                onChange={(value) => handleTimeChange(day, value, true)}
+                className="w-64"
+              />
+              {errors[day] && <span className="text-red-500">{errors[day]}</span>}
+            </div>
+            <div className="w-1/2">
+              <TimeInput
+                label="Close Time"
+                hideTimeZone
+                value={initializeTimeValue(formData[day], false)}
+                onChange={(value) => handleTimeChange(day, value, false)}
+                className="w-64"
+              />
+              {errors[day] && <span className="text-red-500">{errors[day]}</span>}
+            </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
+
   );
 };
 

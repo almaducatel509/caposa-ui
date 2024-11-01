@@ -1,16 +1,11 @@
 import { z } from "zod";
 
 export const openingHoursSchema = z.object({
-    monday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    monday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    tuesday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    tuesday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    wednesday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    wednesday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    thursday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    thursday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    friday_open: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
-    friday_close: z.string().regex(/^\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm"),
+    monday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
+    tuesday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
+    wednesday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
+    thursday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
+    friday: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Format invalide, utilisez HH:mm-HH:mm"),
   });
 
 export type OpeningHours = z.infer<typeof openingHoursSchema>;
