@@ -1,32 +1,32 @@
 import React from 'react';
-import { parseDate, getLocalTimeZone } from "@internationalized/date";
-import {  DatePicker, Input, Textarea} from '@nextui-org/react';
+import { parseDate, getLocalTimeZone, DateValue } from "@internationalized/date";
+import { DateInput, Textarea } from '@nextui-org/react';
 import TitleDetails from '../title-details';
 import { Holiday, ErrorMessages } from '../validations';
+
 
 interface Step1Props {
   formData: Holiday;
   setFormData: (data: Partial<Holiday>) => void;
-
   errors: ErrorMessages<Holiday>;
 }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ [name]: value });
+    
+    if (name === "holyday_date" || name === "holyday_description") {
+      setFormData({ [name]: value } as Partial<Holiday>); // Met à jour uniquement le champ ciblé
+    }
   };
   
-  const handleChangeDate = (value: any) => {
-    setFormData({
-      ...formData,
-      holyday_date: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}`,
-    });
-  };
 
-  
-  let d: any = new Date().toLocaleDateString("fr-FR").split("/");
-  d = `${d[2]}-${d[1]}-${d[0]}`;
+
+  const handleChangeDate = (date: DateValue) => {
+    const formattedDate = date.toString(); // Formate la date en chaîne AAAA-MM-JJ
+    setFormData({ holyday_date: formattedDate }); // Met à jour uniquement la date
+    console.log('Updated date:', formattedDate);
+  };
 
   return (
     <div>
@@ -34,12 +34,14 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         <div className="space-y-2">
           <label htmlFor="holyday_date" className="block text-sm font-medium text-gray-700">Date</label>
-          <DatePicker 
-            name='holyday_date'
-            className="max-w-[284px]" 
-            value={parseDate(formData.holyday_date || d)} 
-            label="Date" 
-            onChange={handleChangeDate}
+          <DateInput 
+            label="Date historique" 
+            description="Veuillez entrer la date au format AAAA-MM-JJ"
+            isInvalid={false} // Par défaut, non invalide
+            errorMessage={errors.holyday_date}
+            className="max-w-xs"
+            value={parseDate(formData.holyday_date || "1804-01-01")}
+            onChange={handleChangeDate} 
           />
           
           {errors.holyday_date && <div className='text-destructive text-red-600'>{errors.holyday_date}</div>}
@@ -47,7 +49,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
         
         <div className="space-y-2">
           <label htmlFor="holyday_description" className="block text-sm font-medium text-gray-700"> Description</label>
-          <textarea
+          <Textarea
             name="holyday_description"
             value={formData.holyday_description}
             onChange={handleChange}

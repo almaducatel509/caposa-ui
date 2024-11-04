@@ -1,20 +1,28 @@
-// _steppers/step-3.tsx
 import React from 'react';
 import { Holiday } from '../validations';
 
-interface Step3Props {
-  formData: Holiday[];
-  setFormData: (data: Partial<Holiday>[]) => void;
-  errors: Partial<Record<number, string>>;
+interface Step2Props {
+  formData: Holiday;
 }
 
-const Step3: React.FC<Step3Props> = () => {
+const Step2: React.FC<Step2Props> = ({ formData }) => {
   return (
     <div>
-      <h2 className='text-base font-semibold leading-7 text-gray-900'>Finalisation</h2>
-      <p className='mt-1 text-sm leading-6 text-gray-600'>Thank you for your submission.</p>
+      <h2 className="text-lg font-bold mb-4">Résumé des informations</h2>
+      <div className="space-y-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Date de congé :</label>
+          <p className="mt-1 text-gray-800">{formData.holyday_date || "Non défini"}</p>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Description :</label>
+          <p className="mt-1 text-gray-800">{formData.holyday_description || "Non défini"}</p>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default Step3;
+export default Step2;
+

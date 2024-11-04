@@ -1,5 +1,5 @@
 import { z } from "zod";
-const fileSchema = z.instanceof(File, { message: "Required" });
+const fileSchema = z.instanceof(File, { message: "Une photo est requise" });
 const imageSchema = fileSchema.refine(
   (file) => file.size === 0 || file.type.startsWith("image/")
 );
@@ -14,7 +14,7 @@ export const step1Schema = z.object({
   address: z.string().min(4,"Adresse est requise"),
   city: z.string().min(2, "Ville est requise"),
   department: z.string().min(4, "Département est requis"),
-  photo_url: imageSchema.refine((file ) => file.size > 0, "Une photo est requise"),
+  photo_url: imageSchema.refine((file ) => file.size > 0),
 });
 
 export const step2Schema = z.object({
