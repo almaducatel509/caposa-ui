@@ -50,9 +50,8 @@ const RegisterForm = () => {
             name: 'Complete'
         },
     });
-    
-    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
+    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
     const validateStep = (step: number): boolean => {
         let result: z.SafeParseReturnType<any, any>;
         switch (step) {
