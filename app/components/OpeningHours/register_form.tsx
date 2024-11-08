@@ -68,7 +68,7 @@ const RegisterForm: React.FC = () => {
   return (
     <div>
       <CurrentStepComponent
-        formData={formData} // Passe directement formData ici
+        formData={formData} 
         setFormData={updateFormData}
         errors={errors}
       />

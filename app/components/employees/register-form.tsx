@@ -106,6 +106,7 @@ const RegisterForm: React.FC = () => {
     };
 
     const CurrentStepComponent = steps[currentStep];
+    
     const stepFormData = formData[currentStep === 0 ? 'step1' : currentStep === 1 ? 'step2' : 'step3'];
 
     const updateFormData = (data: Partial<any>) => {
@@ -138,11 +139,11 @@ const RegisterForm: React.FC = () => {
                     <p className="text-gray-700">Finalize</p>
                 </div>
             </div>
-            {/* <CurrentStepComponent
+            <CurrentStepComponent
                 formData={formData[currentStepKey]}
                 setFormData={updateFormData}
                 errors={errors}
-            /> */}
+            />
 
             <hr className="border-t-2 border-gray-300 mt-4" />
             <div className="flex justify-between mt-8">

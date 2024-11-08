@@ -13,6 +13,7 @@ const UploadImage: React.FC<Props> = ({ fallback, name, data, description }) => 
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
+        console.log("Selected file is:", file); // Log the selected file
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {

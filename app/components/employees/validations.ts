@@ -1,16 +1,10 @@
 import { z } from "zod";
 import { postSchema } from "../postes/validations";
-import { step1Schema } from "../branches/validations";
 
-// Schéma pour valider un fichier d'image
 export const userSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  role: z.string(),
-  team: z.string(),
-  status: z.string(),
-  age: z.string(), // Consider using z.number() if age should be numeric
-  avatar: z.string(),
+  username: z.string(),
+  password: z.string(),
+  confirm_password: z.string(),
   email: z.string().email("Invalid email address"),
 });
 const fileSchema = z.instanceof(File, { message: "Required" }).nullable();
@@ -20,23 +14,18 @@ const imageSchema = fileSchema.refine(
 );
 
 export const Step1Data = z.object({
+  user: userSchema,
   first_name: z.string().min(1, "Prénom est requis"),
   last_name: z.string().min(1, "Nom est requis"),
   gender: z.string().min(1, "Sélection du sexe est requise"),
-  date_of_birthday: z.string().min(1, "Date de naissance est requise"),
-  id_number: z.string().min(1, "Numéro d'identité est requis"),
+  date_of_birth: z.date(),
   phone_number: z.string().min(6, "Téléphone est requis"),
-  email: z.string().email("Email invalide"),
   address: z.string().min(4, "Adresse est requise"),
+  payment_ref: z.string().optional(),
   city: z.string().min(2, "Ville est requise"),
   department: z.string().min(4, "Département est requis"),
-  photo_url: imageSchema.refine(
-    (file) => file !== null && file.size > 0,
-    "Une photo est requise"
-  ),
-  user: userSchema, // Défini dans un fichier séparé
-  branch: step1Schema, // Défini dans un fichier séparé
-  posts: (postSchema), // Défini dans un fichier séparé
+  photo_url: imageSchema, // Use imageSchema here
+  posts: z.array(postSchema) // Include full post objects in posts
 });
 
 // Validation schema for step 2
@@ -61,5 +50,16 @@ export type EmployeeFormData = {
   step3: Step3Data;
 };
 
-// Error messages type
-export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
+// Define specific error messages structure for user
+type UserErrors = {
+  
+  username: string;
+  password: string;
+  confirm_password: string;
+  email: string;
+};
+
+// Recursive ErrorMessages type that checks for nested structures
+export type ErrorMessages<T> = {
+  [K in keyof T]?: T[K] extends object ? (K extends 'user' ? UserErrors : ErrorMessages<T[K]>) : string;
+};

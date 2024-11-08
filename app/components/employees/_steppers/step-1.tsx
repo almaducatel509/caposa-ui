@@ -1,38 +1,52 @@
-import React from 'react';
+import React,  { useState } from 'react';
 import { Step1Data, ErrorMessages } from '../validations';
 import TitleDetails from './title-details';
 import { Input, RadioGroup, Radio, DatePicker } from '@nextui-org/react';
 import UploadImage from '@/app/components/core/upload-file';
 import { parseDate } from "@internationalized/date";
 
+// Define props to receive formData, setFormData, and errors
 interface Step1Props {
     formData: Step1Data;
     setFormData: (data: Partial<Step1Data>) => void;
     errors: ErrorMessages<Step1Data>;
-}
+  }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
-    // Format the date for initial value
+
     let d: any = new Date().toLocaleDateString("fr-FR").split("/");
     d = `${d[2]}-${d[1]}-${d[0]}`;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        setFormData({
+          ...formData,
+          user: {
+            ...formData.user,
+            [name]: value,
+          },
+        });
+      };
+
+      const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData({ [name]: value });
     };
+
 
     const handleRadio = (value: string) => {
         setFormData({ ...formData, gender: value });
     };
 
     const handleChangeDate = (value: any) => {
-        setFormData({ ...formData, date_of_birthday: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}` });
+        setFormData({ ...formData, date_of_birth: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}` });
     };
 
     return (
-        <div>
+        <div className="capitalize">
             <TitleDetails text1={'Remplir les champs nécessaires'} text2={'Fournir vos informations personnelles'} />
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+               
                 <div className="space-y-2">
                     <Input 
                         type={'text'} 
@@ -56,6 +70,29 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     {errors.last_name && <div className='text-destructive text-red-600'>{errors.last_name}</div>}
                 </div>
                 <div className="space-y-2">
+                    <Input
+                    type="text"
+                    name="name"
+                    value={formData.user.username}
+                    label="User Name"
+                    onChange={handleUserChange}
+                    isRequired
+                    />
+                    {errors.user?.username && <div className="text-red-600">{errors.user.username}</div>}
+                </div>
+                
+                <div className="space-y-2">
+                    <Input
+                    type="email"
+                    name="email"
+                    value={formData.user.email}
+                    label="Email"
+                    onChange={handleUserChange}
+                    isRequired
+                    />
+                    {errors.user?.email && <div className="text-red-600">{errors.user.email}</div>}
+                </div>
+                <div className="space-y-2">
                     <RadioGroup
                         label="Choisir le sexe"
                         isRequired
@@ -73,10 +110,10 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     <DatePicker
                         label="Date de naissance"
                         isRequired
-                        value={parseDate(formData.date_of_birthday || d)}
+                        value={parseDate(formData.date_of_birth || d)}
                         onChange={handleChangeDate}
                     />
-                    {errors.date_of_birthday && <div className='text-destructive text-red-600'>{errors.date_of_birthday}</div>}
+                    {errors.date_of_birth && <div className='text-destructive text-red-600'>{errors.date_of_birth}</div>}
                 </div>
                 <div className="space-y-2">
                     <Input 
@@ -100,6 +137,25 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     />
                     {errors.address && <div className='text-destructive text-red-600'>{errors.address}</div>}
                 </div>
+                {/* <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Select Posts</label>
+                    <div className="grid grid-cols-1 gap-2">
+                    {availablePosts.map((post) => (
+                        <div key={post.name} className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            id={`post-${post.name}`}
+                            checked={formData.posts.includes(post.name)}
+                            onChange={(e) => handlePostSelection(post.name, e.target.checked)}
+                        />
+                        <label htmlFor={`post-${post.name}`} className="text-sm text-gray-700">
+                            {post.name}
+                        </label>
+                        </div>
+                    ))}
+                    </div>
+                    {errors.posts && <div className="text-red-600">{errors.posts}</div>}
+                </div> */}
                 <div className="space-y-2">
                     <UploadImage 
                         name='photo_url' 

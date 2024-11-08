@@ -40,7 +40,6 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
         console.log("Genre sélectionné :", value); // Console pour vérifier le sexe sélectionné
     };
     
-
     const handleChangeDate = (date: DateValue) => {
         const formattedDate = date.toString(); // Formate la date en YYYY-MM-DD
         setFormData({ date_of_birthday: formattedDate });

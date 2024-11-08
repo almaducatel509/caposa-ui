@@ -27,10 +27,6 @@ const links = [
     href: '/dashboard/hollydays',
     icon: HiOutlineUserGroup, 
   },
-    { name: 'Branches',
-    href: '/dashboard/branches',
-    icon: HiOutlineUserGroup, 
-  },
   
   { name: 'Employees',
     href: '/dashboard/employees',
@@ -41,7 +37,7 @@ const links = [
     icon: HiOutlineUserGroup, 
   },
   {
-    name: 'Transaction',
+    name: 'Transactions',
     href: '/dashboard/transactions',
     icon: HiOutlineDocumentDuplicate,
   },
@@ -50,8 +46,8 @@ const links = [
     href: '/dashboard/reports',
     icon: HiOutlineDocumentDuplicate,
   },
-  { name: 'Members',
-    href: '/dasboard/members',
+  { name: 'Achives',
+    href: '/dasboard/Achives',
     icon: HiOutlineUserGroup, 
   },
 

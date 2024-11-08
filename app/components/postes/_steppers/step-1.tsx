@@ -1,6 +1,7 @@
 import React from "react";
 import { Input, Textarea, Checkbox } from "@nextui-org/react";
 import { Post, ErrorMessages } from '../validations';
+import TitleDetails from "../title-details";
 
 interface Step1Props {
     formData: Post;
@@ -20,7 +21,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
 
     return (
         <div className="capitalize">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">Post Details</h2>
+            <TitleDetails text1={'Remplir les champs nécessaires'} text2={'Fournir vos informations personnelles'} />
 
             {/* Name Field */}
             <div className="space-y-2">

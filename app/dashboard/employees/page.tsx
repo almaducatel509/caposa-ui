@@ -1,8 +1,8 @@
 import Search from '@/app/components/search';
-import {User} from './columns';
+import {Employee} from './columns';
 import EmployeeTable from '@/app/components/employees/EmployeeTable';
 
-async function getUsers(): Promise<User[]> {
+async function getUsers(): Promise<Employee[]> {
   const res = await fetch(
   'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
 )
@@ -10,7 +10,7 @@ async function getUsers(): Promise<User[]> {
   return data
 }
 
-export default async function Users(){
+export default async function Employees(){
  const users = await getUsers()
     return (
       <div className="w-full bg-white">
