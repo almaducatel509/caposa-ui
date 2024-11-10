@@ -16,11 +16,11 @@ export type Employee = {
 export const columns = [
   {
     key: "name",
-    label: "NAME", // Affichage du nom, rôle et email
+    label: "NAME",
   },
   {
     key: "status",
-    label: "Status", // Affichage du statut de l'employé
+    label: "Status", 
   },
   {
     key: "actions",

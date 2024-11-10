@@ -50,9 +50,8 @@ const RegisterForm = () => {
             name: 'Complete'
         },
     });
-    
-    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
+    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
     const validateStep = (step: number): boolean => {
         let result: z.SafeParseReturnType<any, any>;
         switch (step) {
@@ -80,14 +79,14 @@ const RegisterForm = () => {
                     newErrors[key] = error.message;
                 }
             });
-            // console.log(newErrors)
+            console.log(newErrors)
             setErrors(newErrors);
             return false;
         }
     };
 
     const handleNext = () => {
-        // console.log(formData)
+        console.log(formData)
         if (validateStep(currentStep)) {
             setCurrentStep((prev) => prev + 1);
         }

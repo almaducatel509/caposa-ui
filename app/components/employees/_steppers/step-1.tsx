@@ -4,14 +4,51 @@ import TitleDetails from './title-details';
 import { Input, RadioGroup, Radio, DatePicker } from '@nextui-org/react';
 import UploadImage from '@/app/components/core/upload-file';
 import { parseDate } from "@internationalized/date";
+import { Post } from '../../postes/validations';
 
 // Define props to receive formData, setFormData, and errors
 interface Step1Props {
-    formData: Step1Data;
-    setFormData: (data: Partial<Step1Data>) => void;
-    errors: ErrorMessages<Step1Data>;
+    formData: {
+      user: {
+        username: string;
+        password: string;
+        confirm_password: string;
+        email: string;
+      };
+      first_name: string;
+      last_name: string;
+      gender: string;
+      date_of_birthday: string;
+      phone_number: string;
+      address: string;
+      payment_ref?: string;
+      city: string;
+      department: string;
+      photo_url: File;
+      posts: Post[];
+    };
+    setFormData: (data: any) => void;
+    errors: ErrorMessages<{
+      user: {
+        username: string;
+        password: string;
+        confirm_password: string;
+        email: string;
+      };
+      first_name: string;
+      last_name: string;
+      gender: string;
+      date_of_birthday: string;
+      phone_number: string;
+      address: string;
+      payment_ref?: string;
+      city: string;
+      department: string;
+      photo_url: File;
+      posts: Post[];
+    }>;
   }
-
+  
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
 
     let d: any = new Date().toLocaleDateString("fr-FR").split("/");
@@ -39,8 +76,12 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
     };
 
     const handleChangeDate = (value: any) => {
-        setFormData({ ...formData, date_of_birth: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}` });
+        setFormData({ ...formData, date_of_birthday: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}` });
     };
+
+    function handlePostSelection(name: any, checked: boolean): void {
+        throw new Error('Function not implemented.');
+    }
 
     return (
         <div className="capitalize">
@@ -110,11 +151,12 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     <DatePicker
                         label="Date de naissance"
                         isRequired
-                        value={parseDate(formData.date_of_birth || d)}
+                        value={parseDate(formData.date_of_birthday || d)}
                         onChange={handleChangeDate}
                     />
-                    {errors.date_of_birth && <div className='text-destructive text-red-600'>{errors.date_of_birth}</div>}
+                    {errors.date_of_birthday && <div className='text-destructive text-red-600'>{errors.date_of_birthday}</div>}
                 </div>
+
                 <div className="space-y-2">
                     <Input 
                         type={'text'} 
@@ -163,7 +205,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                         fallback={""} 
                         description="Photo" 
                     />
-                    {errors.photo_url && <div className='text-destructive text-red-600'>{errors.photo_url}</div>}
+                    {errors.photo_url && <div className='text-destructive text-red-600'></div>}
                 </div>
             </div>
         </div>

@@ -14,7 +14,7 @@ const Step2: React.FC<Step2Props> = ({ formData }) => {
       <div className="space-y-2">
         <p><strong>Prénom:</strong> {formData.first_name}</p>
         <p><strong>Nom:</strong> {formData.last_name}</p>
-        <p><strong>Date de naissance:</strong> {formData.date_of_birth}</p>
+        <p><strong>Date de naissance:</strong> {formData.date_of_birthday}</p>
         <p><strong>Téléphone:</strong> {formData.phone_number}</p>
         <p><strong>Adresse:</strong> {formData.address}</p>
         <p><strong>Sexe:</strong> {formData.gender}</p>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 const fileSchema = z.instanceof(File, { message: "Une photo est requise" });
 const imageSchema = fileSchema.refine(
-  (file) => file.size === 0 || file.type.startsWith("image/")
+  (file) =>file.type.startsWith("image/")
 );
 export const step1Schema = z.object({
   first_name: z.string().min(1, "Prénom est requis"),

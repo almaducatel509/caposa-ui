@@ -39,7 +39,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
         setFormData({ gender: value });
         console.log("Genre sélectionné :", value); // Console pour vérifier le sexe sélectionné
     };
-    
+
     const handleChangeDate = (date: DateValue) => {
         const formattedDate = date.toString(); // Formate la date en YYYY-MM-DD
         setFormData({ date_of_birthday: formattedDate });
@@ -63,7 +63,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     <Input type="text" name="last_name" value={formData.last_name} label="Nom" onChange={handleChange} isRequired />
                     {errors.last_name && <div className='text-destructive text-red-600'>{errors.last_name}</div>}
                 </div>
-                <div className="space-y-2">                  
+                <div className="space-y-2">
                     <RadioGroup
                         label="Choisir le sexe"
                         isRequired
@@ -73,7 +73,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                         onValueChange={handleRadio}
                         color="primary"
                         defaultValue="F"
-                  
+
                     >
                         <Radio value="M">M</Radio>
                         <Radio value="F">F</Radio>
@@ -123,22 +123,25 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     {errors.department && <div className='text-destructive text-red-600'>{errors.department}</div>}
                 </div>
                 <div className="space-y-2 md:mt-6">
-                    <Input 
-                        type="text" 
-                        name="city" 
-                        value={formData.city} 
-                        label="Ville" 
-                        onChange={handleChange} 
-                        isRequired  
+                    <Input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        label="Ville"
+                        onChange={handleChange}
+                        isRequired
                     />
                     {errors.city && <div className='text-destructive text-red-600'>{errors.city}</div>}
                 </div>
                 <div className="space-y-2">
-                    <UploadImage 
-                        name='photo_url' 
-                        data={null} 
-                        fallback={""} 
-                        description="Photo" 
+                    <UploadImage
+                        name='photo_url'
+                        data={null}
+                        fallback={""}
+                        description="Photo"
+                        formData={formData}
+                        setFormData={setFormData}
+
                     />
                     {errors.photo_url && <div className='text-destructive text-red-600'>{errors.photo_url}</div>}
                 </div>

@@ -15,27 +15,28 @@ import {
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import {  columns, Employee, renderCell } from "@/app/dashboard/employees/columns";
+import { CreateTransition,UpdateTransition } from '@/app/dashboard/transactions/bouttons';
+import { Transaction, TransactionColumns, renderTransactionCell } from "@/app/dashboard/transactions/columns";
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 
 
-export default function EmployeeTable({employees} : {employees: Employee[] }) {
+export default function TransactionTable({transitions} : {transitions: Transaction[] }) {
   const [filterValue, setFilterValue] = useState('');
   const hasSearchFilter = Boolean(filterValue);
   
   const filteredItems = useMemo(() => {
-    let filteredUsers = [...employees];
+    let filteredUsers = [...transitions];
 
     if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter(employee =>
-        employee.name.toLowerCase().includes(filterValue.toLowerCase())
+      filteredUsers = filteredUsers.filter(transition =>
+        transition.idTransaction.toLowerCase().includes(filterValue.toLowerCase())
       )
   }   
   
   return filteredUsers
-}, [employees, filterValue, hasSearchFilter])
+}, [transitions, filterValue, hasSearchFilter])
   
   const rowsPerPage = 4
   const [page, setPage] = useState(1)
@@ -49,14 +50,14 @@ export default function EmployeeTable({employees} : {employees: Employee[] }) {
   }, [page, filteredItems])
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column:'name',
+    column:'post_name',
     direction: 'ascending'
   })
   
   const sortedItems = useMemo(() => {
-    return [...items].sort((a: Employee, b: Employee) => {
-      const first = a[sortDescriptor.column as keyof Employee] as String;
-      const second = b[sortDescriptor.column as keyof Employee] as String;
+    return [...items].sort((a: Transaction, b: Transaction) => {
+      const first = a[sortDescriptor.column as keyof Transaction] as String;
+      const second = b[sortDescriptor.column as keyof Transaction] as String;
       const cmp = first < second ? -1 : first > second ? 1 : 0;
 
       return sortDescriptor.direction === "descending" ? -cmp : cmp;
@@ -109,7 +110,7 @@ export default function EmployeeTable({employees} : {employees: Employee[] }) {
 
   return (
     <Table 
-      aria-label="User table"
+      aria-label="Post table"
       topContent={topContent}
       topContentPlacement='outside'
       bottomContent={
@@ -132,20 +133,20 @@ export default function EmployeeTable({employees} : {employees: Employee[] }) {
         wrapper: "min-h-[222px]",
       }}
     >
-      <TableHeader columns={columns}>
+      <TableHeader columns={TransactionColumns}>
         {column => (
           <TableColumn 
             key={column.key}
-            {...(column.key === 'name' ? {allowsSorting: true} : {})}
+            {...(column.key === 'post_name' ? {allowsSorting: true} : {})}
             >
               {column.label}
             </TableColumn>
           )}
       </TableHeader>
       <TableBody items={sortedItems} emptyContent='No rows to display.'>
-        {user => (
-          <TableRow key={user.id}>
-            {(columnKey) => <TableCell>{renderCell(user, columnKey)}</TableCell>}
+        {post => (
+          <TableRow key={post.idTransaction}>
+            {(columnKey) => <TableCell>{renderTransactionCell(post, columnKey)}</TableCell>}
           </TableRow>
         )}
       </TableBody>
@@ -153,3 +154,8 @@ export default function EmployeeTable({employees} : {employees: Employee[] }) {
   );
 
 }
+
+
+
+
+

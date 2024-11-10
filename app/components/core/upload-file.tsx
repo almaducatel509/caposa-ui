@@ -6,13 +6,16 @@ type Props = {
     fallback?: string;
     name: string;
     description: string;
-    data: any
+    data: any;
+    formData?: any;
+    setFormData?: any;
 }
-const UploadImage: React.FC<Props> = ({ fallback, name, data, description }) => {
+const UploadImage: React.FC<Props> = ({ fallback, name, data, description, formData, setFormData }) => {
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
+        setFormData({ ...formData, [name]: file })
         console.log("Selected file is:", file); // Log the selected file
         if (file) {
             const reader = new FileReader();
