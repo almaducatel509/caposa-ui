@@ -9,8 +9,11 @@ import { Button } from '@nextui-org/react'
 import { step1Schema, step2Schema, step3Schema, FormData, ErrorMessages } from './validations'
 
 const steps = [Step1, Step2, Step3];
+
 const RegisterForm = () => {
+
     const [currentStep, setCurrentStep] = useState(0);
+
     const [formData, setFormData] = useState<FormData | any>({
         step1: {
             first_name: '',
@@ -22,22 +25,17 @@ const RegisterForm = () => {
             id_number: '',
             phone_number: '',
             city: '',
-            department: ''
-          },
-          step2: {
+            department: '',
             email: '',
             password: '',
+            confirm_password: '',
+          },
+          step2: {
             account_type: '',
             account_number: '',
             current_balance: 0,
-            loan_type: '',
-            loan_amount: 0,
-            interest_rate: 0,
-            loan_duration: '',
-            payment_frequency: '',
             security_question: '',
             security_answer: '',
-            additional_accounts: '',
             monthly_income: 0,
             monthly_expenses: 0
         },
@@ -47,8 +45,8 @@ const RegisterForm = () => {
             name: 'Complete'
         },
     });
-    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
+    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
     const validateStep = (step: number): boolean => {
         let result: z.SafeParseReturnType<any, any>;
         switch (step) {
@@ -76,14 +74,14 @@ const RegisterForm = () => {
                     newErrors[key] = error.message;
                 }
             });
-            // console.log(newErrors)
+            console.log(newErrors)
             setErrors(newErrors);
             return false;
         }
     };
 
     const handleNext = () => {
-        // console.log(formData)
+        console.log(formData)
         if (validateStep(currentStep)) {
             setCurrentStep((prev) => prev + 1);
         }
