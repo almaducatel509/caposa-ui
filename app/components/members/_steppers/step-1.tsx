@@ -16,7 +16,6 @@ type Option = {
 }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
-    const color = 'success';
     const options: Option[] = [
         { label: 'Artibonite', value: 'Artibonite' },
         { label: 'Centre', value: 'Centre' },
@@ -133,6 +132,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     />
                     {errors.city && <div className='text-destructive text-red-600'>{errors.city}</div>}
                 </div>
+                
                 <div className="space-y-2">
                     <UploadImage
                         name='photo_url'

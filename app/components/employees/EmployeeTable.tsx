@@ -9,8 +9,6 @@ import {
   TableBody, 
   TableRow, 
   TableCell, 
-  input,
-  getKeyValue,
   Pagination,
   SortDescriptor,
   Button,
@@ -21,21 +19,20 @@ import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 
 
-export default function EmployeeTable({employees} : {employees: Employee[] }) {
+export default function EmployeeTable({users} : {users: Employee[] }) {
   const [filterValue, setFilterValue] = useState('');
   const hasSearchFilter = Boolean(filterValue);
   
   const filteredItems = useMemo(() => {
-    let filteredUsers = [...employees];
+    let filteredUsers = [...users];
 
     if (hasSearchFilter) {
       filteredUsers = filteredUsers.filter(employee =>
         employee.name.toLowerCase().includes(filterValue.toLowerCase())
       )
   }   
-  
   return filteredUsers
-}, [employees, filterValue, hasSearchFilter])
+}, [users, filterValue, hasSearchFilter])
   
   const rowsPerPage = 4
   const [page, setPage] = useState(1)

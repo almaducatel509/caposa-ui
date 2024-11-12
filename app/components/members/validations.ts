@@ -49,6 +49,7 @@ export const formSchema = z.object({
 export type Step1Data = z.infer<typeof step1Schema>;
 export type Step2Data = z.infer<typeof step2Schema>;
 export type Step3Data = z.infer<typeof step3Schema>;
+
 export type FormData = {
   step1: Step1Data;
   step2: Step2Data;

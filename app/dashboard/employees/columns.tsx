@@ -4,12 +4,20 @@ import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
 
-export type Employee = { 
+export type Employee = {
+  [x: string]: string | (readonly string[] & string) | undefined;
+  user: any;
+  first_name: string | (readonly string[] & string) | undefined;
+  last_name: string | (readonly string[] & string) | undefined;
+  gender: string | null | undefined;
+  date_of_birthday: any;
+  phone_number: string | (readonly string[] & string) | undefined;
+  address: string | (readonly string[] & string) | undefined; 
   id: string;
   name: string;
   role: string;
   email: string;
-  avatar: string;
+  photo_url: string;
   status: string;
 };
 
@@ -34,7 +42,7 @@ export const renderCell = (employee: Employee, columnKey: React.Key) => {
       return (
         <div className="flex items-center">
           <img
-            src={employee.avatar}
+            src={employee.photo_url}
             alt={employee.name}
             className="w-8 h-8 rounded-full mr-3" // Image ronde (avatar)
           />

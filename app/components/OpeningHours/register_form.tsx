@@ -5,6 +5,8 @@ import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
 import { useEffect } from 'react';
+import AxiosInstance from '@/app/lib/axiosInstance';
+
 
 const steps = [Step1, Step2, Step3];
 

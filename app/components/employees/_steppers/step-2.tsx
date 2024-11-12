@@ -1,26 +1,48 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Step2Data } from '../validations';
 
 interface Step2Props {
-  formData: Step2Data;
+  formData?: Step2Data;
 }
 
 const Step2: React.FC<Step2Props> = ({ formData }) => {
-  useEffect(() => {
-    console.log("Données reçues dans Step2:", formData);
-  }, [formData]);  return (
+  if (!formData) {
+    return <p>Loading data...</p>; // Or handle loading state as desired
+  }
+
+  return (
     <div>
-      <h2 className="text-base font-semibold leading-7 text-gray-900">Vérification des informations de l'employé</h2>
+      <h2 className="text-lg font-bold mb-4">Résumé des informations</h2>
       <div className="space-y-2">
-        <p><strong>Prénom:</strong> {formData.first_name}</p>
-        <p><strong>Nom:</strong> {formData.last_name}</p>
-        <p><strong>Date de naissance:</strong> {formData.date_of_birthday}</p>
-        <p><strong>Téléphone:</strong> {formData.phone_number}</p>
-        <p><strong>Adresse:</strong> {formData.address}</p>
-        <p><strong>Sexe:</strong> {formData.gender}</p>
-        <p><strong>Email:</strong> {formData.user.email}</p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Prénom:</label>
+          <p className="mt-1 text-gray-800">{formData.first_name || "Non défini"}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Nom:</label>
+          <p className="mt-1 text-gray-800">{formData.last_name || "Non défini"}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Date de naissance:</label>
+          <p className="mt-1 text-gray-800">{formData.date_of_birthday || "Non défini"}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Téléphone:</label>
+          <p className="mt-1 text-gray-800">{formData.phone_number || "Non défini"}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Adresse:</label>
+          <p className="mt-1 text-gray-800">{formData.address || "Non défini"}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Sexe:</label>
+          <p className="mt-1 text-gray-800">{formData.gender || "Non défini"}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Email:</label>
+          <p className="mt-1 text-gray-800">{formData.email || "Non défini"}</p>
+        </div>
       </div>
-      
     </div>
   );
 };

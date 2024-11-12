@@ -6,7 +6,7 @@ import Step3 from './_steppers/step-3'
 import { z, ZodError } from 'zod';
 import { create } from '@/app/lib/create'
 import { Button } from '@nextui-org/react'
-import { formSchema ,ErrorMessages, EmployeeFormData, step1Schema, step2Schema, step3Schema } from '../employees/validations'
+import { ErrorMessages, EmployeeFormData, step1Schema, step2Schema, step3Schema, } from '../employees/validations'
 
 const steps = [Step1, Step2, Step3];
 
@@ -16,95 +16,56 @@ const RegisterForm = () => {
 
     const [formData, setFormData] = useState<FormData | any>({
         step1: {
-            first_name: '',
-            last_name: '',
-            gender: '',
-            date_of_birthday: '',
-            id_number: '',
-            phone_number: '',
-            email: '',
-            address: '',
-            city: '',
-            department: '',
-            photo_url: null,
-            user: {
-              username: '',
-              password: '',
-              confirm_password: '',
-              email: ''
-            },
-            posts: []
-          },
-          step2: {
-            email: '',
-            password: '',
-            account_type: '',
-            account_number: '',
-            current_balance: 0,
-            loan_type: '',
-            loan_amount: 0,
-            interest_rate: 0,
-            loan_duration: '',
-            payment_frequency: '',
-            security_question: '',
-            security_answer: '',
-            additional_accounts: '',
-            monthly_income: 0,
-            monthly_expenses: 0
-          },
-          step3: {}
+        username:'',
+        password: '',
+        confirm_password: '',
+        email: '',
+        first_name: '',
+        last_name: '',
+        date_of_birthday: null,
+        photo_url: null,
+        phone_number: '',
+        address: '',
+        gender: '',
+        posts: [],    
+      }
     });
-
     
     const [errors, setErrors] = useState<ErrorMessages<EmployeeFormData>>({});
     
-    const validateStep = (currentStep?: number): boolean => {
-        let result;
-        switch (currentStep) {
+    const validateStep = (step: number): boolean => {
+        let result: z.SafeParseReturnType<any, any>;
+        switch (step) {
             case 0:
-                result = formSchema.shape.step1.safeParse(formData.step1);
+                result = step1Schema.safeParse(formData.step1);
                 break;
             case 1:
-                result = formSchema.shape.step2.safeParse(formData.step2);
+                result = step2Schema.safeParse(formData.step2);
                 break;
             case 2:
-                result = formSchema.shape.step3.safeParse(formData.step3);
+                result = step3Schema.safeParse(formData.step3);
                 break;
             default:
                 return false;
         }
-    
+
         if (result.success) {
-            setErrors({}); // Clears all errors when validation passes
+            setErrors({});
             return true;
         } else {
-            // Initialize newErrors as an object with dynamic structure
-            const newErrors: ErrorMessages<EmployeeFormData> = result.error.errors.reduce((acc, error) => {
+            const newErrors: ErrorMessages<any> = {};
+            result.error.errors.forEach((error) => {
                 if (error.path.length) {
-                    const [firstKey, ...restKeys] = error.path as (keyof EmployeeFormData)[];
-                    
-                    // Handle nested paths dynamically
-                    let current = acc;
-                    for (let i = 0; i < restKeys.length; i++) {
-                        const key = restKeys[i];
-                        if (!current[firstKey]) {
-                            current[firstKey] = {};
-                        }
-                        if (i === restKeys.length - 1) {
-                            (current[firstKey] as ErrorMessages<any>)[key] = error.message;                        } else {
-                            current = current[firstKey] as ErrorMessages<any>;
-                        }
-                    }
+                    const key = error.path[0] as string;
+                    newErrors[key] = error.message;
                 }
-                return acc;
-            }, {} as ErrorMessages<EmployeeFormData>);
-    
+            });
+            console.log(newErrors)
             setErrors(newErrors);
             return false;
         }
     };
     
-
     const handleNext = () => {
         console.log(formData)
         if (validateStep(currentStep)) {
@@ -116,12 +77,14 @@ const RegisterForm = () => {
         setCurrentStep((prev) => prev - 1);
     };
 
+    
     const handleSubmit = () => {
         if (validateStep(currentStep)) {
             create({ ...formData?.step1, ...formData?.step2, ...formData?.step3 });
             console.log(formData);
         }
     };
+
 
     const CurrentStepComponent = steps[currentStep];
     

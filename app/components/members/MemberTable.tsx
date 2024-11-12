@@ -9,34 +9,33 @@ import {
   TableBody, 
   TableRow, 
   TableCell, 
+  input,
+  getKeyValue,
   Pagination,
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { CreateMember } from '@/app/dashboard/members/bouttons';
 import { Member, columns, renderCell } from "@/app/dashboard/members/columns";
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 
 
-export default function MemberTable({members} : {members: Member[] }) {
+export default function MemberTable({users} : {users: Member[] }) {
   const [filterValue, setFilterValue] = useState('');
   const hasSearchFilter = Boolean(filterValue);
   
   const filteredItems = useMemo(() => {
-    if (!Array.isArray(members)) {
-      return [];
-    }
-    let filteredUsers = [...members];
+    let filteredUsers = [...users];
+
     if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter(user =>
-        user.first_name.toLowerCase().includes(filterValue.toLowerCase())
-      );
-    }
-    return filteredUsers;
-  }, [members, filterValue, hasSearchFilter]);
+      filteredUsers = filteredUsers.filter(member =>
+        member.first_name.toLowerCase().includes(filterValue.toLowerCase())
+      )
+  }   
   
+  return filteredUsers
+}, [users, filterValue, hasSearchFilter])
   
   const rowsPerPage = 4
   const [page, setPage] = useState(1)
@@ -85,7 +84,7 @@ export default function MemberTable({members} : {members: Member[] }) {
           <Input
             isClearable
             className="w-full sm:max-w-[44%]"
-            placeholder="Search by name..."
+            placeholder="Search by date..."
             startContent={<FiSearch />}
             value={filterValue}
             onClear={() => onClear()}
@@ -137,7 +136,7 @@ export default function MemberTable({members} : {members: Member[] }) {
         {column => (
           <TableColumn 
             key={column.key}
-            {...(column.key === 'name' ? {allowsSorting: true} : {})}
+            {...(column.key === 'holyday_date' ? {allowsSorting: true} : {})}
             >
               {column.label}
             </TableColumn>
@@ -154,3 +153,7 @@ export default function MemberTable({members} : {members: Member[] }) {
   );
 
 }
+
+
+
+

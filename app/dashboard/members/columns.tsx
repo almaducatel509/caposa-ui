@@ -11,6 +11,7 @@ export type Member = {
   email: string;
   photo_url: string;
   current_balance: string;
+  status: string;
 };
 
 export const columns = [

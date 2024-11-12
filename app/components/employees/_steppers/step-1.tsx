@@ -1,83 +1,60 @@
-import React,  { useState } from 'react';
-import { Step1Data, ErrorMessages } from '../validations';
+import React, { useState } from 'react';
+import {ErrorMessages } from '../validations';
 import TitleDetails from './title-details';
 import { Input, RadioGroup, Radio, DatePicker } from '@nextui-org/react';
 import UploadImage from '@/app/components/core/upload-file';
-import { parseDate } from "@internationalized/date";
+import { parseDate, getLocalTimeZone, DateValue } from "@internationalized/date";
 import { Post } from '../../postes/validations';
+import { Employee } from '@/app/dashboard/employees/columns';
+import { PiEyeLight } from "react-icons/pi";
+import { PiEyeSlashLight } from "react-icons/pi";
 
-// Define props to receive formData, setFormData, and errors
 interface Step1Props {
-    formData: {
-      user: {
-        username: string;
-        password: string;
-        confirm_password: string;
-        email: string;
-      };
-      first_name: string;
-      last_name: string;
-      gender: string;
-      date_of_birthday: string;
-      phone_number: string;
-      address: string;
-      payment_ref?: string;
-      city: string;
-      department: string;
-      photo_url: File;
-      posts: Post[];
-    };
-    setFormData: (data: any) => void;
-    errors: ErrorMessages<{
-      user: {
-        username: string;
-        password: string;
-        confirm_password: string;
-        email: string;
-      };
-      first_name: string;
-      last_name: string;
-      gender: string;
-      date_of_birthday: string;
-      phone_number: string;
-      address: string;
-      payment_ref?: string;
-      city: string;
-      department: string;
-      photo_url: File;
-      posts: Post[];
-    }>;
+    formData: Employee;
+    setFormData: (data: Partial<Employee>) => void;
+    errors: ErrorMessages<Employee>;
+    setErrors?: (errors: Partial<ErrorMessages<Employee>>) => void; // Make setErrors optional
   }
   
-const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
-
+  
+  const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors, setErrors }) => {
+    
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+    const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
+    const toggleConfirmPasswordVisibility = () => setIsConfirmPasswordVisible(!isConfirmPasswordVisible);
+    
     let d: any = new Date().toLocaleDateString("fr-FR").split("/");
     d = `${d[2]}-${d[1]}-${d[0]}`;
-
-    const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData({
-          ...formData,
-          user: {
-            ...formData.user,
-            [name]: value,
-          },
-        });
+        setFormData({ ...formData, [name]: value });
+      
+        if (setErrors) {
+          if (name === "confirm_password" && formData.password !== value) {
+            setErrors({ ...errors, confirm_password: "Les mots de passe doivent être identiques" });
+          } else if (name === "confirm_password") {
+            setErrors({ ...errors, confirm_password: "" });
+          }
+        }
       };
-
-      const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData({ [name]: value });
+        setFormData({ ...formData, [name]: value });
+        console.log("Le formatdata :",formData);
     };
-
 
     const handleRadio = (value: string) => {
         setFormData({ ...formData, gender: value });
+        console.log('gender: ',formData);
+    };
+    const handleChangeDate = (date: DateValue) => {
+        const formattedDate = date.toString(); // Formate la date en YYYY-MM-DD
+        setFormData({ date_of_birthday: formattedDate });
+        console.log('Date de naissance mise à jour:', formattedDate); // Console pour vérifier la date sélectionnée
     };
 
-    const handleChangeDate = (value: any) => {
-        setFormData({ ...formData, date_of_birthday: `${value.year}-${value.month < 10 ? '0' : ''}${value.month}-${value.day < 10 ? '0' : ''}${value.day}` });
-    };
 
     function handlePostSelection(name: any, checked: boolean): void {
         throw new Error('Function not implemented.');
@@ -111,27 +88,28 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     {errors.last_name && <div className='text-destructive text-red-600'>{errors.last_name}</div>}
                 </div>
                 <div className="space-y-2">
-                    <Input
-                    type="text"
-                    name="name"
-                    value={formData.user.username}
-                    label="User Name"
-                    onChange={handleUserChange}
-                    isRequired
+                    <Input 
+                        type={'text'} 
+                        name='username' 
+                        value={formData.username} 
+                        label={'Username'} 
+                        onChange={handleChange} 
+                        isRequired 
                     />
-                    {errors.user?.username && <div className="text-red-600">{errors.user.username}</div>}
+                    {errors.username && <div className='text-destructive text-red-600'>{errors.username}</div>}
                 </div>
+                
                 
                 <div className="space-y-2">
                     <Input
                     type="email"
                     name="email"
-                    value={formData.user.email}
+                    value={formData.email}
                     label="Email"
-                    onChange={handleUserChange}
+                    onChange={handleChange}
                     isRequired
                     />
-                    {errors.user?.email && <div className="text-red-600">{errors.user.email}</div>}
+                    {errors.email && <div className="text-red-600">{errors.email}</div>}
                 </div>
                 <div className="space-y-2">
                     <RadioGroup
@@ -153,6 +131,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                         isRequired
                         value={parseDate(formData.date_of_birthday || d)}
                         onChange={handleChangeDate}
+                        description={"MM/DD/YYYY"}
                     />
                     {errors.date_of_birthday && <div className='text-destructive text-red-600'>{errors.date_of_birthday}</div>}
                 </div>
@@ -198,14 +177,72 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                     </div>
                     {errors.posts && <div className="text-red-600">{errors.posts}</div>}
                 </div> */}
-                <div className="space-y-2">
-                    <UploadImage 
-                        name='photo_url' 
-                        data={null} 
-                        fallback={""} 
-                        description="Photo" 
+                 <div className="space-y-2">
+                    <Input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    label="Password"
+                    placeholder="Enter your password"
+                    onChange={handlePassword}
+                    isRequired
+                    endContent={
+                        <button
+                        className="focus:outline-none"
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        aria-label="toggle password visibility"
+                        >
+                        {isPasswordVisible ? (
+                            <PiEyeSlashLight className="text-2xl text-default-400 pointer-events-none" />
+                        ) : (
+                            <PiEyeLight className="text-2xl text-default-400 pointer-events-none" />
+                        )}
+                        </button>
+                    }
+                    className="max-w-xs"
                     />
-                    {errors.photo_url && <div className='text-destructive text-red-600'></div>}
+                    {errors.password && <div className="text-destructive text-red-600">{errors.password}</div>}
+                </div>
+
+                <div className="space-y-2">
+                    <Input
+                    type={isConfirmPasswordVisible ? "text" : "password"}
+                    name="confirm_password"
+                    value={formData.confirm_password}
+                    label="Confirm Password"
+                    placeholder="Confirm your password"
+                    onChange={handlePassword}
+                    isRequired
+                    endContent={
+                        <button
+                        className="focus:outline-none"
+                        type="button"
+                        onClick={toggleConfirmPasswordVisibility}
+                        aria-label="toggle confirm password visibility"
+                        >
+                        {isConfirmPasswordVisible ? (
+                            <PiEyeSlashLight className="text-2xl text-default-400 pointer-events-none" />
+                        ) : (
+                            <PiEyeLight className="text-2xl text-default-400 pointer-events-none" />
+                        )}
+                        </button>
+                    }
+                    className="max-w-xs"
+                    />
+                    {errors.confirm_password && <div className="text-destructive text-red-600">{errors.confirm_password}</div>}
+                </div>
+                <div className="space-y-2">
+                    <UploadImage
+                        name='photo_url'
+                        data={null}
+                        fallback={""}
+                        description="Photo"
+                        formData={formData}
+                        setFormData={setFormData}
+
+                    />
+                    {errors.photo_url && <div className='text-destructive text-red-600'>{errors.photo_url}</div>}
                 </div>
             </div>
         </div>
@@ -213,3 +250,4 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
 };
 
 export default Step1;
+

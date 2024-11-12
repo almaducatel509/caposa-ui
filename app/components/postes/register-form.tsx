@@ -88,12 +88,12 @@ const RegisterForm: React.FC = () => {
       <hr className="border-t-2 border-gray-300 mt-4" />
       <div className="flex justify-between mt-8">
         {currentStep > 0 && (
-          <button onClick={handlePrevious}>Previous</button>
+          <button onClick={handlePrevious}>Précédent</button>
         )}
         {currentStep < steps.length - 1 ? (
-          <button onClick={handleNext}>Next</button>
+          <button onClick={handleNext}>Suivant</button>
         ) : (
-          <button onClick={handleSubmit}>Submit</button>
+          <button onClick={handleSubmit}>Fin</button>
         )}
       </div>
     </div>

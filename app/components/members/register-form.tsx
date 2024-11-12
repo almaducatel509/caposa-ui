@@ -57,12 +57,17 @@ const RegisterForm = () => {
         switch (step) {
             case 0:
                 result = step1Schema.safeParse(formData.step1);
+                console.log('step1: ', formData);
                 break;
             case 1:
                 result = step2Schema.safeParse(formData.step2);
+                console.log('step2: ', formData);
+
                 break;
             case 2:
                 result = step3Schema.safeParse(formData.step3);
+                console.log('step3: ', formData);
+
                 break;
             default:
                 return false;
@@ -86,7 +91,7 @@ const RegisterForm = () => {
     };
 
     const handleNext = () => {
-        console.log(formData)
+        console.log('Next: ',formData)
         if (validateStep(currentStep)) {
             setCurrentStep((prev) => prev + 1);
         }
@@ -99,7 +104,7 @@ const RegisterForm = () => {
     const handleSubmit = () => {
         if (validateStep(currentStep)) {
             create({ ...formData?.step1, ...formData?.step2, ...formData?.step3 });
-            console.log(formData);
+            console.log('SUbmit: ',formData);
         }
     };
 
@@ -143,7 +148,7 @@ const RegisterForm = () => {
                 {currentStep < steps.length - 1 ? (
                     <Button className='bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2' onClick={handleNext}>Suivant</Button>
                 ) : (
-                    <Button className='bg-green-600 text-white' onClick={handleSubmit}>Envoyer</Button>
+                    <Button className='bg-green-600 text-white' onClick={handleSubmit}>Fin</Button>
                 )}
             </div>
         </div>

@@ -8,10 +8,7 @@ interface Step3Props {
 }
 
 const Step2: React.FC<Step3Props> = ({ formData, setFormData, errors }) => {
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData({ [name]: value });
-    };
+    
 
     return (
         <div>

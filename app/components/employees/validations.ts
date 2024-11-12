@@ -1,43 +1,30 @@
 import { z } from "zod";
 import { postSchema } from "../postes/validations";
 
-// Schéma de validation de fichier (non nullable)
-
-const fileSchema = z.instanceof(File, { message: "Une photo est requise" });
+const fileSchema = z.instanceof(File, { message: "Required" });
 const imageSchema = fileSchema.refine(
-  (file) =>file.type.startsWith("image/")
+  (file) => file.size === 0 || file.type.startsWith("image/")
 );
-// Schéma de l'utilisateur
-export const userSchema = z.object({
-  username: z.string().min(1, "Le nom d'utilisateur est requis"),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
-  confirm_password: z.string().min(6, "La confirmation du mot de passe est requise"),
-  email: z.string().email("Adresse e-mail invalide"),
-});
-
 export const step1Schema = z.object({
-  user: userSchema,
-  first_name: z.string().min(1, "Prénom est requis"),
-  last_name: z.string().min(1, "Nom est requis"),
-  gender: z.string().min(1, "Sélection du sexe est requise"),
+  password: z.string().min(3, 'Password must be at least 8 characters long'),
+  confirm_password: z.string().min(3),
+  email: z.string().email('Invalid email format'),
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
+  username: z.string().min(1, 'User name is required'),
   date_of_birthday: z.string().min(1, "Date de naissance est requise").date(),
-  phone_number: z.string().min(6, "Téléphone est requis"),
-  address: z.string().min(4, "Adresse est requise"),
-  payment_ref: z.string().optional(),
-  city: z.string().min(2, "Ville est requise"),
-  department: z.string().min(4, "Département est requis"),
-  photo_url: imageSchema.refine((file ) => file.size > 0),
+  phone_number: z.string().regex(/^\d+$/, 'Phone number must only contain digits'),
+  address: z.string().min(1, 'Address is required'),
+  gender: z.string().min(1, "Sélection du sexe est requise"),
+  //(It's for transaction)payment_ref: z.string().min(1, 'Payment reference is required'),
+  photo_url: imageSchema.refine((file ) => file.size > 0, "Une photo est requise"),
   posts: z.array(postSchema), // Validation pour les objets post
 });
-
 // Schéma pour Step2Data
 export const step2Schema = step1Schema; // Structure similaire pour Step2Data
 
 // Schéma pour Step3Data (vide pour l'instant)
 export const step3Schema = z.object({});
-
-// Schéma principal pour employeeFormSchema
-
 
 export const formSchema = z.object({
   step1: step1Schema,
@@ -45,9 +32,9 @@ export const formSchema = z.object({
   step3: step3Schema,
 });
 
-export type Step1Data = z.infer<typeof step1Schema>;
-export type Step2Data = z.infer<typeof step2Schema>;
-export type Step3Data = z.infer<typeof step3Schema>;
+export interface Step1Data extends z.infer<typeof step1Schema> {}
+export interface Step2Data extends z.infer<typeof step2Schema> {}
+export interface Step3Data extends z.infer<typeof step3Schema> {}
 
 export type EmployeeFormData = {
   step1: Step1Data;
@@ -55,9 +42,7 @@ export type EmployeeFormData = {
   step3: Step3Data;
 };
 
-// Type de messages d'erreur récursif pour gérer les structures imbriquées
-export type ErrorMessages<T> = {
-  [K in keyof T]?: T[K] extends object ? ErrorMessages<T[K]> : string;
-};
+export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
+
 
 
