@@ -1,7 +1,7 @@
 // import Pagination from '@/app/ui/invoices/pagination';
 import Search from '@/app/components/search';
 import {Holyday} from './columns';
-import HolydayTable from '@/app/components/hollydays/holydayTable';
+import HolydayTable from '@/app/components/holydays/holydayTable';
 
 async function getHolidays(): Promise<Holyday[]> {
   const res = await fetch(

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Post, postSchema } from './validations';
-import { create } from '@/app/lib/create';
+import { createPost } from '@/app/lib/api/post'; // Assurez-vous que le chemin est correct
 import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
@@ -56,14 +56,14 @@ const RegisterForm: React.FC = () => {
     setCurrentStep((prev) => prev - 1);
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting form data:", formData);
+  const handleSubmit = async () => {
     if (validateStep()) {
-      console.log("Final validation passed, submitting form.");
-      create(formData);
-      console.log('Form submitted successfully:', formData);
-    } else {
-      console.log("Final validation failed, form not submitted.");
+      try {
+        const response = await createPost(formData); // Utilisation de createPost ici
+        console.log('Post créé avec succès:', response);
+      } catch (error) {
+        console.error("Erreur lors de la création du post:", error);
+      }
     }
   };
 
@@ -81,19 +81,30 @@ const RegisterForm: React.FC = () => {
   return (
     <div>
       <CurrentStepComponent
-        formData={formData}
+        formData={formData} 
         setFormData={updateFormData}
         errors={errors}
       />
-      <hr className="border-t-2 border-gray-300 mt-4" />
       <div className="flex justify-between mt-8">
         {currentStep > 0 && (
-          <button onClick={handlePrevious}>Précédent</button>
+          <button
+            className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
+            onClick={handlePrevious}
+          >
+            Précédent
+          </button>
         )}
         {currentStep < steps.length - 1 ? (
-          <button onClick={handleNext}>Suivant</button>
+          <button
+            className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
+            onClick={handleNext}
+          >
+            Suivant
+          </button>
         ) : (
-          <button onClick={handleSubmit}>Fin</button>
+          <button className="bg-green-600 text-white" onClick={() => console.log('Données enregistrées')}>
+            Fin
+          </button>
         )}
       </div>
     </div>

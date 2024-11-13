@@ -20,9 +20,3 @@ export type Step1Data = z.infer<typeof openingHoursSchema>;
 export type Step2Data = z.infer<typeof openingHoursSchema>;
 export type Step3Data = z.infer<typeof openingHoursSchema>;
 
-//In your POST request, you can construct the payload from formData like this: 
-//const formattedData = {
-//   monday: `${formData.monday_open}-${formData.monday_close}`,
-//   tuesday: `${formData.tuesday_open}-${formData.tuesday_close}`,
-//   // Repeat for all days
-// };

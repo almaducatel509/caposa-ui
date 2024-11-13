@@ -16,7 +16,7 @@ import {
   Button,
 } from "@nextui-org/react";
 import { CreateMember } from '@/app/dashboard/members/bouttons';
-import{OpeningHrs,columns, renderCell} from "@/app/dashboard/openning_hours/columns"
+import{OpeningHrs,columns, renderCell} from "@/app/dashboard/opening_hours/columns"
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";

@@ -1,4 +1,4 @@
-import RegisterForm from "@/app/components/hollydays/register_form"
+import RegisterForm from "@/app/components/holydays/register_form"
 export default function HollydaysForm() {
     return(
     <main className="w-full bg-white">

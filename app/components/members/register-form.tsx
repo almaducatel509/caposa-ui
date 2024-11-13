@@ -7,6 +7,7 @@ import { z, ZodError } from 'zod';
 import { create } from '@/app/lib/create'
 import { Button } from '@nextui-org/react'
 import { step1Schema, step2Schema, step3Schema, FormData, ErrorMessages } from './validations'
+import { createMembers } from '@/app/lib/api/member'
 
 const steps = [Step1, Step2, Step3];
 
@@ -101,12 +102,17 @@ const RegisterForm = () => {
         setCurrentStep((prev) => prev - 1);
     };
 
-    const handleSubmit = () => {
-        if (validateStep(currentStep)) {
-            create({ ...formData?.step1, ...formData?.step2, ...formData?.step3 });
-            console.log('SUbmit: ',formData);
+    const handleSubmit = async () => {
+        if (validateStep()) {
+          try {
+            const response = await createMembers(formData); // Utilisation de createPost ici
+            console.log('Membre créé avec succès:', response);
+          } catch (error) {
+            console.error("Erreur lors de la création du membre:", error);
+          }
         }
     };
+      
 
     const CurrentStepComponent = steps[currentStep];
 

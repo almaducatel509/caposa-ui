@@ -15,8 +15,8 @@ import {
   SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { CreateHoliday } from '@/app/dashboard/hollydays/bouttons';
-import { Holyday, columns, renderCell } from "@/app/dashboard/hollydays/columns";
+import { CreateHoliday } from '@/app/dashboard/holydays/bouttons';
+import { Holyday, columns, renderCell } from "@/app/dashboard/holydays/columns";
 //import { Input } from 'postcss';
 import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";

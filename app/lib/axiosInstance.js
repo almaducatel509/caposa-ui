@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Créer une instance Axios avec des intercepteurs
 const AxiosInstance = axios.create({
-  baseURL: process.env.BASE_URL, // Assure-toi de définir cette variable d'environnement
+  baseURL: process.env.BASE_ROUTE, // Utilise BASE_ROUTE comme base URL
 });
 
 // Intercepteur de requête
@@ -22,12 +21,8 @@ AxiosInstance.interceptors.request.use(
 
 // Intercepteur de réponse
 AxiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (response) => response,
+  (error) => Promise.reject(error)
 );
 
 export default AxiosInstance;

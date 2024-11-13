@@ -78,13 +78,17 @@ const RegisterForm = () => {
     };
 
     
-    const handleSubmit = () => {
-        if (validateStep(currentStep)) {
-            create({ ...formData?.step1, ...formData?.step2, ...formData?.step3 });
-            console.log(formData);
+    const handleSubmit = async () => {
+        if (validateStep()) {
+          try {
+            const response = await createEmployee(formData); // Utilisation de createEmployee ici
+            console.log('Employé créé avec succès:', response);
+          } catch (error) {
+            console.error("Erreur lors de la création de l'employé:", error);
+          }
         }
     };
-
+      
 
     const CurrentStepComponent = steps[currentStep];
     
@@ -113,7 +117,8 @@ const RegisterForm = () => {
                 <div className="w-1/3 space-y-2">
                     <hr className={`border-t-4 ${currentStep === 2 && "border-green-600"}`} />
                     <p className={`text-sm capitalize ${currentStep === 2 ? "text-green-600" : "text-gray-600"}`}>étape 3</p>
-                    <p className="text-gray-700">Finalisation</p></div>
+                    <p className="text-gray-700">Finalisation</p>
+                </div>
             </div>
             <CurrentStepComponent
                 formData={formData[`step${currentStep + 1}`]}
@@ -133,3 +138,7 @@ const RegisterForm = () => {
     );
 };
 export default RegisterForm
+
+function createEmployee(formData: any) {
+    throw new Error('Function not implemented.')
+}
