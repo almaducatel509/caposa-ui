@@ -3,7 +3,7 @@ import AxiosInstance from '../axiosInstance';
 // Fonction pour récupérer tous les employés
 export const fetchEmployees = async () => {
   try {
-    const response = await AxiosInstance.get('/employees'); // Remplace '/employees' par le bon endpoint
+    const response = await AxiosInstance.get('/employees/'); // '/employees' par le bon endpoint
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la récupération des employés:", error);

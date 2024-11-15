@@ -79,16 +79,26 @@ const RegisterForm = () => {
 
     
     const handleSubmit = async () => {
-        if (validateStep()) {
+        const totalSteps = 3;  // Par exemple, si tu as trois étapes
+        let allValid = true;
+    
+        for (let step = 0; step < totalSteps; step++) {
+            if (!validateStep(step)) {
+                allValid = false;
+                break; // Arrête la boucle dès qu'une étape n'est pas valide
+            }
+        }
+    
+        if (allValid) {
           try {
-            const response = await createEmployee(formData); // Utilisation de createEmployee ici
-            console.log('Employé créé avec succès:', response);
+            const response = createEmployee(formData);
+            console.log('Membre créé avec succès:', response);
           } catch (error) {
-            console.error("Erreur lors de la création de l'employé:", error);
+            console.error("Erreur lors de la création du membre:", error);
           }
         }
     };
-      
+    
 
     const CurrentStepComponent = steps[currentStep];
     

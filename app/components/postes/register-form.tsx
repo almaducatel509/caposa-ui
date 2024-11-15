@@ -102,7 +102,7 @@ const RegisterForm: React.FC = () => {
             Suivant
           </button>
         ) : (
-          <button className="bg-green-600 text-white" onClick={() => console.log('Données enregistrées')}>
+          <button className="bg-green-600 text-white" onClick={handleSubmit}>
             Fin
           </button>
         )}

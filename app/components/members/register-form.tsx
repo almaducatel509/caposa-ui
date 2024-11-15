@@ -101,17 +101,27 @@ const RegisterForm = () => {
     const handlePrevious = () => {
         setCurrentStep((prev) => prev - 1);
     };
-
     const handleSubmit = async () => {
-        if (validateStep()) {
+        const totalSteps = 3;  // Par exemple, si tu as trois étapes
+        let allValid = true;
+    
+        for (let step = 0; step < totalSteps; step++) {
+            if (!validateStep(step)) {
+                allValid = false;
+                break; // Arrête la boucle dès qu'une étape n'est pas valide
+            }
+        }
+    
+        if (allValid) {
           try {
-            const response = await createMembers(formData); // Utilisation de createPost ici
+            const response = await createMembers(formData);
             console.log('Membre créé avec succès:', response);
           } catch (error) {
             console.error("Erreur lors de la création du membre:", error);
           }
         }
     };
+    
       
 
     const CurrentStepComponent = steps[currentStep];
