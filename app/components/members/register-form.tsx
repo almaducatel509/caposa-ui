@@ -26,29 +26,19 @@ const RegisterForm = () => {
             id_number: '',
             phone_number: '',
             city: '',
-            department: ''
+            department: '',
+            email: '',
           },
           step2: {
-            email: '',
             password: '',
+            confirm_password:'',
             account_type: '',
             account_number: '',
-            current_balance: 0,
-            loan_type: '',
-            loan_amount: 0,
-            interest_rate: 0,
-            loan_duration: '',
-            payment_frequency: '',
-            security_question: '',
-            security_answer: '',
-            additional_accounts: '',
+            initial_balance:0,
+            membership_tier:'',
             monthly_income: 0,
-            monthly_expenses: 0
-        },
-
-        step3: {
-            id: 'Step 3',
-            name: 'Complete'
+            monthly_expenses: 0,
+            income_source:0,
         },
     });
 

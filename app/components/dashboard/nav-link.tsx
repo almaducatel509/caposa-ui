@@ -15,7 +15,7 @@ const links = [
   { name: 'Home', href: '/dashboard', icon: AiOutlineHome },
   
   { name: 'Opening Hours',
-    href: '/dashboard/openning_hours',
+    href: '/dashboard/opening_hours',
     icon: HiOutlineUserGroup, 
   },
   
@@ -24,7 +24,7 @@ const links = [
     icon: HiOutlineUserGroup, 
   },
   { name: 'Holydays',
-    href: '/dashboard/hollydays',
+    href: '/dashboard/holydays',
     icon: HiOutlineUserGroup, 
   },
   

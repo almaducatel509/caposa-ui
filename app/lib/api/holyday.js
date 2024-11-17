@@ -3,7 +3,7 @@ import AxiosInstance from '../axiosInstance';
 // Fonction pour récupérer tous les holydays
 export const fetchHolydays = async () => {
   try {
-    const response = await AxiosInstance.get('/holydays'); // Remplace '/employees' par le bon endpoint
+    const response = await AxiosInstance.get('/holydays/'); // Remplace '/employees' par le bon endpoint
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la récupération des jours ferriers:", error);

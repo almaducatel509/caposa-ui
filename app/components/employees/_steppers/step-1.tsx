@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import {ErrorMessages } from '../validations';
+import {ErrorMessages,EmployeeFormData, step1Schema, Step1Data } from '../validations';
 import TitleDetails from './title-details';
 import { Input, RadioGroup, Radio, DatePicker } from '@nextui-org/react';
 import UploadImage from '@/app/components/core/upload-file';
 import { parseDate, getLocalTimeZone, DateValue } from "@internationalized/date";
 import { Post } from '../../postes/validations';
-import { Employee } from '@/app/dashboard/employees/columns';
 import { PiEyeLight } from "react-icons/pi";
 import { PiEyeSlashLight } from "react-icons/pi";
 
 interface Step1Props {
-    formData: Employee;
-    setFormData: (data: Partial<Employee>) => void;
-    errors: ErrorMessages<Employee>;
-    setErrors?: (errors: Partial<ErrorMessages<Employee>>) => void; // Make setErrors optional
+    formData: Step1Data;
+    setFormData: (data: Partial<Step1Data>) => void;
+    errors: ErrorMessages<Step1Data>;
+    setErrors?: (errors: Partial<ErrorMessages<Step1Data>>) => void; // Make setErrors optional
   }
   
   
@@ -55,10 +54,6 @@ interface Step1Props {
         console.log('Date de naissance mise à jour:', formattedDate); // Console pour vérifier la date sélectionnée
     };
 
-
-    function handlePostSelection(name: any, checked: boolean): void {
-        throw new Error('Function not implemented.');
-    }
 
     return (
         <div className="capitalize">

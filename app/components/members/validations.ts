@@ -16,29 +16,27 @@ export const step1Schema = z.object({
   department: z.string().min(4, "Département est requis"),
   photo_url: imageSchema.refine((file ) => file.size > 0),
 });
+export const step2Schema = z
+  .object({
+    password: z.string().min(6, "Password must be at least 6 characters long"),
+    confirm_password: z.string().min(6, "Confirm password must be at least 6 characters long"),
+    account_type: z.string().min(1, "Account type is required"),
+    account_number: z.string().min(1, "Account number is required"),
+    initial_balance: z.number().nonnegative("Initial balance must be a positive number"),
+    membership_tier: z.string().min(1, "Sélection du sexe est requise"),
+    monthly_income: z.number().nonnegative("Monthly income must be a positive number").optional(),
+    monthly_expenses: z.number().nonnegative("Monthly expenses must be a positive number").optional(),
+    income_source: z.string().min(1, "Income source is required"),
+    // referred_by: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: "Passwords must match",
+    path: ["confirm_password"], // Afficher l'erreur sur le champ confirm_password
+  });
 
-export const step2Schema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters long"),
-  account_type: z.string().min(1, "Account type is required"),
-  account_number: z.string().min(1, "Account number is required"),
-  current_balance: z.number().nonnegative("Current balance must be a positive number"),
-  loan_type: z.string().optional(),
-  loan_amount: z.number().nonnegative("Loan amount must be a positive number").optional(),
-  interest_rate: z.number().min(0, "Interest rate must be at least 0%").optional(),
-  loan_duration: z.string().optional(),
-  payment_frequency: z.string().optional(),
-  security_question: z.string().optional(),
-  security_answer: z.string().optional(),
-  additional_accounts: z.string().optional(),
-  monthly_income: z.number().nonnegative("Monthly income must be a positive number").optional(),
-  monthly_expenses: z.number().nonnegative("Monthly expenses must be a positive number").optional(),
-});
+// gerer la date de la creation du compte vous pouvez utiliser un champ avec DEFAULT CURRENT_TIMESTAMP.
 
-export const step3Schema = z.object({
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-});
+export const step3Schema = z.object({});
 
 export const formSchema = z.object({
   step1: step1Schema,
