@@ -7,6 +7,8 @@ import { z, ZodError } from 'zod';
 import { create } from '@/app/lib/create'
 import { Button } from '@nextui-org/react'
 import { ErrorMessages, EmployeeFormData, step1Schema, step2Schema, step3Schema, } from '../employees/validations'
+import { createEmployee } from '@/app/lib/api/employee'
+
 
 const steps = [Step1, Step2, Step3];
 
@@ -16,22 +18,26 @@ const RegisterForm = () => {
 
     const [formData, setFormData] = useState<FormData | any>({
         step1: {
-        username:'',
-        password: '',
-        confirm_password: '',
-        email: '',
-        first_name: '',
-        last_name: '',
-        date_of_birthday: null,
-        photo_url: null,
-        phone_number: '',
-        address: '',
-        gender: '',
-        posts: [],    
-      }
-    });
-    
-    const [errors, setErrors] = useState<ErrorMessages<EmployeeFormData>>({});
+          username: '',
+          password: '',
+          confirm_password: '',
+          email: '',
+          first_name: '',
+          last_name: '',
+          date_of_birthday: null,
+          photo_url: null,
+          phone_number: '',
+          address: '',
+          gender: '',
+          posts: [],
+        },
+        step2: {
+          
+        },
+        step3: {},
+      });
+      
+    const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
     
     const validateStep = (step: number): boolean => {
         let result: z.SafeParseReturnType<any, any>;
@@ -79,38 +85,45 @@ const RegisterForm = () => {
 
     
     const handleSubmit = async () => {
-        const totalSteps = 3;  // Par exemple, si tu as trois étapes
+        const totalSteps = 3;
         let allValid = true;
-    
+        const allErrors = {};
+      
         for (let step = 0; step < totalSteps; step++) {
-            if (!validateStep(step)) {
-                allValid = false;
-                break; // Arrête la boucle dès qu'une étape n'est pas valide
-            }
-        }
-    
-        if (allValid) {
-          try {
-            const response = createEmployee(formData);
-            console.log('Membre créé avec succès:', response);
-          } catch (error) {
-            console.error("Erreur lors de la création du membre:", error);
+          const valid = validateStep(step);
+          if (!valid) {
+            allValid = false;
+            Object.assign(allErrors, errors);
           }
         }
-    };
-    
+      
+        if (allValid) {
+          console.log('FormData:', formData); // Ajoute cette ligne pour vérifier les données
+          try {
+            const response = await createEmployee(formData);
+            console.log('Membre créé avec succès:', response);
+          } catch (error) {
+            console.error('Erreur lors de la création de l\'employé:', error);
+          }
+        } else {
+          setErrors(allErrors);
+        }
+    }; 
 
     const CurrentStepComponent = steps[currentStep];
     
     const updateFormData = (data: Partial<any>) => {
-        setFormData((prev: any) => ({
+        setFormData((prev: any) => {
+          const currentStepKey = `step${currentStep + 1}`;
+          return {
             ...prev,
-            [`step${currentStep + 1}`]: {
-                ...prev[`step${currentStep + 1}`],
-                ...data,
+            [currentStepKey]: {
+              ...prev[currentStepKey],
+              ...data,
             },
-        }));
-    };
+          };
+        });
+      };   
 
     return (
         <div>
@@ -149,6 +162,3 @@ const RegisterForm = () => {
 };
 export default RegisterForm
 
-function createEmployee(formData: any) {
-    throw new Error('Function not implemented.')
-}

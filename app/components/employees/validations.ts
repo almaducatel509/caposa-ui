@@ -33,7 +33,9 @@ export const formSchema = z.object({
 });
 
 export interface Step1Data extends z.infer<typeof step1Schema> {}
-export interface Step2Data extends z.infer<typeof step2Schema> {}
+export interface Step2Data extends z.infer<typeof step2Schema> {
+  step1: any;
+}
 export interface Step3Data extends z.infer<typeof step3Schema> {}
 
 export type EmployeeFormData = {

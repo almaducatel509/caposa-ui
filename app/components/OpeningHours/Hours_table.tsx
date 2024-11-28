@@ -1,159 +1,78 @@
-'use client'
+'use client';
 
-import {useState, useMemo, useCallback} from 'react';
-import React from "react";
-import {
-  Table, 
-  TableHeader, 
-  TableColumn, 
-  TableBody, 
-  TableRow, 
-  TableCell, 
-  input,
-  getKeyValue,
-  Pagination,
-  SortDescriptor,
-  Button,
-} from "@nextui-org/react";
-import { CreateMember } from '@/app/dashboard/members/bouttons';
-import{OpeningHrs,columns, renderCell} from "@/app/dashboard/opening_hours/columns"
-import {Input} from "@nextui-org/input";
-import { FiSearch } from "react-icons/fi";
-import { LuPlus } from "react-icons/lu";
+import React, { useState, useMemo, useCallback } from 'react';
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, Input } from '@nextui-org/react';
+import { FiSearch } from 'react-icons/fi';
 
-
-export default function OpeningHoursTable({users} : {users: OpeningHrs[] }) {
+// Composant de tableau pour afficher les horaires d'ouverture
+const OpeningHoursTable = ({ openingHours }: { openingHours: any[] }) => {
   const [filterValue, setFilterValue] = useState('');
-  const hasSearchFilter = Boolean(filterValue);
-  
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 5;
+
+  // Filtrer les horaires par date de création
   const filteredItems = useMemo(() => {
-    let filteredUsers = [...users];
+    return openingHours.filter(item => item.created_at.includes(filterValue));
+  }, [openingHours, filterValue]);
 
-    if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter(OpeningHrs =>
-        OpeningHrs.sunday.toLowerCase().includes(filterValue.toLowerCase())
-      )
-  }   
-  
-  return filteredUsers
-}, [users, filterValue, hasSearchFilter])
-  
-  const rowsPerPage = 4
-  const [page, setPage] = useState(1)
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
-
-  const items = useMemo(() => {
+  const itemsToDisplay = useMemo(() => {
     const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-
-    return filteredItems.slice(start, end)
-  }, [page, filteredItems])
-
-  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column:'name',
-    direction: 'ascending'
-  })
-  
-  const sortedItems = useMemo(() => {
-    return [...items].sort((a: OpeningHrs, b: OpeningHrs) => {
-      const first = a[sortDescriptor.column as keyof OpeningHrs] as String;
-      const second = b[sortDescriptor.column as keyof OpeningHrs] as String;
-      const cmp = first < second ? -1 : first > second ? 1 : 0;
-
-      return sortDescriptor.direction === "descending" ? -cmp : cmp;
-    });
-  }, [sortDescriptor, items])
+    return filteredItems.slice(start, start + rowsPerPage);
+  }, [page, filteredItems]);
 
   const onSearchChange = useCallback((value?: string) => {
-    if (value) {
-      setFilterValue(value);
-      setPage(1);
-    } else {
-      setFilterValue("");
-    }
-  }, [])
-
-  const onClear = useCallback(()=>{
-    setFilterValue("")
-    setPage(1)
-  }, [])
-
-  const topContent = useMemo(() => {
-    return (
-      <div className="flex flex-col gap-4 pt-4">
-        <div className="flex gap-3 items-center">
-          <Input
-            isClearable
-            className="w-full sm:max-w-[44%]"
-            placeholder="Search by name..."
-            startContent={<FiSearch />}
-            value={filterValue}
-            onClear={() => onClear()}
-            onValueChange={onSearchChange}
-          />
-          <div className="button flex gap-3">
-            <Button color="primary" endContent={<LuPlus />}>
-              Add New
-            </Button>
-            <Button color="primary" endContent={<LuPlus />}>
-              Import
-            </Button>
-            <Button color="primary" endContent={<LuPlus />}>
-              Export
-            </Button>
-          </div>
-        </div>
-      </div>
-
-    )
-  }, [filterValue, onSearchChange, onClear])
+    setFilterValue(value || '');
+    setPage(1); // Réinitialiser la pagination lors du changement de filtre
+  }, []);
 
   return (
-    <Table 
-      aria-label="User table"
-      topContent={topContent}
-      topContentPlacement='outside'
-      bottomContent={
-        <div className="flex w-full justify-center">
-          <Pagination
-            isCompact
-            showControls
-            showShadow
-            color="secondary"
-            page={page}
-            total={pages}
-            onChange={page => setPage(page)}
-          />
-        </div>
-      }
-      bottomContentPlacement='outside'
-      sortDescriptor={sortDescriptor}
-      onSortChange={setSortDescriptor}
-      classNames={{
-        wrapper: "min-h-[222px]",
-      }}
-    >
-      <TableHeader columns={columns}>
-        {column => (
-          <TableColumn 
-            key={column.key}
-            {...(column.key === 'sunday' ? {allowsSorting: true} : {})}
-            >
-              {column.label}
-            </TableColumn>
+    <div>
+      <Input
+        placeholder="Search by date..."
+        value={filterValue}
+        onValueChange={onSearchChange}
+        startContent={<FiSearch />}
+        className="mb-4"
+      />
+
+      <Table aria-label="Opening Hours">
+        <TableHeader columns={[
+          { key: 'monday', label: 'Monday' },
+          { key: 'tuesday', label: 'Tuesday' },
+          { key: 'wednesday', label: 'Wednesday' },
+          { key: 'thursday', label: 'Thursday' },
+          { key: 'friday', label: 'Friday' },
+          { key: 'created_at', label: 'Created At' },
+        ]}>
+          {(column) => (
+            <TableColumn key={column.key}>{column.label}</TableColumn>
           )}
-      </TableHeader>
-      <TableBody items={sortedItems} emptyContent="No rows to display.">
-        {OpeningHrs => (
-            <TableRow key={OpeningHrs.sunday}>
-            {(columnKey) => <TableCell>{renderCell(OpeningHrs, columnKey)}</TableCell>}
+        </TableHeader>
+
+        <TableBody items={itemsToDisplay} emptyContent='No rows to display.'>
+          {(item) => (
+            <TableRow key={item.id}>
+              <TableCell>{item.monday}</TableCell>
+              <TableCell>{item.tuesday}</TableCell>
+              <TableCell>{item.wednesday}</TableCell>
+              <TableCell>{item.thursday}</TableCell>
+              <TableCell>{item.friday}</TableCell>
+              <TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
             </TableRow>
-        )}
-    </TableBody>
+          )}
+        </TableBody>
+      </Table>
 
-    </Table>
+      <Pagination
+        isCompact
+        page={page}
+        total={pages}
+        onChange={setPage}
+        showControls
+      />
+    </div>
   );
+};
 
-}
-
-
+export default OpeningHoursTable;

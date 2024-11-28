@@ -1,24 +1,43 @@
-import { Metadata } from 'next';
- 
-export const metadata: Metadata = {
-  title: 'dashboard',
-};
+"use client";
 
+import { useEffect } from 'react';
+import { HiArrowRight } from "react-icons/hi2";
+import Link from 'next/link';
+import { PiPiggyBankLight } from "react-icons/pi";
+import { lusitana } from '@/app/dashboard/fonts';
+import { Button } from '@/app/components/button'; // Importation du bouton
+import styles from '@/app/dashboard/home.module.css';
 
-export default async function Page() {
+export default function Page() {
+  useEffect(() => {
+    // Client-side code here
+    console.log('This runs only on the client side');
+  }, []);
 
   return (
-    <main>
-      <h1 className={` mb-4 text-xl md:text-2xl`}>
-        my Dashboard Y
-      </h1>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {/* <CardWrapper /> */}
-      
+    <main className="flex min-h-screen flex-col p-6">
+      <div className="flex h-20 shrink-0 items-end rounded-lg bg-blue-500 p-4 md:h-52">
+        <PiPiggyBankLight />
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">
-          {/* <RevenueChart /> */}
-          {/* <LatestInvoices /> */}
+      <div className="mt-4 flex grow flex-col gap-4 md:flex-row">
+        <div className="flex flex-col justify-center gap-6 rounded-lg bg-gray-50 px-6 py-10 md:w-2/5 md:px-20">
+          <div className={styles.shape} />
+          <p className={`${lusitana.className} text-xl text-gray-800 md:text-3xl md:leading-normal`}>
+            <strong>Welcome to Acme.</strong> This is the example for the{' '}
+            <a href="https://nextjs.org/learn/" className="text-blue-500">
+              Next.js Learn Course
+            </a>, brought to you by Vercel.
+          </p>
+          <Link href="/login" passHref>
+            {/* Utilisation du composant Button avec Link */}
+            <Button className="self-start px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-400 md:text-base">
+              <span>Log in</span> <HiArrowRight className="w-5 md:w-6" />
+            </Button>
+          </Link>
+        </div>
+        <div className="flex items-center justify-center p-6 md:w-3/5 md:px-28 md:py-12">
+          <h1>IMAGE</h1>
+        </div>
       </div>
     </main>
   );

@@ -11,13 +11,18 @@ export const fetchMembers = async () => {
   }
 };
 
+
 // Fonction pour créer un nouveau member
 export const createMembers = async (memberData) => {
   try {
-    const response = await AxiosInstance.member('/members', memberData);
+    const response = await AxiosInstance.post('/members', memberData); // Utilisez 'post' au lieu de 'member'
     return response.data;
   } catch (error) {
-    console.error("Erreur lors de la création du membre:", error);
+    if (error.response) {
+      console.error("Erreur API:", error.response.data);
+    } else {
+      console.error("Erreur de connexion:", error.message);
+    }
     throw error;
   }
 };

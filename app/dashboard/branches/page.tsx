@@ -1,11 +1,9 @@
-'use client'; // Assure que le composant utilise React côté client
-
 // import Pagination from '@/app/ui/invoices/pagination';
 import Search from '@/app/components/search';
-import MemberTable from '@/app/components/members/MemberTable';
-import {Member} from './columns';
+import {Holyday} from './columns';
+import HolydayTable from '@/app/components/holydays/holydayTable';
 
-async function getUsers(): Promise<Member[]> {
+async function getHolidays(): Promise<Holyday[]> {
   const res = await fetch(
   'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
 )
@@ -13,19 +11,17 @@ async function getUsers(): Promise<Member[]> {
   return data
 }
 
-export default async function Users(){
- const users = await getUsers()
+export default async function Holydays(){
+ const hollydays = await getHolidays()
     return (
       <div className="w-full bg-white">
         <div className="flex w-full items-center justify-between">
-          <h1 className={` text-2xl`}>Member</h1>
+          <h1 className={` text-2xl`}>Holydays</h1>
         </div>
         <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-
-         {/* card */} <p>MemberTable</p>
-
+         {/* card */} 
         </div>
-        <MemberTable users={users} />
+        <HolydayTable holydays={hollydays} />
       </div>
     )
   }

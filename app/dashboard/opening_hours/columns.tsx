@@ -1,57 +1,56 @@
+'use client';
+
 import React from "react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, ChipProps, Chip } from "@nextui-org/react";
 import { Tooltip } from "@nextui-org/react";
 import { FaRegTrashCan, FaRegEye } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 
+// Définition du type des horaires d'ouverture
 export type OpeningHrs = {
-  sunday: string;
+  id: string;
   monday: string;
   tuesday: string;
   wednesday: string;
   thursday: string;
   friday: string;
-  saturday: string;
+  saturday: string | null;
+  sunday: string | null;
+  created_at: string;
+  updated_at: string;
+  status: "active" | "paused" | "vacation";  // Ajout du champ status
 };
 
-export const columns = [
-  {
-    key: "sunday",
-    label: "Sunday",
-  },
-  {
-    key: "monday",
-    label: "Monday ",
-  },
-  {
-    key: "tuesday",
-    label: "Tuesday ",
-  },
-  {
-    key: "wednesday",
-    label: "Wednesday ",
-  },
-  {
-    key: "thursday",
-    label: "Thursday",
-  },
-  {
-    key: "friday",
-    label: "Friday ",
-  },
-  {
-    key: "saturday",
-    label: "Saturday ",
-  },
-  {
-    key: "actions",
-    label: "Actions",
-  },
-];
+const statusColorMap: Record<string, ChipProps["color"]> = {
+  active: "success",
+  paused: "danger",
+  vacation: "warning",
+};
 
-export const renderCell = (openingHours: OpeningHrs, columnKey: React.Key) => {
-  const cellValue = openingHours[columnKey as keyof OpeningHrs];
+// Définition des colonnes du tableau
+export const columns = [
+  { key: "monday", label: "Monday" },
+  { key: "tuesday", label: "Tuesday" },
+  { key: "wednesday", label: "Wednesday" },
+  { key: "thursday", label: "Thursday" },
+  { key: "friday", label: "Friday" },
+  { key: "created_at", label: "Created At" },
+  { key: "status", label: "Status" },  // Colonne pour le statut
+  { key: "actions", label: "Actions" },
+];
+// Fonction pour rendre le contenu des cellules
+export const renderCell = (item: OpeningHrs, columnKey: React.Key) => {
+  const cellValue = item[columnKey as keyof OpeningHrs];
 
   switch (columnKey) {
+    case "created_at":
+      return new Date(item.created_at).toLocaleString(); // Affiche la date de création formatée
+    case "status":
+      return (
+        <Chip className="capitalize" color={statusColorMap[item.status]} size="sm" variant="flat">
+          {cellValue}
+        </Chip>
+      );
     case "actions":
       return (
         <div className="relative flex items-center gap-2">
@@ -72,8 +71,7 @@ export const renderCell = (openingHours: OpeningHrs, columnKey: React.Key) => {
           </Tooltip>
         </div>
       );
-
     default:
-      return cellValue;
+      return item[columnKey as keyof OpeningHrs]; // Retourne les horaires pour chaque jour
   }
 };

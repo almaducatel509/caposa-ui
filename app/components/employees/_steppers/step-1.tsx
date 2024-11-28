@@ -14,8 +14,7 @@ interface Step1Props {
     errors: ErrorMessages<Step1Data>;
     setErrors?: (errors: Partial<ErrorMessages<Step1Data>>) => void; // Make setErrors optional
   }
-  
-  
+    
   const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors, setErrors }) => {
     
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);

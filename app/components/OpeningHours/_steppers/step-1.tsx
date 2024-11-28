@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TimeInput } from "@nextui-org/react";
 import type { TimeValue } from "@react-types/datepicker";
 import { ZonedDateTime } from "@internationalized/date";
@@ -12,6 +12,10 @@ interface Step1Props {
 }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
+  // Déclaration de l'état 'initialized'
+  const [initialized, setInitialized] = useState(false);
+  const [isClient, setIsClient] = useState(false); // Déclarez l'état ici
+
   const initializeTimeValue = (timeString: string | undefined, isOpen: boolean) => {
     if (timeString) {
       const timePart = isOpen ? timeString.split('-')[0] : timeString.split('-')[1];
@@ -37,6 +41,21 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
 
     }
   };
+  
+  useEffect(() => {
+    setInitialized(true); // Indique que le composant a été initialisé côté client
+  }, []);
+
+  if (!initialized) {
+    return null; // Ne pas rendre ce composant sur le serveur
+  }
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null; // Ne pas afficher ce composant côté serveur
+  }
 
   return (
     <div>
@@ -71,5 +90,4 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
 
   );
 };
-
 export default Step1;

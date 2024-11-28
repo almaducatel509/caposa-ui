@@ -5,7 +5,7 @@ import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
 import { useEffect } from 'react';
-
+import { createOpeningHours } from '@/app/lib/api/opening_hour';
 
 const steps = [Step1, Step2, Step3];
 
@@ -60,15 +60,27 @@ const RegisterForm: React.FC = () => {
 
 
   const handleSubmit = async () => {
-    if (validateStep()) {
+    // 1. Valider les données avant de les envoyer
+    const result = openingHoursSchema.safeParse(formData);
+    
+    if (result.success) {
+      // Si la validation réussit, les données sont valides
+      console.log("Les données sont valides:", result.data);
+      
       try {
-        const response = await createOpeningHours(formData); // Utilisation de createPost ici
+        // 2. Créer les horaires d'ouverture en envoyant les données valides à l'API
+        const response = await createOpeningHours(result.data); // Utilisez les données validées ici
         console.log('Post créé avec succès:', response);
       } catch (error) {
         console.error("Erreur lors de la création du post:", error);
       }
+    } else {
+      // Si la validation échoue, afficher les erreurs
+      console.error("Erreur de validation:", result.error.errors);
+      // Vous pouvez également mettre à jour l'état `errors` pour afficher les messages d'erreur dans l'interface utilisateur
     }
   };
+  
   
   const updateFormData = (data: Partial<OpeningHours>) => {
     console.log("Updating form data:", data);
@@ -106,7 +118,7 @@ const RegisterForm: React.FC = () => {
           </button>
         ) : (
           <button className="bg-green-600 text-white" onClick={handleSubmit}>
-            Fin
+            Soumettre
           </button>
         )}
       </div>
@@ -115,7 +127,4 @@ const RegisterForm: React.FC = () => {
 };
 
 export default RegisterForm;
-function createOpeningHours(formData: { monday: string; tuesday: string; wednesday: string; thursday: string; friday: string; }) {
-  throw new Error('Function not implemented.');
-}
 

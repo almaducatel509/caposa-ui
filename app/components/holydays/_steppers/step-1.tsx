@@ -38,7 +38,6 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
             label="Date historique" 
             description="Veuillez entrer la date au format AAAA-MM-JJ"
             isInvalid={false} // Par défaut, non invalide
-            errorMessage={errors.holyday_date}
             className="max-w-xs"
             value={parseDate(formData.holyday_date || "1804-01-01")}
             onChange={handleChangeDate} 
