@@ -629,3 +629,126 @@ const config: Config = {
 };
 ...................
 export default config;
+----------------------------------------------
+##Ce document couvre les erreurs et solutions rencontrées lors de la création d’un post avec Django et Axios, et t'aidera à garder en tête les points essentiels pour éviter les mêmes obstacles à l'avenir.
+
+---
+
+## Journal de Succès : Création d'un Post avec Django et Axios
+
+### Objectif
+Créer un post en utilisant une API Django et Axios pour envoyer les données depuis le frontend.
+
+---
+
+### 1. **Étape : Configuration Initiale et Définition des Variables**
+
+**Problème** : 
+Lors de la création du post, j'ai rencontré des erreurs avec les URL et la connexion.
+
+**Solution** :
+- Dans le fichier `.env`, j’ai défini la variable `BASE_ROUTE` :
+  ```plaintext
+  BASE_ROUTE=http://localhost:8000/api/
+  ```
+- J'ai configuré `AxiosInstance` pour utiliser `BASE_ROUTE` comme `baseURL` :
+  ```javascript
+  const AxiosInstance = axios.create({
+    baseURL: process.env.BASE_ROUTE,
+  });
+  ```
+- **Note** : Toujours redémarrer le serveur après une modification dans `.env`.
+
+---
+
+### 2. **Étape : L'Erreur `ERR_CONNECTION_REFUSED` (Pas de Connexion)**
+
+**Problème** : 
+Le serveur Django ne semblait pas être accessible. J’ai reçu `ERR_CONNECTION_REFUSED`.
+
+**Solution** :
+- **Vérification du serveur Django** : J'ai utilisé `python manage.py runserver` pour démarrer le serveur.
+- **Vérification de l'URL** : J'ai testé [http://127.0.0.1:8000/api/posts/](http://127.0.0.1:8000/api/posts/) dans le navigateur pour vérifier que le serveur répondait bien.
+
+---
+
+### 3. **Étape : Erreur `500 Internal Server Error` et Problème du Slash Final**
+
+**Problème** :
+J'ai rencontré une erreur `500` due à l'absence d'un slash final dans l’URL.
+
+**Solution** :
+- J'ai ajouté le slash final à l’URL dans la requête `AxiosInstance.post` :
+  ```javascript
+  await AxiosInstance.post('/posts/', postData);
+  ```
+- **Autre option** (non utilisée, mais utile à connaître) : Si on ne veut pas ajouter un slash à chaque URL, il est possible de définir `APPEND_SLASH = False` dans les paramètres Django.
+
+---
+
+### 4. **Étape : Tester les Données dans Postman et S'assurer de la Structure**
+
+**Problème** :
+Les données envoyées ne correspondaient pas parfaitement aux champs attendus par l’API.
+
+**Solution** :
+- **Test dans Postman** : J'ai utilisé Postman pour envoyer une requête `POST` manuelle à l'endpoint avec le corps JSON suivant :
+  ```json
+  {
+    "name": "My Post",
+    "description": "This is a test",
+    "deposit": true,
+    "withdrawal": true,
+    "transfer": false
+  }
+  ```
+- **Vérification du Modèle et du Sérialiseur Django** : Dans Django, j'ai vérifié que le modèle `Post` et le `PostSerializer` contenaient bien tous les champs nécessaires.
+
+---
+
+### 5. **Étape : Ajout de Logs pour Vérifier les Données Reçues par l’API**
+
+**Problème** :
+Pour être certain que les données arrivaient bien jusqu’au serveur Django, j'ai ajouté un `print()` pour loguer les données reçues.
+
+**Solution** :
+Dans la vue `create_post`, j'ai ajouté :
+```python
+print("Données reçues :", request.data)
+```
+Cela m'a permis de voir exactement ce que l’API recevait, directement dans la console Django.
+
+---
+
+### 6. **Résultat Final : Succès !**
+
+Après avoir résolu ces obstacles, j’ai finalement pu créer un post avec succès. L'API a retourné un objet post créé avec un identifiant unique et les données envoyées.
+
+**Retour de l'API** :
+```json
+{
+  "id": "38421637-68e0-4f04-a50e-39123e704614",
+  "name": "My Post",
+  "description": "This is a test",
+  "deposit": true,
+  "withdrawal": true,
+  "transfer": false
+}
+```
+
+---
+
+### Leçons Apprises et Meilleures Pratiques
+
+- **Toujours vérifier les URL** : Utiliser un slash final et vérifier que l’URL de base est correctement configurée.
+- **Vérifier les Données et Tester dans Postman** : Tester les requêtes avec Postman pour isoler les problèmes côté serveur.
+- **Utiliser des Logs pour Diagnostiquer** : Ajouter des logs `print` dans les vues Django permet de voir rapidement ce que l’API reçoit.
+- **Documenter le Processus** : Garder une trace des étapes et des solutions pour les réutiliser facilement dans d’autres projets.
+
+---
+
+### Conclusion
+
+Ce journal de succès te servira de guide la prochaine fois que tu devras intégrer un formulaire ou déboguer des erreurs similaires. En répétant ces étapes et en consultant cette référence, tu éviteras de retomber dans les mêmes pièges ! 👏😊
+
+--- 
