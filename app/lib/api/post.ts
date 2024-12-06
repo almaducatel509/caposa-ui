@@ -12,7 +12,7 @@ export const fetchPosts = async () => {
 };
 
 // Fonction pour créer un nouveau post
-export const createPost = async (postData) => {
+export const createPost = async (postData:any) => {
     try {
       const response = await AxiosInstance.post('/posts/', postData);
       return response.data;

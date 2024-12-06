@@ -1,60 +1,34 @@
-import React from "react";
-import {
-   User, 
-   Chip, 
-   Tooltip,
-  } from "@nextui-org/react";
+
+'use client';
+
+import React, { useState, useEffect } from "react";
+import { Tooltip } from '@nextui-org/react';
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
-
+// Define the holiday data type
 export type Holyday = {
-    holyday_date: string;
-    holyday_description: string;
-  }
-  
-  
-export const columns = [
-    {
-      key: "holyday_date",
-      label: "Date",
-    },
-    
-    {
-      key: "holyday_description",
-      label: "Description",
-    }, 
-    {
-      key: "actions",
-      label: "Actions",
-    },
-  ];
-
-const statusColorMap = {
-active: "success",
-paused: "danger",
-vacation: "warning",
+  date: string;
+  description: string;
 };
 
-export const renderCell = (holyday:Holyday, columnKey: React.Key) => {
+// Define the columns for the holidays table
+export const columns = [
+  { key: 'date', label: 'Date' },
+  { key: 'description', label: 'Description' },
+  { key: 'actions', label: 'Actions' },
+];
+
+// Function to render each cell in the table
+export const renderCell = (holyday: Holyday, columnKey: React.Key) => {
   const cellValue = holyday[columnKey as keyof Holyday];
 
   switch (columnKey) {
-    case "holyday_date":
-      return (
-        <div>
-          <strong>{holyday.holyday_date}</strong> {/* Affichage en gras de la date */}
-        </div>
-      );
-
-    case "holyday_description":
-      return (
-        <div>
-          <p>{holyday.holyday_description}</p> {/* Affichage simple de la description */}
-        </div>
-      );
-    
-    case "actions":
+    case 'date':
+      return <div><strong>{holyday.date}</strong></div>;
+    case 'description':
+      return <div><p>{holyday.description}</p></div>;
+    case 'actions':
       return (
         <div className="relative flex items-center gap-2">
           <Tooltip content="Details">
@@ -62,12 +36,12 @@ export const renderCell = (holyday:Holyday, columnKey: React.Key) => {
               <FaRegEye />
             </span>
           </Tooltip>
-          <Tooltip content="Edit user">
+          <Tooltip content="Edit">
             <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
               <FiEdit />
             </span>
           </Tooltip>
-          <Tooltip color="danger" content="Delete user">
+          <Tooltip color="danger" content="Delete">
             <span className="text-lg text-danger cursor-pointer active:opacity-50">
               <FaRegTrashCan />
             </span>
@@ -77,7 +51,7 @@ export const renderCell = (holyday:Holyday, columnKey: React.Key) => {
     default:
       return cellValue;
   }
-}
+};
 
  
 

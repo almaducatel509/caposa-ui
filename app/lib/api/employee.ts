@@ -12,18 +12,14 @@ export const fetchEmployees = async () => {
 };
 
 // Fonction pour créer un nouvel employé
-export const createEmployee = async (employeeData) => {
+export const createEmployee = async (employeeData:any) => {
   try {
     console.log('Données envoyées:', employeeData);
     const response = await AxiosInstance.post('/employees/', employeeData);
     console.log('Réponse API:', response);
     return response.data;
   } catch (error) {
-    if (error.response) {
-      console.error('Erreur API:', error.response.data);
-    } else {
-      console.error('Erreur de connexion:', error.message);
-    }
-    throw error;
+      console.error('Erreur API:', error);
+      throw error;
   }
 };

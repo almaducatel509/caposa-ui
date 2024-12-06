@@ -1,82 +1,52 @@
-'use client'
-
-import {useState, useMemo, useCallback} from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import React from "react";
 import {
-  Table, 
-  TableHeader, 
-  TableColumn, 
-  TableBody, 
-  TableRow, 
-  TableCell, 
-  input,
-  getKeyValue,
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
   Pagination,
-  SortDescriptor,
   Button,
 } from "@nextui-org/react";
-import { CreatePost,UpdatePost } from '@/app/dashboard/postes/bouttons';
-import { Post, columns, renderCell } from "@/app/dashboard/postes/columns";
-import {Input} from "@nextui-org/input";
-import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
+import { Input } from "@nextui-org/input";
+import { FiSearch } from "react-icons/fi";
+import { columns, renderCell } from "@/app/dashboard/postes/columns";
+import { TfiExport, TfiImport } from 'react-icons/tfi';
 
-
-export default function PostTable({postes} : {postes: Post[] }) {
+export default function PostTable({ postes }: { postes: any[] }) {
   const [filterValue, setFilterValue] = useState('');
-  const hasSearchFilter = Boolean(filterValue);
-  
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 5;
+
+  // Filtrer les postes par nom
   const filteredItems = useMemo(() => {
-    let filteredUsers = [...postes];
-
-    if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter(post =>
-        post.post_name.toLowerCase().includes(filterValue.toLowerCase())
-      )
-  }   
-  
-  return filteredUsers
-}, [postes, filterValue, hasSearchFilter])
-  
-  const rowsPerPage = 4
-  const [page, setPage] = useState(1)
-  const pages = Math.ceil(filteredItems.length / rowsPerPage);
-
-  const items = useMemo(() => {
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-
-    return filteredItems.slice(start, end)
-  }, [page, filteredItems])
-
-  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column:'post_name',
-    direction: 'ascending'
-  })
-  
-  const sortedItems = useMemo(() => {
-    return [...items].sort((a: Post, b: Post) => {
-      const first = a[sortDescriptor.column as keyof Post] as String;
-      const second = b[sortDescriptor.column as keyof Post] as String;
-      const cmp = first < second ? -1 : first > second ? 1 : 0;
-
-      return sortDescriptor.direction === "descending" ? -cmp : cmp;
+    return postes.filter(post => {
+      // Assurez-vous que 'post_name' est défini avant d'appliquer 'toLowerCase'
+      if (post.name && typeof post.name === 'string') {
+        return post.name.toLowerCase().includes(filterValue.toLowerCase());
+      }
+      return false; // Si 'post_name' est undefined ou non-string, le filtre échoue
     });
-  }, [sortDescriptor, items])
+  }, [postes, filterValue]);
+  
+  const pages = Math.ceil(filteredItems.length / rowsPerPage);
+  const itemsToDisplay = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredItems.slice(start, start + rowsPerPage);
+  }, [page, filteredItems]);
 
   const onSearchChange = useCallback((value?: string) => {
-    if (value) {
-      setFilterValue(value);
-      setPage(1);
-    } else {
-      setFilterValue("");
-    }
-  }, [])
+    setFilterValue(value || '');
+    setPage(1); // Réinitialiser la pagination lors du changement de filtre
+  }, []);
 
-  const onClear = useCallback(()=>{
-    setFilterValue("")
-    setPage(1)
-  }, [])
+  const onClear = useCallback(() => {
+    setFilterValue('');
+    setPage(1);
+  }, []);
 
   const topContent = useMemo(() => {
     return (
@@ -84,35 +54,35 @@ export default function PostTable({postes} : {postes: Post[] }) {
         <div className="flex gap-3 items-center">
           <Input
             isClearable
-            className="w-full sm:max-w-[44%]"
-            placeholder="Search by name..."
+            className="mb-4"
+            placeholder="Search by post name..."
             startContent={<FiSearch />}
             value={filterValue}
             onClear={() => onClear()}
             onValueChange={onSearchChange}
-          />
-          <div className="button flex gap-3">
-            <Button color="primary" endContent={<LuPlus />}>
+            />
+          {/* Ajouter les boutons Add New, Import, Export */}
+          <div className="button flex gap-3 pb-4 ">
+            <Button color="primary" variant="bordered" endContent={<LuPlus />}>
               Add New
             </Button>
-            <Button color="primary" endContent={<LuPlus />}>
+            <Button color="primary" variant="bordered" endContent={<TfiImport />}>
               Import
             </Button>
-            <Button color="primary" endContent={<LuPlus />}>
+            <Button color="primary" variant="bordered" endContent={<TfiExport />}>
               Export
             </Button>
           </div>
         </div>
       </div>
-
-    )
-  }, [filterValue, onSearchChange, onClear])
+    );
+  }, [filterValue, onSearchChange, onClear]);
 
   return (
-    <Table 
+    <Table
       aria-label="Post table"
       topContent={topContent}
-      topContentPlacement='outside'
+      topContentPlacement="outside"
       bottomContent={
         <div className="flex w-full justify-center">
           <Pagination
@@ -122,40 +92,26 @@ export default function PostTable({postes} : {postes: Post[] }) {
             color="secondary"
             page={page}
             total={pages}
-            onChange={page => setPage(page)}
+            onChange={(page) => setPage(page)}
           />
         </div>
       }
-      bottomContentPlacement='outside'
-      sortDescriptor={sortDescriptor}
-      onSortChange={setSortDescriptor}
-      classNames={{
-        wrapper: "min-h-[222px]",
-      }}
+      bottomContentPlacement="outside"
     >
       <TableHeader columns={columns}>
         {column => (
-          <TableColumn 
-            key={column.key}
-            {...(column.key === 'post_name' ? {allowsSorting: true} : {})}
-            >
-              {column.label}
-            </TableColumn>
-          )}
+          <TableColumn key={column.key} {...(column.key === 'name' ? { allowsSorting: true } : {})}>
+            {column.label}
+          </TableColumn>
+        )}
       </TableHeader>
-      <TableBody items={sortedItems} emptyContent='No rows to display.'>
+      <TableBody items={itemsToDisplay} emptyContent="No rows to display.">
         {post => (
-          <TableRow key={post.post_id}>
+          <TableRow key={post.id}>
             {(columnKey) => <TableCell>{renderCell(post, columnKey)}</TableCell>}
           </TableRow>
         )}
       </TableBody>
     </Table>
   );
-
 }
-
-
-
-
-

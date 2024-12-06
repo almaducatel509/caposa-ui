@@ -13,15 +13,15 @@ export const fetchMembers = async () => {
 
 
 // Fonction pour créer un nouveau member
-export const createMembers = async (memberData) => {
+export const createMembers = async (memberData:any) => {
   try {
     const response = await AxiosInstance.post('/members', memberData); // Utilisez 'post' au lieu de 'member'
     return response.data;
   } catch (error) {
-    if (error.response) {
-      console.error("Erreur API:", error.response.data);
+    if (error) {
+      console.error("Erreur API:", error);
     } else {
-      console.error("Erreur de connexion:", error.message);
+      console.error("Erreur de connexion:", error);
     }
     throw error;
   }

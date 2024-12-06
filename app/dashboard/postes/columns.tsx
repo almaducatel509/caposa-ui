@@ -9,67 +9,86 @@ import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
 
 export type Post = {
-    post_id: string;
-    post_name: string;
-    post_description: string;
-    responsibilities: string;
-  }
-  
-  
-export const columns = [
-    {
-      key: "post_name",
-      label: "NAME",
-    },
-    
-    {
-      key: "responsibilities",
-      label: "Responsibilities",
-    },
-    {
-      key: "post_description",
-      label: "Description",
-    }, 
-    
-    {
-      key: "actions",
-      label: "Actions",
-    },
-  ];
-
-  
-
-const statusColorMap = {
-active: "success",
-paused: "danger",
-vacation: "warning",
+  id: string;
+  name: string;
+  description: string;
+  deposit: boolean;
+  withdrawal: boolean;
+  transfer: boolean;
 };
 
-export const renderCell = (post:Post, columnKey: React.Key) => {
+export const columns = [
+  {
+    key: "name",  // Correspond à 'post_name' dans le JSON
+    label: "Post",
+  },
+  {
+    key: "description",  // Correspond à 'post_description' dans le JSON
+    label: "Description",
+  },
+  {
+    key: "deposit",  // Ajoutez des propriétés comme 'deposit', 'withdrawal', etc. si nécessaire
+    label: "Deposit",
+  },
+  {
+    key: "withdrawal",  // Ajoutez des propriétés comme 'withdrawal', etc. si nécessaire
+    label: "Withdrawal",
+  },
+  {
+    key: "transfer",  // Ajoutez des propriétés comme 'transfer', etc. si nécessaire
+    label: "Transfer",
+  },
+  {
+    key: "actions",
+    label: "Actions",
+  },
+];
+
+const statusColorMap = {
+  active: "success",
+  paused: "danger",
+  vacation: "warning",
+};
+
+export const renderCell = (post: Post, columnKey: React.Key) => {
   const cellValue = post[columnKey as keyof Post];
 
   switch (columnKey) {
-    case "post_name":
+    case "name":
       return (
         <div>
-          <strong>{post.post_name}</strong> 
+          <strong>{post.name}</strong>  {/* Correspond à 'post_name' */}
         </div>
       );
 
-    case "responsibilities":
+    case "description":
       return (
         <div>
-          <p>{post.responsibilities}</p> 
+          <p>{post.description}</p>  {/* Correspond à 'post_description' */}
         </div>
       );
 
-    case "post_description":
+    case "deposit":
       return (
         <div>
-          <p>{post.post_description}</p>
+          <p>{post.deposit ? 'Yes' : 'No'}</p>  {/* Affiche 'Yes' ou 'No' */}
         </div>
       );
-    
+
+    case "withdrawal":
+      return (
+        <div>
+          <p>{post.withdrawal ? 'Yes' : 'No'}</p>  {/* Affiche 'Yes' ou 'No' */}
+        </div>
+      );
+
+    case "transfer":
+      return (
+        <div>
+          <p>{post.transfer ? 'Yes' : 'No'}</p>  {/* Affiche 'Yes' ou 'No' */}
+        </div>
+      );
+
     case "actions":
       return (
         <div className="relative flex items-center gap-2">
@@ -78,12 +97,12 @@ export const renderCell = (post:Post, columnKey: React.Key) => {
               <FaRegEye />
             </span>
           </Tooltip>
-          <Tooltip content="Edit user">
+          <Tooltip content="Edit post">
             <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
               <FiEdit />
             </span>
           </Tooltip>
-          <Tooltip color="danger" content="Delete user">
+          <Tooltip color="danger" content="Delete post">
             <span className="text-lg text-danger cursor-pointer active:opacity-50">
               <FaRegTrashCan />
             </span>
@@ -93,7 +112,7 @@ export const renderCell = (post:Post, columnKey: React.Key) => {
     default:
       return cellValue;
   }
-}
+};
 
  
 

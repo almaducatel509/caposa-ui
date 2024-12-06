@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, Input } from '@nextui-org/react';
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, Input, Tooltip, Button } from '@nextui-org/react';
 import { FiSearch } from 'react-icons/fi';
+import { FaRegTrashCan, FaRegEye } from 'react-icons/fa6';
+import { FiEdit } from 'react-icons/fi';
+import { LuPlus } from "react-icons/lu";
+import { TfiImport } from "react-icons/tfi";
+import { TfiExport } from "react-icons/tfi";
 
-// Composant de tableau pour afficher les horaires d'ouverture
+
+
 const OpeningHoursTable = ({ openingHours }: { openingHours: any[] }) => {
   const [filterValue, setFilterValue] = useState('');
   const [page, setPage] = useState(1);
@@ -28,13 +34,31 @@ const OpeningHoursTable = ({ openingHours }: { openingHours: any[] }) => {
 
   return (
     <div>
-      <Input
-        placeholder="Search by date..."
-        value={filterValue}
-        onValueChange={onSearchChange}
-        startContent={<FiSearch />}
-        className="mb-4"
-      />
+      <div className="flex flex-col gap-4 pt-4">
+        <div className="flex gap-3 items-center">
+            <Input
+            isClearable
+            placeholder="Search by date..."
+            value={filterValue}
+            onValueChange={onSearchChange}
+            startContent={<FiSearch />}
+            className="mb-4"
+          />
+          {/* Ajouter les boutons Add New, Import, Export */}
+          <div className="button flex gap-3">
+            <Button color="primary" variant="bordered" endContent={<LuPlus />}>
+              Add New
+            </Button>
+            <Button color="primary" variant="bordered" endContent={<TfiImport />}>
+              Import
+            </Button>
+            <Button color="primary" variant="bordered" endContent={<TfiExport />}>
+              Export
+            </Button>
+          </div>
+        </div>
+      </div>
+      
 
       <Table aria-label="Opening Hours">
         <TableHeader columns={[
@@ -44,6 +68,7 @@ const OpeningHoursTable = ({ openingHours }: { openingHours: any[] }) => {
           { key: 'thursday', label: 'Thursday' },
           { key: 'friday', label: 'Friday' },
           { key: 'created_at', label: 'Created At' },
+          { key: 'actions', label: 'Actions' }  // Ajout de la colonne des actions
         ]}>
           {(column) => (
             <TableColumn key={column.key}>{column.label}</TableColumn>
@@ -59,6 +84,27 @@ const OpeningHoursTable = ({ openingHours }: { openingHours: any[] }) => {
               <TableCell>{item.thursday}</TableCell>
               <TableCell>{item.friday}</TableCell>
               <TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
+
+              {/* Colonne des actions */}
+              <TableCell>
+                <div className="relative flex items-center gap-2">
+                  <Tooltip content="Details">
+                    <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
+                      <FaRegEye />
+                    </span>
+                  </Tooltip>
+                  <Tooltip content="Edit Hours">
+                    <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
+                      <FiEdit />
+                    </span>
+                  </Tooltip>
+                  <Tooltip color="danger" content="Delete Hours">
+                    <span className="text-lg text-danger cursor-pointer active:opacity-50">
+                      <FaRegTrashCan />
+                    </span>
+                  </Tooltip>
+                </div>
+              </TableCell>
             </TableRow>
           )}
         </TableBody>
@@ -68,7 +114,7 @@ const OpeningHoursTable = ({ openingHours }: { openingHours: any[] }) => {
         isCompact
         page={page}
         total={pages}
-        onChange={setPage}
+        onChange={(page) => setPage(page)}
         showControls
       />
     </div>

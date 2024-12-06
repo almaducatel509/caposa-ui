@@ -12,8 +12,8 @@ const RegisterForm: React.FC = () => {
 
   // Définition de formData pour Holiday
   const [formData, setFormData] = useState<Holiday>({
-    holyday_date: '',
-    holyday_description: '',
+    date: '',
+    description: '',
   });
   console.log("Type de formData dans RegisterForm :", Array.isArray(formData) ? "Tableau" : "Objet");
 

@@ -23,7 +23,7 @@ export default function OpeningHoursPage() {
       } finally {
         setLoading(false);  // Fin du chargement
       }
-    };
+    };   
 
     getOpeningHours();  // Appel pour récupérer les données
   }, []);  // Le tableau vide [] garantit que la fonction se lance une seule fois lors du montage
@@ -38,17 +38,17 @@ export default function OpeningHoursPage() {
     return <div>{error}</div>;
   }
 
-  return (
-    <div className="w-full bg-white">
-      <div className="flex w-full items-center justify-between">
-        <h1 className="text-2xl">Opening Hours</h1>
-      </div>
-      <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-        {/* D'autres éléments peuvent être ajoutés ici */}
-      </div>
+    return (
+      <div className="w-full bg-white">
+        <div className="flex w-full items-center justify-between">
+          <h1 className="text-2xl">Opening Hours</h1>
+        </div>
+        <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
+          {/* D'autres éléments peuvent être ajoutés ici */}
+        </div>
 
-      {/* Passer les horaires d'ouverture au composant Hours_table */}
-      <Hours_table openingHours={openingHours} />
-    </div>
-  );
+        {/* Passer les horaires d'ouverture au composant Hours_table */}
+        <Hours_table openingHours={openingHours} />
+      </div>
+    );
 }

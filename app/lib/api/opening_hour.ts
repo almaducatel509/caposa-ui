@@ -11,9 +11,9 @@ export const fetchOpeningHours = async () => {
     throw error;  // Lancer l'erreur pour pouvoir la gérer ailleurs
   }
 };
-
+// i added :any in create
 // Fonction pour créer un nouveau openingHour
-export const createOpeningHours = async (openingHoursData) => {
+export const createOpeningHours = async (openingHoursData:any) => {
    try { 
       const response = await AxiosInstance.post('/opening-hours/', openingHoursData);
       return response.data; } 

@@ -13,18 +13,14 @@ export const fetchBranches = async () => {
 
 
 // Fonction pour créer une nouvelle branche
-export const createBranch = async (branchData) => {
+export const createBranch = async (branchData:any) => {
   try {
     console.log('Données envoyées:', branchData);
     const response = await AxiosInstance.post('/branches', branchData);
     console.log('Réponse de l\'API:', response);
     return response.data;
   } catch (error) {
-    if (error.response) {
-      console.error('Erreur API:', error.response.data);
-    } else {
-      console.error('Erreur de connexion:', error.message);
-    }
+      console.error('Erreur API:', error);
     throw error;
   }
 };
