@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import Step1 from './_steppers/step-1';
 import Step2 from './_steppers/step-2';
 import Step3 from './_steppers/step-3';
-import { z } from 'zod';
 import { Button } from '@nextui-org/react';
 import { branchSchema, BranchData, ErrorMessages } from './validations';
 import { createBranch } from '@/app/lib/api/branche';
@@ -64,6 +63,7 @@ const RegisterForm = () => {
       try {
         const response = await createBranch(formData);
         console.log('Branch created successfully:', response);
+        console.log('Selected opening hour ID:', formData.opening_hour);
       } catch (error) {
         console.error('Error creating branch:', error);
       }

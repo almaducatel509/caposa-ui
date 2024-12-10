@@ -27,7 +27,10 @@ const links = [
     href: '/dashboard/holydays',
     icon: HiOutlineUserGroup, 
   },
-  
+  { name: 'Branches',
+    href: '/dashboard/branches',
+    icon: HiOutlineUserGroup, 
+  },
   { name: 'Employees',
     href: '/dashboard/employees',
     icon: HiOutlineUserGroup, 
