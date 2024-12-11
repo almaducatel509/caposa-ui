@@ -29,23 +29,35 @@ const RegisterForm = () => {
 
   const validateStep = (): boolean => {
     console.log("Validation des données pour l'étape :", currentStep + 1);
+    console.log("FormData avant validation :", formData);
+
     const result = branchSchema.safeParse(formData);
 
-    if (result.success) {
-      setErrors({});
-      return true;
-    } else {
-      console.log("Erreurs de validation :", result.error);
+    if (!result.success) {
+      // Étape 4 : Log des erreurs brutes retournées par Zod
+      console.log("Erreurs brutes de validation Zod :", result.error.errors);
+  
       const newErrors: ErrorMessages<BranchData> = {};
       result.error.errors.forEach((error) => {
+        // Étape 5 : Log chaque erreur individuellement pour vérifier sa transformation
+        console.log("Erreur Zod transformée :", error);
+  
         if (error.path.length) {
           const key = error.path[0] as keyof BranchData;
           newErrors[key] = error.message;
         }
       });
-      setErrors(newErrors);
-      return false;
+  
+      // Étape 6 : Log des erreurs finales assignées à l'état
+      console.log("Erreurs après transformation :", newErrors);
+      setErrors(newErrors); // Affiche les erreurs
+      return false; // Validation échouée
     }
+  
+    // Étape 7 : Validation réussie, réinitialisez les erreurs
+    console.log("Validation réussie : aucune erreur détectée.");
+    setErrors({});
+    return true; // Validation réussie
   };
 
   const handleNext = () => {
@@ -59,16 +71,30 @@ const RegisterForm = () => {
   };
 
   const handleSubmit = async () => {
-    if (validateStep()) {
-      try {
-        const response = await createBranch(formData);
-        console.log('Branch created successfully:', response);
-        console.log('Selected opening hour ID:', formData.opening_hour);
-      } catch (error) {
-        console.error('Error creating branch:', error);
-      }
+    const result = branchSchema.safeParse(formData);
+    if (!result.success) {
+      console.log("Validation errors:", result.error.errors);
+      return; // Stopper l'envoi en cas d'erreurs
     }
-  };
+  
+    // Envoi des données validées
+    const transformedData = {
+      ...formData,
+      number_of_posts: Number(formData.number_of_posts),
+      number_of_tellers: Number(formData.number_of_tellers),
+      number_of_clerks: Number(formData.number_of_clerks),
+      number_of_credit_officers: Number(formData.number_of_credit_officers),
+      holidays: formData.holidays,
+    };
+  
+    try {
+      console.log('Envoi des données :', transformedData);
+      const response = await createBranch(transformedData);
+      console.log('Réponse API :', response);
+    } catch (error) {
+      console.error('Erreur lors de la création :', error);
+    }
+  };   
 
   const updateFormData = (data: Partial<BranchData>) => {
     setFormData((prev) => ({

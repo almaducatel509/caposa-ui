@@ -1,9 +1,9 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { parseDate, getLocalTimeZone, DateValue } from "@internationalized/date";
 import { BranchData, ErrorMessages } from '../validations';
-import { Input, Button, Spacer, DateInput } from '@nextui-org/react';
+import type {Selection} from "@nextui-org/react";
+import { Input, Button, Spacer, DateInput, Select, SelectItem } from '@nextui-org/react';
 import TitleDetails from '../title-details';
-import axios from 'axios';
 import { fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
 
 
@@ -15,34 +15,44 @@ interface Step1Props {
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
   const [openingHours, setOpeningHours] = useState<{ id: string; schedule: string }[]>([]);
-  const [holidays, setHolidays] = useState<{ id: string; name: string }[]>([]);
+  const [holidays, setHolidays] = useState<{ id: string; date: string; description: string }[]>([]);
+  const [selectedHolidays, setSelectedHolidays] = useState<Selection>(
+    new Set(formData.holidays || [])
+  );
   const [loading, setLoading] = useState(true); // Indicateur de chargement
    
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both opening hours and holidays
         const [openingHoursResponse, holidaysResponse] = await Promise.all([
           fetchOpeningHours(),
           fetchHolidays(),
         ]);
-  
-        setOpeningHours(openingHoursResponse);
-        setHolidays(holidaysResponse);
-      } catch (error) {
+        setOpeningHours(openingHoursResponse); // Mettez à jour l'état
+        console.log("Opening hours set:", openingHoursResponse); // Vérifiez les données mises à jour
+        console.log("Holidays récupérés :", holidaysResponse); // Vérifiez ici
+        setHolidays(holidaysResponse); // Assurez-vous que cette ligne est bien exécutée
+     } catch (error) {
         console.error('Erreur lors de la récupération des données :', error);
       } finally {
-        setLoading(false);
+        setLoading(false); // Désactivez l'indicateur de chargement
       }
     };
   
     fetchData();
   }, []);
+
+  useEffect(() => {
+    console.log("Loading state:", loading);
+  }, [loading]);
   
   useEffect(() => {
     console.log('Opening Hours:', openingHours);
   }, [openingHours]);
-  
+  useEffect(() => {
+    console.log("Holidays:", holidays);
+  }, [holidays]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
   
@@ -53,13 +63,13 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
     } as Partial<BranchData>);
   };
   
+  const handleSelectionChange = (selectedKeys: Selection) => {
+    const selectedValues = Array.from(selectedKeys) as string[];
+    setSelectedHolidays(selectedKeys);
+    setFormData({ holidays: selectedValues });
+    console.log('Selected holidays (UUIDs):', formData.holidays);
 
-  const handleChangeDate = (date: DateValue) => {
-    const formattedDate = date.toString(); // YYYY-MM-DD
-    setFormData({ opening_date: formattedDate });
-    console.log('Updated date:', formattedDate);
-  };
-    
+  }; 
 
   return (
     <div>
@@ -101,6 +111,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
           <div className="space-y-2">
             <label htmlFor="branch_email" className="block text-sm font-medium text-gray-700">Branch Email</label>
             <Input
+              name='branch_email'
               label="Branch Email"
               placeholder="Enter branch email"
               value={formData.branch_email}
@@ -110,6 +121,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
           <div className="space-y-2">
             <label htmlFor="number_of_posts" className="block text-sm font-medium text-gray-700">Number of Posts</label>
             <Input
+              name='number_of_posts'
               label="Number of Posts"
               placeholder="Enter number of posts"
               value={formData.number_of_posts.toString()} // Convertir en chaîne
@@ -120,6 +132,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
           <div className="space-y-2">
             <label htmlFor="number_of_tellers" className="block text-sm font-medium text-gray-700">Number of Tellers</label>
             <Input
+              name='number_of_tellers'
               label="Number of Tellers"
               placeholder="Enter number of tellers"
               value={formData.number_of_tellers.toString()} // Convertir en chaîne
@@ -130,6 +143,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
           <div className="space-y-2">
             <label htmlFor="number_of_clerks" className="block text-sm font-medium text-gray-700">Number of Clerks</label>
             <Input
+              name='number_of_clerks'
               label="Number of Clerks"
               placeholder="Enter number of clerks"
               value={formData.number_of_clerks.toString()} // Convertir en chaîne
@@ -140,6 +154,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
           <div className="space-y-2">
             <label htmlFor="number_of_credit_officers" className="block text-sm font-medium text-gray-700">Number of Credit Officers</label>
             <Input
+              name='number_of_credit_officers'
               label="Number of Credit Officers"
               placeholder="Enter number of credit officers"
               value={formData.number_of_credit_officers.toString()} // Convertir en chaîne
@@ -165,42 +180,35 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
                 <option value="">Select an opening hour</option>
                 {openingHours.map((hour) => (
                   <option key={hour.id} value={hour.id}>
-                    {hour.schedule} {/* Affichez l'horaire formaté */}
+                    {hour.schedule}
                   </option>
                 ))}
               </select>
-
             ) : (
               <p>No opening hours available</p>
             )}
           </div>
 
+
           <div className="space-y-2">
             <label htmlFor="holidays" className="block text-sm font-medium text-gray-700">
               Holidays
             </label>
-            {loading ? (
-              <p>Loading holidays...</p>
-            ) : holidays.length > 0 ? (
-              <select
-                multiple
-                name="holidays"
-                value={formData.holidays}
-                onChange={(e) => {
-                  const selectedValues = Array.from(e.target.selectedOptions, (opt) => opt.value);
-                  setFormData({ holidays: selectedValues }); // Met à jour les jours fériés sélectionnés
-                }}
-                className="w-full border rounded px-3 py-2"
-              >
-                {holidays.map((holiday) => (
-                  <option key={holiday.id} value={holiday.id}>
-                    {holiday.name} {/* Affichez la combinaison date-description */}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p>No holidays available</p>
-            )}
+            <Select
+              name="holidays"
+              label="Select Holidays"
+              placeholder="Choose holidays"
+              selectedKeys={selectedHolidays}
+              selectionMode="multiple"
+              onSelectionChange={handleSelectionChange}
+              className="w-full border rounded px-3 py-2"
+            >
+              {holidays.map((holiday) => (
+                <SelectItem key={holiday.id}>
+                  {`${holiday.date} - ${holiday.description}`} {/* Affichez `date` et `description` */}
+                </SelectItem>
+              ))}
+            </Select>
           </div>
 
 
