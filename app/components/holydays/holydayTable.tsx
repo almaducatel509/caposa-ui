@@ -21,12 +21,14 @@ import {Input} from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 import { TfiExport, TfiImport } from 'react-icons/tfi';
+import { useRouter } from "next/navigation"; 
 
 
 const HolydayTable = ({ holydays }: { holydays: any[] }) => {
   const [filterValue, setFilterValue] = useState('');
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
+  const router = useRouter();
 
   // Handle hydration issue: Wait until client-side render
   const [isClient, setIsClient] = useState(false);
@@ -73,14 +75,8 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
           onValueChange={onSearchChange}
         />
          <div className="button flex gap-3 pb-4 ">
-            <Button 
-              color="primary" 
-              variant="bordered" 
-              endContent={<LuPlus />}
-              style={{ backgroundColor: '#107a33', color: '#ffffff', borderColor: '#107a33' }}
-            >
-              Add New
-            </Button>
+            <CreateHoliday />
+
             <Button color="primary" variant="bordered" endContent={<TfiImport />}>
               Import
             </Button>

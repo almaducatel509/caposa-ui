@@ -6,7 +6,8 @@ export const fetchHolidays = async () => {
     console.log("Données brutes de l'API Holidays :", response.data); // Vérifiez ici
     const formattedHolidays = response.data.map((item: any) => ({
       id: item.id,
-      name: `${item.date} - ${item.description}`,
+      date: item.date, // Vérifiez que `date` existe dans les données de l'API
+      description: item.description, // Vérifiez que `description` existe
     }));
     console.log("Données formatées Holidays :", formattedHolidays); // Vérifiez ici
     return formattedHolidays;

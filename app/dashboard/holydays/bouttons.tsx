@@ -1,18 +1,25 @@
 import Link from 'next/link';
-// import { deleteInvoice } from '@/app/lib/actions';
 import { HiOutlinePlus } from "react-icons/hi";
 import { HiPencil } from "react-icons/hi2";
 import { FaRegTrashAlt } from "react-icons/fa";
-
+import { Button } from '@nextui-org/react';
+import { LuPlus } from 'react-icons/lu';
 
 export function CreateHoliday() {
   return (
-    <Link
-      href="/dashboard/hollydays/create"
-      className="flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-    >
-      <span className="hidden md:block">Create Holiday</span>{' '}
-      <HiOutlinePlus className="h-5 md:ml-4" />
+    <Link href="/dashboard/holydays/create">
+      <Button
+        color="primary"
+        variant="bordered"
+        endContent={<LuPlus />}
+        style={{
+          backgroundColor: '#107a33',
+          color: '#ffffff',
+          borderColor: '#107a33',
+        }}
+      >
+        Add New
+      </Button>
     </Link>
   );
 }

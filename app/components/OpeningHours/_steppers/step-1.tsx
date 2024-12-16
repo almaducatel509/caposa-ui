@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { TimeInput } from "@nextui-org/react";
 import type { TimeValue } from "@react-types/datepicker";
-import { ZonedDateTime } from "@internationalized/date";
 import { OpeningHours, ErrorMessages } from '../validations';
 import { parseZonedDateTime } from "@internationalized/date";
+
 
 interface Step1Props {
   formData: OpeningHours;
@@ -12,50 +12,34 @@ interface Step1Props {
 }
 
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
-  // Déclaration de l'état 'initialized'
-  const [initialized, setInitialized] = useState(false);
-  const [isClient, setIsClient] = useState(false); // Déclarez l'état ici
+  const [isClient, setIsClient] = useState(false);
 
-  const initializeTimeValue = (timeString: string | undefined, isOpen: boolean) => {
-    if (timeString) {
-      const timePart = isOpen ? timeString.split('-')[0] : timeString.split('-')[1];
-      return parseZonedDateTime(`2024-04-08T${timePart}:00[UTC]`);
-    } else {
-      return parseZonedDateTime("2024-04-08T08:00:00[UTC]");
-    }
-  };
-  
-  const handleTimeChange = (day: keyof OpeningHours, value: TimeValue, isOpen: boolean) => {
-    if (value instanceof ZonedDateTime) {
-      const formattedTime = `${value.hour.toString().padStart(2, '0')}:${value.minute.toString().padStart(2, '0')}`;
-      const key = day as keyof OpeningHours;
-
-     const currentTimes = formData[key] || "08:00-17:00"; // valeur par défaut
-    const [currentOpen, currentClose] = currentTimes.split('-');
-    const newTime = isOpen ? `${formattedTime}-${currentClose}` : `${currentOpen}-${formattedTime}`;
-
-      console.log(`Modification de ${key} : Nouvelle valeur = ${newTime}`);
-      setFormData({ [key]: newTime });
-      console.log("Données prêtes pour l'API:", formData);
-      console.log("Données envoyer dans Step2:", formData);
-
-    }
-  };
-  
   useEffect(() => {
-    setInitialized(true); // Indique que le composant a été initialisé côté client
-  }, []);
-
-  if (!initialized) {
-    return null; // Ne pas rendre ce composant sur le serveur
-  }
-  useEffect(() => {
-    setIsClient(true);
+    setIsClient(true); // Indique que le composant est côté client
   }, []);
 
   if (!isClient) {
     return null; // Ne pas afficher ce composant côté serveur
   }
+
+  const initializeTimeValue = (timeString: string | undefined, isOpen: boolean): TimeValue => {
+    if (timeString) {
+      const timePart = isOpen ? timeString.split('-')[0] : timeString.split('-')[1];
+      return parseZonedDateTime(`2024-01-01T${timePart}:00[UTC]`);
+    } else {
+      // Valeur par défaut : 08:00 UTC
+      return parseZonedDateTime("2024-01-01T08:00:00[UTC]");
+    }
+  };
+
+  const handleTimeChange = (day: keyof OpeningHours, value: TimeValue, isOpen: boolean) => {
+    const formattedTime = `${value.hour.toString().padStart(2, '0')}:${value.minute.toString().padStart(2, '0')}`;
+    const currentTimes = formData[day] || "08:00-17:00";
+    const [currentOpen, currentClose] = currentTimes.split('-');
+    const newTime = isOpen ? `${formattedTime}-${currentClose}` : `${currentOpen}-${formattedTime}`;
+
+    setFormData({ [day]: newTime });
+  };
 
   return (
     <div>
@@ -87,7 +71,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
         </div>
       ))}
     </div>
-
   );
 };
+
 export default Step1;

@@ -27,3 +27,14 @@ export const createHoliday = async (holidayData:any) => {
       throw error;
     }
   };
+
+  export const deleteHoliday = async (id: string) => {
+    try {
+      await fetch(`/api/holydays/${id}`, { method: 'DELETE' });
+      alert("Holiday deleted successfully");
+      // Refresh or re-fetch the holidays list after deletion
+    } catch (error) {
+      console.error("Failed to delete holiday:", error);
+    }
+  };
+  

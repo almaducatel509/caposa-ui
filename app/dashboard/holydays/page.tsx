@@ -3,7 +3,7 @@
 import Search from '@/app/components/search';
 import {Holyday} from './columns';
 import HolydayTable from '@/app/components/holydays/holydayTable';
-import { fetchHolydays } from '@/app/lib/api/holyday';  // Importer la fonction pour récupérer les données
+import { fetchHolydays } from '@/app/lib/api/holiday';  // Importer la fonction pour récupérer les données
 import { useState, useEffect } from 'react';
 
 export default function Holydays(){

@@ -1,3 +1,4 @@
+"use client"
 // _steppers/step-3.tsx
 import React from 'react';
 import { Holiday, ErrorMessages } from '../validations';

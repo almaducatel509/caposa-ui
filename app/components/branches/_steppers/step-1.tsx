@@ -70,6 +70,12 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
     console.log('Selected holidays (UUIDs):', formData.holidays);
 
   }; 
+  const handleChangeDate = (date: DateValue) => {
+    const formattedDate = date.toString(); // YYYY-MM-DD
+    console.log("Date sélectionnée :", formattedDate); // Vérifiez ici
+    setFormData({ opening_date: formattedDate });
+  };
+  
 
   return (
     <div>
@@ -188,8 +194,6 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
               <p>No opening hours available</p>
             )}
           </div>
-
-
           <div className="space-y-2">
             <label htmlFor="holidays" className="block text-sm font-medium text-gray-700">
               Holidays
@@ -204,14 +208,24 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
               className="w-full border rounded px-3 py-2"
             >
               {holidays.map((holiday) => (
-                <SelectItem key={holiday.id}>
-                  {`${holiday.date} - ${holiday.description}`} {/* Affichez `date` et `description` */}
+                <SelectItem 
+                  key={holiday.id} 
+                  textValue={`${holiday.date} - ${holiday.description}`} // Accessibilité
+                >
+                  {holiday.date && holiday.description ? `${holiday.date} - ${holiday.description}` : 'Données manquantes'}
                 </SelectItem>
               ))}
             </Select>
           </div>
+          <div className="space-y-2">
+            <DateInput
+              label="Opening Date"
+              description="Veuillez entrer la date au format AAAA-MM-JJ"
+              value={parseDate(formData.opening_date || "2024-01-01")}
+              onChange={handleChangeDate}
+            />
 
-
+          </div>
         </div>
     </div>
   );

@@ -6,6 +6,9 @@ import { Tooltip } from '@nextui-org/react';
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
+import { UpdateHoliday } from '@/app/dashboard/holydays/bouttons';
+import { deleteHoliday } from "@/app/lib/api/holiday";
+
 // Define the holiday data type
 export type Holyday = {
   date: string;
@@ -42,7 +45,10 @@ export const renderCell = (holyday: Holyday, columnKey: React.Key) => {
             </span>
           </Tooltip>
           <Tooltip color="danger" content="Delete">
-            <span className="text-lg text-danger cursor-pointer active:opacity-50">
+            <span 
+              className="text-lg text-danger cursor-pointer active:opacity-50"
+              onClick={() => deleteHoliday(holyday.date)}
+            >
               <FaRegTrashCan />
             </span>
           </Tooltip>

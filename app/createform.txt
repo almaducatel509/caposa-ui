@@ -1,3 +1,196 @@
+<div className="space-y-2">
+          <label htmlFor="holidays" className="block text-sm font-medium text-gray-700">
+            Holidays
+          </label>
+          {loading ? (
+            <p>Loading holidays...</p>
+          ) : holidays.length > 0 ? (
+            <select
+              multiple
+              name="holidays"
+              value={formData.holidays}
+              onChange={(e) => {
+                const selectedValues = Array.from(e.target.selectedOptions, (opt) => opt.value);
+                setFormData({ holidays: selectedValues }); // Met à jour les jours fériés sélectionnés
+              }}
+              className="w-full border rounded px-3 py-2"
+            >
+              {holidays.map((holiday) => (
+                <option key={holiday.id} value={holiday.id}>
+                  {holiday.name} {/* Affichez la combinaison date-description */}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p>No holidays available</p>
+          )}
+        </div>
+
+----------------------------registration form branche-------------------------
+'use client';
+import React, { useState } from 'react';
+import Step1 from './_steppers/step-1';
+import Step2 from './_steppers/step-2';
+import Step3 from './_steppers/step-3';
+import { Button } from '@nextui-org/react';
+import { branchSchema, BranchData, ErrorMessages, validateFields  } from './validations';
+import { createBranch } from '@/app/lib/api/branche';
+import axios from 'axios';
+
+const steps = [Step1, Step2, Step3];
+
+const RegisterForm = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState<BranchData>({
+    branch_name: '',
+    branch_address: '',
+    branch_phone_number: '',
+    branch_email: '',
+    number_of_posts: 0,
+    number_of_tellers: 0,
+    number_of_clerks: 0,
+    number_of_credit_officers: 0,
+    opening_date: '',
+    opening_hour: '',
+    holidays: [],
+  });
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<ErrorMessages<BranchData>>({});
+
+  const validateStep = (): boolean => {
+    const dataToValidate = prepareFormData(formData);
+    const result = branchSchema.safeParse(dataToValidate);
+  
+    if (!result.success) {
+      console.log("Erreurs brutes de validation Zod :", result.error.errors);
+      const newErrors: ErrorMessages<BranchData> = {};
+      result.error.errors.forEach((error) => {
+        if (error.path.length) {
+          const key = error.path[0] as keyof BranchData;
+          newErrors[key] = error.message;
+        }
+      });
+      setErrors(newErrors);
+      return false;
+    }
+  
+    setErrors({});
+    console.log("Validation réussie.");
+    return true;
+  };
+  
+
+  const handleNext = () => {
+    if (validateStep()) {
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep((prev) => prev - 1);
+  };
+
+  const handleSubmit = async () => {
+    setApiError(null);
+  
+    if (!validateStep()) {
+      console.log("Validation échouée.");
+      return; // Ne pas continuer si la validation échoue
+    }
+  
+    // Envoi des données validées
+    const transformedData = {
+      branch_name: formData.branch_name,
+      branch_address: formData.branch_address,
+      branch_phone_number: formData.branch_phone_number,
+      branch_email: formData.branch_email,
+      number_of_posts: Number(formData.number_of_posts),
+      number_of_tellers: Number(formData.number_of_tellers),
+      number_of_clerks: Number(formData.number_of_clerks),
+      number_of_credit_officers: Number(formData.number_of_credit_officers),
+      opening_date: formData.opening_date, // Assurez-vous qu'elle est au format YYYY-MM-DD
+      opening_hour: formData.opening_hour, // Assurez-vous qu'il s'agit d'un UUID valide
+      holidays: formData.holidays, // Assurez-vous qu'il s'agit d'un tableau d'UUID
+    };
+    try {
+      console.log("Données transformées prêtes à être envoyées :", transformedData);
+      const response = await createBranch(transformedData);
+      console.log('Réponse API :', response);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        setApiError(error.response.data.detail || "Une erreur est survenue lors de la création de la branche.");
+      } else {
+        setApiError("Erreur inconnue lors de la création.");
+      }
+      console.error('Erreur lors de la création :', error);
+    }
+  };
+  const prepareFormData = (data: BranchData) => ({
+    ...data,
+    number_of_posts: Number(data.number_of_posts),
+    number_of_tellers: Number(data.number_of_tellers),
+    number_of_clerks: Number(data.number_of_clerks),
+    number_of_credit_officers: Number(data.number_of_credit_officers),
+  });
+const updateFormData = (data: Partial<BranchData>) => {
+    setFormData((prev) => ({
+      ...prev,
+      ...data,
+    }));
+  };
+
+  const CurrentStepComponent = steps[currentStep];
+
+  return (
+    <div>
+  // Affichage dans le composant
+      {apiError && <p className="text-red-500">{apiError}</p>}
+
+      <CurrentStepComponent
+        formData={formData} 
+        setFormData={updateFormData}
+        errors={errors}
+      />
+      <div className="flex justify-between mt-8">
+        {currentStep > 0 && (
+          <Button
+            className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
+            onClick={handlePrevious}
+          >
+            Précédent
+          </Button>
+        )}
+        {currentStep < steps.length - 1 ? (
+          <Button
+            className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
+            onClick={handleNext}
+          >
+            Suivant
+          </Button>
+        ) : (
+          <Button className="bg-green-600 text-white" onClick={handleSubmit}>
+            Fin
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default RegisterForm;
+
+----------------------------------
+
+
+
+
+
+
+
+
+
+
+
 'use client'
 
 import { useState } from 'react'
