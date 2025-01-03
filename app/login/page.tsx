@@ -1,8 +1,7 @@
-// 'use client'; ensures this is a client-side component
 'use client';
 
 import { lusitana } from '@/app/dashboard/fonts';
-import { HiArrowRight } from 'react-icons/hi2';
+import { GoArrowRight } from "react-icons/go";
 import { Button } from '@/app/components/button'; // Import Button component from /components
 import { useRouter } from 'next/navigation'; 
 import { useState } from 'react';
@@ -69,10 +68,12 @@ export default function LoginForm() { const router = useRouter();
   );
 }
 
+
 function LoginButton() {
   return (
     <Button className="mt-4 w-full">
-      Log in <HiArrowRight className="ml-auto h-5 w-5 text-gray-50" />
+      Log in <GoArrowRight className="ml-auto h-5 w-5 text-gray-50" />
+      
     </Button>
   );
 }

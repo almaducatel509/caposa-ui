@@ -17,6 +17,7 @@ import { Branch, columns, renderCell } from "@/app/dashboard/branches/columns";
 import { FiSearch } from "react-icons/fi";
 import { LuPlus } from "react-icons/lu";
 import { TfiExport, TfiImport } from "react-icons/tfi";
+import { CreateBranche } from '@/app/dashboard/branches/bouttons';
 
 const BranchTable = ({ branches }: { branches: Branch[] }) => {
   const [filterValue, setFilterValue] = useState('');
@@ -74,18 +75,7 @@ const BranchTable = ({ branches }: { branches: Branch[] }) => {
           onValueChange={onSearchChange}
         />
         <div className="button flex gap-3 pb-4 ">
-          <Button
-            color="primary"
-            variant="bordered"
-            endContent={<LuPlus />}
-            style={{
-              backgroundColor: '#107a33',
-              color: '#ffffff',
-              borderColor: '#107a33',
-            }}
-          >
-            Add New
-          </Button>
+         < CreateBranche/>
           <Button color="primary" variant="bordered" endContent={<TfiImport />}>
             Import
           </Button>

@@ -25,18 +25,16 @@ const RegisterForm = () => {
           first_name: '',
           last_name: '',
           date_of_birthday: null,
-          photo_url: null,
+          photo_profil: null,
           phone_number: '',
           address: '',
           gender: '',
-          posts: [],
+          posts: [], 
+          branch: null, // Single branch object
         },
-        step2: {
-          
-        },
+        step2: {},
         step3: {},
       });
-      
     const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
     
     const validateStep = (step: number): boolean => {
@@ -84,11 +82,22 @@ const RegisterForm = () => {
     };
 
     
+    const generatePaymentRef = (firstName: string, lastName: string, creationDate: Date): string => {
+        const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase(); // Extract initials
+        const date = creationDate
+          .toLocaleDateString("en-GB") // Format as DD/MM/YYYY
+          .split("/")
+          .join("")
+          .slice(0, 6); // Extract DDMMYY
+        return `${initials}${date}`;
+      };
+      
     const handleSubmit = async () => {
         const totalSteps = 3;
         let allValid = true;
         const allErrors = {};
       
+        // Validate all steps
         for (let step = 0; step < totalSteps; step++) {
           const valid = validateStep(step);
           if (!valid) {
@@ -98,18 +107,35 @@ const RegisterForm = () => {
         }
       
         if (allValid) {
-          console.log('FormData:', formData); // Ajoute cette ligne pour vérifier les données
+          // Generate payment_ref
+          const creationDate = new Date();
+          const paymentRef = generatePaymentRef(
+            formData.step1.first_name,
+            formData.step1.last_name,
+            creationDate
+          );
+      
+          // Update formData with payment_ref
+          setFormData((prev: any) => ({
+            ...prev,
+            step1: {
+              ...prev.step1,
+              payment_ref: paymentRef,
+            },
+          }));
+      
           try {
+            console.log('Final FormData:', formData);
             const response = await createEmployee(formData);
-            console.log('Membre créé avec succès:', response);
+            console.log('Employee created successfully:', response);
           } catch (error) {
-            console.error('Erreur lors de la création de l\'employé:', error);
+            console.error('Error creating employee:', error);
           }
         } else {
           setErrors(allErrors);
         }
-    }; 
-
+    };
+            
     const CurrentStepComponent = steps[currentStep];
     
     const updateFormData = (data: Partial<any>) => {

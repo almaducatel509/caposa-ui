@@ -1,26 +1,20 @@
-import Link from 'next/link';
-import { HiOutlinePlus } from "react-icons/hi";
+import {Link, Button} from "@nextui-org/react";
+import { HiOutlineCalendar } from "react-icons/hi";
 import { HiPencil } from "react-icons/hi2";
 import { FaRegTrashAlt } from "react-icons/fa";
-import { Button } from '@nextui-org/react';
-import { LuPlus } from 'react-icons/lu';
 
 export function CreateHoliday() {
   return (
-    <Link href="/dashboard/holydays/create">
-      <Button
-        color="primary"
-        variant="bordered"
-        endContent={<LuPlus />}
-        style={{
-          backgroundColor: '#107a33',
-          color: '#ffffff',
-          borderColor: '#107a33',
-        }}
-      >
-        Add New
-      </Button>
-    </Link>
+    <Button
+    as={Link}
+    className=" bg-green-600 px-4 text-sm font-medium text-white flex items-center gap-2 hover:bg-green-500"
+    href="/dashboard/holydays/create"
+    variant="solid"
+    radius="md"
+  >
+    <HiOutlineCalendar className="h-5 w-5" /> {/* Calendar Icon */}
+    <span className="hidden md:block">Créer Jour Férié</span> {''}
+  </Button>
   );
 }
 

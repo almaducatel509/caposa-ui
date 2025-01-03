@@ -14,7 +14,7 @@ export const step1Schema = z.object({
   address: z.string().min(4,"Adresse est requise"),
   city: z.string().min(2, "Ville est requise"),
   department: z.string().min(4, "Département est requis"),
-  photo_url: imageSchema.refine((file ) => file.size > 0),
+  photo_profil: imageSchema.refine((file ) => file.size > 0),
 });
 export const step2Schema = z
   .object({

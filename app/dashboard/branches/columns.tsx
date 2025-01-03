@@ -1,9 +1,10 @@
-import React from "react";
-import {
-  Tooltip,
-} from "@nextui-org/react";
+import React, { useState, useEffect,  } from 'react';
+import { Tooltip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from "@nextui-org/react";
 import { FaRegTrashCan, FaRegEye } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
+// import EditBranch from "./EditBranch"; // Adjust the path as needed
+import { BranchData } from "@/app/components/branches/validations";
+
 
 export type Branch = {
   branch_name: string;
@@ -51,7 +52,14 @@ export const columns = [
 
 export const renderCell = (branch: Branch, columnKey: React.Key) => {
   const cellValue = branch[columnKey as keyof Branch];
+//Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used
+  const handleOpenModal = () => {
+    console.log("open")  
+  };
 
+  const handleCloseModal = () => {
+    console.log("open")  
+  };
   switch (columnKey) {
     case "branch_name":
       return <strong>{branch.branch_name}</strong>;
@@ -84,10 +92,32 @@ export const renderCell = (branch: Branch, columnKey: React.Key) => {
             </span>
           </Tooltip>
           <Tooltip content="Edit Branch">
-            <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
+            <span
+              className="text-lg text-default-400 cursor-pointer active:opacity-50"
+              onClick={handleOpenModal}
+            >
               <FiEdit />
             </span>
           </Tooltip>
+
+          {/* Modal for Editing */}
+          <Modal>
+            <ModalContent>
+              <ModalHeader>Modifier une Branche</ModalHeader>
+              <ModalBody>
+                {/* Render EditBranch inside the modal */}
+                <Button
+                  // branchId={branch.id} // Pass branchId to fetch and edit the branch
+                  // onClose={handleCloseModal} // Close modal after save or cancel
+                />
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" onPress={handleCloseModal}>
+                  Fermer
+                </Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
           <Tooltip color="danger" content="Delete Branch">
             <span className="text-lg text-danger cursor-pointer active:opacity-50">
               <FaRegTrashCan />

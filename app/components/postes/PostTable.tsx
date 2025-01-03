@@ -15,6 +15,7 @@ import { Input } from "@nextui-org/input";
 import { FiSearch } from "react-icons/fi";
 import { columns, renderCell } from "@/app/dashboard/postes/columns";
 import { TfiExport, TfiImport } from 'react-icons/tfi';
+import { CreatePost } from '@/app/dashboard/postes/bouttons';
 
 export default function PostTable({ postes }: { postes: any[] }) {
   const [filterValue, setFilterValue] = useState('');
@@ -63,9 +64,7 @@ export default function PostTable({ postes }: { postes: any[] }) {
             />
           {/* Ajouter les boutons Add New, Import, Export */}
           <div className="button flex gap-3 pb-4 ">
-            <Button color="primary" variant="bordered" endContent={<LuPlus />}>
-              Add New
-            </Button>
+            <CreatePost />
             <Button color="primary" variant="bordered" endContent={<TfiImport />}>
               Import
             </Button>

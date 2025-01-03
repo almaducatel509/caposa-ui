@@ -12,7 +12,28 @@ interface Step1Props {
   setFormData: (data: Partial<BranchData>) => void;
   errors: ErrorMessages<BranchData>;
 }
-
+export const SelectorIcon = (props: React.JSX.IntrinsicAttributes & React.SVGProps<SVGSVGElement>) => {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="1em"
+      role="presentation"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.5"
+      viewBox="0 0 24 24"
+      width="1em"
+      {...props}
+    >
+      <path d="M0 0h24v24H0z" fill="none" stroke="none" />
+      <path d="M8 9l4 -4l4 4" />
+      <path d="M16 15l-4 4l-4 -4" />
+    </svg>
+  );
+};
 const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
   const [openingHours, setOpeningHours] = useState<{ id: string; schedule: string }[]>([]);
   const [holidays, setHolidays] = useState<{ id: string; date: string; description: string }[]>([]);
@@ -195,17 +216,26 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
             )}
           </div>
           <div className="space-y-2">
+            <label htmlFor=""> Opening Date</label>
+            <DateInput
+              description="Veuillez entrer la date au format AAAA-MM-JJ"
+              value={parseDate(formData.opening_date || "2024-01-01")}
+              onChange={handleChangeDate}
+            />
+
+          </div>
+          <div className="space-y-2">
             <label htmlFor="holidays" className="block text-sm font-medium text-gray-700">
               Holidays
             </label>
             <Select
               name="holidays"
-              label="Select Holidays"
-              placeholder="Choose holidays"
               selectedKeys={selectedHolidays}
               selectionMode="multiple"
               onSelectionChange={handleSelectionChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full"  
+              selectorIcon={<SelectorIcon />}
+
             >
               {holidays.map((holiday) => (
                 <SelectItem 
@@ -217,15 +247,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors }) => {
               ))}
             </Select>
           </div>
-          <div className="space-y-2">
-            <DateInput
-              label="Opening Date"
-              description="Veuillez entrer la date au format AAAA-MM-JJ"
-              value={parseDate(formData.opening_date || "2024-01-01")}
-              onChange={handleChangeDate}
-            />
-
-          </div>
+          
         </div>
     </div>
   );

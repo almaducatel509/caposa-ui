@@ -1,19 +1,22 @@
-import Link from 'next/link';
 // import { deleteInvoice } from '@/app/lib/actions';
-import { HiOutlinePlus } from "react-icons/hi";
+import { HiOutlineClock } from "react-icons/hi";
 import { HiPencil } from "react-icons/hi2";
 import { FaRegTrashAlt } from "react-icons/fa";
+import {Link, Button} from "@nextui-org/react";
 
 
 export function CreatePost() {
   return (
-    <Link
-      href="/dashboard/invoices/create"
-      className="flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+    <Button
+      as={Link}
+      className=" bg-green-600 px-4 text-sm font-medium text-white flex items-center gap-2 hover:bg-green-500"
+      href="/dashboard/postes/create"
+      variant="solid"
+      radius="md"
     >
-      <span className="hidden md:block">Create Post</span>{' '}
-      <HiOutlinePlus className="h-5 md:ml-4" />
-    </Link>
+    <HiOutlineClock className="w-5 h-5" /> {/* Icon */}
+    <span>Créer Post</span> {/* Text */}
+  </Button>
   );
 }
 

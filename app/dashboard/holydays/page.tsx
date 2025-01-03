@@ -11,7 +11,7 @@ export default function Holydays(){
   const [loading, setLoading] = useState(true);  // Indicateur de chargement
   const [error, setError] = useState<string | null>(null);  // Pour stocker les erreurs potentielles
 
-  // Appel à l'API pour récupérer les holiday dès le montage du composant
+  //Appel à l'API pour récupérer les holiday dès le montage du composant
   useEffect(() => {
     const getHolidays = async () => {
       try {

@@ -62,7 +62,8 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
   }, []);
 
   // Render the search bar and buttons
-  const topContent = useMemo(() => (
+  const topContent = useMemo(() => {
+    return (
     <div className="flex flex-col gap-4 pt-4">
       <div className="flex gap-3 items-center">
         <Input
@@ -76,7 +77,6 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
         />
          <div className="button flex gap-3 pb-4 ">
             <CreateHoliday />
-
             <Button color="primary" variant="bordered" endContent={<TfiImport />}>
               Import
             </Button>
@@ -86,7 +86,8 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
           </div>
       </div>
     </div>
-  ), [filterValue, onSearchChange, onClear]);
+  )
+}, [filterValue, onSearchChange, onClear]);
 
   // Render the table only when the component is mounted (client-side)
   if (!isClient) {
@@ -111,16 +112,14 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
                 </TableColumn>
               )}
             </TableHeader>
-  
             <TableBody items={itemsToDisplay}>
               {(holiday) => (
-                <TableRow key={holiday.id}>
+                <TableRow className='group/item hover:bg-neutral-100 hover:rounded-md' key={holiday.id}>
                   {(columnKey) => <TableCell>{renderCell(holiday, columnKey)}</TableCell>}
                 </TableRow>
               )}
             </TableBody>
           </Table>
-  
           {/* Pagination */}
           <Pagination
             isCompact

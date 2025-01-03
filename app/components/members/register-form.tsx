@@ -20,7 +20,7 @@ const RegisterForm = () => {
       last_name: '',
       gender: '',
       date_of_birthday: null,
-      photo_url: null,
+      photo_profil: null,
       address: '',
       id_number: '',
       phone_number: '',

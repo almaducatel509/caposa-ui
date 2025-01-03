@@ -59,7 +59,6 @@ export const fetchBranches = async () => {
   }
 };
 
-
 // Fonction pour créer une nouvelle branche
 export const createBranch = async (branchData: any) => {
   try {
@@ -68,6 +67,28 @@ export const createBranch = async (branchData: any) => {
     return response.data;
   } catch (error) {
     console.error('Erreur API :', error);
+    throw error;
+  }
+};
+
+// Function to get branch by ID
+export const getBranchById = async (id: string) => {
+  try {
+    const response = await AxiosInstance.get(`/branches/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la branche :", error);
+    throw error;
+  }
+};
+
+// Function to update branch
+export const updateBranch = async (id: string, data: any) => {
+  try {
+    const response = await AxiosInstance.put(`/branches/${id}/`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour de la branche :", error);
     throw error;
   }
 };

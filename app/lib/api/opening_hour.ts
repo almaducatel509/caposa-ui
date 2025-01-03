@@ -4,14 +4,18 @@ import AxiosInstance from '../axiosInstance';
 // Fonction pour récupérer les horaires d'ouverture
 export const fetchOpeningHours = async () => {
   try {
-    const response = await AxiosInstance.get('/opening-hours/');  // Endpoint pour récupérer les horaires d'ouverture
-    return response.data;  // Retourne les données de l'API
-  } catch (error) {
-    console.error("Erreur lors de la récupération des horaires d'ouverture :", error);
-    throw error;  // Lancer l'erreur pour pouvoir la gérer ailleurs
+    const response = await AxiosInstance.get('/opening-hours/');
+    return response.data; // Return the API data
+  } catch (error: any) {
+    console.error("Error fetching opening hours:", {
+      message: error.message,
+      response: error.response ? error.response.data : "No response",
+      status: error.response ? error.response.status : "No status",
+    });
+    throw new Error("Erreur lors de la récupération des horaires d'ouverture.");
   }
 };
-// i added :any in create
+
 // Fonction pour créer un nouveau openingHour
 export const createOpeningHours = async (openingHoursData:any) => {
    try { 

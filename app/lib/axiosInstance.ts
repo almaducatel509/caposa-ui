@@ -26,6 +26,7 @@ console.log("Base URL Axios:", AxiosInstance.defaults.baseURL);
 //     return Promise.reject(error);
 //   }
 // );
+
 const isTokenExpired = (token: string): boolean => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1])); // Décoder le JWT
@@ -35,25 +36,32 @@ const isTokenExpired = (token: string): boolean => {
   }
 };
 
-// Vérifiez l'expiration avant chaque requête
-AxiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token && isTokenExpired(token)) {
-    // Token expiré, affichez une alerte ou redirigez l'utilisateur
-    alert('Votre session a expiré, veuillez vous reconnecter.');
-    localStorage.removeItem('token'); // Supprimez le token
-  } else if (token) {
-    config.headers['Authorization'] = `Bearer ${JSON.parse(token)}`;
-  }
-  return config;
-});
+// Intercepteur de requête : ajouter le token et vérifier son expiration
+AxiosInstance.interceptors.request.use(
+  async (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      if (isTokenExpired(token)) {
+        // Token expiré, redirigez l'utilisateur
+        alert('Votre session a expiré, veuillez vous reconnecter.');
+        localStorage.removeItem('token');
+        window.location.href = '/login'; // Redirection vers la page de connexion
+        return Promise.reject(new Error("Token expiré"));
+      } else {
+        // Ajout du token au header Authorization
+        config.headers['Authorization'] = `Bearer ${JSON.parse(token)}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-
-// Fonction pour rafraîchir le token
+// Fonction pour rafraîchir le token (si votre API supporte cette fonctionnalité)
 const refreshToken = async () => {
   try {
-    const response = await axios.post('/refresh-token-endpoint', {
-      // Données nécessaires pour rafraîchir le token
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_ROUTE}/refresh-token`, {
+      // Données nécessaires pour le rafraîchissement
     });
     const newToken = response.data.token;
     localStorage.setItem('token', JSON.stringify(newToken));
@@ -64,14 +72,18 @@ const refreshToken = async () => {
   }
 };
 
-// Intercepteur de réponse
+
+// Intercepteur de réponse : gestion des erreurs 401 et autres
 AxiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response.status === 401) {
+    if (error.response?.status === 401) {
+      // Redirection en cas d'erreur 401
       alert("Votre session a expiré. Vous allez être redirigé vers la connexion.");
       localStorage.removeItem('token');
-      window.location.href = '/login'; // Redirigez vers la page de connexion
+      window.location.href = '/login';
+    } else {
+      console.error("Erreur Axios:", error);
     }
     return Promise.reject(error);
   }
