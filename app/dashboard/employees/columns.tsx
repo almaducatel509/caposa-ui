@@ -3,7 +3,8 @@ import { Tooltip, Avatar, User, ChipProps, Chip } from "@nextui-org/react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
- 
+import Image from 'next/image'
+
 export type Employee = {
   [x: string]: string | null | (readonly string[] & string) | undefined;
   user: any;
@@ -11,7 +12,6 @@ export type Employee = {
   last_name: string;
   gender: string | null | undefined;
   date_of_birthday: any;
-  phone_number: string | (readonly string[] & string) | undefined;
   address: string | (readonly string[] & string) | undefined; 
   id: string;
   username: string;
@@ -48,16 +48,21 @@ export const columns = [
 export const renderCell = (employee: Employee, columnKey: React.Key) => {
   const cellValue = employee[columnKey as keyof Employee];
   console.log("Avatar URL:", employee.photo_profil || "/default-avatar.png");
+  const profileImageUrl = employee.photo_profil || "/default-avatar.png"; // Fallback image
 
   switch (columnKey) {
     case "name":
       return (
         <div className="flex items-center">
-          <img
-            src={employee.photo_profil}
+         <Image
+            src={ "http://localhost:8000/media/profile_photos/board.png"}
             alt={`${employee.first_name} ${employee.last_name}`}
-            className="w-8 h-8 rounded mr-3" // Image ronde (avatar)
-          />
+            width={40} // Taille adaptée
+            height={40}
+            className="w-8 h-8 rounded object-cover mr-3"
+          />      
+           {/* className="w-8 h-8 rounded mr-3" // Image ronde (avatar) */}
+
           <div>
             <p className="text-sm">
               {employee.first_name} <span className="font-bold">{employee.last_name}</span>

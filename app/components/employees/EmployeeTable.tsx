@@ -16,7 +16,6 @@ import {
   ChipProps,
   SortDescriptor,
 } from "@nextui-org/react";
-
 import { columns, Employee, renderCell } from "@/app/dashboard/employees/columns";
 import { FiSearch } from "react-icons/fi";
 import { TfiImport, TfiExport } from 'react-icons/tfi';

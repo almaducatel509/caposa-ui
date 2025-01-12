@@ -1,26 +1,23 @@
 import React, { useState, useEffect,  } from 'react';
-import {ErrorMessages,EmployeeFormData, step1Schema, Step1Data } from '../validations';
+import {ErrorMessages, Step1Data } from '../validations';
 import TitleDetails from './title-details';
-import { Input, RadioGroup, Radio, DatePicker, Select, SelectItem, } from '@nextui-org/react';
+import { Input, RadioGroup, Radio, DatePicker, Select, SelectItem, Autocomplete, AutocompleteItem, } from '@nextui-org/react';
 import UploadImage from '@/app/components/core/upload-file';
 import { parseDate, getLocalTimeZone, DateValue } from "@internationalized/date";
-import { Post } from '../../postes/validations';
 import { PiEyeLight } from "react-icons/pi";
 import { PiEyeSlashLight } from "react-icons/pi";
 import { fetchBranches } from '@/app/lib/api/branche';
 import type { Selection } from '@nextui-org/react';
 import { fetchPosts } from '@/app/lib/api/post';
-import { Branch } from '@/app/dashboard/branches/columns';
 
-//j'aurais aimer genere un code de ref au lieu de rentrer manuellement. code unique.
 interface Step1Props {
     formData: Step1Data;
     setFormData: (data: Partial<Step1Data>) => void;
     errors: ErrorMessages<Step1Data>;
     setErrors?: (errors: Partial<ErrorMessages<Step1Data>>) => void; // Make setErrors optional
   }
-    
-  const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors, setErrors }) => {
+
+const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors, setErrors }) => {
     
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -40,7 +37,7 @@ interface Step1Props {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch branches and posts concurrently using Promise.all
+                // Fetch branches and posts concurrently
                 const [branchesResponse, postsResponse] = await Promise.all([
                     fetchBranches(),
                     fetchPosts(),
@@ -50,22 +47,26 @@ interface Step1Props {
                 setBranches(branchesResponse);
                 setPosts(postsResponse);
     
-                // Debugging logs
                 console.log("Branches fetched:", branchesResponse);
                 console.log("Posts fetched:", postsResponse);
             } catch (error) {
                 console.error("Error fetching data:", error);
-                    // Set error state to show user feedback
                 setError("An error occurred while fetching data.");
             } finally {
-                // Turn off loading state regardless of success or failure
                 setLoading(false);
             }
         };
     
-        // Trigger fetch function when component mounts
+        // Fetch data only on mount
         fetchData();
-    }, []); // Dependency array ensures this runs only once on mount
+    
+        // Generate payment_ref dynamically when fields are updated
+        if (formData.first_name && formData.last_name && formData.date_of_birthday) {
+            const generatedRef = generatePaymentRef(formData.first_name, formData.last_name, formData.date_of_birthday);
+            setFormData({ payment_ref: generatedRef });
+        }
+    }, [formData.first_name, formData.last_name, formData.date_of_birthday]); // Dependencies to re-run when user updates these fields
+    
     
     // Conditional rendering for loading and error states
     if (loading) {
@@ -119,7 +120,16 @@ interface Step1Props {
         setSelectedPost(selectedKeys);
         setFormData({ posts: selectedValues });
     };
-   
+    // Fonction pour générer automatiquement `payment_ref`
+    const generatePaymentRef = (firstName: string, lastName: string, creationDate: string): string => {
+        if (!firstName || !lastName || !creationDate) return ""; // Si un champ est vide, ne rien générer
+
+        const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase(); // Extrait les initiales
+        const date = creationDate.replace(/-/g, "").slice(2); // Transforme en YYMMDD
+        return `${initials}${date}`;
+    };
+
+    
     return (
         <div className="capitalize">
             <TitleDetails text1={'Remplir les champs nécessaires'} text2={'Fournir vos informations personnelles'} />
@@ -162,12 +172,13 @@ interface Step1Props {
                 
                 <div className="space-y-2">
                     <Input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    label="Email"
-                    onChange={handleChange}
-                    isRequired
+                        isClearable
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        label="Email"
+                        onChange={handleChange}
+                        isRequired
                     />
                     {errors.email && <div className="text-red-600">{errors.email}</div>}
                 </div>
@@ -274,7 +285,19 @@ interface Step1Props {
                     />
                     {errors.confirm_password && <div className="text-destructive text-red-600">{errors.confirm_password}</div>}
                 </div>
-                
+                 {/* Référence de paiement (générée automatiquement) */}
+                <div className="space-y-2">
+                    <Autocomplete
+                        isReadOnly // Empêche l'édition manuelle
+                        className="w-full rounded px-3 py-2"
+                        label="Référence de paiement"
+                        selectedKey={formData.payment_ref || "Aucune référence générée"} // ✅ Affiche la valeur actuelle
+                    >
+                        <AutocompleteItem key={formData.payment_ref || "Aucune référence générée"}>
+                            {formData.payment_ref || "Aucune référence générée"}
+                        </AutocompleteItem>
+                    </Autocomplete>
+                </div>
                  {/* Branch Selection */}
                 <div className="space-y-2">
                     <label htmlFor="branch" className="block text-sm font-medium text-gray-700">

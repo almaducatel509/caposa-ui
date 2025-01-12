@@ -14,8 +14,8 @@ export const step1Schema = z.object({
   phone_number: z.string().regex(/^\d+$/, 'Phone number must only contain digits'),
   address: z.string().min(1, 'Address is required'),
   gender: z.string().min(1, 'Gender is required'),
-  payment_ref: z.string().optional(), // Payment reference is optional
-  photo_profil: imageSchema.optional(),
+  payment_ref: z.string().min(1, 'Payment reference is required'),
+  photo_profil: imageSchema.optional().nullable(),
   branch: z.string().uuid('Branch must be a valid UUID'), // Single branch
   posts: z.array(z.string().uuid('Post must be a valid UUID')).min(1, 'At least one post is required'), // Multiple posts
 });
