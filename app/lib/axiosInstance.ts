@@ -74,20 +74,24 @@ const refreshToken = async () => {
 
 
 // Intercepteur de réponse : gestion des erreurs 401 et autres
-AxiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // Redirection en cas d'erreur 401
-      alert("Votre session a expiré. Vous allez être redirigé vers la connexion.");
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    } else {
-      console.error("Erreur Axios:", error);
+AxiosInstance.interceptors.request.use(
+  async (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      if (isTokenExpired(token)) {
+        // Token expiré, redirigez l'utilisateur
+        alert('Votre session a expiré, veuillez vous reconnecter.');
+        localStorage.removeItem('token');
+        window.location.href = '/login'; // Redirection vers la page de connexion
+        return Promise.reject(new Error("Token expiré"));
+      } else {
+        // Ajout du token au header Authorization
+        config.headers['Authorization'] = `Bearer ${JSON.parse(token)}`;
+      }
     }
-    return Promise.reject(error);
-  }
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
 
 export default AxiosInstance;
-

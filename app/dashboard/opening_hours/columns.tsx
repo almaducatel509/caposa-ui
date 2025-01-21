@@ -13,11 +13,12 @@ import {
   Tooltip,
   Checkbox,
 } from "@nextui-org/react";
-import { FaRegTrashCan, FaRegEye } from "react-icons/fa6";
+import { FaRegEye } from "react-icons/fa6";
+import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
-
 // Type des horaires d'ouverture
 export type OpeningHrs = {
+  [x: string]: string | null | (readonly string[] & string) | undefined;
   id: string;
   monday: string;
   tuesday: string;
@@ -40,7 +41,6 @@ const statusColorMap: Record<string, ChipProps["color"]> = {
 
 // Colonnes du tableau
 export const columns = [
-  { key: "select", label: "" }, // Colonne pour les checkboxes
   { key: "monday", label: "Monday" },
   { key: "tuesday", label: "Tuesday" },
   { key: "wednesday", label: "Wednesday" },
@@ -55,73 +55,49 @@ export const columns = [
 export const renderCell = (
   item: OpeningHrs,
   columnKey: React.Key,
-  selectedRows: Set<string>,
-  toggleSelect: (id: string) => void
-) => {
+  ) => {
+
   switch (columnKey) {
-    case "select":
-      return (
-        <Checkbox
-          isSelected={selectedRows.has(item.id)}
-          onChange={() => toggleSelect(item.id)}
-          aria-label={`Select row ${item.id}`}
-        />
-      );
     case "created_at":
-      // return new Date(item.created_at).toLocaleString(); // Format date
+      return new Date(item.created_at).toLocaleString(); // Format date
     case "status":
       return (
         <Chip className="capitalize" color={statusColorMap[item.status]} size="sm" variant="flat">
-          {/* {item.status} */}
+          {item.status}
         </Chip>
       );
     case "actions":
       return (
-        <div className="relative flex items-center gap-4">
-          {/* Actions principales */}
-          
+        <div className="flex items-center gap-2">
+          <Tooltip content="Details">
+            <span
+              className="text-lg text-default-400 cursor-pointer"
+              onClick={() => console.log("View details")}
+            >
+              <FaRegEye />
+            </span>
+          </Tooltip>
+          <Tooltip content="Edit employee">
+            <span
+              className="text-lg text-default-400 cursor-pointer"
+              onClick={() => console.log("Edit employee:")}
+            >
+              <FiEdit />
+            </span>
+          </Tooltip>
+          <Tooltip color="danger" content="Delete employee">
+            <span
+              className="text-lg text-danger cursor-pointer"
+              onClick={() => console.log("Delete employee:")}
+            >
+              <FaRegTrashCan />
+            </span>
+          </Tooltip>
         </div>
       );
+
     default:
-      return item[columnKey as keyof OpeningHrs]; // Retourne la valeur par défaut
+      return null;
   }
 };
 
-// Composant principal de tableau
-const OpeningHoursTable = ({ data }: { data: OpeningHrs[] }) => {
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-
-  // Fonction pour gérer la sélection/déselection
-  const toggleSelect = (id: string) => {
-    setSelectedRows((prev) => {
-      const updated = new Set(prev);
-      if (updated.has(id)) {
-        updated.delete(id);
-      } else {
-        updated.add(id);
-      }
-      return updated;
-    });
-  };
-
-  return (
-    <Table aria-label="Opening Hours Table">
-      <TableHeader columns={columns}>
-        {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
-      </TableHeader>
-      <TableBody items={data}>
-        {(item) => (
-          <TableRow key={item.id}>
-            {(columnKey) => (
-              <TableCell>
-                {renderCell(item, columnKey, selectedRows, toggleSelect)}
-              </TableCell>
-            )}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  );
-};
-
-export default OpeningHoursTable;

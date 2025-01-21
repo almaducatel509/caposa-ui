@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { Employee } from './columns';
 import EmployeeTable from '@/app/components/employees/EmployeeTable';
@@ -28,7 +27,7 @@ export default function Employees() {
           address: item.address,
           role: item.user?.username || 'N/A', // Rôle basé sur le champ username
           email: item.user?.email || 'N/A', // Email basé sur le champ user
-          photo_url: item.photo_profil, // Utilisation de photo_profil comme photo_url
+          photo_profil: item.photo_profil, // Utilisation de photo_profil comme photo_url
           status: 'Active', // Exemple de statut par défaut
         }));
 
@@ -47,11 +46,11 @@ export default function Employees() {
   }, []);
 
   if (loading) {
-    return <div>Chargement des employés...</div>;
+    return <div className='font-normal'>Chargement des employés...</div>;
   }
 
   if (error) {
-    return <div>{error}</div>;
+    return <div className='font-normal'>{error}</div>;
   }
 
   return (

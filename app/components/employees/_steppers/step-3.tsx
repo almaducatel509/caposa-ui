@@ -6,7 +6,7 @@ interface Step3Props {
 
 const Step3: React.FC<Step3Props> = ({ formData }) => {
   return (
-    <div>
+    <div className="font-normal	">
       <h2 className='text-base font-semibold leading-7 text-gray-900'>Complete</h2>
       <p className='mt-1 text-sm leading-6 text-gray-600'>Thank you for your submission.</p>
     </div>

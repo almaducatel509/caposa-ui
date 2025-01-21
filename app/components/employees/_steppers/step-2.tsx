@@ -7,7 +7,7 @@ interface Step2Props {
 
 const Step2: React.FC<Step2Props> = ({ formData }) => {
   return (
-    <div>
+    <div className='font-normal	'>
       <h2 className="text-base font-semibold leading-7 text-gray-900">Review Post Details</h2>
       
       <div className="space-y-2">
@@ -25,10 +25,8 @@ const Step2: React.FC<Step2Props> = ({ formData }) => {
       <div className="space-y-2">
         <p><strong>date_of_birthday</strong> {formData.date_of_birthday }</p>
       </div>
+    
       
-      <div className="space-y-2">
-        <p><strong>username:</strong> {formData.username}</p>
-      </div>
     </div>
   );
 };

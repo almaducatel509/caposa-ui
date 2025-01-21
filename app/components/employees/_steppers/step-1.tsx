@@ -59,8 +59,7 @@ const Step1: React.FC<Step1Props> = ({ formData, setFormData, errors, setErrors 
     
         // Fetch data only on mount
         fetchData();
-    
-        // Generate payment_ref dynamically when fields are updated
+            // Generate payment_ref dynamically when fields are updated
         if (formData.first_name && formData.last_name && formData.date_of_birthday) {
             const generatedRef = generatePaymentRef(formData.first_name, formData.last_name, formData.date_of_birthday);
             setFormData({ payment_ref: generatedRef });

@@ -27,27 +27,21 @@ export function capitalize(s: string) {
 export default function EmployeeTable({ employees }: { employees: Employee[] }) {
   const [filterValue, setFilterValue] = useState('');
   const hasSearchFilter = Boolean(filterValue);
-  // Handle hydration issue: Wait until client-side render
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true); // Ensure this is only set on client
-  }, []);
+  
   
   const filteredItems = useMemo(() => {
     return employees.filter(item =>
       item.first_name.toLowerCase().includes(filterValue.toLowerCase())
     );
   }, [employees, filterValue]);
-  
 
-  const rowsPerPage = 4;
+  const rowsPerPage = 5;
   const [page, setPage] = useState(1);
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
   const items = useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-
     return filteredItems.slice(start, end);
   }, [page, filteredItems]);
 
@@ -114,8 +108,7 @@ export default function EmployeeTable({ employees }: { employees: Employee[] }) 
     );
   }, [selectedKeys, items.length,filterValue, onSearchChange, onClear]);
 
-  // Render the table only when the component is mounted (client-side)
-  if (!isClient) {
+  if (!employees) {
     return <>Loading...</>;
   }
 
@@ -130,21 +123,21 @@ export default function EmployeeTable({ employees }: { employees: Employee[] }) 
       onSelectionChange={setSelectedKeys}
       bottomContent={
         <div className="flex w-full justify-center">
-          {/* Nombre de lignes sélectionnées */}
-      <span className="w-[30%] text-small text-default-400">
-        {selectedKeys === "all"
-          ? "All rows selected"
-          : `${Array.from(selectedKeys).length} of ${filteredItems.length} selected`}
-      </span>
-          <Pagination
-            isCompact
-            showControls
-            showShadow
-            color="secondary"
-            page={page}
-            total={pages}
-            onChange={(page) => setPage(page)}
-          />
+            {/* Nombre de lignes sélectionnées */}
+          <span className="w-[30%] text-small text-default-400">
+            {selectedKeys === "all"
+              ? "All rows selected"
+              : `${Array.from(selectedKeys).length} of ${filteredItems.length} selected`}
+          </span>
+            <Pagination
+              isCompact
+              showControls
+              showShadow
+              color="secondary"
+              page={page}
+              total={pages}
+              onChange={(page) => setPage(page)}
+            />
         </div>
       }
       bottomContentPlacement="outside"

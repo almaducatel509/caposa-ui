@@ -67,84 +67,9 @@ const RegisterForm: React.FC = () => {
   //   onClose(); // Close the modal
   //   setCurrentStep(0); // Reset to the first step
   // };
-  const generatePaymentRef = (firstName: string, lastName: string, creationDate: Date): string => {
-    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase(); // Initiales
-    const date = creationDate
-      .toLocaleDateString("en-GB") // Format DD/MM/YYYY
-      .split("/")
-      .join("")
-      .slice(0, 6); // Garde DDMMYY
-    return `${initials}${date}`;
-  };
-  const transformedData = {
-    user: {
-        username: formData.username,
-        password: formData.password,
-        confirm_password: formData.confirm_password,
-        email: formData.email,
-    },
-    first_name: formData.first_name,
-    last_name: formData.last_name,
-    date_of_birth: formData.date_of_birthday, 
-    phone_number: formData.phone_number,
-    address: formData.address,
-    gender: formData.gender,
-    payment_ref: formData.payment_ref || undefined, // Optionnel
-    branch: typeof formData.branch === 'object' ? formData.branch : formData.branch,
-    posts: formData.posts.map((post: any) => post.id ?? post), // Assurer que ce sont des UUID
-  };
-
-  const handleSubmit = async () => {
-    setApiError(null);
-    setSuccessMessage(null);
-    setIsSubmitting(true);
-
-    if (!validateStep()) {
-      setIsSubmitting(false);
-      return;
-    }
-    // 🚀 Transformation des données avant envoi
-    const transformedData = {
-        user: {
-            username: formData.username,
-            password: formData.password,
-            confirm_password: formData.confirm_password,
-            email: formData.email,
-        },
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        date_of_birth: formData.date_of_birthday, // Conversion correcte
-        phone_number: formData.phone_number,
-        address: formData.address,
-        gender: formData.gender,
-        payment_ref: formData.payment_ref || undefined, // Optionnel
-        branch: typeof formData.branch === 'object' ? formData.branch : formData.branch,
-        posts: formData.posts.map((post: any) => post.id ?? post), // Assurer que ce sont des UUID
-    };
-  
-      console.log("🔍 Données envoyées à l'API :", transformedData);
-  
-      try {
-          await createEmployee(transformedData);
-          setSuccessMessage("Employé créé avec succès !");
-          onOpen(); // Ouvrir modal de succès
-      } catch (error) {
-          setApiError("Une erreur est survenue lors de la création de l'employé.");
-          onOpen(); // Ouvrir modal d'erreur
-      } finally {
-          setIsSubmitting(false);
-      }
-  };
-  
-            
-  const CurrentStepComponent = steps[currentStep];
       
-  const updateFormData = (data: Partial<Step1Data>) => {
-    setFormData((prev) => ({
-      ...prev,
-      ...data,
-    }));
-  };
+ 
+
   const handleNext = () => {
     if (validateStep()) {
       if (currentStep === steps.length - 1) {
@@ -158,8 +83,70 @@ const RegisterForm: React.FC = () => {
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
+    
+  const handleSubmit = async () => {
+    setApiError(null);
+    setSuccessMessage(null);
+    setIsSubmitting(true);
   
-      
+    if (!validateStep()) {
+      setIsSubmitting(false);
+      return;
+    }
+  
+    // Préparer les données pour l'API
+    const dataToSend = {
+      user: {
+        username: formData.username,
+        password: formData.password,
+        confirm_password: formData.confirm_password || '',
+        email: formData.email,
+      },
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      date_of_birth: formData.date_of_birthday,
+      phone_number: formData.phone_number,
+      address: formData.address,
+      gender: formData.gender,
+      payment_ref: formData.payment_ref || undefined,
+      branch: formData.branch || undefined,
+      photo_profil: formData.photo_profil, // Inclure photo_profil ici
+      posts: formData.posts.map((post) => 
+        typeof post === 'string' ? post : post // Si c'est déjà une chaîne, on la garde
+      ),
+    };
+  
+    // Ajouter une image si présente
+    if (formData.photo_profil) {
+      dataToSend.photo_profil = formData.photo_profil; // Ajouter directement comme champ racine
+    }
+  
+    console.log('🔍 Données envoyées à l’API :', dataToSend);
+    console.log("formData: ",formData)
+
+    try {
+      await createEmployee(dataToSend); // Appel API avec le format JSON
+      console.log('Employé créé avec succès');
+      setSuccessMessage('Employé créé avec succès !');
+      onOpen(); // Ouvrir une modal de succès
+    } catch (error) {
+      console.error("Erreur lors de la création de l'employé :", error);
+      setApiError('Une erreur est survenue lors de la création de l\'employé.');
+      onOpen(); // Ouvrir une modal d'erreur
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const CurrentStepComponent = steps[currentStep];
+
+  const updateFormData = (data: Partial<Step1Data>) => {
+    setFormData((prev) => ({
+      ...prev,
+      ...data,
+    }));
+  };    
+        
   return (
     <>
       <div className="flex flex-row space-x-8">

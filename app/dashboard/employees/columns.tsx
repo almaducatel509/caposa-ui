@@ -1,5 +1,5 @@
-import React from "react";
-import { Tooltip, Avatar, User, ChipProps, Chip } from "@nextui-org/react";
+import React, { useEffect } from "react";
+import { Tooltip, ChipProps, Chip } from "@nextui-org/react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";
@@ -15,7 +15,8 @@ export type Employee = {
   address: string | (readonly string[] & string) | undefined; 
   id: string;
   username: string;
-  role: string;
+  posts: string;
+  branch: string;
   email: string;
   photo_profil: string;
   status: string;
@@ -32,8 +33,8 @@ export const columns = [
     label: "NAME",
   },
   {
-    key: "role",
-    label: "Role", 
+    key: "posts",
+    label: "Poste", 
   },
   {
     key: "status",
@@ -44,39 +45,49 @@ export const columns = [
     label: "Actions", // Les boutons (Détail, Éditer, Supprimer)
   },
 ];
-
 export const renderCell = (employee: Employee, columnKey: React.Key) => {
+  
   const cellValue = employee[columnKey as keyof Employee];
-  console.log("Avatar URL:", employee.photo_profil || "/default-avatar.png");
-  const profileImageUrl = employee.photo_profil || "/default-avatar.png"; // Fallback image
+  console.log("photo: ", employee.photo_profil);
+  console.log("Employee Branch:", employee.branch);
+  console.log("Employee Data:", employee);
+
+  const profileImageUrl = employee.photo_profil
+  ? employee.photo_profil.startsWith("http") 
+    ? employee.photo_profil 
+    : `http://localhost:8000${employee.photo_profil}` 
+  : "/default-avatar.png";
+
+console.log("Profile Image URL:", employee.photo_profil);
 
   switch (columnKey) {
     case "name":
       return (
-        <div className="flex items-center">
-         <Image
-            src={ "http://localhost:8000/media/profile_photos/board.png"}
-            alt={`${employee.first_name} ${employee.last_name}`}
-            width={40} // Taille adaptée
-            height={40}
-            className="w-8 h-8 rounded object-cover mr-3"
-          />      
-           {/* className="w-8 h-8 rounded mr-3" // Image ronde (avatar) */}
-
+        <div className="flex flex-row items-center">
+           <>
+              <Image
+                  src={ "http://localhost:8000/media/profile_photos/board.png"}
+                  alt={`${employee.first_name} ${employee.last_name}`}
+                  width={40} // Taille adaptée
+                  height={40}
+                  className="w-8 h-8 rounded object-cover mr-3"
+              />  
+           </>
+             
           <div>
-            <p className="text-sm">
-              {employee.first_name} <span className="font-bold">{employee.last_name}</span>
-            </p> {/* Affichage du prénom et du nom en gras pour last_name */}
-            <p className="text-xs text-gray-500">{employee.email}</p> {/* Email en dessous */}
+            <div className="text-black"> 
+              <strong>{employee.name}</strong>
+            </div>
+            <span className="text-sm font-light"> {employee.email} </span>
           </div>
         </div>
       );
 
-    case "role":
+    case "posts":
       return (
         <div className="flex flex-col">
-          <p className="text-bold text-small capitalize">{cellValue}</p>
-          <p className="text-tiny text-gray-400 capitalize">{employee.role || "No Department"}</p>
+          <p className="text-bold text-small capitalize">{employee.branch}</p>
+          <p className="text-tiny text-gray-400 capitalize">{employee.posts || "No Department"}</p>
         </div>
       );
 

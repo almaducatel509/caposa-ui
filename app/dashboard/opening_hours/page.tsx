@@ -1,8 +1,7 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
-import { fetchOpeningHours } from '@/app/lib/api/opening_hour';  // Importer la fonction pour récupérer les données
-import Hours_table from '@/app/components/OpeningHours/Hours_table';  // Importer le tableau d'affichage des horaires
+import { fetchOpeningHours } from '@/app/lib/api/opening_hour';  
+import Hours_table from '@/app/components/OpeningHours/Hours_table';  
 import { OpeningHrs } from './columns';
 
 export default function OpeningHoursPage() {
@@ -48,7 +47,7 @@ export default function OpeningHoursPage() {
         </div>
 
         {/* Passer les horaires d'ouverture au composant Hours_table */}
-        <Hours_table openingHours={openingHours} />
+        <Hours_table hourtable={openingHours} />
       </div>
     );
 }
