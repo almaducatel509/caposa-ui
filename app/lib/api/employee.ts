@@ -1,3 +1,4 @@
+'use server'
 import axios from 'axios';
 import AxiosInstance from '../axiosInstance';
 
@@ -22,7 +23,8 @@ export const fetchEmployees = async () => {
 };
 
 // Fonction pour créer un nouvel employé
-export const createEmployee = async (formData:any) => {
+export const createEmployee = async (formData:FormData) => {
+
   try {
     const response = await axios.post('http://127.0.0.1:8000/api/employees/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -30,8 +32,10 @@ export const createEmployee = async (formData:any) => {
     console.log('Réponse API :', response);
     return response.data;
   } catch (error: any) {
+    console.log(error)
     console.error('Erreur API:', error.response?.data || error.message);
     throw new Error('Impossible de créer l\'employé.');
+
   }
 };
 

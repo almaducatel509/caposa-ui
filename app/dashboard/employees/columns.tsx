@@ -12,7 +12,7 @@ export type Employee = {
   last_name: string;
   gender: string | null | undefined;
   date_of_birthday: any;
-  address: string | (readonly string[] & string) | undefined; 
+  address: string | (readonly string[] & string) | undefined;
   id: string;
   username: string;
   posts: string;
@@ -34,11 +34,11 @@ export const columns = [
   },
   {
     key: "posts",
-    label: "Poste", 
+    label: "Poste",
   },
   {
     key: "status",
-    label: "Status", 
+    label: "Status",
   },
   {
     key: "actions",
@@ -46,16 +46,16 @@ export const columns = [
   },
 ];
 export const renderCell = (employee: Employee, columnKey: React.Key) => {
-  
+
   const cellValue = employee[columnKey as keyof Employee];
   console.log("photo: ", employee.photo_profil);
   console.log("Employee Branch:", employee.branch);
   console.log("Employee Data:", employee);
 
   const profileImageUrl = employee.photo_profil
-  ? employee.photo_profil.startsWith("http") 
-    ? employee.photo_profil 
-    : `http://localhost:8000${employee.photo_profil}` 
+  ? employee.photo_profil.startsWith("http")
+    ? employee.photo_profil
+    : `http://localhost:8000${employee.photo_profil}`
   : "/default-avatar.png";
 
 console.log("Profile Image URL:", employee.photo_profil);
@@ -66,16 +66,16 @@ console.log("Profile Image URL:", employee.photo_profil);
         <div className="flex flex-row items-center">
            <>
               <Image
-                  src={ "http://localhost:8000/media/profile_photos/board.png"}
+                  src={`${employee.photo_profil}`}
                   alt={`${employee.first_name} ${employee.last_name}`}
                   width={40} // Taille adaptée
                   height={40}
                   className="w-8 h-8 rounded object-cover mr-3"
-              />  
+              />
            </>
-             
+
           <div>
-            <div className="text-black"> 
+            <div className="text-black">
               <strong>{employee.name}</strong>
             </div>
             <span className="text-sm font-light"> {employee.email} </span>
