@@ -32,8 +32,7 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
 
   // Handle hydration issue: Wait until client-side render
   const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => {
+    useEffect(() => {
     setIsClient(true); // Ensure this is only set on client
   }, []);
   useEffect(() => {
@@ -77,10 +76,10 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
         />
          <div className="button flex gap-3 pb-4 ">
             <CreateHoliday />
-            <Button color="primary" variant="bordered" endContent={<TfiImport />}>
+            <Button color="primary" className='rounded-sm' variant="bordered" endContent={<TfiImport />}>
               Import
             </Button>
-            <Button color="primary" variant="bordered" endContent={<TfiExport />}>
+            <Button color="primary" variant="bordered" className='rounded-sm' endContent={<TfiExport />}>
               Export
             </Button>
           </div>
@@ -138,7 +137,3 @@ const HolydayTable = ({ holydays }: { holydays: any[] }) => {
 };
 
 export default HolydayTable;
-
-
-
-

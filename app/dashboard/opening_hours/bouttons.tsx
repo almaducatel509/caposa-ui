@@ -9,10 +9,9 @@ export function CreateOpeningHour() {
   return ( 
     <Button
       as={Link}
-      className=" bg-green-600 px-4 text-sm font-medium text-white flex items-center gap-2 hover:bg-green-500"
+      className=" bg-green-600 px-4 text-sm font-medium text-white flex items-center gap-2 hover:bg-green-500 rounded-sm"
       href="/dashboard/opening_hours/create"
       variant="solid"
-      radius="md"
     >
       <HiOutlineClock className="w-5 h-5" /> {/* Icon */}
       <span>Créer Horaire</span> {/* Text */}

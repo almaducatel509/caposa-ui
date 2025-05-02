@@ -41,13 +41,7 @@ const statusColorMap: Record<string, ChipProps["color"]> = {
 
 // Colonnes du tableau
 export const columns = [
-  { key: "monday", label: "Monday" },
-  { key: "tuesday", label: "Tuesday" },
-  { key: "wednesday", label: "Wednesday" },
-  { key: "thursday", label: "Thursday" },
-  { key: "friday", label: "Friday" },
-  { key: "created_at", label: "Created At" },
-  { key: "status", label: "Status" },
+ { key: "status", label: "Status" },
   { key: "actions", label: "Actions" },
 ];
 

@@ -20,7 +20,8 @@ import { FaRegTrashCan, FaRegEye } from 'react-icons/fa6';
 import { FiEdit } from 'react-icons/fi';
 import { TfiImport, TfiExport } from 'react-icons/tfi';
 import { CreateOpeningHour } from '@/app/dashboard/opening_hours/bouttons';
-import { columns,OpeningHrs, renderCell } from '@/app/dashboard/opening_hours/columns';
+import { OpeningHrs } from '@/app/dashboard/opening_hours/columns';
+import { LuPrinter } from 'react-icons/lu';
 
 export default function OpeningHoursTable({ hourtable = [] }: { hourtable?: OpeningHrs[] }) {
 
@@ -86,24 +87,25 @@ const topContent = useMemo(() => {
         <div className="flex gap-3 items-center">
           <Input
             isClearable
-            className="mb-4"
+            // className="mb-1"
             placeholder="Search by name..."
             startContent={<FiSearch />}
             value={filterValue}
             onClear={() => onClear()}
             onValueChange={onSearchChange}
+            className='rounded-sm'
           />
           <div className="button flex gap-3">
-            {/* <NewSchedul /> */}
+            <CreateOpeningHour  />
             <Button
               endContent={<TfiExport />}
-              className=" bg-white border-2 border-green-600 px-4 text-sm font-medium text-green-600 hover:border-slate-300 flex items-center gap-2"
+              className=" bg-white border-1 border-slate-200 rounded-sm text-sm font-medium text-green-600 hover:border-slate-300 flex items-center gap-2"
             >
               Import
             </Button>
             <Button
               endContent={<TfiImport />}
-              className=" bg-white border-2 border-slate-600 px-4 text-sm font-medium text-green-600 hover:border-slate-300 flex items-center gap-2"
+              className=" bg-white border-1 border-slate-200 rounded-sm text-sm font-medium text-green-600 hover:border-slate-300 flex items-center gap-2"
             >
               Export
             </Button>
@@ -118,57 +120,39 @@ const topContent = useMemo(() => {
   }
 
   return (
-   <Table
-         isHeaderSticky
-         aria-label="Employee table"
-         topContent={topContent}
-         topContentPlacement="outside"
-         selectedKeys={selectedKeys}
-         selectionMode="multiple"
-         onSelectionChange={setSelectedKeys}
-         bottomContent={
-           <div className="flex w-full justify-center">
-               {/* Nombre de lignes sélectionnées */}
-             <span className="w-[30%] text-small text-default-400">
-               {selectedKeys === "all"
-                 ? "All rows selected"
-                 : `${Array.from(selectedKeys).length} of ${filteredItems.length} selected`}
-             </span>
-               <Pagination
-                 isCompact
-                 showControls
-                 showShadow
-                 color="secondary"
-                 page={page}
-                 total={pages}
-                 onChange={(page) => setPage(page)}
-               />
-           </div>
-         }
-         bottomContentPlacement="outside"
-         sortDescriptor={sortDescriptor}
-         onSortChange={setSortDescriptor}
-         classNames={{
-           wrapper: "min-h-[222px]",
-         }}
-       >
-      <TableHeader columns={columns}>
-        {(column) => (
-          <TableColumn
-            key={column.key}
-            {...(column.key === 'name' ? { allowsSorting: true } : {})}
-          >
-            {column.label}
-          </TableColumn>
-        )}
-      </TableHeader>
-      <TableBody items={sortedItems} emptyContent="No Schedule found.">
-        {(opening_hours) => (
-          <TableRow className="group/item hover:bg-neutral-100" key={opening_hours.id}>
-            {(columnKey) => <TableCell>{renderCell(opening_hours, columnKey)}</TableCell>}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+    <div className="flex flex-col gap-4">
+      {topContent}
+  
+      {filteredItems.length === 0 ? (
+        <div className="text-center py-4 text-gray-600">Aucun horaire trouvé.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredItems.map((item) => (
+            <div key={item.id} className="border shadow-md rounded-lg p-4 bg-white hover:bg-gray-50 transition">
+              <div className="flex justify-between items-center mb-2">
+                <strong className="text-sm text-gray-600">
+                  Créé le : {new Date(item.created_at).toLocaleDateString()}
+                </strong>
+                <div className="flex gap-2 text-lg">
+                  <FiEdit className="cursor-pointer text-gray-500 hover:text-green-600" />
+                  <FaRegTrashCan className="cursor-pointer text-red-500 hover:text-red-700" />
+                  <LuPrinter className="cursor-pointer text-gray-500 hover:text-blue-600" />
+                </div>
+              </div>
+              <div className="space-y-1 text-sm text-gray-700">
+                <p><strong>Lundi :</strong> {item.monday}</p>
+                <p><strong>Mardi :</strong> {item.tuesday}</p>
+                <p><strong>Mercredi :</strong> {item.wednesday}</p>
+                <p><strong>Jeudi :</strong> {item.thursday}</p>
+                <p><strong>Vendredi :</strong> {item.friday}</p>
+                <p><strong>Samedi :</strong> {item.saturday || 'Closed'}</p>
+                <p><strong>Dimanche :</strong> {item.sunday || 'Closed'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
+    
 }

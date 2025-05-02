@@ -1,6 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import {
+  Input,
+  Textarea,
+  Checkbox,
   Modal,
   ModalContent,
   ModalHeader,
@@ -11,12 +14,8 @@ import {
 } from "@nextui-org/react";
 import { Post, postSchema } from "./validations";
 import { createPost } from "@/app/lib/api/post"; // Ensure this path is correct
-import Step1 from "./_steppers/step-1";
-import Step2 from "./_steppers/step-2";
-import Step3 from "./_steppers/step-3";
 import { useRouter } from "next/navigation";
-
-const steps = [Step1, Step2, Step3];
+import TitleDetails from "./title-details";
 
 const RegisterForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -74,20 +73,13 @@ const RegisterForm: React.FC = () => {
     }
   };
 
-  const handleNext = () => {
-    if (validateStep()) {
-      if (currentStep === steps.length - 1) {
-        handleSubmit(); // Submit at the last step
-      } else {
-        setCurrentStep((prev) => prev + 1);
-      }
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  const handleCheckboxChange = (name: keyof Post, checked: boolean) => {
+    setFormData((prev) => ({ ...prev, [name]: checked }));
   };
-
   const handleCreateAnother = () => {
     setFormData({
       name: "",
@@ -99,35 +91,73 @@ const RegisterForm: React.FC = () => {
     setApiError(null);
     setSuccessMessage(null);
     onClose(); // Close the modal
-    setCurrentStep(0); // Reset to the first step
   };
 
-  const CurrentStepComponent = steps[currentStep];
-
   return (
-    <div>
-      <CurrentStepComponent
-        formData={formData}
-        setFormData={(data) => setFormData({ ...formData, ...data })}
-        errors={errors}
-      />
-      <div className="flex justify-between mt-8">
-        {currentStep > 0 && (
-          <button
-            className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
-            onClick={handlePrevious}
+    <div className="capitalize space-y-6">
+        <TitleDetails text1="Remplir les champs nécessaires" text2="Fournir vos informations personnelles" />
+  
+        {/* Name Field */}
+        <div className="space-y-2">
+          <Input
+            type="text"
+            label="Name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+          {errors.name && <div className="text-red-600">{errors.name}</div>}
+        </div>
+  
+        {/* Description Field */}
+        <div className="space-y-2">
+          <Textarea
+            label="Description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+          />
+          {errors.description && <div className="text-red-600">{errors.description}</div>}
+        </div>
+  
+        {/* Checkboxes */}
+        <div className="space-y-2">
+          <Checkbox
+            isSelected={formData.deposit}
+            onChange={(e) => handleCheckboxChange("deposit", e.target.checked)}
           >
-            Précédent
-          </button>
-        )}
-        <button
-          className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
-          onClick={handleNext}
-          disabled={isSubmitting}
-        >
-          {currentStep < steps.length - 1 ? "Suivant" : "Soumettre"}
-        </button>
-      </div>
+            Deposit
+          </Checkbox>
+          {errors.deposit && <div className="text-red-600">{errors.deposit}</div>}
+  
+          <Checkbox
+            isSelected={formData.withdrawal}
+            onChange={(e) => handleCheckboxChange("withdrawal", e.target.checked)}
+          >
+            Withdrawal
+          </Checkbox>
+          {errors.withdrawal && <div className="text-red-600">{errors.withdrawal}</div>}
+  
+          <Checkbox
+            isSelected={formData.transfer}
+            onChange={(e) => handleCheckboxChange("transfer", e.target.checked)}
+          >
+            Transfer
+          </Checkbox>
+          {errors.transfer && <div className="text-red-600">{errors.transfer}</div>}
+        </div>
+  
+        <div className="flex justify-end mt-6">
+          <Button
+            className="bg-green-600 text-white"
+            onClick={handleSubmit}
+            isDisabled={isSubmitting}
+          >
+            {isSubmitting ? "Envoi..." : "Soumettre"}
+          </Button>
+        </div>
 
       {/* Modal */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
@@ -161,4 +191,10 @@ const RegisterForm: React.FC = () => {
     </div>
   );
 };
-export default RegisterForm;
+// export default RegisterForm;
+// const isDuplicatePost = (newPost: Post): string | null => {
+//   const duplicate = existingPosts.find(
+//     (p) => p.name === newPost.name
+//   );
+//   return duplicate ? `Un poste avec le nom "${newPost.name}" existe déjà.` : null;
+// };

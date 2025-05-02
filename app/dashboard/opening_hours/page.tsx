@@ -3,6 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { fetchOpeningHours } from '@/app/lib/api/opening_hour';  
 import Hours_table from '@/app/components/OpeningHours/Hours_table';  
 import { OpeningHrs } from './columns';
+import { Card, CardBody, CardFooter, CardHeader } from '@nextui-org/react';
+import { FiEdit2 } from "react-icons/fi";
+import { GoTrash } from "react-icons/go";
+import { LuPrinter } from "react-icons/lu";
+
 
 export default function OpeningHoursPage() {
   const [openingHours, setOpeningHours] = useState<OpeningHrs[]>([]);  // État pour stocker les horaires d'ouverture
@@ -36,18 +41,15 @@ export default function OpeningHoursPage() {
   if (error) {
     return <div>{error}</div>;
   }
-
-    return (
-      <div className="w-full bg-white">
-        <div className="flex w-full items-center justify-between">
-          <h1 className="text-2xl">Opening Hours</h1>
-        </div>
-        <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-          {/* D'autres éléments peuvent être ajoutés ici */}
-        </div>
-
-        {/* Passer les horaires d'ouverture au composant Hours_table */}
-        <Hours_table hourtable={openingHours} />
-      </div>
-    );
+  const handleEdit = (dayKey: string) => {
+    console.log("Modifier", dayKey);
+    // Ouvre un modal ou affiche un input par exemple
+  };
+  return (
+    <div className="w-full p-6 space-y-6">
+      <h1 className="text-2xl font-bold text-center text-gray-800">Opening Hours</h1>
+      <Hours_table hourtable={openingHours} />
+    </div>
+  );
+  
 }

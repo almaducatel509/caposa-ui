@@ -54,6 +54,7 @@ export default function PostPage() {
       <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
         {/* D'autres éléments peuvent être ajoutés ici */}
       </div>
+      
       <PostTable postes={postes} />
     </div>
   );

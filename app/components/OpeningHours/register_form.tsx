@@ -1,30 +1,26 @@
-"use client"
-import React, { useState } from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import {
+  TimeInput,
+  Button,
+  Checkbox,
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Button,
   useDisclosure,
 } from "@nextui-org/react";
 import { OpeningHours, openingHoursSchema, ErrorMessages } from './validations';
-import Step1 from './_steppers/step-1';
-import Step2 from './_steppers/step-2';
-import Step3 from './_steppers/step-3';
 import { createOpeningHours } from '@/app/lib/api/opening_hour';
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import axios from "axios";
-
-const steps = [Step1, Step2, Step3];
+import type { TimeValue } from "@react-types/datepicker";
+import { parseZonedDateTime } from "@internationalized/date";
+import OpeningHoursSummary from './summary';
 
 const RegisterForm: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errors, setErrors] = useState<ErrorMessages<OpeningHours>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<OpeningHours>({
     monday: "08:00-17:00",
     tuesday: "08:00-17:00",
@@ -33,61 +29,82 @@ const RegisterForm: React.FC = () => {
     friday: "08:00-17:00",
   });
 
+  const [closedDays, setClosedDays] = useState<{ [K in keyof OpeningHours]?: boolean }>({});
+  const [errors, setErrors] = useState<ErrorMessages<OpeningHours>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const router = useRouter();
 
-  const validateStep = (): boolean => {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
+  if (!isClient) return null;
+
+  const initializeTimeValue = (timeString: string | undefined, isOpen: boolean): TimeValue => {
+    if (timeString) {
+      const timePart = isOpen ? timeString.split('-')[0] : timeString.split('-')[1];
+      return parseZonedDateTime(`2024-01-01T${timePart}:00[UTC]`);
+    } else {
+      return parseZonedDateTime("2024-01-01T08:00:00[UTC]");
+    }
+  };
+
+  const handleTimeChange = (day: keyof OpeningHours, value: TimeValue, isOpen: boolean) => {
+    const formattedTime = `${value.hour.toString().padStart(2, '0')}:${value.minute.toString().padStart(2, '0')}`;
+    const currentTimes = formData[day] || "08:00-17:00";
+    const [currentOpen, currentClose] = currentTimes.split('-');
+    const newTime = isOpen ? `${formattedTime}-${currentClose}` : `${currentOpen}-${formattedTime}`;
+    setFormData({ ...formData, [day]: newTime });
+  };
+
+  const handleClosedChange = (day: keyof OpeningHours, checked: boolean) => {
+    setClosedDays((prev) => ({ ...prev, [day]: checked }));
+    if (checked) {
+      setFormData((prev) => ({ ...prev, [day]: "" }));
+    } else {
+      setFormData((prev) => ({ ...prev, [day]: "08:00-17:00" })); // default when reopened
+    }
+  };
+
+  const validate = () => {
     const result = openingHoursSchema.safeParse(formData);
     if (result.success) {
       setErrors({});
       return true;
-    } else {
-      const newErrors: Partial<OpeningHours> = {};
-      result.error.errors.forEach((error) => {
-        if (error.path.length) {
-          const key = error.path[0] as keyof OpeningHours;
-          newErrors[key] = error.message;
-        }
-      });
-      setErrors(newErrors);
-      return false;
     }
+
+    const newErrors: Partial<OpeningHours> = {};
+    result.error.errors.forEach((e) => {
+      const key = e.path[0] as keyof OpeningHours;
+      newErrors[key] = e.message;
+    });
+
+    setErrors(newErrors);
+    return false;
   };
 
   const handleSubmit = async () => {
-    setApiError(null);
     setIsSubmitting(true);
+    setApiError(null);
 
-    if (!validateStep()) {
+    if (!validate()) {
       setIsSubmitting(false);
       return;
     }
 
     try {
-      console.log("Données envoyées :", formData);
       await createOpeningHours(formData);
       setSuccessMessage("Horaires créés avec succès !");
-      setApiError(null);
-      onOpen(); // Open modal
+      onOpen();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        setApiError(error.response?.data?.detail || "Une erreur est survenue.");
-      } else {
-        setApiError("Erreur inconnue.");
-      }
-      onOpen(); // Open modal for error
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.detail || "Une erreur est survenue."
+        : "Erreur inconnue.";
+      setApiError(message);
+      onOpen();
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleNext = () => {
-    if (!validateStep()) return;
-
-    if (currentStep === steps.length - 1) {
-      handleSubmit(); // Submit at the last step
-    } else {
-      setCurrentStep((prev) => prev + 1);
     }
   };
 
@@ -99,47 +116,92 @@ const RegisterForm: React.FC = () => {
       thursday: "08:00-17:00",
       friday: "08:00-17:00",
     });
+    setClosedDays({});
     setApiError(null);
     setSuccessMessage(null);
-    onClose(); // Close the modal
-    setCurrentStep(0); // Reset to the first step
+    onClose();
   };
-
-  const CurrentStepComponent = steps[currentStep];
 
   return (
     <div>
-      <CurrentStepComponent
-        formData={formData}
-        setFormData={(data) => setFormData({ ...formData, ...data })}
-        errors={errors}
-      />
-      <div className="flex justify-between mt-8">
-        {currentStep > 0 && (
-          <button
-            className="bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2"
-            onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
-          >
-            Précédent
-          </button>
-        )}
-        <button
-          className={`${
-            isSubmitting ? "cursor-not-allowed opacity-50" : ""
-          } bg-white text-green-600 hover:text-white hover:bg-green-600 border-green-600 hover:border-none border-2`}
-          onClick={handleNext}
-          disabled={isSubmitting}
+      <h2 className="text-xl font-bold mb-6">Horaire de Semaine</h2>
+      <div className="grid grid-cols-4 gap-4 font-semibold border-b pb-2 mb-2">
+        <span>Jour</span>
+        <span>Heure d'ouverture</span>
+        <span>Heure de fermeture</span>
+        <span>Fermé</span>
+      </div>
+
+      {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((day) => {
+        const isWeekend = day === "saturday" || day === "sunday";
+
+        return (
+          <div key={day} className={`grid grid-cols-4 gap-4 mb-4 items-center px-2 ${isWeekend ? "bg-green-100 rounded" : ""}`}>
+            <label className="capitalize">{day}</label>
+
+            <TimeInput
+              hideTimeZone
+              isDisabled={isWeekend}
+              value={
+                day in formData
+                  ? initializeTimeValue(formData[day as keyof OpeningHours], true)
+                  : initializeTimeValue(undefined, true)
+              }
+              onChange={(value) => {
+                if (!isWeekend) {
+                  handleTimeChange(day as keyof OpeningHours, value, true);
+                }
+              }}
+              className="w-40"
+              classNames={{
+                base: "bg-white",
+                input: "bg-white text-black",
+                inputWrapper: "bg-white border border-gray-300 rounded-sm",
+              }}
+              variant="bordered"
+            />
+
+            <TimeInput
+              hideTimeZone
+              isDisabled={isWeekend}
+              value={
+                day in formData
+                  ? initializeTimeValue(formData[day as keyof OpeningHours], false)
+                  : initializeTimeValue(undefined, false)
+              }
+              onChange={(value) => {
+                if (!isWeekend) {
+                  handleTimeChange(day as keyof OpeningHours, value, false);
+                }
+              }}
+              className="w-40"
+              classNames={{
+                base: "bg-white",
+                input: "bg-white text-black",
+                inputWrapper: "bg-white border border-gray-300 rounded-sm",
+              }}
+              variant="bordered"
+            />
+
+            <Checkbox isSelected={isWeekend} isDisabled className="px-2"/>
+          </div>
+        );
+      })}
+
+      <div className="flex justify-end mt-6">
+        <Button
+          className="bg-green-600 text-white"
+          onClick={handleSubmit}
+          isDisabled={isSubmitting}
         >
-          {currentStep < steps.length - 1 ? "Suivant" : "Soumettre"}
-        </button>
+          {isSubmitting ? "Envoi..." : "Soumettre"}
+        </Button>
       </div>
 
       <Modal isOpen={isOpen} onOpenChange={onClose}>
         <ModalContent>
           <>
-            <ModalHeader>
-              {successMessage ? "Succès!" : "Erreur!"}
-            </ModalHeader>
+            <ModalHeader>{successMessage ? "Succès!" : "Erreur!"}</ModalHeader>
             <ModalBody>
               {successMessage ? (
                 <p>{successMessage}</p>
@@ -148,20 +210,13 @@ const RegisterForm: React.FC = () => {
               )}
             </ModalBody>
             <ModalFooter>
-              {successMessage && (
+              {successMessage ? (
                 <>
-                  <Button color="primary" onPress={handleCreateAnother}>
-                    Créer un autre
-                  </Button>
-                  <Button color="success" onPress={() => router.push('/dashboard/opening_hours')}>
-                    Voir tout
-                  </Button>
+                  <Button color="primary" onPress={handleCreateAnother}>Créer un autre</Button>
+                  <Button color="success" onPress={() => router.push('/dashboard/opening_hours')}>Voir tout</Button>
                 </>
-              )}
-              {!successMessage && (
-                <Button color="danger" onPress={onClose}>
-                  Fermer
-                </Button>
+              ) : (
+                <Button color="danger" onPress={onClose}>Fermer</Button>
               )}
             </ModalFooter>
           </>

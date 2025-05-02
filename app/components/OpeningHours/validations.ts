@@ -12,11 +12,3 @@ export type OpeningHours = z.infer<typeof openingHoursSchema>;
 
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
-export const formSchema = z.object({ 
-  step1: openingHoursSchema,
-});
-
-export type Step1Data = z.infer<typeof openingHoursSchema>;
-export type Step2Data = z.infer<typeof openingHoursSchema>;
-export type Step3Data = z.infer<typeof openingHoursSchema>;
-
