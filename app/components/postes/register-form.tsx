@@ -172,14 +172,14 @@ const RegisterForm: React.FC = () => {
           </ModalBody>
           <ModalFooter>
             {successMessage ? (
-              <>
+              <div>
                 <Button color="primary" onPress={handleCreateAnother}>
                   Créer un autre
                 </Button>
                   <Button color="success" onPress={() => router.push('/dashboard/postes')}>
                   Voir tout
                 </Button>
-              </>
+              </div>
             ) : (
               <Button color="danger" onPress={onClose}>
                 Fermer
@@ -191,7 +191,7 @@ const RegisterForm: React.FC = () => {
     </div>
   );
 };
-// export default RegisterForm;
+export default RegisterForm;
 // const isDuplicatePost = (newPost: Post): string | null => {
 //   const duplicate = existingPosts.find(
 //     (p) => p.name === newPost.name

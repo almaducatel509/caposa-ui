@@ -1,141 +1,305 @@
-'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import React from "react";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
+"use client";
+import EditBranch from "@/app/components/branches/editBranchesForm";
+import { FaCalendarAlt } from "react-icons/fa";
+import React, { useState, useEffect } from 'react';
+import { 
+  Table, 
+  TableHeader, 
+  TableColumn, 
+  TableBody, 
+  TableRow, 
   TableCell,
-  Input,
-  Pagination,
+  Chip,
+  Tooltip, 
+  Modal, 
+  ModalContent, 
+  ModalHeader, 
+  ModalBody,
   Button,
+  useDisclosure,
+  Card,
+  CardBody,
+  Divider,
+  Avatar,
+  Badge
 } from "@nextui-org/react";
-import { Branch, columns, renderCell } from "@/app/dashboard/branches/columns";
-import { FiSearch } from "react-icons/fi";
-import { LuPlus } from "react-icons/lu";
-import { TfiExport, TfiImport } from "react-icons/tfi";
-import { CreateBranche } from '@/app/dashboard/branches/bouttons';
+import { FaRegTrashCan, FaRegEye, FaBuilding } from "react-icons/fa6";
+import { FiEdit } from "react-icons/fi";
+import { MdLocationOn, MdEmail } from "react-icons/md";
+import { BsTelephone, BsBriefcase } from "react-icons/bs";
+import { BranchData } from "@/app/components/branches/validations";
+import { fetchBranches } from "@/app/lib/api/branche";
 
-const BranchTable = ({ branches }: { branches: Branch[] }) => {
-  const [filterValue, setFilterValue] = useState('');
-  const [page, setPage] = useState(1);
-  const rowsPerPage = 5;
+//Interface pour les branches
+export interface Branch extends BranchData {
+  id: string;
+  branch_code: string;
+}
 
-  // Handle hydration issue: Wait until client-side render
-  const [isClient, setIsClient] = useState(false);
+interface BranchesTableProps {
+  branches?: Branch[];
+}
+
+const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches }) => {
+  const [branches, setBranches] = useState<Branch[]>(initialBranches || []);
+  const [isLoading, setIsLoading] = useState(!initialBranches);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  // Fonction pour charger les données
+  const loadBranchesData = async () => {
+    if (initialBranches?.length && !isLoading) return; // Si des branches sont fournies en props, ne pas recharger
+    
+    try {
+      setIsLoading(true);
+      // Utiliser la fonction fetchBranches de votre API
+      const data = await fetchBranches();
+      console.log("Branch data:", data);
+      setBranches(data);
+    } catch (error) {
+      console.error('Failed to fetch branches:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setIsClient(true); // Ensure this is only set on the client
-  }, []);
+    loadBranchesData();
+  }, [initialBranches]);
 
-  useEffect(() => {
-    console.log('Branch data:', branches);
-  }, [branches]);
+  // Fonction pour gérer le clic sur "Modifier"
+  const handleEditBranch = (branchId: string) => {
+    setSelectedBranchId(branchId);
+    onOpen();
+  };
 
-  // Filter branches by name or address
-  const filteredItems = useMemo(() => {
-    return branches.filter(
-      (item) =>
-        item.branch_name.toLowerCase().includes(filterValue.toLowerCase()) ||
-        item.branch_address.toLowerCase().includes(filterValue.toLowerCase())
-    );
-  }, [branches, filterValue]);
+  // Calcul de la catégorie de la branche basée sur le nombre total de personnel
+  const getBranchCategory = (branch: Branch) => {
+    const totalStaff = branch.number_of_tellers + 
+                       branch.number_of_clerks + 
+                       branch.number_of_credit_officers;
+    
+    if (totalStaff >= 20) return { color: "success", text: "Grande" };
+    if (totalStaff >= 10) return { color: "primary", text: "Moyenne" };
+    return { color: "warning", text: "Petite" };
+  };
 
-  // Pagination logic
-  const pages = Math.ceil(filteredItems.length / rowsPerPage);
-  const itemsToDisplay = useMemo(() => {
-    const start = (page - 1) * rowsPerPage;
-    return filteredItems.slice(start, start + rowsPerPage);
-  }, [page, filteredItems]);
+  // Format de la date en français
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Date inconnue";
+    
+    try {
+      const options: Intl.DateTimeFormatOptions = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      };
+      return new Date(dateString).toLocaleDateString('fr-FR', options);
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateString;
+    }
+  };
 
-  const onSearchChange = useCallback((value?: string) => {
-    setFilterValue(value || '');
-    setPage(1); // Reset page when filter changes
-  }, []);
+  // Colonnes du tableau - définies directement dans ce composant
+  const columns = [
+    { key: "info", label: "BRANCHE" },
+    { key: "staff", label: "PERSONNEL" },
+    { key: "contact", label: "CONTACT" },
+    { key: "details", label: "DÉTAILS" },
+    { key: "actions", label: "ACTIONS" },
+  ];
 
-  const onClear = useCallback(() => {
-    setFilterValue('');
-    setPage(1);
-  }, []);
+  const renderCell = (branch: Branch, columnKey: React.Key) => {
+    const branchCategory = getBranchCategory(branch);
+    
+    switch (columnKey) {
+      case "info":
+        return (
+          <div className="flex items-start gap-3">
+            <Avatar
+              icon={<FaBuilding />}
+              classNames={{
+                base: "bg-gradient-to-br from-indigo-500 to-purple-500",
+                icon: "text-white"
+              }}
+            />
+            <div className="flex flex-col">
+              <p className="text-bold text-small capitalize">{branch.branch_name}</p>
+              <div className="flex items-center gap-1 text-xs text-default-500">
+                <MdLocationOn />
+                <span className="truncate max-w-xs">{branch.branch_address}</span>
+              </div>
+              <Chip className="mt-1" size="sm" variant="flat" color={branchCategory.color as any}>
+                {branchCategory.text}
+              </Chip>
+            </div>
+          </div>
+        );
 
-  // Render the search bar and buttons
-  const topContent = useMemo(() => (
-    <div className="flex flex-col gap-4 pt-4">
-      <div className="flex gap-3 items-center">
-        <Input
-          isClearable
-          className="mb-4"
-          placeholder="Search by name or address..."
-          startContent={<FiSearch />}
-          value={filterValue}
-          onClear={onClear}
-          onValueChange={onSearchChange}
-        />
-        <div className="button flex gap-3 pb-4 ">
-         < CreateBranche/>
-          <Button color="primary" variant="bordered" endContent={<TfiImport />}>
-            Import
-          </Button>
-          <Button color="primary" variant="bordered" endContent={<TfiExport />}>
-            Export
+      case "staff":
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Badge content={branch.number_of_tellers} color="primary" size="sm">
+                <Chip size="sm" variant="flat">Caissiers</Chip>
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge content={branch.number_of_clerks} color="secondary" size="sm">
+                <Chip size="sm" variant="flat">Commis</Chip>
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge content={branch.number_of_credit_officers} color="success" size="sm">
+                <Chip size="sm" variant="flat">Agents crédit</Chip>
+              </Badge>
+            </div>
+          </div>
+        );
+
+      case "contact":
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-xs">
+              <BsTelephone className="text-primary" />
+              <span>{branch.branch_phone_number}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <MdEmail className="text-primary" />
+              <span>{branch.branch_email}</span>
+            </div>
+          </div>
+        );
+
+      case "details":
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-xs">
+              <BsBriefcase className="text-success" />
+              <span>Code: <strong>{branch.branch_code}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <FaCalendarAlt className="text-warning" />
+              <span>Ouvert le: <strong>{formatDate(branch.opening_date)}</strong></span>
+            </div>
+          </div>
+        );
+
+      case "actions":
+        return (
+          <div className="relative flex justify-end items-center gap-2">
+            <Tooltip content="Détails">
+              <Button isIconOnly size="sm" variant="light" color="primary">
+                <FaRegEye />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Modifier">
+              <Button 
+                isIconOnly 
+                size="sm" 
+                variant="light"
+                color="default"
+                onClick={() => handleEditBranch(branch.id)}
+              >
+                <FiEdit />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Supprimer">
+              <Button isIconOnly size="sm" variant="light" color="danger">
+                <FaRegTrashCan />
+              </Button>
+            </Tooltip>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Composant rendu
+  return (
+    <Card className="shadow-md">
+      <CardBody className="overflow-hidden px-0">
+        <div className="flex justify-between items-center px-6 py-2">
+          <h3 className="text-xl font-bold text-default-700">Gestion des Branches</h3>
+          <Button color="primary" variant="shadow">
+            + Nouvelle Branche
           </Button>
         </div>
-      </div>
-    </div>
-  ), [filterValue, onSearchChange, onClear]);
-
-  // Render the table only when the component is mounted (client-side)
-  if (!isClient) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {topContent}
-
-      {/* Handle empty state */}
-      {itemsToDisplay.length === 0 ? (
-        <div className="text-center py-4 text-gray-600">No branches found.</div>
-      ) : (
-        <>
-          {/* Branches table */}
-          <Table aria-label="Branches Table">
-            <TableHeader columns={columns}>
-              {(column) => (
-                <TableColumn key={column.key}>
-                  {column.label}
-                </TableColumn>
-              )}
-            </TableHeader>
-
-            <TableBody items={itemsToDisplay}>
-              {(branch) => (
-                <TableRow key={branch.branch_code}>
-                  {(columnKey) => (
-                    <TableCell>{renderCell(branch, columnKey)}</TableCell>
+        
+        <Divider />
+        
+        <Table
+          aria-label="Tableau des branches"
+          removeWrapper
+          selectionMode="none"
+        >
+          <TableHeader>
+            {columns.map((column) => (
+              <TableColumn 
+                key={column.key} 
+                align={column.key === "actions" ? "end" : "start"}
+                className="bg-default-50 text-xs uppercase tracking-wider font-semibold"
+              >
+                {column.label}
+              </TableColumn>
+            ))}
+          </TableHeader>
+          <TableBody
+            items={branches}
+            isLoading={isLoading}
+            loadingContent={
+              <div className="p-6 text-center">
+                Chargement des données des branches...
+              </div>
+            }
+            emptyContent={
+              <div className="p-6 text-center">
+                Aucune branche trouvée
+              </div>
+            }
+          >
+            {(branch) => (
+              <TableRow key={branch.id}>
+                {(columnKey) => (
+                  <TableCell>{renderCell(branch, columnKey)}</TableCell>
+                )}
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardBody>
+      
+      {/* Modal pour l'édition */}
+      {/* Important: Le modal est rendu de façon conditionnelle côté client seulement */}
+      {typeof window !== "undefined" && (
+        <Modal isOpen={isOpen} onClose={onClose} size="2xl">
+          <ModalContent>
+            {(onClose) => (
+              <div>
+                <ModalHeader className="flex items-center gap-2">
+                  <FiEdit className="text-success" />
+                  Modifier une Branche
+                </ModalHeader>
+                <ModalBody>
+                  {selectedBranchId && (
+                    <EditBranch 
+                      branchId={selectedBranchId} 
+                      onClose={onClose}
+                      onSuccess={loadBranchesData}
+                    />
                   )}
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          <Pagination
-            isCompact
-            showControls
-            showShadow
-            color="secondary"
-            page={page}
-            total={pages}
-            onChange={(page) => setPage(page)}
-          />
-        </>
+                </ModalBody>
+              </div>
+            )}
+          </ModalContent>
+        </Modal>
       )}
-    </div>
+    </Card>
   );
 };
 
-export default BranchTable;
+export default BranchesTable;

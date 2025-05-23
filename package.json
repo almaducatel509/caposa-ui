@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@axe-core/react": "^4.10.1",
     "@files-ui/react": "^1.2.4",
     "@hookform/resolvers": "^3.4.0",
     "@material-tailwind/react": "^2.1.10",

@@ -45,6 +45,25 @@ const RegisterForm = () => {
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
   const router = useRouter();
 
+  // Calcul dynamique du nombre de postes
+  const calculateTotalPosts = (tellers: number, clerks: number, creditOfficers: number) => {
+    return tellers + clerks + creditOfficers;
+  };
+
+  // Mettre à jour le nombre de postes chaque fois que les sous-valeurs changent
+  useEffect(() => {
+    const totalPosts = calculateTotalPosts(
+      formData.number_of_tellers,
+      formData.number_of_clerks,
+      formData.number_of_credit_officers
+    );
+    
+    setFormData(prev => ({
+      ...prev,
+      number_of_posts: totalPosts
+    }));
+  }, [formData.number_of_tellers, formData.number_of_clerks, formData.number_of_credit_officers]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -66,7 +85,6 @@ const RegisterForm = () => {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const numericFields = [
-      "number_of_posts",
       "number_of_tellers",
       "number_of_clerks",
       "number_of_credit_officers"
@@ -191,8 +209,17 @@ const RegisterForm = () => {
           />
         ))}
 
+        {/* Champ en lecture seule pour le nombre total de postes */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Number of Posts (Total)</label>
+          <div className="w-full px-3 py-2 border rounded-md bg-gray-50">
+            {formData.number_of_posts}
+          </div>
+          <p className="text-xs text-gray-500">Calculé automatiquement</p>
+        </div>
+
+        {/* Champs pour les différents types de personnel */}
         {[
-          { name: "number_of_posts", label: "Number of Posts" },
           { name: "number_of_tellers", label: "Number of Tellers" },
           { name: "number_of_clerks", label: "Number of Clerks" },
           { name: "number_of_credit_officers", label: "Credit Officers" },
@@ -273,14 +300,14 @@ const RegisterForm = () => {
           </ModalBody>
           <ModalFooter>
             {successMessage ? (
-              <>
+              <div>
                 <Button color="primary" onPress={handleCreateAnother}>
                   Créer un autre
                 </Button>
                 <Button color="success" onPress={() => router.push("/dashboard/branches")}>
                   Voir tout
                 </Button>
-              </>
+              </div>
             ) : (
               <Button color="danger" onPress={onClose}>
                 Fermer

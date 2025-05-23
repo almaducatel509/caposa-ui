@@ -13,7 +13,6 @@ import {
   Button,
   Pagination,
   Selection,
-  ChipProps,
   SortDescriptor,
 } from "@nextui-org/react";
 import { columns, Employee, renderCell } from "@/app/dashboard/employees/columns";
@@ -109,7 +108,7 @@ export default function EmployeeTable({ employees }: { employees: Employee[] }) 
   }, [selectedKeys, items.length,filterValue, onSearchChange, onClear]);
 
   if (!employees) {
-    return <>Loading...</>;
+    return <p>Loading...</p>;
   }
 
   return (

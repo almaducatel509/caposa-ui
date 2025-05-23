@@ -1,66 +1,37 @@
 'use client';
 
-import { BsBoxes } from "react-icons/bs";
 import { HiOutlineUserGroup } from "react-icons/hi2";
 import { AiOutlineHome } from "react-icons/ai";
 import { HiOutlineDocumentDuplicate } from "react-icons/hi2";
-
+import { GrSchedule } from "react-icons/gr";
+import { TfiLayoutListPost } from "react-icons/tfi";
+import { MdOutlineHolidayVillage } from "react-icons/md";
+import { AiOutlineBranches } from "react-icons/ai";
+import { GrTransaction } from "react-icons/gr";
+import { LuFolderTree } from "react-icons/lu";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
+import { TbBrandUbuntu } from "react-icons/tb";
 
-// Map of links to display in the side navigation.
-// Depending on the size of the application, this would be stored in a database.
 const links = [
-  { name: 'Home', href: '/dashboard', icon: AiOutlineHome },
-  
-  { name: 'Opening Hours',
-    href: '/dashboard/opening_hours',
-    icon: HiOutlineUserGroup, 
-  },
-  
-  { name: 'Postes',
-    href: '/dashboard/postes',
-    icon: HiOutlineUserGroup, 
-  },
-  { name: 'Holydays',
-    href: '/dashboard/holydays',
-    icon: HiOutlineUserGroup, 
-  },
-  { name: 'Branches',
-    href: '/dashboard/branches',
-    icon: HiOutlineUserGroup, 
-  },
-  { name: 'Employees',
-    href: '/dashboard/employees',
-    icon: HiOutlineUserGroup, 
-  },
-  { name: 'Members',
-    href: '/dashboard/members',
-    icon: HiOutlineUserGroup, 
-  },
-  {
-    name: 'Transactions',
-    href: '/dashboard/transactions',
-    icon: HiOutlineDocumentDuplicate,
-  },
-  {
-    name: 'Report',
-    href: '/dashboard/reports',
-    icon: HiOutlineDocumentDuplicate,
-  },
-  { name: 'Achives',
-    href: '/dasboard/Achives',
-    icon: HiOutlineUserGroup, 
-  },
-
+  { name: 'Acceuil', href: '/dashboard', icon: AiOutlineHome },
+  { name: 'Horaires', href: '/dashboard/opening_hours', icon: GrSchedule },
+  { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
+  { name: ' Jours Fériés', href: '/dashboard/holidays', icon: MdOutlineHolidayVillage },
+  { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
+  { name: 'Employees', href: '/dashboard/employees', icon: HiOutlineUserGroup },
+  { name: 'Membres', href: '/dashboard/members', icon: TbBrandUbuntu },
+  { name: 'Transactions', href: '/dashboard/transactions', icon: GrTransaction },
+  { name: 'Analyse', href: '/dashboard/reports', icon: HiOutlineDocumentDuplicate },
+  { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree }, // ✅ Corrigé
 ];
 
 export default function NavLinks() {
   const pathname = usePathname();
-
+  
   return (
-    <>
+    <div>
       {links.map((link) => {
         const LinkIcon = link.icon;
         return (
@@ -68,7 +39,7 @@ export default function NavLinks() {
             key={link.name}
             href={link.href}
             className={clsx(
-              'flex h-[48px] grow items-center justify-center gap-2 rounded-md bg-white p-3 text-sm font-medium hover:bg-sky-100 hover:text-green-600 md:flex-none md:justify-start md:p-2 md:px-3',
+              'flex h-[48px] grow items-center justify-center gap-2 rounded-md bg-white p-3 text-sm font-medium hover:bg-green-100 hover:text-green-600 md:flex-none md:justify-start md:p-2 md:px-3',
               {
                 'bg-sky-100 text-green-600': pathname === link.href,
               },
@@ -79,6 +50,6 @@ export default function NavLinks() {
           </Link>
         );
       })}
-    </>
+    </div>
   );
 }

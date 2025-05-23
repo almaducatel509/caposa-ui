@@ -1,26 +1,20 @@
-'use server'
 import axios from 'axios';
 import AxiosInstance from '../axiosInstance';
 
 // Fonction pour récupérer tous les employés
 export const fetchEmployees = async () => {
   try {
-    const response = await AxiosInstance.get('/employees/'); // Assurez-vous que '/employees/' est le bon endpoint
-    console.log("Données récupérées depuis l'API :", response.data); // Log des données récupérées
-
-    // Transformer les données pour ajouter le champ `name`
-    const transformedData = response.data.map((employee: any) => ({
+    const response = await axios.get('http://127.0.0.1:8000/api/employees/');
+    return response.data.map((employee: any) => ({
       ...employee,
-      name: `${employee.first_name || ""} ${employee.last_name || ""}`.trim(), // Combine `first_name` et `last_name`
+      name: `${employee.first_name || ""} ${employee.last_name || ""}`.trim(),
     }));
-
-    console.log("Données transformées avec 'name' :", transformedData); // Debugging
-    return transformedData;
   } catch (error) {
-    console.error("Erreur lors de la récupération des employés:", error);
+    console.error("Erreur lors de la récupération des employés Ts:", error);
     throw error;
   }
 };
+
 
 // Fonction pour créer un nouvel employé
 export const createEmployee = async (formData:FormData) => {

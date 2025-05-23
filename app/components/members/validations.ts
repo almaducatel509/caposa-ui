@@ -28,7 +28,6 @@ export const memberSchema = z
     monthly_income: z.number().nonnegative("Revenu mensuel invalide").optional(),
     monthly_expenses: z.number().nonnegative("Dépenses mensuelles invalides").optional(),
     income_source: z.string().min(1, "Source de revenu requise"),
-    // referred_by: z.string().optional(), // à activer si besoin
   })
   .refine((data) => data.password === data.confirm_password, {
     message: "Les mots de passe ne correspondent pas",

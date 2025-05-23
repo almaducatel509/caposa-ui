@@ -1,7 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import Search from '@/app/components/search';
-import {Branch} from './columns';
 import BranchTable from '@/app/components/branches/branchesTable';
 import { fetchBranches } from '@/app/lib/api/branche';
 

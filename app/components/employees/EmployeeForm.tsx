@@ -19,7 +19,6 @@ const EmployeeForm: React.FC<{
   errors: ErrorMessages<EmployeeFormData>;
   setErrors?: (errors: Partial<ErrorMessages<EmployeeFormData>>) => void;
 }> = ({ formData, setFormData, errors, setErrors }) => {
-  // ⚙️ Copie-colle ici tout ton long JSX du formulaire (avec les inputs, uploads, etc.)
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -129,228 +128,227 @@ const EmployeeForm: React.FC<{
       const date = creationDate.replace(/-/g, "").slice(2); // Transforme en YYMMDD
       return `${initials}${date}`;
   };
-
   
   return (
-      <div className="capitalize">
-          <TitleDetails text1={'Remplir les champs nécessaires'} text2={'Fournir vos informations personnelles'} />
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-             
-              <div className="space-y-2">
-                  <Input 
-                      type={'text'} 
-                      name='first_name' 
-                      value={formData.first_name} 
-                      label={'Prénom'} 
-                      onChange={handleChange} 
-                      isRequired 
-                  />
-                  {errors.first_name && <div className='text-destructive text-red-600'>{errors.first_name}</div>}
-              </div>
-              <div className="space-y-2">
-                  <Input 
-                      type={'text'} 
-                      name='last_name' 
-                      value={formData.last_name} 
-                      label={'Nom'} 
-                      onChange={handleChange} 
-                      isRequired 
-                  />
-                  {errors.last_name && <div className='text-destructive text-red-600'>{errors.last_name}</div>}
-              </div>
-              <div className="space-y-2">
-                  <Input 
-                      type={'text'} 
-                      name='username' 
-                      value={formData.username} 
-                      label={'Username'} 
-                      onChange={handleChange} 
-                      isRequired 
-                  />
-                  {errors.username && <div className='text-destructive text-red-600'>{errors.username}</div>}
-              </div>
-              
-              
-              <div className="space-y-2">
-                  <Input
-                      isClearable
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      label="Email"
-                      onChange={handleChange}
-                      isRequired
-                  />
-                  {errors.email && <div className="text-red-600">{errors.email}</div>}
-              </div>
-              <div className="space-y-2">
-                  <RadioGroup
-                      label="Choisir le sexe"
-                      isRequired
-                      orientation="horizontal"
-                      name='gender'
-                      value={formData.gender}
-                      onValueChange={handleRadio}
-                  >
-                      <Radio value="M">M</Radio>
-                      <Radio value="F">F</Radio>
-                  </RadioGroup>
-                  {errors.gender && <div className='text-destructive text-red-600'>{errors.gender}</div>}
-              </div>
-              <div className="space-y-2">
-                  <DatePicker
-                      label="Date de naissance"
-                      isRequired
-                      value={parseDate(formData.date_of_birthday || d)}
-                      onChange={handleChangeDate}
-                      description={"MM/DD/YYYY"}
-                  />
-                  {errors.date_of_birthday && <div className='text-destructive text-red-600'>{errors.date_of_birthday}</div>}
-              </div>
+    <div className="capitalize">
+        <TitleDetails text1={'Remplir les champs nécessaires'} text2={'Fournir vos informations personnelles'} />
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            
+            <div className="space-y-2">
+                <Input 
+                    type={'text'} 
+                    name='first_name' 
+                    value={formData.first_name} 
+                    label={'Prénom'} 
+                    onChange={handleChange} 
+                    isRequired 
+                />
+                {errors.first_name && <div className='text-destructive text-red-600'>{errors.first_name}</div>}
+            </div>
+            <div className="space-y-2">
+                <Input 
+                    type={'text'} 
+                    name='last_name' 
+                    value={formData.last_name} 
+                    label={'Nom'} 
+                    onChange={handleChange} 
+                    isRequired 
+                />
+                {errors.last_name && <div className='text-destructive text-red-600'>{errors.last_name}</div>}
+            </div>
+            <div className="space-y-2">
+                <Input 
+                    type={'text'} 
+                    name='username' 
+                    value={formData.username} 
+                    label={'Username'} 
+                    onChange={handleChange} 
+                    isRequired 
+                />
+                {errors.username && <div className='text-destructive text-red-600'>{errors.username}</div>}
+            </div>
+            
+            
+            <div className="space-y-2">
+                <Input
+                    isClearable
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    label="Email"
+                    onChange={handleChange}
+                    isRequired
+                />
+                {errors.email && <div className="text-red-600">{errors.email}</div>}
+            </div>
+            <div className="space-y-2">
+                <RadioGroup
+                    label="Choisir le sexe"
+                    isRequired
+                    orientation="horizontal"
+                    name='gender'
+                    value={formData.gender}
+                    onValueChange={handleRadio}
+                >
+                    <Radio value="M">M</Radio>
+                    <Radio value="F">F</Radio>
+                </RadioGroup>
+                {errors.gender && <div className='text-destructive text-red-600'>{errors.gender}</div>}
+            </div>
+            <div className="space-y-2">
+                <DatePicker
+                    label="Date de naissance"
+                    isRequired
+                    value={parseDate(formData.date_of_birthday || d)}
+                    onChange={handleChangeDate}
+                    description={"MM/DD/YYYY"}
+                />
+                {errors.date_of_birthday && <div className='text-destructive text-red-600'>{errors.date_of_birthday}</div>}
+            </div>
 
-              <div className="space-y-2">
-                  <Input 
-                      type={'text'} 
-                      name='phone_number' 
-                      value={formData.phone_number} 
-                      label={'Téléphone'} 
-                      onChange={handleChange} 
-                      isRequired 
-                  />
-                  {errors.phone_number && <div className='text-destructive text-red-600'>{errors.phone_number}</div>}
-              </div>
-              <div className="space-y-2">
-                  <Input 
-                      type={'text'} 
-                      name='address' 
-                      value={formData.address} 
-                      label={'Adresse'} 
-                      onChange={handleChange} 
-                      isRequired 
-                  />
-                  {errors.address && <div className='text-destructive text-red-600'>{errors.address}</div>}
-              </div>
-              
-              <div className="space-y-2">
-                  <Input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  label="Password"
-                  placeholder="Enter your password"
-                  onChange={handlePassword}
-                  isRequired
-                  endContent={
-                      <button
-                      className="focus:outline-none"
-                      type="button"
-                      onClick={togglePasswordVisibility}
-                      aria-label="toggle password visibility"
-                      >
-                      
-                      </button>
-                  }
-                  className="max-w-xs"
-                  />
-                  {errors.password && <div className="text-destructive text-red-600">{errors.password}</div>}
-              </div>
+            <div className="space-y-2">
+                <Input 
+                    type={'text'} 
+                    name='phone_number' 
+                    value={formData.phone_number} 
+                    label={'Téléphone'} 
+                    onChange={handleChange} 
+                    isRequired 
+                />
+                {errors.phone_number && <div className='text-destructive text-red-600'>{errors.phone_number}</div>}
+            </div>
+            <div className="space-y-2">
+                <Input 
+                    type={'text'} 
+                    name='address' 
+                    value={formData.address} 
+                    label={'Adresse'} 
+                    onChange={handleChange} 
+                    isRequired 
+                />
+                {errors.address && <div className='text-destructive text-red-600'>{errors.address}</div>}
+            </div>
+            
+            <div className="space-y-2">
+                <Input
+                type="password"
+                name="password"
+                value={formData.password}
+                label="Password"
+                placeholder="Enter your password"
+                onChange={handlePassword}
+                isRequired
+                endContent={
+                    <button
+                    className="focus:outline-none"
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    aria-label="toggle password visibility"
+                    >
+                    
+                    </button>
+                }
+                className="max-w-xs"
+                />
+                {errors.password && <div className="text-destructive text-red-600">{errors.password}</div>}
+            </div>
 
-              <div className="space-y-2">
-                  <Input
-                  type={isConfirmPasswordVisible ? "text" : "password"}
-                  name="confirm_password"
-                  value={formData.confirm_password}
-                  label="Confirm Password"
-                  placeholder="Confirm your password"
-                  onChange={handlePassword}
-                  isRequired
-                  endContent={
-                      <button
-                      className="focus:outline-none"
-                      type="button"
-                      onClick={toggleConfirmPasswordVisibility}
-                      aria-label="toggle confirm password visibility"
-                      >
-                      
-                      </button>
-                  }
-                  className="max-w-xs"
-                  />
-                  {errors.confirm_password && <div className="text-destructive text-red-600">{errors.confirm_password}</div>}
-              </div>
-               {/* Référence de paiement (générée automatiquement) */}
-              <div className="space-y-2">
-                  <Autocomplete
-                      isReadOnly // Empêche l'édition manuelle
-                      className="w-full rounded px-3 py-2"
-                      label="Référence de paiement"
-                      selectedKey={formData.payment_ref || "Aucune référence générée"} // ✅ Affiche la valeur actuelle
-                  >
-                      <AutocompleteItem key={formData.payment_ref || "Aucune référence générée"}>
-                          {formData.payment_ref || "Aucune référence générée"}
-                      </AutocompleteItem>
-                  </Autocomplete>
-              </div>
-               {/* Branch Selection */}
-              <div className="space-y-2">
-                  <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
-                  Branch
-                  </label>
-                  <Select
-                      name="branch"
-                      label="Select Branch"
-                      placeholder="Choose a branch"
-                      selectedKeys={selectedBranch}
-                      selectionMode="single"
-                      onSelectionChange={handleBranchChange}
-                      className="w-full rounded px-3 py-2"
-                  >
-                  {branches.map((branch) => (
-                      <SelectItem key={branch.id} textValue={branch.branch_name}>
-                      {branch.branch_name}
-                      </SelectItem>
-                  ))}
-                  </Select>
-              </div>
-              {/* Post Selection */}
-              <div className="space-y-2">
-                  <label htmlFor="posts" className="block text-sm font-medium text-gray-700">
-                      Posts
-                  </label>
-                  <Select
-                      name="posts"
-                      label="Select Posts"
-                      placeholder="Choose posts"
-                      selectedKeys={selectedPost}
-                      selectionMode="multiple"
-                      onSelectionChange={handlePostChange}
-                      className="w-full rounded px-3 py-2"
-                  >
-                      {posts.map((post) => (
-                          <SelectItem 
-                              key={post.id} 
-                              textValue={post.name}
-                          >
-                              {post.name}
-                          </SelectItem>
-                      ))}
-                  </Select>
-              </div>
+            <div className="space-y-2">
+                <Input
+                type={isConfirmPasswordVisible ? "text" : "password"}
+                name="confirm_password"
+                value={formData.confirm_password}
+                label="Confirm Password"
+                placeholder="Confirm your password"
+                onChange={handlePassword}
+                isRequired
+                endContent={
+                    <button
+                    className="focus:outline-none"
+                    type="button"
+                    onClick={toggleConfirmPasswordVisibility}
+                    aria-label="toggle confirm password visibility"
+                    >
+                    
+                    </button>
+                }
+                className="max-w-xs"
+                />
+                {errors.confirm_password && <div className="text-destructive text-red-600">{errors.confirm_password}</div>}
+            </div>
+            {/* Référence de paiement (générée automatiquement) */}
+            <div className="space-y-2">
+                <Autocomplete
+                    isReadOnly // Empêche l'édition manuelle
+                    className="w-full rounded px-3 py-2"
+                    label="Référence de paiement"
+                    selectedKey={formData.payment_ref || "Aucune référence générée"} // ✅ Affiche la valeur actuelle
+                >
+                    <AutocompleteItem key={formData.payment_ref || "Aucune référence générée"}>
+                        {formData.payment_ref || "Aucune référence générée"}
+                    </AutocompleteItem>
+                </Autocomplete>
+            </div>
+            {/* Branch Selection */}
+            <div className="space-y-2">
+                <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
+                Branch
+                </label>
+                <Select
+                    name="branch"
+                    label="Select Branch"
+                    placeholder="Choose a branch"
+                    selectedKeys={selectedBranch}
+                    selectionMode="single"
+                    onSelectionChange={handleBranchChange}
+                    className="w-full rounded px-3 py-2"
+                >
+                {branches.map((branch) => (
+                    <SelectItem key={branch.id} textValue={branch.branch_name}>
+                    {branch.branch_name}
+                    </SelectItem>
+                ))}
+                </Select>
+            </div>
+            {/* Post Selection */}
+            <div className="space-y-2">
+                <label htmlFor="posts" className="block text-sm font-medium text-gray-700">
+                    Posts
+                </label>
+                <Select
+                    name="posts"
+                    label="Select Posts"
+                    placeholder="Choose posts"
+                    selectedKeys={selectedPost}
+                    selectionMode="multiple"
+                    onSelectionChange={handlePostChange}
+                    className="w-full rounded px-3 py-2"
+                >
+                    {posts.map((post) => (
+                        <SelectItem 
+                            key={post.id} 
+                            textValue={post.name}
+                        >
+                            {post.name}
+                        </SelectItem>
+                    ))}
+                </Select>
+            </div>
 
-              <div className="space-y-2">
-                  <UploadImage
-                      name='photo_profil'
-                      data={null}
-                      fallback={""}
-                      description="Photo"
-                      formData={formData}
-                      setFormData={setFormData}
+            <div className="space-y-2">
+                <UploadImage
+                    name='photo_profil'
+                    data={null}
+                    fallback={""}
+                    description="Photo"
+                    formData={formData}
+                    setFormData={setFormData}
 
-                  />
-                  {errors.photo_profil && <div className='text-destructive text-red-600'>{errors.photo_profil}</div>}
-              </div>
-          </div>
-      </div>
+                />
+                {errors.photo_profil && <div className='text-destructive text-red-600'>{errors.photo_profil}</div>}
+            </div>
+        </div>
+    </div>
   );
 
 

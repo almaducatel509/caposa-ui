@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { z, ZodError } from 'zod';
 import { create } from '@/app/lib/create';
 import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure } from '@nextui-org/react';
 import { createMembers } from '@/app/lib/api/member';

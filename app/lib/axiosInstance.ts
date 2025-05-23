@@ -1,32 +1,53 @@
 import axios from 'axios';
 
+// const AxiosInstance = axios.create({
+// baseURL: process.env.NEXT_PUBLIC_BASE_ROUTE, // Utilise BASE_ROUTE comme base URL
+// });
+
+// console.log("Base URL Axios:", AxiosInstance.defaults.baseURL);
+//  Afficher la variable d'environnement pour faciliter le débogage
+console.log("NEXT_PUBLIC_BASE_ROUTE:", process.env.NEXT_PUBLIC_BASE_ROUTE);
+
 const AxiosInstance = axios.create({
-baseURL: process.env.NEXT_PUBLIC_BASE_ROUTE, // Utilise BASE_ROUTE comme base URL
+  baseURL: process.env.NEXT_PUBLIC_BASE_ROUTE || 'http://localhost:8000/api/',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
+console.log("Base URL Axios configurée:", AxiosInstance.defaults.baseURL);
 
-console.log("Base URL Axios:", AxiosInstance.defaults.baseURL);
+// Ajouter un intercepteur pour voir les requêtes complètes (pour débogage)
+if (process.env.NODE_ENV !== 'production') {
+  AxiosInstance.interceptors.request.use(request => {
+    console.log('Requête envoyée:', {
+      url: request.url,
+      method: request.method,
+      data: request.data,
+      headers: request.headers
+    });
+    return request;
+  });
 
-// Intercepteur de requête
-// AxiosInstance.interceptors.request.use(
-//   (config) => {
-//     try {
-//       const token = localStorage.getItem('token');
-//       if (token) {
-//         const accessToken = JSON.parse(token);
-//         if (accessToken) {
-//           config.headers['Authorization'] = `Bearer ${accessToken}`;
-//         }
-//       }
-//     } catch (e) {
-//       console.error("Erreur lors de la récupération du token:", e);
-//     }
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
-
+  AxiosInstance.interceptors.response.use(
+    response => {
+      console.log('Réponse reçue:', {
+        status: response.status,
+        url: response.config.url,
+        data: response.data
+      });
+      return response;
+    },
+    error => {
+      console.error('Erreur de réponse:', {
+        status: error.response?.status,
+        url: error.config?.url,
+        data: error.response?.data
+      });
+      return Promise.reject(error);
+    }
+  );
+}
 const isTokenExpired = (token: string): boolean => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1])); // Décoder le JWT
