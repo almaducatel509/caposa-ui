@@ -36,11 +36,13 @@ export type BranchDataBase = z.infer<typeof branchSchema>;
 
 // Interface étendue qui inclut les champs facultatifs retournés par l'API
 export interface BranchData extends BranchDataBase {
-  id?: string;
+  id?: string; // ✅ facultatif pour la création, requis côté API si besoin
   branch_code?: string;
   created_at?: string;
   updated_at?: string;
 }
+export type BranchFromAPI = BranchData & { id: string };
+
 
 // Type pour les erreurs
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;

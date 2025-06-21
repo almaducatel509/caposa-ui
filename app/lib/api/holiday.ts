@@ -1,3 +1,4 @@
+import { HolidayData } from '@/app/components/holidays/validations';
 import AxiosInstance from '../axiosInstance';
 
 // Interface pour les jours fériés
@@ -7,16 +8,18 @@ export interface HolidayAPI {
   description: string;
 }
 // Fonction pour récupérer tous les jours fériés
-export const fetchHolidays = async (): Promise<HolidayAPI[]> => {
+// Dans holiday.ts (API)
+export const fetchHolidays = async (): Promise<HolidayData[]> => {
   try {
-    // Notez qu'ici l'URL correcte sera http://localhost:8000/api/holidays/
-    // puisque NEXT_PUBLIC_BASE_ROUTE est http://localhost:8000/api/
     const response = await AxiosInstance.get('holidays/');
     console.log("Réponse fetchHolidays:", response.data);
     return response.data.map((holiday: any) => ({
-      id: holiday.id,
+      id: holiday.id || '', // Assurer que id est toujours une string
       date: holiday.date,
       description: holiday.description,
+      created_at: holiday.created_at,
+      updated_at: holiday.updated_at,
+      branch_code: holiday.branch_code
     }));
   } catch (error) {
     console.error("Erreur lors de la récupération des jours fériés:", error);

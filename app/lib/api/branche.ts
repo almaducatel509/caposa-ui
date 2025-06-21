@@ -1,5 +1,7 @@
 import AxiosInstance from '../axiosInstance';
 
+
+
 export const fetchHolidays = async () => {
   try {
     const response = await AxiosInstance.get('/holidays/');
@@ -20,33 +22,39 @@ export const fetchHolidays = async () => {
 export const fetchOpeningHours = async () => {
   try {
     const response = await AxiosInstance.get('/opening-hours/');
-    console.log("Opening hours fetched:", response.data); // Ajoutez un log pour vérifier les données
+    console.log("🔍 Opening hours API response:", response.data);
+    
     const formattedOpeningHours = response.data.map((item: any) => {
+      console.log("🔍 Traitement de l'item:", item); // Voir chaque item
+      
       const schedule = [
-        item.monday && `Monday: ${item.monday}`,
-        item.tuesday && `Tuesday: ${item.tuesday}`,
-        item.wednesday && `Wednesday: ${item.wednesday}`,
-        item.thursday && `Thursday: ${item.thursday}`,
-        item.friday && `Friday: ${item.friday}`,
-        item.saturday && `Saturday: ${item.saturday}`,
-        item.sunday && `Sunday: ${item.sunday}`,
+        item.monday && `Lundi: ${item.monday}`,
+        item.tuesday && `Mardi: ${item.tuesday}`,
+        item.wednesday && `Mercredi: ${item.wednesday}`,
+        item.thursday && `Jeudi: ${item.thursday}`,
+        item.friday && `Vendredi: ${item.friday}`,
+        item.saturday && `Samedi: ${item.saturday}`,
+        item.sunday && `Dimanche: ${item.sunday}`,
       ]
-        .filter(Boolean) // Supprimez les valeurs nulles
-        .join(', ');
+        .filter(Boolean)
+        .join('\n'); // Utiliser \n au lieu de ', '
 
-      return {
+      const formatted = {
         id: item.id,
         schedule,
       };
+      
+      console.log("🔍 Item formaté:", formatted);
+      return formatted;
     });
-    console.log("Formatted Opening Hours:", formattedOpeningHours); // Vérifiez les données formatées
+    
+    console.log("✅ Opening Hours formatés:", formattedOpeningHours);
     return formattedOpeningHours;
   } catch (error) {
-    console.error("Erreur lors de la récupération des heures d'ouverture :", error);
+    console.error("❌ Erreur lors de la récupération des heures d'ouverture :", error);
     throw error;
   }
 };
-
 
 // Fonction pour récupérer toutes les branches
 export const fetchBranches = async () => {
@@ -89,6 +97,17 @@ export const updateBranch = async (id: string, data: any) => {
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la mise à jour de la branche :", error);
+    throw error;
+  }
+};
+
+// Dans votre fichier API branche.ts
+export const deleteBranch = async (id: string) => {
+  try {
+    const response = await AxiosInstance.delete(`/branches/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la suppression de la branche :", error);
     throw error;
   }
 };

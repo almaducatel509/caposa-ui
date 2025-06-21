@@ -1,49 +1,30 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { Post } from './columns';
-import { fetchPosts } from '@/app/lib/api/post';
+"use client"
+import React, { useState, useEffect } from 'react';
+import Search from '@/app/components/search';
 import PostTable from '@/app/components/postes/PostTable';
+import { fetchPosts } from '@/app/lib/api/post';
 
-export default function PostPage() {
-  const [postes, setPostes] = useState<Post[]>([]);  // État pour stocker les postes
-  const [loading, setLoading] = useState(true);  // Indicateur de chargement
-  const [error, setError] = useState<string | null>(null);  // Pour stocker les erreurs potentielles
-  const [isClient, setIsClient] = useState(false);  // Flag pour vérifier si on est côté client
+const PostDashboard = () => {
+  const [postes, setPostes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Assurez-vous que tout le code dépendant de la fenêtre (client) s'exécute uniquement côté client
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsClient(true); // Si on est côté client, définir isClient à true
+  const loadPosts = async () => {
+    try {
+      const data = await fetchPosts();
+      setPostes(data);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadPosts();
   }, []);
-  
-  useEffect(() => {
-    if (isClient) {
-      const getPostes = async () => {
-        try {
-          const data = await fetchPosts();  // Appel de l'API
-          console.log('Posts récupérés:', data);
-          setPostes(data);  // Mettre à jour l'état avec les données reçues
-        } catch (error) {
-          console.error('Erreur de récupération des posts:', error);
-          setError('Erreur lors de la récupération des posts.');
-        } finally {
-          setLoading(false);  // Fin du chargement
-        }
-      };
-      getPostes();
-    }
-  }, [isClient]);  // L'appel de l'API se fait une fois que le client est monté
 
-  // Affichage d'un message de chargement tant que les données ne sont pas récupérées
   if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  // Affichage des erreurs si elles existent
-  if (error) {
-    return <div>{error}</div>;
+    return <div>Loading posts...</div>;
   }
 
   return (
@@ -52,10 +33,11 @@ export default function PostPage() {
         <h1 className="text-2xl">Postes</h1>
       </div>
       <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-        {/* D'autres éléments peuvent être ajoutés ici */}
+        {/* card */} 
       </div>
-      
-      <PostTable postes={postes} />
+      <PostTable postes={postes} onRefresh={loadPosts} />
     </div>
-  );
+  )
 }
+
+export default PostDashboard;

@@ -10,9 +10,14 @@ export const holidaySchema = z.object({
       }),
     description: z.string().min(6, "La description de la date est requise"),
 });
+export type HolidayDataBase = z.infer<typeof holidaySchema>;
 
-// Specific interface for holidays
-export interface Holiday extends z.infer<typeof holidaySchema> {}
-
+// Interface étendue qui inclut les champs facultatifs retournés par l'API
+export interface HolidayData extends HolidayDataBase {
+  id: string; // ✅ facultatif pour la création, requis côté API si besoin
+  branch_code?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 // Generic type for handling error messages
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;

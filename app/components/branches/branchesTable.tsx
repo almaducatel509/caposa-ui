@@ -1,37 +1,28 @@
-
 "use client";
-import EditBranch from "@/app/components/branches/editBranchesForm";
-import { FaCalendarAlt } from "react-icons/fa";
-import React, { useState, useEffect } from 'react';
-import { 
-  Table, 
-  TableHeader, 
-  TableColumn, 
-  TableBody, 
-  TableRow, 
-  TableCell,
-  Chip,
-  Tooltip, 
-  Modal, 
-  ModalContent, 
-  ModalHeader, 
-  ModalBody,
-  Button,
-  useDisclosure,
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
   Card,
   CardBody,
-  Divider,
+  Button,
+  Chip,
   Avatar,
-  Badge
+  Badge,
+  Tooltip
 } from "@nextui-org/react";
-import { FaRegTrashCan, FaRegEye, FaBuilding } from "react-icons/fa6";
-import { FiEdit } from "react-icons/fi";
-import { MdLocationOn, MdEmail } from "react-icons/md";
-import { BsTelephone, BsBriefcase } from "react-icons/bs";
-import { BranchData } from "@/app/components/branches/validations";
-import { fetchBranches } from "@/app/lib/api/branche";
+import { FaBuilding, FaEdit, FaTrash } from "react-icons/fa";
+import { BsTelephone, BsPeople } from "react-icons/bs";
+import { BranchData } from './validations';
+import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
+import { Holiday, OpeningHour } from './validations';
 
-//Interface pour les branches
+// Imports des composants séparés
+import BranchFilterBar from './BranchFilterBar';
+import BranchDetailsModal from './BranchDetailsModal';
+import EditBranchModal from './EditBranchModal';
+import DeleteBranchModal from './DeleteBranchModal';
+import { FaBuildingWheat } from 'react-icons/fa6';
+
 export interface Branch extends BranchData {
   id: string;
   branch_code: string;
@@ -41,264 +32,458 @@ interface BranchesTableProps {
   branches?: Branch[];
 }
 
+// Composant BranchCard
+const BranchCard = ({
+  branch, onEdit, onDelete, onViewDetails 
+}: {
+  branch: Branch;
+  onEdit: (branch: Branch) => void;
+  onDelete: (branch: Branch) => void;
+  onViewDetails: (branch: Branch) => void;
+}) => {
+  const totalStaff = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
+  
+  const getBranchCategory = () => {
+    if (totalStaff >= 20) return { color: "success", text: "Grande", bgColor: "bg-[#34963d]" };
+    if (totalStaff >= 10) return { color: "primary", text: "Moyenne", bgColor: "bg-[#1e7367]" };
+    return { color: "warning", text: "Petite", bgColor: "bg-[#f8bf2c]" };
+  };
+
+  
+  return (
+    <Card>
+      <CardBody className="p-4">
+        {/* Header - Essentiel seulement */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-3">
+            <Avatar
+              icon={<FaBuilding />}
+              classNames={{
+                base: "bg-gradient-to-br from-[#34963d] to-[#1e7367]",
+                icon: "text-white"
+              }}
+              size="md"
+            />            
+            <div>
+              <h3 className="font-semibold text-lg text-[#2c2e2f]">
+                {branch.branch_name}
+              </h3>
+              <p className="text-sm text-gray-600">{branch.branch_address}</p>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {/* Actions */}
+            <Tooltip content="Modifier">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="text-[#1e7367] hover:bg-[#1e7367]/10"
+                onPress={() => onEdit(branch)}
+              >
+                <FaEdit className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Supprimer">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                color="danger"
+                onPress={() => onDelete(branch)}
+              >
+                <FaTrash className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          </div>
+        </div>
+
+        {/* Info résumée */}
+        <div className="flex items-center justify-between">
+          <Chip size="sm" className="bg-[#34963d]/10">
+            {getBranchCategory().text}
+          </Chip>
+          <div className="flex items-center gap-2">
+            <BsPeople className="text-[#34963d]" />
+            <span className="font-medium">{totalStaff}</span>
+            <span className="text-sm text-gray-500">employés</span>
+          </div>
+        </div>
+
+        {/* Call-to-action */}
+        <Button 
+          variant="light" 
+          className="w-full mt-3 text-[#34963d]"
+          onClick={() => onViewDetails(branch)}
+        >
+          Voir les détails →
+        </Button>
+      </CardBody>
+    </Card>
+  );
+};
+
 const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches }) => {
+  // ✅   // États de référence
   const [branches, setBranches] = useState<Branch[]>(initialBranches || []);
   const [isLoading, setIsLoading] = useState(!initialBranches);
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [error, setError] = useState<string | null>(null);
+   // 🆕 NOUVEAUX ÉTATS pour les données de référence
+  const [isLoadingReferenceData, setIsLoadingReferenceData] = useState(true);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
 
-  // Fonction pour charger les données
-  const loadBranchesData = async () => {
-    if (initialBranches?.length && !isLoading) return; // Si des branches sont fournies en props, ne pas recharger
-    
+  // États de filtrage
+  const [filterValue, setFilterValue] = useState('');
+  const [debouncedValue, setDebouncedValue] = useState(filterValue);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  
+  // États des modals
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // ✅ Effect pour le debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(filterValue);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filterValue]);
+
+  // ✅ Chargement des données avec gestion d'erreurs
+  const loadBranches = async () => {
     try {
       setIsLoading(true);
-      // Utiliser la fonction fetchBranches de votre API
+      setError(null);
       const data = await fetchBranches();
-      console.log("Branch data:", data);
       setBranches(data);
     } catch (error) {
-      console.error('Failed to fetch branches:', error);
+      console.error("Erreur lors du chargement des branches:", error);
+      setError("Impossible de charger les branches. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
-    loadBranchesData();
+    loadBranches();
   }, [initialBranches]);
 
-  // Fonction pour gérer le clic sur "Modifier"
-  const handleEditBranch = (branchId: string) => {
-    setSelectedBranchId(branchId);
-    onOpen();
-  };
-
-  // Calcul de la catégorie de la branche basée sur le nombre total de personnel
-  const getBranchCategory = (branch: Branch) => {
-    const totalStaff = branch.number_of_tellers + 
-                       branch.number_of_clerks + 
-                       branch.number_of_credit_officers;
-    
-    if (totalStaff >= 20) return { color: "success", text: "Grande" };
-    if (totalStaff >= 10) return { color: "primary", text: "Moyenne" };
-    return { color: "warning", text: "Petite" };
-  };
-
-  // Format de la date en français
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Date inconnue";
-    
+ // CHARGEMENT DES DONNÉES DE RÉFÉRENCE
+  const loadReferenceData = async () => {
     try {
-      const options: Intl.DateTimeFormatOptions = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      };
-      return new Date(dateString).toLocaleDateString('fr-FR', options);
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return dateString;
-    }
-  };
-
-  // Colonnes du tableau - définies directement dans ce composant
-  const columns = [
-    { key: "info", label: "BRANCHE" },
-    { key: "staff", label: "PERSONNEL" },
-    { key: "contact", label: "CONTACT" },
-    { key: "details", label: "DÉTAILS" },
-    { key: "actions", label: "ACTIONS" },
-  ];
-
-  const renderCell = (branch: Branch, columnKey: React.Key) => {
-    const branchCategory = getBranchCategory(branch);
+      setIsLoadingReferenceData(true);
+      console.log('🔄 Chargement des données de référence...');
+      
+      // Charger les deux en parallèle pour optimiser
+     const [holidaysData, openingHoursData] = await Promise.all([
+      fetchHolidays(),
+      fetchOpeningHours()
+    ]);
+  // 🔍 LOGS DÉTAILLÉS pour diagnostiquer
+    console.log('📅 Données holidays reçues:', holidaysData);
+    console.log('⏰ Données openingHours reçues:', openingHoursData);
     
-    switch (columnKey) {
-      case "info":
-        return (
-          <div className="flex items-start gap-3">
-            <Avatar
-              icon={<FaBuilding />}
-              classNames={{
-                base: "bg-gradient-to-br from-indigo-500 to-purple-500",
-                icon: "text-white"
-              }}
-            />
-            <div className="flex flex-col">
-              <p className="text-bold text-small capitalize">{branch.branch_name}</p>
-              <div className="flex items-center gap-1 text-xs text-default-500">
-                <MdLocationOn />
-                <span className="truncate max-w-xs">{branch.branch_address}</span>
-              </div>
-              <Chip className="mt-1" size="sm" variant="flat" color={branchCategory.color as any}>
-                {branchCategory.text}
-              </Chip>
-            </div>
-          </div>
-        );
+      setHolidays(holidaysData);
+      setOpeningHours(openingHoursData);
+      
+    console.log('✅ Données sauvegardées dans l\'état:', {
+      holidays: holidaysData.length,
+      openingHours: openingHoursData.length,
+      premierOpeningHour: openingHoursData[0] // Voir la structure du premier élément
+    });
 
-      case "staff":
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <Badge content={branch.number_of_tellers} color="primary" size="sm">
-                <Chip size="sm" variant="flat">Caissiers</Chip>
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge content={branch.number_of_clerks} color="secondary" size="sm">
-                <Chip size="sm" variant="flat">Commis</Chip>
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge content={branch.number_of_credit_officers} color="success" size="sm">
-                <Chip size="sm" variant="flat">Agents crédit</Chip>
-              </Badge>
-            </div>
-          </div>
-        );
-
-      case "contact":
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-xs">
-              <BsTelephone className="text-primary" />
-              <span>{branch.branch_phone_number}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <MdEmail className="text-primary" />
-              <span>{branch.branch_email}</span>
-            </div>
-          </div>
-        );
-
-      case "details":
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-xs">
-              <BsBriefcase className="text-success" />
-              <span>Code: <strong>{branch.branch_code}</strong></span>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <FaCalendarAlt className="text-warning" />
-              <span>Ouvert le: <strong>{formatDate(branch.opening_date)}</strong></span>
-            </div>
-          </div>
-        );
-
-      case "actions":
-        return (
-          <div className="relative flex justify-end items-center gap-2">
-            <Tooltip content="Détails">
-              <Button isIconOnly size="sm" variant="light" color="primary">
-                <FaRegEye />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Modifier">
-              <Button 
-                isIconOnly 
-                size="sm" 
-                variant="light"
-                color="default"
-                onClick={() => handleEditBranch(branch.id)}
-              >
-                <FiEdit />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Supprimer">
-              <Button isIconOnly size="sm" variant="light" color="danger">
-                <FaRegTrashCan />
-              </Button>
-            </Tooltip>
-          </div>
-        );
-
-      default:
-        return null;
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données de référence:', error);
+      // Fallback vers les données mock en cas d'erreur
+      setHolidays([{
+        id: "070a07c0-f478-44e0-afa3-8445fcf76ba5",
+        date: "2024-01-01",
+        description: "Jour de l'An (données de secours)"
+      }]);
+      setOpeningHours([{
+        id: "23fe342c-367f-4c05-8050-6ed6b89d5199",
+        schedule: "Lun-Ven: 9h00-17h00\nSam: 9h00-12h00\nDim: Fermé (données de secours)"
+      }]);
+    } finally {
+      setIsLoadingReferenceData(false);
     }
   };
+   // Chargement initial des données de référence
+  useEffect(() => {
+    loadReferenceData();
+  }, []);
 
-  // Composant rendu
+// Dans BranchesTable.tsx, après le chargement des données :
+useEffect(() => {
+  if (openingHours.length > 0 && selectedBranch) {
+    console.log('🧪 TEST DE CORRESPONDANCE:');
+    console.log('Branche sélectionnée:', selectedBranch.branch_name);
+    console.log('ID recherché:', selectedBranch.opening_hour);
+    console.log('Tous les IDs disponibles:', openingHours.map(oh => ({ id: oh.id, schedule: oh.schedule })));
+    
+    const found = openingHours.find(oh => oh.id === selectedBranch.opening_hour);
+    console.log('Résultat de la recherche:', found);
+    
+    if (!found) {
+      console.log('❌ PROBLÈME: Aucun horaire trouvé!');
+      console.log('Vérifiez si l\'ID de la branche correspond aux IDs des horaires');
+    } else {
+      console.log('✅ Horaire trouvé:', found);
+    }
+  }
+}, [openingHours, selectedBranch]);
+
+
+  // ✅ Logique de filtrage avec debouncing
+  const filteredBranches = useMemo(() => {
+    let filtered = branches;
+
+    // Filtre par recherche (avec debouncedValue)
+    if (debouncedValue) {
+      const lowercasedFilter = debouncedValue.toLowerCase();
+      filtered = filtered.filter((branch) => 
+        branch.branch_name.toLowerCase().includes(lowercasedFilter) ||
+        branch.branch_address.toLowerCase().includes(lowercasedFilter) ||
+        branch.branch_code.toLowerCase().includes(lowercasedFilter) ||
+        branch.branch_email.toLowerCase().includes(lowercasedFilter)
+      );
+    }
+
+    // Filtre par catégorie
+    switch (selectedFilter) {
+      case 'large':
+        filtered = filtered.filter(branch => {
+          const total = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
+          return total >= 20;
+        });
+        break;
+      case 'medium':
+        filtered = filtered.filter(branch => {
+          const total = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
+          return total >= 10 && total < 20;
+        });
+        break;
+      case 'small':
+        filtered = filtered.filter(branch => {
+          const total = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
+          return total < 10;
+        });
+        break;
+      default:
+        break;
+    }
+
+    return filtered.sort((a, b) => a.branch_name.localeCompare(b.branch_name));
+  }, [branches, debouncedValue, selectedFilter]);
+
+  // ✅ Gestionnaires d'événements
+  const handleExport = useCallback(() => {
+    try {
+      const csvContent = [
+        'Code,Nom,Adresse,Téléphone,Email,Caissiers,Commis,Agents crédit,Date ouverture',
+        ...filteredBranches.map(branch => 
+          `"${branch.branch_code}","${branch.branch_name}","${branch.branch_address}","${branch.branch_phone_number}","${branch.branch_email}","${branch.number_of_tellers}","${branch.number_of_clerks}","${branch.number_of_credit_officers}","${branch.opening_date}"`
+        )
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `branches_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  }, [filteredBranches]);
+
+  const handleAdd = () => {
+    setSelectedBranch(null);
+    setIsEditMode(false);
+    setShowEditModal(true);
+  };
+
+  const handleEdit = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setIsEditMode(true);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setShowDeleteModal(true);
+  };
+
+  const handleViewDetails = (branch: Branch) => {
+   console.log('🎯 handleViewDetails appelé avec:', branch.branch_name);
+    console.log('📊 État avant:', { showDetailsModal, selectedBranch: selectedBranch?.branch_name });
+  
+    setSelectedBranch(branch);
+    setShowDetailsModal(true);
+    console.log('📊 État après (sera appliqué au prochain render):', { 
+    showDetailsModal: true, 
+    selectedBranch: branch.branch_name 
+  });
+  };
+
+  const handleSuccess = () => {
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setShowDetailsModal(false);
+    loadBranches();
+  };
+
+  const onSearchChange = useCallback((value?: string) => {
+    setFilterValue(value || '');
+  }, []);
+
+  const onClear = useCallback(() => {
+    setFilterValue('');
+  }, []);
+
+  const onFilterChange = useCallback((key: string) => {
+    setSelectedFilter(key);
+  }, []);
+// // Test temporaire avec des données factices
+// const mockHolidays = [
+//   {
+//     id: "070a07c0-f478-44e0-afa3-8445fcf76ba5",
+//     date: "2024-01-01",
+//     description: "Jour de l'An"
+//   }
+// ];
+
+// const mockOpeningHours = [
+//   {
+//     id: "23fe342c-367f-4c05-8050-6ed6b89d5199",
+//     schedule: "Lun-Ven: 9h00-17h00\nSam: 9h00-12h00\nDim: Fermé"
+//   }
+// ];
+
+  // ✅ Loading state avec skeleton
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardBody className="p-4">
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Card className="shadow-md">
-      <CardBody className="overflow-hidden px-0">
-        <div className="flex justify-between items-center px-6 py-2">
-          <h3 className="text-xl font-bold text-default-700">Gestion des Branches</h3>
-          <Button color="primary" variant="shadow">
-            + Nouvelle Branche
+    <div className="flex flex-col gap-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen">
+      {/* ✅ Gestion d'erreurs */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+          <p className="text-red-700">{error}</p>
+          <Button size="sm" onClick={loadBranches} className="mt-2 bg-red-600 text-white">
+            Réessayer
           </Button>
         </div>
-        
-        <Divider />
-        
-        <Table
-          aria-label="Tableau des branches"
-          removeWrapper
-          selectionMode="none"
-        >
-          <TableHeader>
-            {columns.map((column) => (
-              <TableColumn 
-                key={column.key} 
-                align={column.key === "actions" ? "end" : "start"}
-                className="bg-default-50 text-xs uppercase tracking-wider font-semibold"
-              >
-                {column.label}
-              </TableColumn>
-            ))}
-          </TableHeader>
-          <TableBody
-            items={branches}
-            isLoading={isLoading}
-            loadingContent={
-              <div className="p-6 text-center">
-                Chargement des données des branches...
-              </div>
-            }
-            emptyContent={
-              <div className="p-6 text-center">
-                Aucune branche trouvée
-              </div>
-            }
-          >
-            {(branch) => (
-              <TableRow key={branch.id}>
-                {(columnKey) => (
-                  <TableCell>{renderCell(branch, columnKey)}</TableCell>
-                )}
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardBody>
-      
-      {/* Modal pour l'édition */}
-      {/* Important: Le modal est rendu de façon conditionnelle côté client seulement */}
-      {typeof window !== "undefined" && (
-        <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-          <ModalContent>
-            {(onClose) => (
-              <div>
-                <ModalHeader className="flex items-center gap-2">
-                  <FiEdit className="text-success" />
-                  Modifier une Branche
-                </ModalHeader>
-                <ModalBody>
-                  {selectedBranchId && (
-                    <EditBranch 
-                      branchId={selectedBranchId} 
-                      onClose={onClose}
-                      onSuccess={loadBranchesData}
-                    />
-                  )}
-                </ModalBody>
-              </div>
-            )}
-          </ModalContent>
-        </Modal>
       )}
-    </Card>
+
+      {/* FilterBar */}
+      <BranchFilterBar
+        filterValue={filterValue}
+        selectedFilter={selectedFilter}
+        onSearchChange={onSearchChange}
+        onClear={onClear}
+        onFilterChange={onFilterChange}
+        onAdd={handleAdd}
+        onExport={handleExport}
+        totalCount={filteredBranches.length}
+      />
+
+      <div className="text-sm text-[#2c2e2f]/70">
+        {filteredBranches.length} résultat(s) trouvé(s)
+      </div>
+
+      {/* Grid de cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredBranches.length > 0 ? (
+          filteredBranches.map((branch) => (
+            <BranchCard
+              key={branch.id}
+              branch={branch}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onViewDetails={handleViewDetails}
+            />
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12">
+
+          <div className="text-8xl mb-4">
+            <FaBuildingWheat />
+          </div>
+          <h3 className="text-xl font-semibold text-[#2c2e2f] mb-2">
+            {filterValue ? "Aucune branche trouvée" : "Aucune branche"}
+          </h3>
+          <p className="text-[#2c2e2f]/70 mb-4">
+            {filterValue 
+              ? "Essayez de modifier vos critères de recherche"
+              : "Commencez par créer votre première branche"
+            }
+          </p>
+          {filterValue ? (
+            <Button onClick={onClear} variant="light" className="text-[#34963d]">
+              Effacer les filtres
+            </Button>
+          ) : (
+            <Button onClick={handleAdd} className="bg-[#34963d] text-white">
+              Créer une branche
+            </Button>
+          )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {showEditModal && (
+        <EditBranchModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={handleSuccess}
+          branch={selectedBranch}
+          isEditMode={isEditMode}
+          holidays={holidays}
+
+        />
+      )}
+
+      {showDeleteModal && selectedBranch && (
+        <DeleteBranchModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onSuccess={handleSuccess}
+          branch={selectedBranch}
+        />
+      )}
+
+     {showDetailsModal && selectedBranch && (
+        <BranchDetailsModal
+          isOpen={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          branch={selectedBranch}
+          onEdit={handleEdit}
+          openingHours={openingHours}
+          holidays={holidays}
+          isLoadingData={isLoadingReferenceData && (holidays.length === 0 || openingHours.length === 0)}
+        />
+      )}
+    </div>
   );
 };
 
