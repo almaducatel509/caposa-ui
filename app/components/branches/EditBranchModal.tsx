@@ -37,7 +37,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   onSuccess,
   branch,
   isEditMode,
-    holidays: passedHolidays = [],
+  holidays: passedHolidays = [],
  
 }) => {
   console.log('🎯 BranchEditModal render:', {
@@ -324,13 +324,15 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
 
   return (
     <Modal 
-       isOpen={isOpen} 
+      isOpen={isOpen} 
       onClose={onClose} 
       size="5xl"
       placement="center"
       scrollBehavior="inside"
       classNames={{
         base: "max-h-[95vh]",
+        wrapper: "z-[9999]",           // ← Very high z-index for modal wrapper
+        backdrop: "z-[9998]",          // ← Backdrop just below wrapper
         body: "overflow-y-auto max-h-[85vh] px-6 shadow-inner"
       }}
       // className="z-[50]" // ✅ Ensure dropdown appears over everything

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Search from '@/app/components/search';
 import { HolidayData } from '@/app/components/holidays/validations';
 import HolidayTable from '@/app/components/holidays/holidayTable';
 import { fetchHolidays } from '@/app/lib/api/holiday';

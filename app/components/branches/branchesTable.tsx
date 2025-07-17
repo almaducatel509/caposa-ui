@@ -11,6 +11,7 @@ import {
   Tooltip
 } from "@nextui-org/react";
 import { FaBuilding, FaEdit, FaTrash } from "react-icons/fa";
+import { TbListDetails } from "react-icons/tb";
 import { BsTelephone, BsPeople } from "react-icons/bs";
 import { BranchData } from './validations';
 import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
@@ -78,7 +79,7 @@ const BranchCard = ({
                 isIconOnly
                 size="sm"
                 variant="light"
-                className="text-[#1e7367] hover:bg-[#1e7367]/10"
+                className="text-orange-600 hover:bg-orange-50"
                 onPress={() => onEdit(branch)}
               >
                 <FaEdit className="w-4 h-4" />
@@ -93,6 +94,18 @@ const BranchCard = ({
                 onPress={() => onDelete(branch)}
               >
                 <FaTrash className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+                    {/* Call-to-action */}
+            <Tooltip content="Detail">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="text-[#1e7367] hover:bg-[#1e7367]/10"
+                onPress={() => onViewDetails(branch)}
+              >
+                <TbListDetails  className="w-4 h-4" />
               </Button>
             </Tooltip>
           </div>
@@ -111,13 +124,13 @@ const BranchCard = ({
         </div>
 
         {/* Call-to-action */}
-        <Button 
+        {/* <Button 
           variant="light" 
           className="w-full mt-3 text-[#34963d]"
           onClick={() => onViewDetails(branch)}
         >
           Voir les détails →
-        </Button>
+        </Button> */}
       </CardBody>
     </Card>
   );
@@ -302,12 +315,14 @@ useEffect(() => {
   }, [filteredBranches]);
 
   const handleAdd = () => {
+    console.log("🆕 Creating new branch"); 
     setSelectedBranch(null);
     setIsEditMode(false);
     setShowEditModal(true);
   };
 
   const handleEdit = (branch: Branch) => {
+    console.log("📝 Editing employee:", branch); 
     setSelectedBranch(branch);
     setIsEditMode(true);
     setShowEditModal(true);
@@ -348,21 +363,6 @@ useEffect(() => {
   const onFilterChange = useCallback((key: string) => {
     setSelectedFilter(key);
   }, []);
-// // Test temporaire avec des données factices
-// const mockHolidays = [
-//   {
-//     id: "070a07c0-f478-44e0-afa3-8445fcf76ba5",
-//     date: "2024-01-01",
-//     description: "Jour de l'An"
-//   }
-// ];
-
-// const mockOpeningHours = [
-//   {
-//     id: "23fe342c-367f-4c05-8050-6ed6b89d5199",
-//     schedule: "Lun-Ven: 9h00-17h00\nSam: 9h00-12h00\nDim: Fermé"
-//   }
-// ];
 
   // ✅ Loading state avec skeleton
   if (isLoading) {
@@ -434,7 +434,7 @@ useEffect(() => {
           <p className="text-[#2c2e2f]/70 mb-4">
             {filterValue 
               ? "Essayez de modifier vos critères de recherche"
-              : "Commencez par créer votre première branche"
+              : "Commencez par Ajouter votre première branche"
             }
           </p>
           {filterValue ? (
@@ -443,7 +443,7 @@ useEffect(() => {
             </Button>
           ) : (
             <Button onClick={handleAdd} className="bg-[#34963d] text-white">
-              Créer une branche
+              Ajouter une branche
             </Button>
           )}
           </div>

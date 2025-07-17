@@ -1,28 +1,10 @@
-// import Pagination from '@/app/ui/invoices/pagination';
-import Search from '@/app/components/search';
-import {Transaction} from './columns';
-import TransactionsTable from '@/app/components/transactions/TransactionsTable';
+'use client';
+import TransactionDashboard from '@/app/components/transactions/TransactionDashboard';
 
-async function getUsers(): Promise<Transaction[]> {
-  const res = await fetch(
-  'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
-)
-  const data = await res.json()
-  return data
+export default function TransactionsPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <TransactionDashboard />
+    </div>
+  );
 }
-
-export default async function Postes(){
- const transactions = await getUsers()
-    return (
-      <div className="w-full bg-white">
-        <div className="flex w-full items-center justify-between">
-          <h1 className={` text-2xl`}>Transaction</h1>
-        </div>
-        <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-         {/* card */} 
-        </div>
-        <TransactionsTable transitions={transactions} />
-
-      </div>
-    )
-  }

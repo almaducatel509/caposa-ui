@@ -20,7 +20,7 @@ import { fetchHolidays, updateHoliday, deleteHoliday, createHoliday } from '@/ap
 
 // Composants
 import HolidayFilterBar from './HolidayFilterBar';
-import { EditHolidayModal } from './EditHolidayModal';
+import EditHolidayModal from './EditHolidayModal';
 import DeleteHolidayModal from './DeleteHolidayModal';
 
 interface HolidayTableProps {

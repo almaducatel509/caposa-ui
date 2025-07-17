@@ -8,9 +8,9 @@ import {
   Button,
   Tooltip,
 } from "@nextui-org/react";
+import { EmployeeData, formatGender, getEmployeeStatus } from './validations';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { FaEye, FaEdit, FaTrash, FaMoneyBillWave } from "react-icons/fa";
-import { getEmployeeStatus, EmployeeData } from '@/app/components/employees/validations';
 
 interface EmployeeCardProps {
   employee: EmployeeData;
