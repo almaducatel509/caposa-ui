@@ -181,7 +181,7 @@ const LoanDashboard: React.FC = () => {
         <Button
           color="primary"
           startContent={<FaPlus />}
-          href="/dashboard/transactions/loans/new"
+          href="/dashboard/transactions/loans/create"
         >
           Nouvelle Demande
         </Button>

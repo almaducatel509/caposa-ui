@@ -12,17 +12,13 @@ export const memberSchema = z
   .object({
     first_name: z.string().min(1, "Prénom est requis"),
     last_name: z.string().min(1, "Nom est requis"),
-    gender: z.string().min(1, "Sélection du sexe est requise"),
-    date_of_birthday: z.string().min(1, "Date de naissance est requise"),
     id_number: z.string().min(1, "Numéro d'identité est requis"),
     phone_number: z.string().min(6, "Téléphone est requis"),
-    email: z.string().email("Email invalide"),
+    department: z.string().min(2, "Département est requis"),
+    city: z.string().min(1, "Ville est requise"),
     address: z.string().min(4, "Adresse est requise"),
-    city: z.string().min(2, "Ville est requise"),
-    department: z.string().min(4, "Département est requis"),
-    photo_profil: imageSchema.optional().nullable(),
-    password: z.string().min(6, "Mot de passe requis"),
-    confirm_password: z.string().min(6, "Confirmation du mot de passe requise"),
+    gender: z.string().min(1, "Genre est requis"),
+    date_of_birthday: z.string().min(1, "Date de naissance est requise"),
     account_type: z.string().min(1, "Type de compte requis"),
     account_number: z.string().min(1, "Numéro de compte requis"),
     initial_balance: z.number().nonnegative("Solde initial invalide"),
@@ -31,10 +27,6 @@ export const memberSchema = z
     monthly_expenses: z.number().nonnegative("Dépenses mensuelles invalides").optional(),
     income_source: z.string().min(1, "Source de revenu requise"),
   })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "Les mots de passe ne correspondent pas",
-    path: ["confirm_password"],
-  });
 
 // ==================== TYPES SIMPLES ====================
 
@@ -48,31 +40,53 @@ export type ErrorMessages<T> = Partial<Record<keyof T, string>> & {
 // ==================== INTERFACE MEMBER DATA SIMPLE ====================
 
 export interface MemberData {
-  id: string;
+  id : string;
   first_name: string;
   last_name: string;
   gender: string;
   date_of_birthday: string;
   id_number: string;
   phone_number: string;
-  email: string;
   address: string;
   city: string;
   department: string;
+
+  // Optional/nullable fields (not used in creation but present in the full object)
+  email?: string;
   photo_profil?: string | null;
   account_type: string;
-  account_number: string;
+  account_number?: string;
   initial_balance: number;
-  membership_tier: string;
+  membership_tier?: string;
   monthly_income?: number;
   monthly_expenses?: number;
-  income_source: string;
-  created_at: string;
-  updated_at: string;
-  // Legacy compatibility
+  income_source?: string;
+
+  created_at?: string;
+  updated_at?: string;
+
+  // Legacy fallback
   membership_type?: string;
   date_of_birth?: string;
 }
+// 📄 validations.ts (in members folder)
+
+
+// Converts MemberFormData into API-compatible structure
+export function formDataToApiData(formData: MemberFormData): any {
+  return {
+    first_name: formData.first_name,
+    last_name: formData.last_name,
+    id_number: formData.id_number,
+    phone_number: formData.phone_number,
+    department: formData.department,
+    city: formData.city,
+    address: formData.address,
+    gender: formData.gender,
+    date_of_birthday: formData.date_of_birthday,
+  };
+}
+
 
 // ==================== FONCTIONS UTILITAIRES SIMPLES ====================
 

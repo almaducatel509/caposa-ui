@@ -1,4 +1,6 @@
 import AxiosInstance from '../axiosInstance';
+import { formDataToApiData } from '@/app/components/members/validations';
+import { MemberFormData } from '@/app/components/members/validations';
 
 // Fonction pour récupérer tous les members
 export const fetchMembers = async () => {
@@ -51,49 +53,58 @@ export const fetchMembers = async () => {
 };
 
 // Fonction pour créer un nouveau member
-export const createMembers = async (memberData: any) => {
+
+export const createMembers = async (formData: MemberFormData) => {
   try {
     console.log('🚀 Création d\'un nouveau membre...');
     
-    const response = await AxiosInstance.post('/members', memberData);
-    
-    if (response.data) {
-      console.log('✅ Membre créé avec succès:', response.data);
-      return response.data;
-    } else {
-      throw new Error('Réponse vide lors de la création');
-    }
+    // Convert form data to API shape
+    const jsonData = formDataToApiData(formData);
+
+    console.log('📤 Données envoyées à l\'API:', jsonData);
+
+    const response = await AxiosInstance.post('/members/', jsonData, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    console.log('✅ Membre créé avec succès:', response.data);
+    return response.data;
+
   } catch (error: any) {
-    console.error("❌ Erreur lors de la création du membre:", error);
-    
+    console.error('❌ Erreur lors de la création du membre:', error);
+
+    let errorMessage = 'Erreur lors de la création du membre.';
+
     if (error.response) {
-      // Erreur de réponse du serveur
       const status = error.response.status;
-      const message = error.response.data?.message || error.response.statusText;
-      
-      console.error(`🔴 Erreur serveur ${status}:`, message);
-      
+      const serverMessage = error.response.data?.message || error.response.statusText;
+
+      console.error(`🔴 Erreur API ${status}:`, serverMessage);
+
       switch (status) {
         case 400:
-          throw new Error('Données invalides. Vérifiez les informations saisies.');
+          errorMessage = 'Données invalides. Veuillez vérifier le formulaire.';
+          break;
         case 409:
-          throw new Error('Ce membre existe déjà.');
+          errorMessage = 'Ce membre existe déjà.';
+          break;
         case 422:
-          throw new Error('Données de validation incorrectes.');
+          errorMessage = 'Erreur de validation des données.';
+          break;
         default:
-          throw new Error(`Erreur serveur (${status}): ${message}`);
+          errorMessage = `Erreur serveur (${status}): ${serverMessage}`;
       }
     } else if (error.request) {
-      // Erreur de connexion
-      console.error('🔴 Erreur de connexion:', error.request);
-      throw new Error('Impossible de se connecter au serveur pour créer le membre.');
+      console.error('🔴 Aucun retour du serveur:', error.request);
+      errorMessage = 'Impossible de se connecter au serveur.';
     } else {
-      // Autre erreur
-      console.error('🔴 Erreur:', error.message);
-      throw new Error(`Erreur lors de la création: ${error.message}`);
+      errorMessage = `Erreur inattendue: ${error.message}`;
     }
+
+    throw new Error(errorMessage);
   }
 };
+
 
 // Fonction pour mettre à jour un membre
 export const updateMember = async (id: string | number, memberData: any) => {

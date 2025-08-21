@@ -14,7 +14,7 @@ import { TbBrandUbuntu } from "react-icons/tb";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { useState } from 'react';
+import { useState, useRef } from 'react'; // ← AJOUT: useRef
 import { IconType } from 'react-icons';
 
 // Interface pour les sous-liens
@@ -37,65 +37,55 @@ interface MainLink {
 
 // Définition des sous-menus pour les transactions
 const transactionSubLinks: SubLink[] = [
-  { 
-    name: 'Tableau de Bord', 
-    href: '/dashboard/transactions', 
-    icon: FaChartLine,
-    description: 'Vue d\'ensemble et statistiques',
-    category: 'overview'
-  },
-  // Créer de nouvelles transactions
-  { 
-    name: 'Nouveau Dépôt', 
-    href: '/dashboard/transactions/deposits/new', 
-    icon: '💵',
-    description: 'Espèces, chèques, subventions',
-    category: 'create'
-  },
-  { 
-    name: 'Nouveau Retrait', 
-    href: '/dashboard/transactions/withdrawals/new', 
-    icon: '💸',
-    description: 'Guichet, achats locaux',
-    category: 'create'
-  },
-  { 
-    name: 'Nouveau Virement', 
-    href: '/dashboard/transactions/transfers/new', 
-    icon: '🔄',
-    description: 'Interac, transferts internes',
-    category: 'create'
-  },
-  { 
-    name: 'Demande de Prêt', 
-    href: '/dashboard/transactions/loans/new', 
-    icon: '🏦',
-    description: 'Nouvelle demande de prêt',
-    category: 'create'
-  },
-  // Consulter l'existant
-  { 
-    name: 'Historique Complet', 
-    href: '/dashboard/transactions/history', 
-    icon: FaEye,
-    description: 'Toutes les transactions',
-    category: 'view'
-  },
+    // Consulter l'existant
+   
   { 
     name: 'Mes Prêts', 
     href: '/dashboard/transactions/loans', 
     icon: '📋',
     description: 'Suivi et remboursements',
     category: 'view'
-  }
+  },
+  { 
+    name: 'Nouveau Dépôt', 
+    href: '/dashboard/transactions/deposits', 
+    icon: '💵',
+    description: 'Espèces, chèques, subventions',
+    category: 'create'
+  },
+  { 
+    name: 'Nouveau Retrait', 
+    href: '/dashboard/transactions/withdrawals', 
+    icon: '💸',
+    description: 'Guichet, achats locaux',
+    category: 'create'
+  },
+  { 
+    name: 'Nouveau Virement', 
+    href: '/dashboard/transactions/transfers', 
+    icon: '🔄',
+    description: 'Interac, transferts internes',
+    category: 'create'
+  },
+  { 
+    name: 'Demande de Prêt', 
+    href: '/dashboard/transactions/loans/create', 
+    icon: '🏦',
+    description: 'Nouvelle demande de prêt',
+    category: 'create'
+  },
+ { 
+    name: 'Historique Complet', 
+    href: '/dashboard/transactions/history', 
+    icon: FaEye,
+    description: 'Toutes les transactions',
+    category: 'view'
+  },
+ 
 ];
-
+//http://localhost:3000/dashboard/transactions/loans
 const links: MainLink[] = [
   { name: 'Acceuil', href: '/dashboard', icon: AiOutlineHome },
-  { name: 'Horaires', href: '/dashboard/opening_hours', icon: GrSchedule },
-  { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
-  { name: ' Jours Fériés', href: '/dashboard/holidays', icon: MdOutlineHolidayVillage },
-  { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
   { name: 'Employees', href: '/dashboard/employees', icon: HiOutlineUserGroup },
   { name: 'Membres', href: '/dashboard/members', icon: TbBrandUbuntu },
   { 
@@ -105,6 +95,11 @@ const links: MainLink[] = [
     hasSubmenu: true,
     subLinks: transactionSubLinks
   },
+  { name: 'Horaires', href: '/dashboard/opening_hours', icon: GrSchedule },
+  { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
+  { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
+  { name: 'Jours Fériés', href: '/dashboard/holidays', icon: MdOutlineHolidayVillage },
+  
   { name: 'Analyse', href: '/dashboard/reports', icon: HiOutlineDocumentDuplicate },
   { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
 ];
@@ -133,6 +128,22 @@ export default function NavLinks() {
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   
+  // ← CHANGEMENT 1: Ajout timeout pour hover plus stable
+  const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleMouseLeave = () => {
+    hoverTimeout.current = setTimeout(() => {
+      setHoveredItem(null);
+    }, 300); // ← 300ms de délai
+  };
+
+  const handleMouseEnter = (linkName: string) => {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+    }
+    setHoveredItem(linkName);
+  };
+  
   return (
     <div className="relative">
       {links.map((link) => {
@@ -144,8 +155,8 @@ export default function NavLinks() {
           <div 
             key={link.name}
             className="relative"
-            onMouseEnter={() => setHoveredItem(link.name)}
-            onMouseLeave={() => setHoveredItem(null)}
+            onMouseEnter={() => handleMouseEnter(link.name)} // ← CHANGEMENT 2: Utilise la nouvelle fonction
+            onMouseLeave={handleMouseLeave} // ← CHANGEMENT 2: Utilise la nouvelle fonction
           >
             <Link
               href={link.href}
@@ -170,135 +181,57 @@ export default function NavLinks() {
               )}
             </Link>
 
-            {/* Sous-menu hover pour les transactions */}
+           {/* Sous-menu hover pour les transactions - VERSION SIMPLIFIÉE */}
             {hasSubmenu && hoveredItem === link.name && (
-              <div className="absolute left-full top-0 ml-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 hidden md:block">
-                <div className="p-4">
-                  {/* En-tête du sous-menu */}
-                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <GrTransaction className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Transactions</h3>
-                      <p className="text-xs text-gray-500">Gestion financière complète</p>
-                    </div>
-                  </div>
-
-                  {/* Liste des sous-liens */}
-                  <div className="space-y-3">
-                    {/* Section Créer */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
-                        <FaPlus className="w-3 h-3" />
-                        Créer
-                      </h4>
-                      <div className="space-y-1">
-                        {link.subLinks?.filter(item => item.category === 'create').map((subLink) => {
-                          const isSubActive = pathname === subLink.href;
+              <div 
+                className="absolute left-full top-0 ml-2 w-72 max-h-80 overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden md:block"
+                onMouseEnter={() => handleMouseEnter(link.name)}
+                onMouseLeave={handleMouseLeave}
+              >
+                <div className="p-2">
+                  {/* LISTE SIMPLE - TOUS LES LIENS DIRECTEMENT */}
+                  <div className="space-y-1">
+                    {link.subLinks?.map((subLink) => {
+                      const isSubActive = pathname === subLink.href;
+                      
+                      return (
+                        <Link
+                          key={subLink.name}
+                          href={subLink.href}
+                          className={clsx(
+                            "flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group transition-colors",
+                            {
+                              "bg-green-50 border border-green-200": isSubActive
+                            }
+                          )}
+                        >
+                          <div className="flex-shrink-0">
+                            {typeof subLink.icon === 'string' ? (
+                              <span className="text-lg" role="img" aria-label="icon">
+                                {subLink.icon}
+                              </span>
+                            ) : (
+                              <subLink.icon className={clsx(
+                                "w-4 h-4",
+                                isSubActive ? "text-green-600" : "text-gray-500 group-hover:text-green-600"
+                              )} />
+                            )}
+                          </div>
                           
-                          return (
-                            <Link
-                              key={subLink.name}
-                              href={subLink.href}
-                              className={clsx(
-                                "flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group",
-                                {
-                                  "bg-green-50 border border-green-200": isSubActive
-                                }
-                              )}
-                            >
-                              <div className="flex-shrink-0">
-                                {typeof subLink.icon === 'string' ? (
-                                  <RenderIcon icon={subLink.icon} />
-                                ) : (
-                                  <RenderIcon 
-                                    icon={subLink.icon} 
-                                    className={clsx(
-                                      "w-4 h-4",
-                                      isSubActive ? "text-green-600" : "text-gray-500 group-hover:text-green-600"
-                                    )}
-                                  />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={clsx(
-                                  "text-sm font-medium",
-                                  isSubActive ? "text-green-700" : "text-gray-700 group-hover:text-green-700"
-                                )}>
-                                  {subLink.name}
-                                </p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {subLink.description}
-                                </p>
-                              </div>
-                              <FaChevronRight className="w-3 h-3 text-gray-400 group-hover:text-green-500" />
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Section Vue d'ensemble */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
-                        <FaChartLine className="w-3 h-3" />
-                        Consulter
-                      </h4>
-                      <div className="space-y-1">
-                        {link.subLinks?.filter(item => item.category === 'overview' || item.category === 'view').map((subLink) => {
-                          const isSubActive = pathname === subLink.href;
-                          
-                          return (
-                            <Link
-                              key={subLink.name}
-                              href={subLink.href}
-                              className={clsx(
-                                "flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group",
-                                {
-                                  "bg-green-50 border border-green-200": isSubActive
-                                }
-                              )}
-                            >
-                              <div className="flex-shrink-0">
-                              <div className="flex-shrink-0">
-                                {typeof subLink.icon === 'string' ? (
-                                  <span className="text-lg" role="img" aria-label="icon">
-                                    {subLink.icon}
-                                  </span>
-                                ) : (
-                                  <subLink.icon className={clsx(
-                                    "w-4 h-4",
-                                    isSubActive ? "text-green-600" : "text-gray-500 group-hover:text-green-600"
-                                  )} />
-                                )}
-                              </div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={clsx(
-                                  "text-sm font-medium",
-                                  isSubActive ? "text-green-700" : "text-gray-700 group-hover:text-green-700"
-                                )}>
-                                  {subLink.name}
-                                </p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {subLink.description}
-                                </p>
-                              </div>
-                              <FaChevronRight className="w-3 h-3 text-gray-400 group-hover:text-green-500" />
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer du sous-menu */}
-                  <div className="mt-4 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>💡 Tip: Clic direct pour créer une transaction</span>
-                      <span className="bg-gray-100 px-2 py-1 rounded">7 actions</span>
-                    </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={clsx(
+                              "text-sm font-medium",
+                              isSubActive ? "text-green-700" : "text-gray-700 group-hover:text-green-700"
+                            )}>
+                              {subLink.name}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {subLink.description}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
