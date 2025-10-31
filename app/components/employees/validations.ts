@@ -42,7 +42,7 @@ export interface UserInfo {
 export interface BranchDetails {
   id: string;
   branch_name: string;
-  branch_code?: string | null; // ✅ Permet null ET undefined
+  branch_code?: string; // ✅ Permet null ET undefined
 }
 
 // Post details interface

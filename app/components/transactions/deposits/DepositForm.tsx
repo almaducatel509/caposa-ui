@@ -434,7 +434,7 @@ const DepositForm: React.FC = () => {
 
               {/* Champs conditionnels selon le type */}
               {formData.depositType?.includes('check') && (
-                <>
+                <div>
                   <Input
                     label="Numéro de chèque"
                     placeholder="123456"
@@ -453,11 +453,11 @@ const DepositForm: React.FC = () => {
                     value={formData.checkDate || ''}
                     onChange={(e) => handleInputChange('checkDate', e.target.value)}
                   />
-                </>
+                </div>
               )}
 
               {formData.depositType === 'transfer_received' && (
-                <>
+                <div>
                   <Input
                     label="Référence du virement"
                     placeholder="REF123456"
@@ -470,7 +470,7 @@ const DepositForm: React.FC = () => {
                     value={formData.senderName || ''}
                     onChange={(e) => handleInputChange('senderName', e.target.value)}
                   />
-                </>
+                </div>
               )}
             </div>
 

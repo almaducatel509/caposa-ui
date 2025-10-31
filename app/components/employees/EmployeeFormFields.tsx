@@ -133,6 +133,8 @@ const EmployeeFormFields: React.FC<{
       </div>
 
       {/* User Account Section */}
+      {/* Il faut aussi verifier si le emp en question a deja un compte */}
+
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <span className="text-xl mr-2">👤</span> User Account

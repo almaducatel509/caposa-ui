@@ -21,13 +21,14 @@ import {
 } from './validations';
 import { fetchBranches } from '@/app/lib/api/branche';
 import { fetchPosts } from '@/app/lib/api/post';
-import { updateEmployee, createEmployee } from '@/app/lib/api/employee';
+import { createEmployee } from '@/app/lib/api/employee';
 import EmployeeFormFields from './EmployeeFormFields';
+import { putEmployeeMultipart } from '@/app/lib/api/employee';
 
 interface EditEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (updated: EmployeeData) => void;  // ← change ici
   employee: EmployeeData | null; // null = create mode, object = edit mode
   branches?: BranchData[];
   posts?: PostData[];
@@ -68,6 +69,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const branchesToUse = passedBranches.length > 0 ? passedBranches : branches;
   const postsToUse = passedPosts.length > 0 ? passedPosts : posts;
 
+  
   // ✅ Initialisation simplifiée
   useEffect(() => {
     if (!isOpen) return;
@@ -105,9 +107,9 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
           console.log('📝 Empty form for create mode');
         }
         
-      } catch (error) {
-        console.error("❌ Error loading data:", error);
-        setApiError("Unable to load data");
+        } catch (err: any) {
+        console.error("❌ Error loading Employee data:", err);
+        setApiError(err?.message ||"Unable to load data");
       } finally {
         setIsLoading(false);
       }
@@ -117,35 +119,73 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   }, [isOpen, employee]); // Dépendances simplifiées
 
   // ✅ Soumission simplifiée
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setApiError(null);
+//  const handleSubmit = async () => {
+//   setIsSubmitting(true);
+//   setApiError(null);
+//   try {
+//     if (isEditMode && employee?.id) {
+//       // user payload (uniquement champs modifiés)
+//       const userPayload: any = {};
+//       if (formData.user.username && formData.user.username !== employee.user?.username) {
+//         userPayload.username = formData.user.username;
+//       }
+//       if (formData.user.email && formData.user.email !== employee.user?.email) {
+//         userPayload.email = formData.user.email;
+//       }
+//       if (!keepCurrentPassword) {
+//         if (formData.user.password) userPayload.password = formData.user.password;
+//         if (formData.user.confirm_password) userPayload.confirm_password = formData.user.confirm_password;
+//       }
 
-    try {
-      console.log('🚀 Submitting:', { mode: isEditMode ? 'EDIT' : 'CREATE', formData });
+//       const payload = {
+//         first_name: formData.first_name,
+//         last_name: formData.last_name,
+//         date_of_birth: formData.date_of_birth,
+//         phone_number: formData.phone_number,
+//         address: formData.address,
+//         gender: formData.gender,
+//         payment_ref: formData.payment_ref,
+//         branch: formData.branch,
+//         posts: formData.posts,
+//         user: userPayload,
+//       };
 
-      if (isEditMode && employee?.id) {
-    // 1️⃣ Construction du userPayload
+//       // ⚠️ si l’API attend une string: String(employee.id)
+//       const updated = await putEmployeeMultipart(String(employee.id), payload, {
+//         withPassword: !keepCurrentPassword,
+//       });
+
+//       onSuccess(updated);        // ← une seule fois, avec l’EmployeeData
+//       onClose();
+//       return;
+//     }
+
+//     // CREATE
+//     const created = await createEmployee(formData); // doit retourner l'EmployeeData
+//     onSuccess(created);          // ← toujours avec l’objet
+//     onClose();
+
+//   } catch (err: any) {
+//     setApiError(`Error ${isEditMode ? 'updating' : 'creating'} employee: ${err.message || 'Unknown error'}`);
+//   } finally {
+//     setIsSubmitting(false);
+//   }
+// };
+const handleSubmit = async () => {
+  setIsSubmitting(true);
+  setApiError(null);
+  setErrors({});
+
+  try {
+    if (isEditMode && employee?.id) {
       const userPayload: any = {};
-
-      if (formData.user.username !== employee.user?.username) {
-        userPayload.username = formData.user.username;
-      }
-      if (formData.user.email !== employee.user?.email) {
-        userPayload.email = formData.user.email;
-      }
+      if (formData.user.username && formData.user.username !== employee.user?.username) userPayload.username = formData.user.username;
+      if (formData.user.email && formData.user.email !== employee.user?.email) userPayload.email = formData.user.email;
       if (!keepCurrentPassword) {
         if (formData.user.password) userPayload.password = formData.user.password;
         if (formData.user.confirm_password) userPayload.confirm_password = formData.user.confirm_password;
       }
-      if (formData.user.username !== employee.user?.username) {
-        userPayload.username = formData.user.username;
-      }
-      if (formData.user.email !== employee.user?.email) {
-        userPayload.email = formData.user.email;
-      }
 
-      // 2️⃣ Construction du payload complet
       const payload = {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -156,37 +196,52 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         payment_ref: formData.payment_ref,
         branch: formData.branch,
         posts: formData.posts,
-        user: userPayload, // ✅ clé importante
+        user: userPayload,
       };
 
-      // 3️⃣ Envoi à l’API
-      const result = await updateEmployee(employee.id, formData, keepCurrentPassword);
+      const updated = await putEmployeeMultipart(String(employee.id), payload, {
+        withPassword: !keepCurrentPassword,
+      });
 
-      console.log('✅ Update successful:', result);
+      onSuccess(updated);
+      onClose();
+      return;
+    }
 
-      if (onSuccess) {
-        onSuccess(); // Actualiser
+    // CREATE
+    const created = await createEmployee(formData);
+    onSuccess(created);
+    onClose();
+
+  } catch (err: any) {
+    console.error('❌ Submit error (employee):', err);
+
+    // Map structured validation errors if present
+    const apiErrors = err?.response?.data || err?.response?.data?.errors || null;
+    if (apiErrors) {
+      const nextErrors: Record<string,string> = {};
+      if (apiErrors.errors && typeof apiErrors.errors === 'object') {
+        Object.entries(apiErrors.errors).forEach(([k, v]) => {
+          nextErrors[k] = Array.isArray(v) ? String(v[0]) : String(v);
+        });
+        setErrors(nextErrors);
+      } else if (typeof apiErrors === 'object') {
+        Object.entries(apiErrors).forEach(([k, v]) => {
+          nextErrors[k] = String(v);
+        });
+        setErrors(nextErrors);
+      } else {
+        setApiError(err?.message || 'Erreur inconnue');
       }
-      onClose(); // Fermer modal
-    }
-  else {
-      // CREATE mode (inchangé)
-      await createEmployee(formData);
-      console.log('✅ Create successful');
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1000);
+    } else {
+      setApiError(err?.message || 'Erreur inconnue');
     }
 
-  } catch (error: any) {
-      console.error('❌ Submit error:', error);
-      const action = isEditMode ? 'updating' : 'creating';
-      setApiError(`Error ${action} employee: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // ✅ Handler pour mise à jour du formulaire
   const handleFormUpdate = (data: Partial<EmployeeFormData>) => {
@@ -302,7 +357,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             onPress={onClose}
             isDisabled={isSubmitting}
           >
-            Cancel
+            Annuler
           </Button>
           <Button 
             className="bg-[#34963d] text-white hover:bg-[#1e7367]"

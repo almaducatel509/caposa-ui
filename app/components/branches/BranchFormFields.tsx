@@ -11,8 +11,8 @@ import {
   Divider
 } from "@nextui-org/react";
 import { parseDate } from "@internationalized/date";
-import { appConfig } from "@/app/lib/actions";
 import { BranchData, OpeningHour, Holiday, ErrorMessages } from "./validations";
+import { appConfig } from "@/config/appConfig";
 
 interface BranchFormFieldsProps {
   formData: BranchData;
@@ -120,7 +120,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
               </label>
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">{formData.number_of_posts}</div>
-                <div className="text-xs text-green-500 mt-1">Calculé automatiquement</div>
+                <div className="text-xs text-green-500 mt-1">Employe(s)</div>
               </div>
             </div>
 

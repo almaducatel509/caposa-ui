@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { getCookie, getCookies, setCookie, deleteCookie, hasCookie } from 'cookies-next';
+
 // --- Single request interceptor ---
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_ROUTE || 'http://localhost:8000/api/';
 
@@ -8,69 +10,47 @@ const AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-// Helper function to check if token is expired
-const isTokenExpired = (token: string): boolean => {
+// ---- Helpers
+const ACCESS_COOKIE = process.env.TOKEN_NAME || "auth_token";
+const REFRESH_COOKIE = process.env.REFRESH_TOKEN || "refresh_token";
+
+const isJwtExpired = (token?: string | null) => {
+  if (!token) return true;
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = JSON.parse(atob(token.split(".")[1]));
     return payload.exp * 1000 < Date.now();
   } catch {
     return true;
   }
 };
 
+// Pour éviter les refresh concurrents
+let isRefreshing = false;
+let pendingQueue: Array<(token: string | null) => void> = [];
+
+function onRefreshed(newToken: string | null) {
+  pendingQueue.forEach((cb) => cb(newToken));
+  pendingQueue = [];
+}
+
+
 AxiosInstance.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token && !isTokenExpired(token)) {
+  // If this file can be imported in server code, keep this guard
+  if (typeof window !== "undefined") {
+    const access = getCookie(ACCESS_COOKIE) as string | undefined;
+    if (access) {
       config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${token}`;
-    } else if (token && isTokenExpired(token)) {
-      // Clean up expired token
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh');
+      config.headers.Authorization = `Bearer ${access}`;
     }
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('📤 Request', {
-      method: config.method,
-      url: (config.baseURL || '') + (config.url || ''),
-      headers: config.headers,
-      data: config.data
-    });
+  // Optional debug (don’t log tokens!)
+  if (process.env.NODE_ENV !== "production") {
+    //console.debug('📤', config.method, (config.baseURL || '') + (config.url || ''));
   }
 
   return config;
 });
-// Response interceptor for handling auth errors
-AxiosInstance.interceptors.response.use(
-  (response) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📥 Response', {
-        status: response.status,
-        url: response.config?.url,
-        data: response.data
-      });
-    }
-    return response;
-  },
-  (error) => {
-    // Handle 401 errors globally
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh');
-      window.location.href = '/login';
-    }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('❌ Response error', {
-        status: error.response?.status,
-        url: error.config?.url,
-        data: error.response?.data
-      });
-    }
-    return Promise.reject(error);
-  }
-);
 
 export default AxiosInstance;

@@ -2,18 +2,23 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-} from '@nextui-org/react';
-import { FaEdit, FaPlus } from 'react-icons/fa';
-import { MemberData, MemberFormData, ErrorMessages, memberDataToFormData } from './validations';
-import { fetchBranches } from '@/app/lib/api/branche';
-import { updateMember, createMember } from '@/app/lib/api/member';
-import MemberFormFields from './MemberFormFields';
+  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button,
+} from "@nextui-org/react";
+import { FaEdit, FaPlus } from "react-icons/fa";
+
+// ✅ Use the unified schema/types/helpers
+import {
+  MemberData,          // API read model
+  MemberUiForm,        // UI form model (has department_code, etc.)
+  FieldErrors,
+  validateMemberUi,
+  memberDataToUi,      // API -> UI
+  toMemberApiFormData, // UI -> FormData (multipart) with optional photo
+} from "./validations";
+
+import { updateMember, createMember } from "@/app/lib/api/members";
+import MemberFormFields from "./MemberFormFields";
+import { HAITI_DEPARTMENTS } from "@/app/data/haitiLocations";
 
 interface EditMemberModalProps {
   isOpen: boolean;
@@ -29,69 +34,109 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
   member,
 }) => {
   const isEditMode = !!member;
-
-  const [formData, setFormData] = useState<MemberFormData>({
-    first_name: '',
-    last_name: '',
-    id_number: '',
-    phone_number: '',
-    department: '',
-    city: '',
-    address: '',
-    gender: '',
-    date_of_birthday: '',
+  const [errors, setErrors] = useState<FieldErrors<MemberUiForm>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  // ✅ UI state matches Zod schema (department_code, etc.)
+  const [formData, setFormData] = useState<MemberUiForm>({
+    first_name: "",
+    last_name: "",
+    id_number: "",
+    phone_number: "",
+    department_code: HAITI_DEPARTMENTS[0].code, // "OUEST"
+    city: "",
+    address: "",
+    gender: "F",
+    date_of_birthday: "",
+    email: "",
+    initial_balance: undefined,
     photo_profil: null,
   });
 
-  const [errors, setErrors] = useState<ErrorMessages<MemberFormData>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  
 
+  // ✅ Prefill when editing; reset when creating
   useEffect(() => {
     if (!isOpen) return;
-
     if (isEditMode && member) {
-      const editFormData = memberDataToFormData(member);
-      setFormData(editFormData);
+      setFormData(memberDataToUi(member));
+      setErrors({});
+      setApiError(null);
+    } else {
+      setFormData({
+        first_name: "",
+        last_name: "",
+        id_number: "",
+        phone_number: "",
+        department_code: HAITI_DEPARTMENTS[0].code, // e.g. "OUEST"
+        city: "",
+        address: "",
+        gender: "F",
+        date_of_birthday: "",
+        email: "",
+        initial_balance: undefined,
+        photo_profil: null,
+      });
+      setErrors({});
+      setApiError(null);
     }
-  }, [isOpen, member]);
+  }, [isOpen, isEditMode, member]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setApiError(null);
 
+    // ✅ Zod validation
+    const result = validateMemberUi(formData);
+    if (!result.data) {
+      setErrors(result.errors || {});
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
+      // ✅ Build multipart FormData (includes photo if File is present)
+      const fd = toMemberApiFormData(result.data, { includePhoto: true });
+
       if (isEditMode && member?.id) {
-        await updateMember(member.id, formData);
+        await updateMember(member.id, fd); // PATCH/PUT in your API wrapper
       } else {
-        await createMember(formData);
+        await createMember(fd);
       }
+
       onSuccess();
       onClose();
     } catch (error: any) {
-      setApiError(`Error: ${error.message || 'Unknown error'}`);
+      setApiError(
+        `Error: ${error?.response?.status ?? ""} ${
+          error?.response?.data
+            ? JSON.stringify(error.response.data)
+            : error?.message || "Unknown error"
+        }`
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFormUpdate = (data: Partial<MemberFormData>) => {
-    setFormData(prev => ({ ...prev, ...data }));
-    setErrors(prev => {
-      const updated = { ...prev };
-      Object.keys(data).forEach(key => delete updated[key as keyof MemberFormData]);
-      return updated;
+  // ✅ Patch fields + clear their errors
+  const handleFormUpdate = (patch: Partial<MemberUiForm>) => {
+    setFormData((prev) => ({ ...prev, ...patch }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(patch).forEach((k) => delete (next as Record<string, string>)[k]);
+      return next;
     });
   };
 
   if (!isOpen) return null;
 
   return (
-    <Modal 
+    <Modal
       isDismissable={false}
-      isOpen={isOpen} 
-      onClose={onClose} 
-      size="5xl" 
+      isOpen={isOpen}
+      onClose={onClose}
+      size="5xl"
       scrollBehavior="inside"
       backdrop="blur"
     >
@@ -101,11 +146,11 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
             {isEditMode ? <FaEdit className="text-white" /> : <FaPlus className="text-white" />}
           </div>
           <div>
-            <h3 className="text-lg font-bold">
-              {isEditMode ? 'Edit Member' : 'Create Member'}
-            </h3>
+            <h3 className="text-lg font-bold">{isEditMode ? "Edit Member" : "Create Member"}</h3>
             <p className="text-sm opacity-90">
-              {isEditMode ? `Update ${member?.first_name} ${member?.last_name}` : 'Register a new member'}
+              {isEditMode
+                ? `Update ${member?.first_name} ${member?.last_name}`
+                : "Register a new member"}
             </p>
           </div>
         </ModalHeader>
@@ -123,6 +168,8 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
             errors={errors}
             setErrors={setErrors}
             isEditMode={isEditMode}
+            //disabled={isEditMode && field === 'id_number'} ou dois-je mettre ca?
+
           />
         </ModalBody>
 
@@ -130,13 +177,19 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
           <Button variant="light" onPress={onClose} isDisabled={isSubmitting}>
             Cancel
           </Button>
-          <Button 
+          <Button
             className="bg-[#34963d] text-white hover:bg-[#1e7367]"
             onPress={handleSubmit}
             isLoading={isSubmitting}
             isDisabled={isSubmitting}
           >
-            {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update" : "Create")}
+            {isSubmitting
+              ? isEditMode
+                ? "Updating..."
+                : "Creating..."
+              : isEditMode
+              ? "Update"
+              : "Create"}
           </Button>
         </ModalFooter>
       </ModalContent>

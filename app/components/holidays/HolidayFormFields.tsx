@@ -7,7 +7,7 @@ import {
   Chip
 } from "@nextui-org/react";
 import { parseDate } from "@internationalized/date";
-import { appConfig } from "@/app/lib/actions";
+import { appConfig } from "@/config/appConfig";
 import { Input } from "@nextui-org/input";
 // Vous pouvez importer vos types depuis le fichier de validation
 export interface Holiday {

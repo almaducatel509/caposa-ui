@@ -26,7 +26,7 @@ export interface User {
   }
 
 
-  export interface Member extends Base {
+  export interface MemberData extends Base {
     memberId: string;
     firstName: string;
     lastName: string;

@@ -219,8 +219,8 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Branche</p>
                   <p className="capitalize font-medium">
-                    {employee.branch_details?.branch_name || 'N/A'}
-                    {employee.branch_details?.branch_code && (
+                      {employee.branch_details?.branch_name || 'N/A'} 
+                      {employee.branch_details?.branch_code && (
                       <span className="capitalize text-sm text-gray-500 ml-2">
                         ({employee.branch_details.branch_code})
                       </span>

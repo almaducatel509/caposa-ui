@@ -1,0 +1,13 @@
+1. Sélectionner membre
+2. Choisir type (épargne/chèques/terme)
+3. Entrer dépôt initial (avec validation minimum)
+4. Configurer paramètres (taux, limites)
+5. Backend: soldeActuel = depotInitial
+```
+
+### **Mode EDIT:**
+```
+1. Membre = LECTURE SEULE (ne peut pas changer)
+2. Solde = LECTURE SEULE (affiché, pas modifiable)
+3. Peut changer: statut, paramètres, conseiller
+4. Modification solde → Module Transactions uniquement

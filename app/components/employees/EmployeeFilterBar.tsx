@@ -21,6 +21,9 @@ interface EmployeeFilterBarProps {
   onImport: () => void;
   onExport: () => void;
   totalCount: number;
+  onTypeChange: (value: string) => void;
+  onRefresh: () => void;
+
 }
 
 const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
@@ -37,6 +40,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   onAdd,
   onImport,
   onExport,
+  onRefresh,
   totalCount,
 }) => {
   const filterOptions = [

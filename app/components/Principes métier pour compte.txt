@@ -1,0 +1,15 @@
+Principes métier pour compte
+
+Un membre peut avoir plusieurs comptes. Les règles d’accès/avantages d’un compte dépendent souvent du statut du membre (active/inactive), de son ancienneté, du total dépôts / solde courant et parfois du nombre de comptes.
+
+Avant de créer un compte, on vérifie l'existence et l'état du membre (ex : actif/suspendu) et éventuellement s’il n’a pas de blocages (ex : interdiction, KYC non complété).
+
+Les avantages (taux préférentiels, dispense de frais, limites de retrait, plafond d’encours, accès à produits) sont calculés selon des règles métier — p.ex. :
+
+Ancienneté >= 24 mois → « senior » → meilleur taux, frais réduits.
+
+Solde cumulé > X → prime ou taux bonus.
+
+Nombre comptes > N → conditions favorisées.
+
+Back-end : la validation finale et la logique sensible (ex : vérification KYC, blacklist, création d’un compte) doit être faite côté serveur. Frontend donne l’UX + vérifs préliminaires.

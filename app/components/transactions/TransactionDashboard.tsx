@@ -18,7 +18,7 @@ const TransactionDashboard: React.FC = () => {
     status: 'all',
     dateRange: 'all'
   });
-
+  
   // Charger les transactions
   useEffect(() => {
     loadTransactions();

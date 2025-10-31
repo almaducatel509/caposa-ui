@@ -9,13 +9,14 @@ import { MdOutlineHolidayVillage } from "react-icons/md";
 import { AiOutlineBranches } from "react-icons/ai";
 import { GrTransaction } from "react-icons/gr";
 import { LuFolderTree } from "react-icons/lu";
-import { FaPlus, FaChevronRight, FaEye, FaChartLine } from "react-icons/fa";
+import { FaPlus, FaChevronRight, FaEye, FaChartLine, FaUser } from "react-icons/fa";
 import { TbBrandUbuntu } from "react-icons/tb";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import { useState, useRef } from 'react'; // ← AJOUT: useRef
 import { IconType } from 'react-icons';
+import { MdOutlineSupervisorAccount } from "react-icons/md";
 
 // Interface pour les sous-liens
 interface SubLink {
@@ -95,6 +96,7 @@ const links: MainLink[] = [
     hasSubmenu: true,
     subLinks: transactionSubLinks
   },
+  { name: 'Compte', href: '/dashboard/account', icon: MdOutlineSupervisorAccount },
   { name: 'Horaires', href: '/dashboard/opening_hours', icon: GrSchedule },
   { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
   { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },

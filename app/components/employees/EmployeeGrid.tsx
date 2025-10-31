@@ -20,8 +20,6 @@ import EditEmployeeModal from '@/app/components/employees/EditEmployeeModal';
 import DeleteEmployeeModal from '@/app/components/employees/DeleteEmployeeModal';
 import EmployeeTransactionModal from '@/app/components/employees/EmployeeTransactionModal';
 import { BranchData, BranchDetails, EmployeeData, PostData } from '@/app/components/employees/validations';
-import { Branch } from '@/types/data';
-import { Post } from '../postes/validations';
 import { fetchPosts } from '@/app/lib/api/post';
 
 interface EmployeeGridProps {
@@ -30,27 +28,33 @@ interface EmployeeGridProps {
 }
 
 const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees, onSuccess: parentOnSuccess }) => {
-  // États
-  const [employees, setEmployees] = useState<EmployeeData[]>([]);
-  const [branches, setBranches] = useState<BranchData[]>([]);
-  const [posts, setPosts] = useState<PostData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // États de filtrage
-  const [filterValue, setFilterValue] = useState('');
-  const [debouncedValue, setDebouncedValue] = useState(filterValue);
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [selectedBranch, setSelectedBranch] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  
-  // États des modals
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  // États des données
+const [employees, setEmployees] = useState<EmployeeData[]>([]);
+const [branches, setBranches] = useState<BranchData[]>([]);
+const [posts, setPosts] = useState<PostData[]>([]);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
+const [filters, setFilters] = useState({
+    search: '',
+    type: 'all',
+    status: 'all'
+  });
+// États de filtrage
+const [filterValue, setFilterValue] = useState('');
+const [debouncedValue, setDebouncedValue] = useState(filterValue);
+const [selectedFilter, setSelectedFilter] = useState('all');
+const [selectedBranch, setSelectedBranch] = useState('all');
+const [selectedStatus, setSelectedStatus] = useState('all');
+
+// États des modals
+const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [showTransactionModal, setShowTransactionModal] = useState(false);
+
+// indicateur d’édition
+
+const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
+const [showDetailModal, setShowDetailModal] = useState(false);
+const [showEditModal, setShowEditModal] = useState(false);
 
   // Effect pour le debouncing
   useEffect(() => {
@@ -86,12 +90,20 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
       setIsLoading(false);
     }
   };
-  
+   
   useEffect(() => {
-    if (!initialEmployees) {
-      loadEmployees();
-    }
-  }, [initialEmployees]);
+  if (initialEmployees && initialEmployees.length) {
+    // On injecte les employés passés en props
+    setEmployees(initialEmployees);
+    setIsLoading(false);
+    setError(null);
+  } else {
+    // Sinon on charge depuis l’API
+    loadEmployees();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [initialEmployees]);
+
 
   // Logique de filtrage
   const filteredEmployees = useMemo(() => {
@@ -182,21 +194,20 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
     }
   }, [filteredEmployees]);
 
-  const handleImport = () => {
+   const handleImport = () => {
     console.log('Import employees');
   };
 
   const handleAdd = () => {
     console.log("🆕 Creating new employee"); 
     setSelectedEmployee(null);
-    setIsEditMode(false);
     setShowEditModal(true);
     console.log("📋 Modal state:", { showEditModal: true, selectedEmployee: null, isEditMode: false }); // ✅ Et ça
-
   };
 
   const handleView = (employee: EmployeeData) => {
-    setSelectedEmployee(employee);
+    const hydratedEmployee = hydrateDetails(employee);
+    setSelectedEmployee(hydratedEmployee);
     setShowDetailModal(true);
   };
 
@@ -206,7 +217,6 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
       employeeId: employee?.id
     });
       setSelectedEmployee(employee);
-    setIsEditMode(true);
     setShowEditModal(true);
     console.log('🔍 États après:', {
       selectedEmployee: employee?.first_name,
@@ -223,15 +233,54 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
     setSelectedEmployee(employee);
     setShowTransactionModal(true);
   };
+// re-mappe aussi branch/posts "details" si le back ne les renvoie pas
+function hydrateDetails(e: EmployeeData) {
+  // branche
+  const b = branches.find(br => br.id === e.branch);
+  const withBranch =
+    e.branch_details || !e.branch
+      ? e
+      : {
+          ...e,
+          branch_details: b
+            ? {
+                id: b.id,                         // ← AJOUT TRÈS IMPORTANT
+                branch_name: b.branch_name,
+                branch_code: b.branch_code,
+              }
+            : undefined,
+        };
 
-  const handleSuccess = () => {
-    setShowEditModal(false);
-    setShowDeleteModal(false);
-    setShowDetailModal(false);
-    setSelectedEmployee(null);
+  // posts
+  const withPosts =
+    withBranch.posts_details || !Array.isArray(withBranch.posts)
+      ? withBranch
+      : {
+          ...withBranch,
+          posts_details: withBranch.posts
+            .map(pid => posts.find(p => p.id === pid))
+            .filter(Boolean)
+            .map(p => ({ id: p!.id, name: p!.name || p!.post_name })),
+        };
+
+  return withPosts; // ← ceci est bien un EmployeeData
+}
+
+
+function handleDeleteSuccess(deletedId?: string) {
+  if (deletedId) {
+    setEmployees(prev => prev.filter(e => e.id !== deletedId));
+    if (selectedEmployee?.id === deletedId) {
+      setSelectedEmployee(null);
+      setShowDetailModal(false);
+    }
+  } else {
+    // Si le modal n'envoie pas d'id, on relit tout
     loadEmployees();
-
-  };
+    setShowDetailModal(false);
+  }
+  setShowDeleteModal(false);
+}
 
   const onSearchChange = useCallback((value?: string) => {
     setFilterValue(value || '');
@@ -269,9 +318,6 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
     );
   }
 
-  function handleClose(): void {
-    throw new Error('Function not implemented.');
-  }
 
   return (
     <div className="flex flex-col gap-4 px-6 py-4 w-full bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen">
@@ -298,9 +344,12 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
         onBranchChange={setSelectedBranch}
         onStatusChange={setSelectedStatus}
         onAdd={handleAdd}
+        onTypeChange={(value) => setFilters({ ...filters, type: value })}
+        onRefresh={() => window.location.reload()}
         onImport={handleImport}
         onExport={handleExport}
         totalCount={filteredEmployees.length}
+        // Let the header breathe and focus on context.all buttons inside FilterBar.
       />
 
       <div className="text-sm text-[#2c2e2f]/70">
@@ -308,7 +357,6 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
       </div>
 
       {/* Grid de cards */}
-{/* Remplace ta ligne de grid par : */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">  
         {filteredEmployees.length > 0 ? (
           filteredEmployees.map((employee) => (
@@ -336,11 +384,11 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
               }
             </p>
             {filterValue ? (
-              <Button onClick={onClear} variant="light" className="text-[#34963d]">
+              <Button onPress={onClear} variant="light" className="text-[#34963d]">
                 Effacer les filtres
               </Button>
             ) : (
-              <Button onClick={handleAdd} className="bg-[#34963d] text-white">
+              <Button onPress={handleAdd} className="bg-[#34963d] text-white">
                 Ajouter un employé
               </Button>
             )}
@@ -356,31 +404,39 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
           employee={selectedEmployee}
           onEdit={() => {
             setShowDetailModal(false);
-            handleEdit(selectedEmployee);
+            setShowEditModal(true);
           }}
         />
       )}
 
+      {/* Edit */}
       {showEditModal && (
        <EditEmployeeModal
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
-          employee={selectedEmployee}    // ← Seule prop nécessaire pour déterminer le mode
+          employee={selectedEmployee}
           branches={branches}
           posts={posts}
-          onSuccess={handleSuccess}
-        />
+          onSuccess={(updated) => {
+            // rafraîchir la liste + le détail
+            setEmployees(prev => prev.map(e => e.id === updated.id ? updated : e));
+            setSelectedEmployee(updated);
+          }}
+       />
+
       )}
 
+      {/* Delete */}
       {showDeleteModal && selectedEmployee && (
         <DeleteEmployeeModal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
-          onSuccess={handleSuccess}
           employee={selectedEmployee}
+          onSuccess={handleDeleteSuccess}  // <= accepte id? et fallback reload
         />
       )}
 
+      {/* Transactions */}
       {showTransactionModal && selectedEmployee && (
         <EmployeeTransactionModal
           isOpen={true}

@@ -1,0 +1,34 @@
+📋 Checklist pour demain (auth & connexion)
+Finaliser loginUser()
+
+Appeler me() après le login
+
+Valider avec Zod
+
+Retourner un objet conforme à UserSession
+
+Compléter authorize() dans Credentials()
+
+Appeler loginUser()
+
+Retourner UserSession si succès
+
+Sécuriser les cookies
+
+Ajouter httpOnly, secure, sameSite si nécessaire
+
+Créer un hook useUser()
+
+Pour accéder à session.user typé dans les composants
+
+Créer un AuthGuard
+
+Pour protéger les routes selon roles
+
+Tester avec un utilisateur fictif
+
+Vérifier que session.user est bien rempli
+
+Documenter le flow
+
+Ajouter un schéma ou un README pour clarifier le cycle login → token → session

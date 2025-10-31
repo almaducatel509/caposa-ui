@@ -21,7 +21,7 @@ export const fetchOpeningHours = async (): Promise<OpeningHoursAPI[]> => {
     return response.data;
   } catch (error) {
     console.error("Error fetching opening hours:", error);
-    throw error;
+    return [];
   }
 };
 

@@ -12,7 +12,7 @@ import {
 import { FaUserTimes, FaExclamationTriangle } from 'react-icons/fa';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { MemberData } from './validations';
-import { deleteMember } from '@/app/lib/api/member';
+import { deleteMember } from '@/app/lib/api/members';
 
 interface DeleteMemberModalProps {
   isOpen: boolean;
@@ -40,7 +40,8 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
     setApiError(null);
 
     try {
-      await deleteMember(member.id);
+      const idStr = String(member.id);
+      await deleteMember(idStr);
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -107,7 +108,7 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
                   <div className="text-xs text-red-600 mt-2 space-y-1">
                     <div>Téléphone: {member.phone_number}</div>
                     <div>Ville: {member.city}</div>
-                    <div>ID: {member.id?.substring(0, 16)}...</div>
+                    <div>ID: {String(member.id).substring(0, 16)}...</div>
                   </div>
                 </div>
               </div>

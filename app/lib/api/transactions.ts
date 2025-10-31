@@ -47,10 +47,10 @@ export const fetchTransactions = async (): Promise<TransactionData[]> => {
       }
     } else if (error.request) {
       console.error('🔴 Erreur de connexion:', error.request);
-      throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+      return [];
     } else {
       console.error('🔴 Erreur:', error.message);
-      throw new Error(`Erreur inattendue: ${error.message}`);
+    return [];
     }
   }
 };

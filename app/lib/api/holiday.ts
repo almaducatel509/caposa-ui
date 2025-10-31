@@ -23,7 +23,7 @@ export const fetchHolidays = async (): Promise<HolidayData[]> => {
     }));
   } catch (error) {
     console.error("Erreur lors de la récupération des jours fériés:", error);
-    throw error;
+    return [];
   }
 };
 

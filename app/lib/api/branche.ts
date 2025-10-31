@@ -15,7 +15,7 @@ export const fetchHolidays = async () => {
     return formattedHolidays;
   } catch (error) {
     console.error('Erreur lors de la récupération des jours fériés :', error);
-    throw error;
+    return [];
   }
 };
 
@@ -52,7 +52,7 @@ export const fetchOpeningHours = async () => {
     return formattedOpeningHours;
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des heures d'ouverture :", error);
-    throw error;
+    return [];
   }
 };
 
@@ -63,7 +63,7 @@ export const fetchBranches = async () => {
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des branches:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -75,7 +75,7 @@ export const createBranch = async (branchData: any) => {
     return response.data;
   } catch (error) {
     console.error('Erreur API :', error);
-    throw error;
+    return [];
   }
 };
 
@@ -86,7 +86,7 @@ export const getBranchById = async (id: string) => {
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la récupération de la branche :", error);
-    throw error;
+    return [];
   }
 };
 
@@ -97,7 +97,7 @@ export const updateBranch = async (id: string, data: any) => {
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la mise à jour de la branche :", error);
-    throw error;
+    return [];
   }
 };
 

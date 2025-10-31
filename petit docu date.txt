@@ -1,0 +1,86 @@
+Parfait 🙌 je te fais un **petit document ultra simple** — style “mémo de développeur” — que tu pourras ressortir dans 100 ans sans réfléchir.
+
+---
+
+# 📅 Guide des Dates – Coop App
+
+## 1. Deux types de dates seulement
+
+* **Date simple** = juste un jour (pas d’heure).
+  👉 Exemple : date de naissance, date de chèque, date de valeur.
+  👉 Format : `"YYYY-MM-DD"` (ex. `"2025-09-01"`).
+  👉 Ne jamais faire `new Date("2025-09-01")`.
+
+* **Date/Heure (timestamp)** = jour + heure précise.
+  👉 Exemple : créé le, modifié le, exécution transaction.
+  👉 Format : ISO UTC (`"2025-09-01T13:45:00Z"`).
+  👉 Toujours afficher en timezone locale choisie.
+
+---
+
+## 2. Règles d’or
+
+1. **Backend**
+
+   * `DateField` pour les dates simples.
+   * `DateTimeField` (UTC) pour les timestamps.
+
+2. **Frontend**
+
+   * **Date simple** : traiter comme une string.
+
+     * `<input type="date">` ⇄ `"YYYY-MM-DD"`.
+     * Affichage direct : `"2025-09-01"`.
+   * **Timestamp** : convertir avec `Intl.DateTimeFormat`.
+
+     * Exemple :
+
+       ```ts
+       new Intl.DateTimeFormat("fr-CA", { timeZone: "America/Port-au-Prince" }).format(new Date(iso));
+       ```
+
+3. **Jamais mélanger**
+
+   * Pas de `new Date("YYYY-MM-DD")`.
+   * Pas de stocker un timestamp dans un champ “date simple”.
+
+---
+
+## 3. Petit utilitaire
+
+```ts
+// Date simple
+function formatDateOnly(yyyyMmDd: string) {
+  return yyyyMmDd;
+}
+
+// Timestamp ISO
+function formatDateTime(iso: string, tz = "America/Port-au-Prince") {
+  return new Intl.DateTimeFormat("fr-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+```
+
+---
+
+## 4. Résumé visuel
+
+| Cas              | Exemple               | Type API        | Frontend           |
+| ---------------- | --------------------- | --------------- | ------------------ |
+| Date simple      | `"2025-09-01"`        | `DateField`     | String             |
+| Date/Heure (UTC) | `"2025-09-01T13:45Z"` | `DateTimeField` | Format avec `Intl` |
+
+---
+
+👉 En une phrase :
+**Jours bancaires = string `"YYYY-MM-DD"`, événements précis = ISO UTC.**
+
+---
+
+Veux-tu que je te génère ce mémo en **PDF A4** (genre fiche pratique à imprimer et coller au mur) ?

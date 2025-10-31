@@ -25,13 +25,18 @@ import {
 import UserAvatar from '@/app/components/core/UserAvatar';
 import {
   MemberData,
-  formatGender,
-  formatMembershipTier,
-  getMembershipColor,
-  formatBalance,
-  calculateAge,
-  formatAccountType
 } from './validations';
+import {
+  tierOf,
+  tierColor,
+  tierLabel,
+  calculateAge,
+  formatDate,
+  formatDateTime,
+  formatBalance,
+  formatGender,
+  accountTypeLabel
+} from "./utils";
 
 interface MemberDetailModalProps {
   isOpen: boolean;
@@ -46,8 +51,9 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
   member,
   onEdit
 }) => {
-  const membershipTier = member.membership_tier || member.membership_type || 'basic';
-  const age = member.date_of_birthday ? calculateAge(member.date_of_birthday) : null;
+  const membershipTier = tierOf(member); // "junior" | "standard" | "senior"
+const age = member.date_of_birthday ? calculateAge(member.date_of_birthday) : null;
+
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -58,16 +64,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
     });
   };
 
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+ 
 
   return (
     <Modal 
@@ -77,30 +74,61 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
       scrollBehavior="inside"
     >
       <ModalContent>
-        <ModalHeader className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white p-6">
-          <UserAvatar
-            user={member}
+       <ModalHeader className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white p-6">
+         <UserAvatar
+            user={{
+              ...member,
+              photo_profil: member.photo_profil ?? undefined, // ✅ prevents TS error
+            }}
             size="xl"
             type="member"
             className="border-2 border-white"
           />
+
           <div className="flex-1 capitalize">
-            <h3 className="capitalize text-xl font-bold">
+            <h3 className="capitalize text-xl font-bold flex items-center gap-2">
               {member.first_name} {member.last_name}
-              <Chip 
-                size="sm" 
-                color={getMembershipColor(membershipTier) as any}
-                variant="flat"
-                className="ml-3"
-              >
-                {formatMembershipTier(membershipTier)}
-              </Chip>
+              {(() => {
+                const t = tierOf(member);
+                return (
+                  <Chip
+                    size="sm"
+                    color={tierColor(t) as any}
+                    variant="flat"
+                    className="ml-3"
+                  >
+                    {tierLabel(t)}
+                  </Chip>
+                );
+              })()}
             </h3>
-            <p className="text-sm opacity-90 capitalize">
-              {member.income_source || member.account_type || 'Membre'} • ID: {member.id_number}
-            </p>
+
+            {/* Sous-titre : source simple + ID */}
+           {member.accounts?.length ? (
+              <div className="space-y-2">
+                {member.accounts.map(acc => (
+                  <div key={acc.id} className="flex items-center justify-between p-2 rounded border border-gray-200">
+                    <div className="text-sm">
+                      <div className="font-medium">
+                        {accountTypeLabel(acc.account_type)} — {acc.account_number}
+                      </div>
+                      {acc.balance != null && (
+                        <div className="text-gray-600">Solde : {formatBalance(acc.balance)}</div>
+                      )}
+                    </div>
+                    <Chip size="sm" variant="flat">{acc.id}</Chip>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-3 rounded border border-red-200 bg-red-50 text-red-700">
+                Ce membre n’a pas encore de compte. Il faut lier un compte pour bénéficier des services.
+              </div>
+            )}
+
           </div>
         </ModalHeader>
+
 
         <ModalBody className="p-6">
           <div className="mb-6">
@@ -162,27 +190,33 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
 
           <Divider />
 
+          {/* Compte(s) */}
           <div className="my-6">
             <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <FaMoneyBillWave className="text-[#34963d]" /> Compte et finance
+              <FaMoneyBillWave className="text-[#34963d]" /> Compte(s)
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3">
-                <FaIdCard className="text-gray-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Compte</p>
-                  <p className="font-medium">{formatAccountType(member.account_type)} - {member.account_number}</p>
-                </div>
+
+            {member.accounts?.length ? (
+              <div className="space-y-2">
+                {member.accounts.map((acc) => (
+                  <div key={acc.id} className="flex items-center justify-between rounded border px-3 py-2">
+                    <div>
+                      <div className="font-medium">{acc.account_type}</div>
+                      <div className="text-sm text-gray-500">{acc.account_number}</div>
+                    </div>
+                    <div className="text-sm font-semibold">
+                      {acc.balance != null ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "HTG" }).format(acc.balance) : "—"}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-start gap-3">
-                <FaMoneyBillWave className="text-gray-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Solde initial</p>
-                  <p className="font-medium">{formatBalance(member.initial_balance)}</p>
-                </div>
+            ) : (
+              <div className="p-3 rounded border border-red-200 bg-red-50 text-red-700">
+                Ce membre n’a <b>aucun compte</b>. Pour bénéficier des services, créez au moins un compte.
               </div>
-            </div>
+            )}
           </div>
+            
 
           <Divider />
 

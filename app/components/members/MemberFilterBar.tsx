@@ -21,6 +21,9 @@ interface MemberFilterBarProps {
   onImport: () => void;
   onExport: () => void;
   totalCount: number;
+    // 👇 new
+  importLoading?: boolean;
+
 }
 
 const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
@@ -38,6 +41,7 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   onImport,
   onExport,
   totalCount,
+   importLoading = false,  
 }) => {
   const filterOptions = [
     { key: 'all', label: 'Tous' },
@@ -85,17 +89,20 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           >
             Ajouter
           </Button>
+         <Button
+          variant="bordered"
+          startContent={<FaUpload size={14} />}
+          onPress={onImport}
+          className="border-2 border-slate-600 text-slate-600 h-10 px-4"
+          size="sm"
+          isLoading={importLoading}     // 👈 show spinner
+          isDisabled={importLoading}    // 👈 prevent double clicks
+        >
+          {importLoading ? "Import..." : "Importer"}
+        </Button>
+
           <Button
-            variant="bordered"
-            startContent={<FaUpload size={14} />}
-            onPress={onImport}
-            className="border-2 border-slate-600 text-slate-600 h-10 px-4"
-            size="sm"
-          >
-            Importer
-          </Button>
-          <Button
-            color="primary"
+            color="primary" 
             className="bg-green-600 text-white h-10 px-4"
             startContent={<CiExport size={16} />}
             variant="flat"

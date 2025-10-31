@@ -12,6 +12,7 @@ import { fetchBranches } from '@/app/lib/api/branche';
 import { fetchPosts } from '@/app/lib/api/post';
 import EmployeeFormFields from './EmployeeFormFields';
 import { createEmployee } from '@/app/lib/api/employee'; 
+
 interface CreateEmployeeFormProps {
   onSuccess: () => void;
   onCancel?: () => void;
@@ -19,7 +20,7 @@ interface CreateEmployeeFormProps {
 
 const CreateEmployeeForm: React.FC<CreateEmployeeFormProps> = ({
   onSuccess,
-  onCancel
+  onCancel,
 }) => {
   // Initialize with proper structure
   const [formData, setFormData] = useState<EmployeeFormData>({

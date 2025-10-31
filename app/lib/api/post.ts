@@ -7,7 +7,7 @@ export const fetchPosts = async () => {
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la récupération des postes:", error);
-    throw error;
+    return [];
   }
 };
 

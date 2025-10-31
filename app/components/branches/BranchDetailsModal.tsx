@@ -33,7 +33,7 @@ import {
 
 import { Branch } from './branchesTable';
 import { Holiday, OpeningHour } from './validations';
-import { appConfig } from '@/app/lib/actions';
+import { appConfig } from '@/config/appConfig';
 
 interface BranchDetailsModalProps {
   isOpen: boolean;                   // Modal ouvert/fermé
