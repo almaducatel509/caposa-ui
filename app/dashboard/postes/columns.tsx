@@ -3,7 +3,7 @@ import {
    User, 
    Chip, 
    Tooltip,
-  } from "@nextui-org/react";
+  } from "@heroui/react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { FaRegEye } from "react-icons/fa6";

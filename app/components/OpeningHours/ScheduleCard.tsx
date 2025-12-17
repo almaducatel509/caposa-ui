@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Button, Tooltip, Chip, Badge } from '@nextui-org/react';
+import { Button, Tooltip, Chip, Badge } from "@heroui/react";
 import { FiEdit, FiInfo } from 'react-icons/fi';
 import { FaRegTrashCan } from 'react-icons/fa6';
 import { LuPrinter } from 'react-icons/lu';

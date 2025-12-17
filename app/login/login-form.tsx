@@ -50,7 +50,8 @@ const LoginForm = () => {
             <p className="text-gray-600">
               Connectez-vous à votre espace employé
             </p>
-          </div>
+            //suprimer le cookies expierer pour trouver la forme et reconnecter
+         </div>
 
           {/* Login Card */}
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">

@@ -19,8 +19,9 @@ export type Gender = "M" | "F";
 
 /** API response model (read model) */
 export interface MemberData {
-  department_code: string | number | readonly string[] | undefined;
   id: string;
+  department_code: string | number | readonly string[] | undefined;
+  id_member: string;
   first_name: string;
   last_name: string;
   gender: Gender | string; // tolerate legacy
@@ -58,14 +59,14 @@ export interface MemberData {
 
 // Branch details interface
 export interface BranchDetails {
-  id: string;
+  id_branch: string;
   branch_name: string;
   branch_code?: string; // ✅ Permet null ET undefined
 }
 
 // Post details interface
 export interface PostDetails {
-  id: string;
+  id_post: string;
   name: string;
   post_name?: string;
 
@@ -90,7 +91,21 @@ export type MemberApiPayload = {
 // --------------------------------------------
 // Zod schema (strict UI validation)
 // --------------------------------------------
-
+// Utility functions
+export function formatGender(gender?: string) {
+  switch (gender?.toLowerCase()) {
+    case 'male':
+    case 'm':
+      return 'Homme';
+    case 'female':
+    case 'f':
+      return 'Femme';
+    case 'other':
+      return 'Autre';
+    default:
+      return 'Non spécifié';
+  }
+}
 const DepartmentCodeZ = z.enum(
   HAITI_DEPARTMENTS.map((d) => d.code) as [DepartmentCode, ...DepartmentCode[]]
 );

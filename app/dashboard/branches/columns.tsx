@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Tooltip, Button } from "@nextui-org/react";
+import { Tooltip, Button } from "@heroui/react";
 import { FaRegTrashCan, FaRegEye } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 import { BranchData } from "@/app/components/branches/validations";

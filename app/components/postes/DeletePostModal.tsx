@@ -9,7 +9,7 @@ import {
   ModalFooter,
   Button,
   Chip,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { Post } from "./validations";
 import { deletePost } from "@/app/lib/api/post"; // Vous devez créer cette fonction

@@ -7,7 +7,7 @@
 //   Chip,
 //   Button,
 //   Tooltip,
-// } from "@nextui-org/react";
+// } from "@heroui/react";
 // import UserAvatar from '@/app/components/core/UserAvatar';
 // import { FaEye, FaEdit, FaTrash, FaMoneyBillWave } from "react-icons/fa";
 // import { getEmployeeStatus, EmployeeData } from '@/app/components/employees/validations';

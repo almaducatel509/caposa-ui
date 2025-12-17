@@ -1,4 +1,4 @@
-import LoanApplicationForm from "@/app/components/transactions/loans/LoanApplicationForm"
+import LoanApplicationForm from "@/app/components/transactions/loans/LoanFormFields"
 import TransferForm from "@/app/components/transactions/transfers/TransferForm"
 export default function PostForm() {
     return(

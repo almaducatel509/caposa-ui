@@ -9,7 +9,7 @@ import {
   Avatar,
   Badge,
   Tooltip
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaBuilding, FaEdit, FaTrash } from "react-icons/fa";
 import { TbListDetails } from "react-icons/tb";
 import { BsTelephone, BsPeople } from "react-icons/bs";

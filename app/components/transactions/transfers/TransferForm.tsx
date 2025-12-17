@@ -21,7 +21,7 @@ import {
   Switch,
   Autocomplete,
   AutocompleteItem
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaArrowLeft, FaExchangeAlt, FaUserCheck, FaExclamationTriangle, FaCheckCircle, FaCalculator, FaClock } from "react-icons/fa";
 
 // Types pour le formulaire de virement
@@ -850,7 +850,6 @@ const TransferForm: React.FC = () => {
           </div>
         </CardBody>
       </Card>
-
       {/* Modal de confirmation */}
       <Modal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} size="lg">
         <ModalContent>
@@ -931,7 +930,6 @@ const TransferForm: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
       {/* Modal de succès */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalContent>

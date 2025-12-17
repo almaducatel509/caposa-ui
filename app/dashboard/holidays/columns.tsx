@@ -1,7 +1,7 @@
 'use client';
 
 import React from "react";
-import { Tooltip, Badge, Chip } from '@nextui-org/react';
+import { Tooltip, Badge, Chip } from "@heroui/react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FaCalendarAlt } from "react-icons/fa"; // Garde l'icône comme demandé
 import { deleteHoliday, HolidayAPI } from "@/app/lib/api/holiday"; // Importer HolidayAPI au lieu de Holiday

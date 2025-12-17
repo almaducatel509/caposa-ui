@@ -19,7 +19,7 @@ import {
   ModalFooter,
   useDisclosure,
   Switch
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaArrowLeft, FaMoneyBillWave, FaFileInvoiceDollar, FaExclamationTriangle, FaCheckCircle, FaCamera, FaCalculator } from "react-icons/fa";
 
 // Types pour le formulaire de dépôt
@@ -348,6 +348,7 @@ const DepositForm: React.FC = () => {
               onChange={(e) => handleAccountChange(e.target.value)}
               isRequired
             >
+              {/* auto completion react select form https://www.heroui.com/docs/components/autocomplete */}
               {availableAccounts.map((account) => (
                 <SelectItem 
                   key={account.accountNumber} 

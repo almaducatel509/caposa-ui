@@ -8,7 +8,7 @@ import {
   ModalBody,
   ModalFooter,
   Button,
-} from '@nextui-org/react';
+} from "@heroui/react";
 import { FaEdit, FaPlus } from 'react-icons/fa';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { 
@@ -47,7 +47,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   
   console.log('🎯 Modal opened:', {
     mode: isEditMode ? 'EDIT' : 'CREATE',
-    employee: employee ? `${employee.first_name} ${employee.last_name}` : 'none'
+    employee: employee ? `${employee.first_name} ${employee.id}` : 'none'
   });
 
   // ✅ États simplifiés
@@ -118,59 +118,6 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     loadData();
   }, [isOpen, employee]); // Dépendances simplifiées
 
-  // ✅ Soumission simplifiée
-//  const handleSubmit = async () => {
-//   setIsSubmitting(true);
-//   setApiError(null);
-//   try {
-//     if (isEditMode && employee?.id) {
-//       // user payload (uniquement champs modifiés)
-//       const userPayload: any = {};
-//       if (formData.user.username && formData.user.username !== employee.user?.username) {
-//         userPayload.username = formData.user.username;
-//       }
-//       if (formData.user.email && formData.user.email !== employee.user?.email) {
-//         userPayload.email = formData.user.email;
-//       }
-//       if (!keepCurrentPassword) {
-//         if (formData.user.password) userPayload.password = formData.user.password;
-//         if (formData.user.confirm_password) userPayload.confirm_password = formData.user.confirm_password;
-//       }
-
-//       const payload = {
-//         first_name: formData.first_name,
-//         last_name: formData.last_name,
-//         date_of_birth: formData.date_of_birth,
-//         phone_number: formData.phone_number,
-//         address: formData.address,
-//         gender: formData.gender,
-//         payment_ref: formData.payment_ref,
-//         branch: formData.branch,
-//         posts: formData.posts,
-//         user: userPayload,
-//       };
-
-//       // ⚠️ si l’API attend une string: String(employee.id)
-//       const updated = await putEmployeeMultipart(String(employee.id), payload, {
-//         withPassword: !keepCurrentPassword,
-//       });
-
-//       onSuccess(updated);        // ← une seule fois, avec l’EmployeeData
-//       onClose();
-//       return;
-//     }
-
-//     // CREATE
-//     const created = await createEmployee(formData); // doit retourner l'EmployeeData
-//     onSuccess(created);          // ← toujours avec l’objet
-//     onClose();
-
-//   } catch (err: any) {
-//     setApiError(`Error ${isEditMode ? 'updating' : 'creating'} employee: ${err.message || 'Unknown error'}`);
-//   } finally {
-//     setIsSubmitting(false);
-//   }
-// };
 const handleSubmit = async () => {
   setIsSubmitting(true);
   setApiError(null);
@@ -285,16 +232,41 @@ const handleSubmit = async () => {
       onClose={onClose} 
       size="5xl" 
       scrollBehavior="inside"
-      backdrop="blur"
+      backdrop="opaque"
       classNames={{
-        base: "max-h-[95vh]",
+        // base: "max-h-[95vh]",
         wrapper: "z-[9999]",
-        backdrop: "z-[9998]",
-        body: "overflow-y-auto max-h-[85vh] px-6"
+        // backdrop: "z-[9998]",
+        body: "overflow-y-auto max-h-[85vh] px-6",
+         backdrop: "bg-[#292f46]/50 backdrop-opacity-40 z-[9998]",
+          base: "border-gray-300 bg-[#fff] dark:bg-[#19172c] text-[#a8b0d3] max-h-[95vh]",
+          header: "border-b-[1px] border-gray-300",
+          footer: "border-t-[1px] border-gray-300",
+
       }}
+      motionProps={{
+          variants: {
+            enter: {
+              y: 0,
+              opacity: 1,
+              transition: {
+                duration: 0.3,
+                ease: "easeOut",
+              },
+            },
+            exit: {
+              y: -20,
+              opacity: 0,
+              transition: {
+                duration: 0.2,
+                ease: "easeIn",
+              },
+            },
+          },
+        }}
     >
       <ModalContent>
-        <ModalHeader className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white">
+        <ModalHeader className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white">
           {/* Avatar/Icon */}
           {isEditMode && employee ? (
             <UserAvatar user={employee} size="sm" type="employee" />

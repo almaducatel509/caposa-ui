@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, ShieldCheck, TrendingUp, Users, PiggyBank } from 'lucide-react';
 import Link from 'next/link';
 import AxiosInstance from './lib/axiosInstance';
-import { button } from '@nextui-org/react';
 
 function verifyData() {
   AxiosInstance.get('/branches')
@@ -22,8 +21,6 @@ function verifyData() {
 export default function Page() {
   const [mounted, setMounted] = useState(false);
 
-
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -31,7 +28,7 @@ export default function Page() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-emerald-50 via-white to-green-50 flex flex-col">
       {/* Header Bar */}
       <div className="w-full bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -76,7 +73,7 @@ export default function Page() {
               {/* Features */}
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
@@ -85,7 +82,7 @@ export default function Page() {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
                     <TrendingUp className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
@@ -94,7 +91,7 @@ export default function Page() {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
                     <Users className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
@@ -127,7 +124,6 @@ export default function Page() {
               <div className="aspect-square bg-gradient-to-br from-emerald-100 to-green-100 rounded-2xl flex items-center justify-center">
                 <PiggyBank className="w-32 h-32 text-emerald-600" />
               </div>
-              
             </div>
           </div>
         </div>

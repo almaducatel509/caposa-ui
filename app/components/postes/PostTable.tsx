@@ -7,7 +7,7 @@ import {
   Chip,
   Tooltip,
   Input,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { LuPlus } from "react-icons/lu";
 import { FiSearch } from "react-icons/fi";
 import { TfiExport, TfiImport } from 'react-icons/tfi';
@@ -163,7 +163,6 @@ export default function PostTable({ postes, onRefresh }: {
           </div>
         </CardBody>
       </Card>
-
       {/* Grille de postes */}
       {filteredItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -252,7 +251,7 @@ export default function PostTable({ postes, onRefresh }: {
         </div>
       ) : (
         /* État vide */
-        <Card className="shadow-md border border-gray-100">
+        (<Card className="shadow-md border border-gray-100">
           <CardBody className="p-12 text-center">
             <div className="space-y-4">
               <div className="text-6xl">🏷️</div>
@@ -289,9 +288,8 @@ export default function PostTable({ postes, onRefresh }: {
               </div>
             </div>
           </CardBody>
-        </Card>
+        </Card>)
       )}
-
       {/* Modals */}
       {showCreateModal && (
         <CreatePostModal
@@ -300,7 +298,6 @@ export default function PostTable({ postes, onRefresh }: {
           onSuccess={handleSuccess}
         />
       )}
-
       {showEditModal && selectedPost && (
         <EditPostModal
           isOpen={showEditModal}
@@ -309,7 +306,6 @@ export default function PostTable({ postes, onRefresh }: {
           post={selectedPost}
         />
       )}
-
       {showDeleteModal && selectedPost && (
         <DeletePostModal
           isOpen={showDeleteModal}

@@ -54,7 +54,7 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
 
     return matchesSearch && matchesType && matchesStatus && matchesDate();
   });
-
+  
   // Gestionnaires d'événements
   const handleView = (transaction: TransactionData) => {
     console.log('👁️ Voir transaction:', transaction);
@@ -81,7 +81,7 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
       <div className="text-center py-16">
         {transactions.length === 0 ? (
           // Cas où il n'y a aucune transaction dans la base de données
-          <>
+          <div>
             <span className="text-8xl mb-6 block">💰</span>
             <h3 className="text-2xl font-medium text-gray-900 mb-3">
               Aucune transaction enregistrée
@@ -113,10 +113,10 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
                 </div>
               </div>
             </div>
-          </>
+          </div>
         ) : (
           // Cas où la recherche/filtre ne donne aucun résultat
-          <>
+          <div>
             <span className="text-6xl mb-4 block">🔍</span>
             <h3 className="text-xl font-medium text-gray-900 mb-2">
               Aucune transaction trouvée
@@ -133,7 +133,7 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
                 <li>• Supprimez certains filtres</li>
               </ul>
             </div>
-          </>
+          </div>
         )}
       </div>
     );

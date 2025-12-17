@@ -1,5 +1,5 @@
 import React from 'react';
-import { Input, Select, SelectItem, Chip, Button } from "@nextui-org/react";
+import { Input, Select, SelectItem, Chip, Button } from "@heroui/react";
 import { FaPlus } from "react-icons/fa6";
 import { FiSearch } from 'react-icons/fi';
 import { CiExport } from "react-icons/ci";

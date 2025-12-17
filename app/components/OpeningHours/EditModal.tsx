@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, Button } from '@nextui-org/react';
+import { Modal, ModalContent, ModalHeader, ModalBody, Button } from "@heroui/react";
 import RegisterForm from './register_form';
 import { OpeningHrs } from '@/app/dashboard/opening_hours/columns';
 

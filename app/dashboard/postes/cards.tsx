@@ -1,5 +1,5 @@
 import React from "react";
-import {Card, CardHeader, CardBody, CardFooter, Avatar, Button} from "@nextui-org/react";
+import {Card, CardHeader, CardBody, CardFooter, Avatar, Button} from "@heroui/react";
 
 export default function App() {
   const [isFollowed, setIsFollowed] = React.useState(false);

@@ -9,7 +9,7 @@ import {
   Card,
   CardBody,
   Divider
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { parseDate } from "@internationalized/date";
 import { BranchData, OpeningHour, Holiday, ErrorMessages } from "./validations";
 import { appConfig } from "@/config/appConfig";

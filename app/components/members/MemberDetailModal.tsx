@@ -10,7 +10,7 @@ import {
   Button,
   Chip,
   Divider,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import {
   FaUser,
   FaPhone,
@@ -147,7 +147,7 @@ const age = member.date_of_birthday ? calculateAge(member.date_of_birthday) : nu
                 <FaIdCard className="text-gray-400 mt-1" />
                 <div>
                   <p className="text-sm text-gray-600">ID Membre</p>
-                  <p className="font-medium text-xs">{member.id}</p>
+                  <p className="font-medium text-xs">{member.id_member}</p>
                 </div>
               </div>
             </div>

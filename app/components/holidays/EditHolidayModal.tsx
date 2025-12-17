@@ -9,7 +9,7 @@ import {
   ModalFooter, 
   Button, 
   Input 
-} from '@nextui-org/react';
+} from "@heroui/react";
 import { FaCalendarAlt } from 'react-icons/fa';
 import { HolidayData } from './validations'; // ✅ Utilise HolidayData au lieu de HolidayDataBase
 // import { updateHoliday } from '@/api/holidays'; // à décommenter si tu as une fonction API

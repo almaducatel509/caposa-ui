@@ -4,52 +4,84 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GrPower } from 'react-icons/gr';
 import { GiReceiveMoney } from 'react-icons/gi';
-import NavLinks from '@/app/components/dashboard/nav-link';
+import NavLinks from '@/app/components/dashboard/Navlink';
+import { Avatar } from "@heroui/react";
 
 export default function SideNav() {
   const router = useRouter();
 
   const handleLogout = () => {
-    // ✅ Remove authentication data
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     
-    // ✅ Optional: clear cookies if used
     document.cookie.split(';').forEach((c) => {
       document.cookie = c
         .replace(/^ +/, '')
         .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
     });
 
-    // ✅ Redirect to presentation page
     router.push('/');
   };
 
+  // 🧑 Données utilisateur (remplacer par vos vraies données de session)
+  const currentUser = {
+    name: "Jean Dupont",
+    email: "jean@caisse.com",
+    avatar: "https://i.pravatar.cc/150?img=12",
+    role: "Admin"
+  };
+
   return (
-    <div className="flex h-full flex-col px-3 py-4 md:px-2 bg-white shadow-inner">
+    <div className="flex h-full flex-col bg-gray-50 relative z-50">
+      {/* Logo Header */}
       <Link
-        className="mb-2 flex h-20 items-end justify-start rounded-md bg-green-600 p-4 md:h-40"
+        className="mb-2 flex h-16 items-center justify-center bg-green-600 p-4 shrink-0"
         href="/"
       >
-        <div className="w-32 text-red-200 md:w-40">
-          <GiReceiveMoney />
+        <div className="w-12 text-white">
+          <GiReceiveMoney className="w-full h-full" />
         </div>
+        <span className="ml-3 text-white text-xl font-bold hidden md:block">OripioFin</span>
       </Link>
 
-      <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-2">
+      {/* Scrollable Menu Area */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
         <NavLinks />
+      </div>
 
-        <div className="hidden h-auto w-full grow rounded-md bg-white md:block"></div>
+      {/* Bottom Section: User Profile + Logout */}
+      <div className="shrink-0 border-t border-gray-200 bg-white">
+        {/* User Profile */}
+        <div className="p-3 border-b border-gray-100">
+          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+            <Avatar 
+              src={currentUser.avatar}
+              name={currentUser.name}
+              className="w-10 h-10 shrink-0"
+              showFallback
+            />
+            <div className="hidden md:block flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {currentUser.name}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {currentUser.email}
+              </p>
+            </div>
+          </div>
+        </div>
 
-        {/* ✅ Logout button */}
-        <button
-          onClick={handleLogout}
-          className="flex h-[48px] w-full grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-red-100 hover:text-red-600 md:flex-none md:justify-start md:p-2 md:px-3 transition"
-        >
-          <GrPower className="w-6" />
-          <span className="hidden md:block">Sign Out</span>
-        </button>
+        {/* Logout Button */}
+        <div className="p-3">
+          <button
+            onClick={handleLogout}
+            className="flex h-11 w-full items-center justify-center gap-3 rounded-md bg-white border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 md:justify-start transition-all"
+          >
+            <GrPower className="w-5 h-5" />
+            <span className="hidden md:block">Déconnexion</span>
+          </button>
+        </div>
       </div>
     </div>
   );

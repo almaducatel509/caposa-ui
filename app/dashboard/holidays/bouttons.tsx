@@ -1,4 +1,4 @@
-import {Link, Button} from "@nextui-org/react";
+import {Link, Button} from "@heroui/react";
 import { HiOutlineCalendar } from "react-icons/hi";
 import { HiPencil } from "react-icons/hi2";
 import { FaRegTrashAlt } from "react-icons/fa";

@@ -1,3 +1,9 @@
+import ModalTest from "@/app/components/achives/test";
+
 export default function Page() {
-    return <div><p>Archive Page</p></div>;
+    return (
+    <div>
+      <ModalTest />
+    </div>
+    );
   }

@@ -8,7 +8,7 @@ import {
   ModalBody,
   ModalFooter,
   Button
-} from '@nextui-org/react';
+} from "@heroui/react";
 import { FaUserTimes, FaExclamationTriangle } from 'react-icons/fa';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { MemberData } from './validations';
@@ -31,7 +31,7 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
   const [apiError, setApiError] = useState<string | null>(null);
 
   const handleDelete = async () => {
-    if (!member.id) {
+    if (!member.id_member) {
       setApiError("ID du membre manquant");
       return;
     }
@@ -40,7 +40,7 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
     setApiError(null);
 
     try {
-      const idStr = String(member.id);
+      const idStr = String(member.id_member);
       await deleteMember(idStr);
       onSuccess();
       onClose();
@@ -108,7 +108,7 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
                   <div className="text-xs text-red-600 mt-2 space-y-1">
                     <div>Téléphone: {member.phone_number}</div>
                     <div>Ville: {member.city}</div>
-                    <div>ID: {String(member.id).substring(0, 16)}...</div>
+                    <div>ID: {String(member.id_member).substring(0, 16)}...</div>
                   </div>
                 </div>
               </div>
@@ -116,8 +116,7 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
 
             <div className="p-3 bg-gray-100 border border-gray-200 rounded">
               <p className="text-sm text-gray-700">
-                ⚠️ Cette opération est définitive. Assurez-vous d’avoir sauvegardé toutes les informations nécessaires avant de continuer.
-              </p>
+on en va pas effacer mais achiver verrifier que les sold sont a 0 que les compte sont ferme avan   </p>
             </div>
           </div>
         </ModalBody>

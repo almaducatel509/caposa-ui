@@ -5,7 +5,7 @@ import {
   Select,
   SelectItem,
   Chip,
-} from '@nextui-org/react';
+} from "@heroui/react";
 import { FiSearch } from 'react-icons/fi';
 import { FaPlus } from 'react-icons/fa6';
 import { CiExport } from "react-icons/ci";

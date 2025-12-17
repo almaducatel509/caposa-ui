@@ -19,6 +19,7 @@ export default async function  Home() {
     <Suspense fallback={
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin h-6 w-6" />
+        //loader https://www.npmjs.com/package/ng-loading-bar
       </div>
     }>
       <LoginForm />

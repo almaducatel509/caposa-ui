@@ -10,7 +10,7 @@ import {
   Button,
   Chip,
   Divider,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { 
   FaUser, 
   FaPhone, 
@@ -30,7 +30,7 @@ import { EmployeeData, formatGender, getEmployeeStatus } from './validations';
 interface EmployeeDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  employee: EmployeeData;
+  employee: EmployeeData | null; // ← Accepte null
   onEdit: () => void;
 }
 
@@ -40,6 +40,11 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   employee,
   onEdit
 }) => {
+  // ⚠️ PROTECTION OBLIGATOIRE - À ajouter ici
+  if (!employee) return null;
+
+  // ✅ À partir d'ici, TypeScript sait que employee n'est plus null
+  
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'active':
@@ -80,14 +85,53 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   };
 
   return (
+    // <Modal 
+    //   isOpen={isOpen} 
+    //   onClose={onClose} 
+    //   size="2xl"
+    //   scrollBehavior="inside"
+    // >
     <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      size="2xl"
-      scrollBehavior="inside"
-    >
+          isDismissable={false}
+          isOpen={isOpen} 
+          onClose={onClose} 
+          size="5xl" 
+          scrollBehavior="inside"
+          backdrop="opaque"
+          classNames={{
+            // base: "max-h-[95vh]",
+            wrapper: "z-[9999]",
+            // backdrop: "z-[9998]",
+            body: "overflow-y-auto max-h-[85vh] px-6",
+             backdrop: "bg-[#292f46]/50 backdrop-opacity-40 z-[9998]",
+              base: "border-gray-300 bg-[#fff] dark:bg-[#19172c] text-[#a8b0d3] max-h-[95vh]",
+              header: "border-b-[1px] border-gray-300",
+              footer: "border-t-[1px] border-gray-300",
+    
+          }}
+          motionProps={{
+              variants: {
+                enter: {
+                  y: 0,
+                  opacity: 1,
+                  transition: {
+                    duration: 0.3,
+                    ease: "easeOut",
+                  },
+                },
+                exit: {
+                  y: -20,
+                  opacity: 0,
+                  transition: {
+                    duration: 0.2,
+                    ease: "easeIn",
+                  },
+                },
+              },
+            }}
+        >
       <ModalContent>
-        <ModalHeader className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white p-6">
+        <ModalHeader className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white p-6">
           <UserAvatar
             user={employee}
             size="xl"
@@ -249,6 +293,7 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           </div>
 
           <Divider />
+
           {/* Système */}
           <div className="mt-6">
             <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">

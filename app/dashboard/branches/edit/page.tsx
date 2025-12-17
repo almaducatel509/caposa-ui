@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { branchSchema, BranchData, ErrorMessages } from '@/app/components/branches/validations';
 import { getBranchById, updateBranch } from '@/app/lib/api/branche';
-import { Button, Input, Textarea } from "@nextui-org/react";
+import { Button, Input, Textarea } from "@heroui/react";
 
 const EditBranch = ({ branchId }: { branchId: string }) => {
   const [formData, setFormData] = useState<BranchData>({

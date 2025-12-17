@@ -9,7 +9,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaEdit, FaPlus } from "react-icons/fa";
 import { BranchData, OpeningHour, Holiday, ErrorMessages, branchSchema } from "./validations";
 import { fetchOpeningHours, fetchHolidays, updateBranch, createBranch, fetchBranches, getBranchById } from "@/app/lib/api/branche";

@@ -9,9 +9,9 @@ import {
   ModalFooter,
   Button,
   useDisclosure,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { OpeningHours, openingHoursSchema, ErrorMessages, } from './validations';
-import { TimeInput } from "@nextui-org/react";
+import { TimeInput } from "@heroui/react";
 import { createOpeningHours } from '@/app/lib/api/opening_hour';
 import { useRouter } from "next/navigation"; 
 import axios from "axios";

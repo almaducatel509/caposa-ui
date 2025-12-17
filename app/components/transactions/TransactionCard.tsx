@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Button, Chip } from "@nextui-org/react";
+import { Button, Chip } from "@heroui/react";
 import { TransactionData } from './types';
 import { FaEye, FaEdit, FaTrash, FaClock, FaCheckCircle, FaTimesCircle, FaBolt } from "react-icons/fa";
 

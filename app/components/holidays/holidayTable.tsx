@@ -9,7 +9,7 @@ import {
   Avatar,
   Tooltip,
   Divider
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaCalendarAlt, FaEdit, FaTrash } from "react-icons/fa";
 import { BsCalendar2Event } from "react-icons/bs";
 import { FaCalendarDays } from 'react-icons/fa6';

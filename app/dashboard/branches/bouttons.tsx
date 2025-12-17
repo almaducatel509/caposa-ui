@@ -1,7 +1,7 @@
 import { HiOutlineLocationMarker   } from "react-icons/hi";
 import { HiPencil } from "react-icons/hi2";
 import { FaRegTrashAlt } from "react-icons/fa";
-import {Link, Button} from "@nextui-org/react";
+import {Link, Button} from "@heroui/react";
 
 
 export function CreateBranche() {

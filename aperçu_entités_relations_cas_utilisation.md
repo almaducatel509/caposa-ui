@@ -33,6 +33,11 @@
   - `employee_id` peut être lié à la table `Employee`.
   - `account_number` pourrait être référencé dans `Transaction`, `Loan`, et `Treasury`.
 - **Cas d'utilisation**: Utilisé pour gérer les soldes de comptes, les types de comptes, et les informations de sécurité financière.
+id | type_compte | taux_interet | frais_service_mensuel | limite_trait
+---------------------------------------------------------------
+ 1 | epargne     | 2.5          | 0.00                  | null
+ 2 | cheques     | null         | 5.00                  | 1000
+ 3 | terme       | 3.0          | 0.00                  | null
 
 ## Employee
 - **Description**: Représente un employé, incluant des informations personnelles et professionnelles.
@@ -40,13 +45,119 @@
   - `employee_id` est lié aux tables `Account`, `Branch`, `Treasury`, et `Analysis`, 'transaction'.
 - **Cas d'utilisation**: Utilisé pour la gestion des employés et leurs rôles dans diverses transactions.
 
-## Payment
-- **Description**: Enregistre les paiements effectués au sein du système, reliant les transactions et les comptes.
-- **Relations**:
-  - `member_id` est lié à `Member`.
-  - `transaction_id` est lié à `Transaction`. Le paiement est lié à une transaction particulière.
-  - `account_id` est lié à `Account`.
-- **Cas d'utilisation**: Utilisé pour suivre les enregistrements de paiements liés aux transactions et aux comptes.
+## Loan
+- **Description** : Représente les prêts contractés par les membres, y compris les détails tels que le type de prêt, le montant et les conditions.
+
+Relations :
+
+member_id est lié à la table Member.
+
+loan_id est utilisé dans la table Treasury.
+
+guarantor_account_id : le prêt peut être garanti par un autre compte.
+
+employee_id : l’employé associé au prêt est identifié.
+
+disbursement_date : représente la date à laquelle les fonds du prêt sont effectivement versés au bénéficiaire.
+
+Permet de suivre précisément quand les fonds ont été débloqués.
+
+Aide à gérer les flux de trésorerie et à s’assurer que les fonds sont disponibles à la date prévue.
+
+Crucial pour la conformité aux politiques internes et réglementations.
+
+Utile pour planifier les besoins en liquidités et prévoir les sorties de fonds.
+
+- **Cas d'utilisation** : Utilisé pour suivre les détails des prêts, y compris les remboursements et les statuts.
+
+- ## Dépôt
+Description : Mouvement entrant où un membre verse de l’argent dans son compte au sein de l’institution.
+
+Relations :
+
+transaction_id est lié à Transaction.
+
+member_id identifie le membre qui effectue le dépôt.
+
+account_number identifie le compte crédité.
+
+employee_id identifie l’employé qui enregistre ou valide le dépôt.
+
+Champs spécifiques :
+
+deposit_type : espèce, chèque, virement, mobile.
+
+reference_code : numéro de reçu ou justificatif.
+
+Cas d’utilisation :
+
+Créditer un compte membre.
+
+Enregistrer les dépôts en espèces ou par chèque.
+
+Générer un reçu ou rapport de dépôt.
+
+Permettre l’impression, la modification ou l’annulation du dépôt.
+
+- ## Retrait
+Description : Mouvement sortant où un membre retire de l’argent de son compte.
+
+Relations :
+
+transaction_id est lié à Transaction.
+
+member_id identifie le membre qui effectue le retrait.
+
+account_number identifie le compte débité.
+
+employee_id identifie l’employé responsable du retrait.
+
+Champs spécifiques :
+
+withdrawal_method : espèces, virement, mobile.
+
+authorization_code : code de sécurité ou validation.
+
+- **Cas d’utilisation** :
+
+Débiter un compte membre.
+
+Suivre les retraits en espèces ou par virement.
+
+Gérer les limites de retrait et les validations.
+
+Fournir un rapport ou reçu de retrait.
+
+- ## Transfert
+Description : Mouvement interne ou externe entre deux comptes, appartenant au même membre ou à des membres différents.
+
+Relations :
+
+transaction_id est lié à Transaction.
+
+member_id identifie le membre initiateur.
+
+source_account_number : compte débité.
+
+destination_account_number : compte crédité.
+
+employee_id identifie l’employé qui valide le transfert.
+
+Champs spécifiques :
+
+transfer_type : interne (entre comptes de la même institution) ou externe (vers une autre institution).
+
+transfer_reason : épargne, remboursement, don, etc.
+
+- **Cas d’utilisation** :
+
+Transférer des fonds entre comptes.
+
+Gérer les transferts garantissant un prêt.
+
+Suivre les transferts inter-membres ou inter-agences.
+
+Générer un rapport ou justificatif de transfert.
 
 ## Branch
 - **Description**: Représente une agence physique de l'organisation, incluant des informations sur la localisation et le personnel.

@@ -5,10 +5,10 @@ import {
   Textarea,
   DateInput,
   Chip
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { parseDate } from "@internationalized/date";
 import { appConfig } from "@/config/appConfig";
-import { Input } from "@nextui-org/input";
+import { Input } from "@heroui/input";
 // Vous pouvez importer vos types depuis le fichier de validation
 export interface Holiday {
   id?: string;

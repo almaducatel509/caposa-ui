@@ -8,17 +8,18 @@ import {
   ModalBody,
   ModalFooter,
   Button
-} from '@nextui-org/react';
+} from "@heroui/react";
 import { FaUserTimes, FaExclamationTriangle } from 'react-icons/fa';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { EmployeeData } from './validations';
 import { deleteEmployee } from '@/app/lib/api/employee';
 
+// ============= INTERFACE AVEC | null =============
 interface DeleteEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  employee: EmployeeData;
+  onSuccess: (deletedId?: string) => void; // ← Peut envoyer l'ID ou rien
+  employee: EmployeeData | null; // ← Accepte null
 }
 
 const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
@@ -27,6 +28,11 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
   onSuccess,
   employee
 }) => {
+  // ⚠️ PROTECTION OBLIGATOIRE contre null
+  if (!employee) return null;
+
+  // ✅ À partir d'ici, TypeScript sait que employee n'est plus null
+  
   const [isDeleting, setIsDeleting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -41,7 +47,7 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
 
     try {
       await deleteEmployee(employee.id);
-      onSuccess();
+      onSuccess(employee.id); // ← Envoie l'ID supprimé
       onClose();
     } catch (error: any) {
       console.error('Erreur lors de la suppression:', error);
@@ -57,17 +63,17 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
       size="md" 
       placement="center"
+      isDismissable={!isDeleting}
+      hideCloseButton={isDeleting}
     >
       <ModalContent>
-        <ModalHeader className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white">
+        <ModalHeader className="flex items-center gap-2 bg-linear-to-r from-red-500 to-red-600 text-white">
           <FaUserTimes />
           <div>
             <h3 className="text-lg font-bold">Supprimer l'employé</h3>
@@ -84,7 +90,7 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
 
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
-              <FaExclamationTriangle className="text-xl flex-shrink-0" />
+              <FaExclamationTriangle className="text-xl shrink-0" />
               <p className="text-sm">
                 Êtes-vous sûr de vouloir supprimer cet employé ? Toutes les données associées seront perdues.
               </p>
@@ -115,7 +121,7 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
 
             <div className="p-3 bg-gray-100 border border-gray-200 rounded">
               <p className="text-sm text-gray-700">
-                ⚠️ Cette opération est définitive. Assurez-vous d’avoir sauvegardé toutes les informations nécessaires avant de continuer.
+                ⚠️ Cette opération est définitive. Assurez-vous d'avoir sauvegardé toutes les informations nécessaires avant de continuer.
               </p>
             </div>
           </div>

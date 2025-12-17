@@ -14,7 +14,7 @@ import {
   Avatar,
   Divider,
   Spinner
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaUniversity } from "react-icons/fa";
 import { 
   FaBuilding, 

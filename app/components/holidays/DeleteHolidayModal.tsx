@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from '@nextui-org/react';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from "@heroui/react";
 import { FaCalendarAlt } from 'react-icons/fa';
 import { HolidayData } from './validations';
 // import { deleteHoliday } from '@/api/holidays'; // à activer si tu as une API

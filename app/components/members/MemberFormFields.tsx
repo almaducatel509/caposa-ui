@@ -18,7 +18,7 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
    // LEGACY / FUTURE CANDIDATES:
    // - department (use department_code instead)
    // - account_type
-   // - account_number
+   // - account_number is generated
    // - membership_tier
    // - income_source
    // - total_amount (read-only display, not a form input)
@@ -96,7 +96,7 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
   return (
     <div className="space-y-6">
  {/* Professional Progress Indicator */}
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+      <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium text-gray-700">
             Form Completion
@@ -107,7 +107,7 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
-            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
+            className="bg-linear-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
             style={{ width: `${completionPercentage}%` }}
           ></div>
         </div>
@@ -147,6 +147,7 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Ville *</label>
             <select
+              required
               value={formData.city}
               onChange={(e) => {
                 setFormData({ city: e.target.value });
@@ -231,10 +232,8 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
           If later you add member accounts to the UI form, prefer a dedicated
           sub-section (cards/list) instead of raw inputs:
 
-          - account_type: 'savings' | 'checking' | 'investment' | 'loan'
-          - account_number: string
-          - initial account deposit workflow → transactions module
-
+          - account_type: 'savings' | 'checking' ' '
+          
           And remember: the current API wants department NAME, not CODE.
           `toMemberApiPayload` already maps:
             department_code → department (human name)

@@ -1,5 +1,5 @@
 import { HiOutlineLocationMarker   } from "react-icons/hi";
-import {Link, Button} from "@nextui-org/react";
+import {Link, Button} from "@heroui/react";
 
 
 export function CreatePost({ onRefresh }: { onRefresh?: () => void }) {  return (

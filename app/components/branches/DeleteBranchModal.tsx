@@ -10,7 +10,7 @@ import {
   Button,
   Card,
   CardBody
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaRegTrashCan, FaBuilding } from "react-icons/fa6";
 import { MdLocationOn } from "react-icons/md";
 import { deleteBranch } from '@/app/lib/api/branche';

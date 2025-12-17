@@ -18,7 +18,7 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaArrowLeft, FaWallet, FaCreditCard, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaCalculator } from "react-icons/fa";
 
 // Types pour le formulaire de retrait

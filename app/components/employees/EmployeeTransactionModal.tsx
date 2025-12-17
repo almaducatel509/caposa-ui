@@ -15,7 +15,7 @@ import {
   Tabs,
   Card,
   CardBody
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaMoneyBillWave, FaHistory, FaFileInvoiceDollar, FaUserClock } from "react-icons/fa";
 import { BsArrowUpCircle, BsArrowDownCircle } from "react-icons/bs";
 
@@ -41,6 +41,7 @@ interface ActivityLog {
   modifiedBy: string;
 }
 
+// ============= INTERFACE AVEC | null =============
 interface EmployeeTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,7 +51,7 @@ interface EmployeeTransactionModalProps {
     last_name: string;
     photo_profil: string | null;
     payment_ref: string;
-  };
+  } | null; // ← Accepte null
 }
 
 // Données mockées
@@ -148,6 +149,11 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
   onClose,
   employee
 }) => {
+  // ⚠️ PROTECTION OBLIGATOIRE contre null
+  if (!employee) return null;
+
+  // ✅ À partir d'ici, TypeScript sait que employee n'est plus null
+  
   const [selectedTab, setSelectedTab] = useState("transactions");
   
   // Données mockées
@@ -210,7 +216,7 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
       scrollBehavior="inside"
     >
       <ModalContent>
-        <ModalHeader className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white p-6">
+        <ModalHeader className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white p-6">
           <Avatar
             src={employee.photo_profil || undefined}
             name={`${employee.first_name} ${employee.last_name}`}
@@ -255,7 +261,7 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
             >
               <div className="space-y-3">
                 {transactions.map((transaction) => (
-                  <Card key={transaction.id} className="border-1 hover:shadow-md transition-shadow">
+                  <Card key={transaction.id} className="border hover:shadow-md transition-shadow">
                     <CardBody className="p-4">
                       <div className="flex items-start gap-3">
                         <div className="p-2 bg-gray-100 rounded-lg">
@@ -309,7 +315,7 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
             >
               <div className="space-y-3">
                 {activityLogs.map((log) => (
-                  <Card key={log.id} className="border-1">
+                  <Card key={log.id} className="border">
                     <CardBody className="p-4">
                       <div className="flex items-start gap-3">
                         <div className="p-2 bg-blue-100 rounded-lg">

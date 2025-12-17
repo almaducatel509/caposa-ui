@@ -1,10 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
+  --background-start-rgb: 225, 230, 240;
   --background-end-rgb: 255, 255, 255;
   --inter-font: 'Montserrat', sans-serif;
 }
@@ -13,26 +11,27 @@
   :root {
     --foreground-rgb: 255, 255, 255;
     --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-    ;
+    --background-end-rgb: 20, 20, 20;
   }
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-    font-size: 16px; /* Taille du texte principal */
-    color: #323743; 
+    to bottom,
+    transparent,
+    rgb(var(--background-end-rgb))
+  ) rgb(var(--background-start-rgb));
+  font-family: var(--inter-font);
+  font-size: 16px;
 }
-
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
 }
+/* 
+//🎉 Résumé problem de modal:
+Le changement dans globals.css (retirer overflow-x: hidden sur html) a résolu le problème pour TOUS les modals de ton application, pas seulement celui qu'on testait.
+Tu n'as donc PAS besoin de changer useDisclosure() en useState() dans tes autres modals - ils devraient tous fonctionner maintenant avec leur code actuel. */

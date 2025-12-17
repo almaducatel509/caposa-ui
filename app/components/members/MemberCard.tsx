@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { Card, CardBody, Chip, Button, Tooltip } from "@nextui-org/react";
-import { MemberData } from "./validations";
-import UserAvatar from "@/app/components/core/UserAvatar";
-import { FaEye, FaEdit, FaTrash, FaMoneyBillWave } from "react-icons/fa";
+import { Card, CardBody, Chip, Button, Avatar } from "@heroui/react";
+import { FaEye, FaEdit, FaTrash, FaMoneyBillWave, FaEnvelope, FaPhone, FaMapMarkerAlt, FaVenusMars, FaCalendar, FaCreditCard } from "react-icons/fa";
+import { formatGender, MemberData } from "./validations";
 
 interface MemberCardProps {
   member: MemberData;
@@ -24,120 +23,182 @@ const MemberCard: React.FC<MemberCardProps> = ({
   onDelete,
   onViewTransactions,
 }) => {
+  const fullName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Sans nom';
   const dob = member.date_of_birthday || member.date_of_birth;
   const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : null;
+  const firstAccount = member.accounts?.[0];
+  const genderLabel = formatGender(member.gender);
 
-  const firstAccount = member.accounts?.[0]; // on montre juste le 1er pour garder le rendu léger
+  
 
+// Couleur du badge genre
+  const getGenderColor = (gender?: string) => {
+    switch (gender?.toUpperCase()) {
+      case 'M':
+      case 'MALE':
+        return 'bg-blue-100 text-blue-700';
+      case 'F':
+      case 'FEMALE':
+        return 'bg-pink-100 text-pink-700';
+      default:
+        return 'bg-purple-100 text-purple-700';
+    }
+  };
   return (
-    <Card className="border border-gray-200 hover:shadow-lg transition-all duration-300 min-h-[360px]">
-      <CardBody className="p-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <UserAvatar user={member} size="lg" type="member" />
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold capitalize text-lg text-gray-800 truncate leading-relaxed">
-              {safeString(member.first_name)} {safeString(member.last_name)}
-            </h3>
-            <p className="text-sm text-gray-500 truncate mt-1 capitalize">
-              {safeString("Membre")}
-            </p>
-            {age && (
-              <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
-                {age} ans
-              </p>
+    <Card 
+      className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-green-200 rounded-2xl overflow-hidden group"
+    >
+      <CardBody className="p-0">
+        {/* Header avec genre et status */}
+        <div className="relative bg-linear-to-br from-purple-50 to-pink-50 p-6 pb-16">
+          <div className="flex justify-between items-start mb-4">
+            {/* Badge Genre */}
+            {member.gender && (
+              <div className={`flex items-center gap-1.5 ${getGenderColor(member.gender)} backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm`}>
+                <FaVenusMars className="text-sm" />
+                <span className="text-xs font-semibold">{genderLabel}</span>
+              </div>
             )}
+          </div>
+
+          {/* Avatar centré */}
+          <div className="flex justify-center">
+            <Avatar
+              src={member.photo_profil || undefined}
+              alt={fullName}
+              className="w-24 h-24 border-4 border-white shadow-lg ring-2 ring-purple-100"
+              showFallback
+              name={fullName}
+            />
           </div>
         </div>
 
-        <hr className="border-gray-100" />
+        {/* Informations principales */} m pa
+        <div className="px-6 pt-4 pb-5 -mt-8 relative">
+          {/* Nom et âge */}
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1 capitalize">
+              {fullName}
+            </h3>
+          </div>
 
-        {/* Infos */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-2 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 w-16">📧</span>
-              <span className="text-gray-700 truncate">
-                {safeString(member.email ?? "")}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 w-16">📞</span>
-              <span className="text-gray-700">{safeString(member.phone_number)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 w-16">📍</span>
-              <span className="capitalize text-gray-700 truncate">
-                {safeString(member.city)}, {safeString(member.department)}
-              </span>
-            </div>
+          {/* Informations de contact */}
+          <div className="space-y-2.5 mb-4">
+            {member.email && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <FaEnvelope className="text-gray-400 shrink-0" />
+                <span className="truncate">{safeString(member.email)}</span>
+              </div>
+            )}
+            
+            {member.phone_number && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <FaPhone className="text-gray-400 shrink-0" />
+                <span>{safeString(member.phone_number)}</span>
+              </div>
+            )}
+            
+            {(member.city || member.department) && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <FaMapMarkerAlt className="text-gray-400 shrink-0" />
+                <span className="truncate capitalize">
+                  {safeString(member.city)}{member.city && member.department ? ', ' : ''}{safeString(member.department)}
+                </span>
+              </div>
+            )}
 
-            {/* 🏦 Compte — seulement si présent */}
+            {/* Compte bancaire */}
             {firstAccount && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400 w-16">🏦</span>
-                <span className="text-gray-700">
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <FaCreditCard className="text-gray-400 shrink-0" />
+                <span className="truncate">
                   {firstAccount.account_type} — {safeString(firstAccount.account_number)}
                 </span>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-          <Chip size="sm" color="success" variant="flat" className="text-xs">
-            Membre
-          </Chip>
+          {/* Divider */}
+          <div className="h-px bg-gray-200 my-4"></div>
 
-          <div className="flex gap-1">
-            <Tooltip content="Voir profil">
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                className="text-blue-600 hover:bg-blue-50"
-                onClick={() => onView(member)}
-              >
-                <FaEye className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Modifier">
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                className="text-orange-600 hover:bg-orange-50"
-                onClick={() => onEdit(member)}
-              >
-                <FaEdit className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Supprimer">
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                className="text-red-600 hover:bg-red-50"
-                onClick={() => onDelete(member)}
-              >
-                <FaTrash className="w-4 h-4" />
-              </Button>
-            </Tooltip>
+          {/* Actions buttons */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              size="sm"
+              variant="flat"
+              color="default"
+              className="flex-1 font-medium"
+              startContent={<FaCalendar className="text-sm" />}
+              onPress={() => onView(member)}
+            >
+              Profil
+            </Button>
+            
             {onViewTransactions && (
-              <Tooltip content="Transactions">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  className="text-green-600 hover:bg-green-50"
-                  onClick={() => onViewTransactions(member)}
-                >
-                  <FaMoneyBillWave className="w-4 h-4" />
-                </Button>
-              </Tooltip>
+              <Button
+                size="sm"
+                variant="flat"
+                color="success"
+                className="flex-1 font-medium"
+                startContent={<FaMoneyBillWave className="text-sm" />}
+                onPress={() => onViewTransactions(member)}
+              >
+                Transactions
+              </Button>
             )}
+          </div>
+
+          {/* Action icons */}
+          <div className="flex justify-center gap-2 pt-4 border-t border-gray-100">
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              color="primary"
+              onPress={() => onView(member)}
+              className="hover:bg-blue-50"
+              title="Voir les détails"
+            >
+              <FaEye className="text-base" />
+            </Button>
+            
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              color="warning"
+              onPress={() => onEdit(member)}
+              className="hover:bg-orange-50"
+              title="Modifier"
+            >
+              <FaEdit className="text-base" />
+            </Button>
+            
+            {onViewTransactions && (
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                color="secondary"
+                onPress={() => onViewTransactions(member)}
+                className="hover:bg-purple-50"
+                title="Voir les transactions"
+              >
+                <FaMoneyBillWave className="text-base" />
+              </Button>
+            )}
+            
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              color="danger"
+              onPress={() => onDelete(member)}
+              className="hover:bg-red-50"
+              title="Supprimer"
+            >
+              <FaTrash className="text-base" />
+            </Button>
           </div>
         </div>
       </CardBody>

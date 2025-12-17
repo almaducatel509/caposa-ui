@@ -15,7 +15,7 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { Post, postSchema } from "./validations";
 import { createPost } from "@/app/lib/api/post";
 import { useRouter } from "next/navigation";
@@ -190,6 +190,7 @@ const RegisterForm: React.FC<{ onRefresh?: () => void }> = ({ onRefresh }) => {
             <p className="text-sm text-gray-600 mb-4">
               Sélectionnez les opérations que ce poste est autorisé à effectuer :
             </p>
+            {/* ajout de plus de permissions */}
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Permission Dépôt */}

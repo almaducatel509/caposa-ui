@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Input, Button } from "@nextui-org/react";
+import { Input, Button } from "@heroui/react";
 import { FaSearch, FaFilter, FaCalendarAlt } from "react-icons/fa";
 
 interface TransactionFiltersProps {

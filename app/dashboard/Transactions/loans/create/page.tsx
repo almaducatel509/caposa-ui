@@ -1,12 +1,11 @@
-import LoanApplicationForm from "@/app/components/transactions/loans/LoanApplicationForm"
+import LoanApplicationForm from "@/app/components/transactions/loans/LoanFormFields"
 export default function PostForm() {
     return(
-    <main className="w-full bg-white">
-        <div className="text-2xl font-semibold">Create Post</div>
         <div className="bg-white mt-12">
+            <div className="text-2xl font-semibold">Create Post</div>
+
             <LoanApplicationForm />
         </div>   
-     </main>
 
     )
 }

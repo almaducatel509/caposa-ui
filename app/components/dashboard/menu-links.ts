@@ -1,0 +1,114 @@
+import {
+  AiOutlineHome, AiOutlineBranches
+} from "react-icons/ai";
+import {
+  HiOutlineUserGroup, HiOutlineDocumentDuplicate, HiOutlineChartBar
+} from "react-icons/hi2";
+import {
+  MdOutlineSupervisorAccount, MdOutlineHolidayVillage
+} from "react-icons/md";
+import {
+  GrTransaction, GrSchedule
+} from "react-icons/gr";
+import { TfiLayoutListPost } from "react-icons/tfi";
+import { LuFolderTree } from "react-icons/lu";
+import { TbBrandUbuntu } from "react-icons/tb";
+import { FaHandHoldingUsd, FaClipboardList, FaMoneyCheckAlt, FaExchangeAlt } from "react-icons/fa";
+import { GiTwoCoins, GiReceiveMoney, GiPayMoney, } from "react-icons/gi";
+import { RiDashboardLine, RiFileList3Line, RiBarChart2Line } from "react-icons/ri";
+import { BsFileEarmarkCheck, BsFileEarmarkBarGraph, BsShieldCheck } from "react-icons/bs";
+import { IconType } from "react-icons";
+import { PiVaultFill } from "react-icons/pi";
+import { FiSettings } from "react-icons/fi";
+
+
+interface SubLink {
+  name: string;
+  href: string;
+  icon?: IconType | string;
+  description?: string;
+}
+
+interface MainLink {
+  name: string;
+  href: string;
+  icon: IconType;
+  hasSubmenu?: boolean;
+  subLinks?: SubLink[];
+}
+
+export const links: MainLink[] = [
+  { name: 'Accueil', href: '/dashboard', icon: AiOutlineHome },
+
+  { name: 'Employés', href: '/dashboard/employees', icon: HiOutlineUserGroup },
+  { name: 'Membres', href: '/dashboard/members', icon: TbBrandUbuntu },
+
+  { name: 'Comptes', href: '/dashboard/accounts', icon: MdOutlineSupervisorAccount },
+
+  {
+    name: 'Transactions',
+    href: '/dashboard/transactions',
+    icon: GrTransaction,
+    hasSubmenu: true,
+    subLinks: [
+      { name: 'Toutes', href: '/dashboard/transactions', icon: FaClipboardList },
+      { name: 'Dépôts', href: '/dashboard/transactions/deposits', icon: GiReceiveMoney },
+      { name: 'Retraits', href: '/dashboard/transactions/withdrawals', icon: GiPayMoney },
+      { name: 'Transferts', href: '/dashboard/transactions/transfers', icon: FaExchangeAlt },
+    ],
+  },
+  {
+    name: 'Prêts',
+    href: '/dashboard/transactions/loans',
+    icon: FaHandHoldingUsd,
+    hasSubmenu: true,
+    subLinks: [
+      { name: 'Tous',    href: '/dashboard/transactions/loans', icon: FaClipboardList },
+      { name: 'Demandes', href: '/dashboard/transactions/loans/create', icon: FaMoneyCheckAlt },
+      { name: 'Actifs', href: '/dashboard/loans/active', icon: HiOutlineChartBar },
+    ],
+  },
+  {
+    name: 'Trésorerie',
+    href: '/dashboard/treasury',
+    icon: GiTwoCoins,
+    hasSubmenu: true,
+    subLinks: [
+      { name: "Vue d'ensemble", href: '/dashboard/treasury', icon: RiDashboardLine },
+      { name: 'Encaisse', href: '/dashboard/treasury/cash', icon: GiReceiveMoney },
+      { name: 'Coffre', href: '/dashboard/treasury/vault', icon: PiVaultFill },
+      { name: 'Réconciliation', href: '/dashboard/treasury/reconciliation', icon: RiFileList3Line },
+    ],
+  },
+  {
+    name: 'Analyse',
+    href: '/dashboard/analysis',
+    icon: HiOutlineChartBar,
+    hasSubmenu: true,
+    subLinks: [
+      { name: 'Dashboard', href: '/dashboard/analysis', icon: RiDashboardLine },
+      { name: 'KPIs', href: '/dashboard/analysis/kpis', icon: RiBarChart2Line },
+      { name: 'Performance', href: '/dashboard/analysis/performance', icon: HiOutlineChartBar },
+    ],
+  },
+  {
+    name: 'Rapports',
+    href: '/dashboard/reports',
+    icon: HiOutlineDocumentDuplicate,
+    hasSubmenu: true,
+    subLinks: [
+      { name: 'Réglementaires', href: '/dashboard/reports/regulatory', icon: BsFileEarmarkCheck },
+      { name: 'Financiers', href: '/dashboard/reports/financial', icon: BsFileEarmarkBarGraph },
+      { name: 'Audit', href: '/dashboard/reports/audit', icon: BsShieldCheck },
+    ],
+  },
+
+  { name: 'Horaires', href: '/dashboard/opening-hours', icon: GrSchedule },
+  { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
+  { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
+  { name: 'Jours Fériés', href: '/dashboard/holidays', icon: MdOutlineHolidayVillage },
+
+  { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
+  { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: FiSettings, }
+
+];

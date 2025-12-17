@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Button, Chip, Progress } from "@nextui-org/react";
+import { Button, Chip, Progress } from "@heroui/react";
 import { FaPlus, FaEye, FaDownload, FaCalendarAlt, FaCreditCard } from "react-icons/fa";
 
 // Types spécifiques aux prêts

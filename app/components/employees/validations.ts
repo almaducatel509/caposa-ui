@@ -49,7 +49,7 @@ export interface BranchDetails {
 export interface PostDetails {
   id: string;
   name: string;
-  post_name?: string;
+  post_name: string;
 
 }
 
@@ -64,6 +64,7 @@ export interface EmployeeData {
   date_of_birth?: string;
   address?: string;
   gender?: string;
+  posts_details?: PostData[]; // ✅ TOUJOURS pour l'affichage
   posts?: string[];
   photo_profil?: string | null;
   photo_url?: string | null;
@@ -75,7 +76,7 @@ export interface EmployeeData {
   role?: string;
   // Add missing properties for details
   branch_details?: BranchDetails;
-  posts_details?: PostDetails[];
+  // posts_details?: PostDetails[];
   name?: string; // ✅ Ajout pour la propriété enrichie
 
 }
@@ -112,6 +113,8 @@ export type EmployeeFormData = {
   branch: string;
   posts: string[];
   photo_profil?: File | string | null;
+  remove_photo?: boolean;
+
 };
 
 // Alternative flat form data structure for easier handling
@@ -182,7 +185,7 @@ export function employeeDataToFormData(employee: EmployeeData): EmployeeFormData
     gender: employee.gender || 'M',
     payment_ref: employee.payment_ref || '',
     branch: employee.branch || '',
-    posts: employee.posts || [],
+    posts: employee.posts_details?.map(p => p.id) || [], // ✅ IDs seulement
     photo_profil: employee.photo_profil || null,
   };
 }

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FaEdit, FaPlus } from "react-icons/fa";
 
 // ✅ Use the unified schema/types/helpers
@@ -98,8 +98,8 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
       // ✅ Build multipart FormData (includes photo if File is present)
       const fd = toMemberApiFormData(result.data, { includePhoto: true });
 
-      if (isEditMode && member?.id) {
-        await updateMember(member.id, fd); // PATCH/PUT in your API wrapper
+      if (isEditMode && member?.id_member) {
+        await updateMember(member.id_member, fd); // PATCH/PUT in your API wrapper
       } else {
         await createMember(fd);
       }

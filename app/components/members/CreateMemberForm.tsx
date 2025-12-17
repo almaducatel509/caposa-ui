@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button } from "@nextui-org/react";
+import { Button } from "@heroui/react";
 import { createMember } from "@/app/lib/api/members";
 import { memberUiSchema, type MemberUiForm, zodToFieldErrors, type FieldErrors, toMemberApiFormData } from "@/app/components/members/validations";
 
@@ -119,7 +119,6 @@ const CreateMemberForm: React.FC<CreateMemberFormProps> = ({ onSuccess, onCancel
           {successMessage}
         </div>
       )}
-
       {/* Infos perso */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Informations Personnelles</h3>
@@ -214,7 +213,6 @@ const CreateMemberForm: React.FC<CreateMemberFormProps> = ({ onSuccess, onCancel
           {renderError("address")}
         </div>
       </div>
-
       <div className="flex gap-4 justify-end pt-6 border-t">
         {onCancel && (
           <Button variant="light" onPress={onCancel} isDisabled={isSubmitting}>

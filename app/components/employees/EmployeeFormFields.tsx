@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 // Using your existing interfaces
 import { BranchData, PostData, EmployeeFormData, ErrorMessages } from './validations';
 import { EmailField } from './EmailField';
+import EmployeePhotoField from './EmployeePhotoField';
 
 const EmployeeFormFields: React.FC<{
   formData: EmployeeFormData;
@@ -115,7 +116,7 @@ const EmployeeFormFields: React.FC<{
   return (
     <div className="space-y-6">
       {/* Professional Progress Indicator */}
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+      <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium text-gray-700">
             Form Completion
@@ -126,7 +127,7 @@ const EmployeeFormFields: React.FC<{
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
-            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
+            className="bg-linear-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
             style={{ width: `${completionPercentage}%` }}
           ></div>
         </div>
@@ -167,7 +168,7 @@ const EmployeeFormFields: React.FC<{
             /* EDIT MODE: Professional Password Management with Choice */
             <div className="md:col-span-2 space-y-4">
               {/* Keep Current Password Checkbox */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <div className="bg-linear-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
                 <label className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -378,17 +379,25 @@ const EmployeeFormFields: React.FC<{
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Profile Photo
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
+            <EmployeePhotoField
+              value={formData.photo_profil}
+              isEditMode={isEditMode}
+              error={errors.photo_profil}
+              onChange={(file) =>
+                setFormData({
+                  photo_profil: file,
+                  remove_photo: false // reset si nouvelle photo
+                })
+              }
+              onRemove={() =>
+                setFormData({
+                  photo_profil: null,
+                  remove_photo: true // 🔥 envoyé à Django
+                })
+              }
             />
-            {errors.photo_profil && <p className="text-red-500 text-sm mt-1">{errors.photo_profil}</p>}
           </div>
+
         </div>
       </div>
 
@@ -457,7 +466,7 @@ const EmployeeFormFields: React.FC<{
 
       {/* Current Selections Summary */}
       {(formData.branch || (formData.posts && formData.posts.length > 0)) && (
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+        <div className="bg-linear-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
           <h4 className="font-medium text-green-800 mb-2 flex items-center">
             <span className="mr-2">✅</span> Work Assignment Summary
           </h4>

@@ -14,7 +14,7 @@ import {
   Card,
   CardBody,
   Chip,
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { FiEdit } from "react-icons/fi";
 import { Post, postSchema } from "./validations";
 import { updatePost } from "@/app/lib/api/post"; // Vous devez créer cette fonction
