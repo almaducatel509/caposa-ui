@@ -35,6 +35,7 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   totalCount,
   importLoading = false,
 }) => {
+  // Options de filtre par période
   const filterOptions = [
     { key: 'all', label: 'Tous', icon: FaFilter },
     { key: 'recent', label: 'Récents (30j)', icon: FaCalendarAlt },
@@ -42,6 +43,7 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
     { key: 'thisYear', label: 'Cette année', icon: FaCalendarAlt },
   ];
 
+  // Options de filtre par statut
   const statusOptions = [
     { key: 'all', label: 'Tous les statuts', color: 'default' },
     { key: 'active', label: 'Actifs', color: 'success' },
@@ -61,23 +63,53 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
     <div className="space-y-4">
       {/* Header avec recherche et actions principales */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        {/* Recherche */}
-        <div className="flex-1 w-full lg:max-w-xl">
-          <Input
-            isClearable
-            size="lg"
-            placeholder="Rechercher un membre par nom, email, téléphone..."
-            value={filterValue}
-            startContent={<FiSearch className="text-gray-400" size={20} />}
-            onClear={onClear}
-            onValueChange={onSearchChange}
-            classNames={{
-              base: "w-full",
-              inputWrapper: "bg-white shadow-sm border-2 border-transparent hover:border-purple-200 focus-within:border-purple-500 transition-colors h-12",
-              input: "text-sm"
-            }}
-          />
-        </div>
+        
+         <div className="relative w-full lg:max-w-xl">
+                  {/* Search icon (always visible) */}
+            <FiSearch
+              size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+  
+            {/* Input */}
+            <input
+              type="text"
+              value={filterValue}
+              placeholder="Rechercher un membre par nom, email, téléphone..."
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="
+                w-full h-12 pl-12 pr-12
+                rounded-xl text-sm
+                bg-white shadow-sm
+                border-2 border-transparent
+                hover:border-blue-200
+                focus:border-blue-500 focus:outline-none
+                transition-colors
+              "
+            />
+  
+            {/* Clear button (only when text exists) */}
+            {filterValue && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSearchChange("");
+                  onClear();
+                }}
+                className="
+                  absolute right-3 top-1/2 -translate-y-1/2
+                  p-1 rounded-md
+                  text-gray-400
+                  hover:text-gray-600
+                  hover:bg-gray-100
+                  transition
+                "
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
         {/* Actions */}
         <div className="flex gap-2 w-full lg:w-auto">
@@ -85,7 +117,15 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
             color="success"
             startContent={<FaPlus size={16} />}
             onPress={onAdd}
-            className="flex-1 lg:flex-none bg-linear-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6"
+            className="flex-1 lg:flex-none 
+              bg-linear-to-r from-green-600 to-green-700
+             text-white 
+              font-semibold 
+              shadow-lg 
+              hover:shadow-xl 
+              transition-all h-12 px-6
+              rounded-md
+            "
           >
             Ajouter
           </Button>
@@ -95,7 +135,16 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
             onPress={onImport}
             isLoading={importLoading}
             isDisabled={importLoading}
-            className="flex-1 lg:flex-none border-2 border-slate-300 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 transition-all"
+            className="rounded-md
+              flex-1 lg:flex-none 
+              border-2 
+              border-slate-300 
+              hover:border-slate-400 
+              hover:bg-slate-50 
+              font-medium 
+              h-12 
+              px-6 
+              transition-all"
           >
             {importLoading ? "Import..." : "Importer"}
           </Button>
@@ -103,7 +152,17 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
             variant="bordered"
             startContent={<FaDownload size={16} />}
             onPress={onExport}
-            className="flex-1 lg:flex-none border-2 border-green-600 text-green-600 hover:bg-green-50 font-medium h-12 px-6 transition-all"
+            className="              
+             rounded-md
+              flex-1 lg:flex-none 
+              border-2 
+              border-green-600
+              text-green-600 
+              hover:bg-green-50
+              font-medium 
+              h-12
+              px-6
+              transition-all"
           >
             Exporter
           </Button>
@@ -136,12 +195,12 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                 <Button
                   variant="flat"
                   size="md"
-                  startContent={<FaCalendarAlt className="text-purple-600" />}
+                  startContent={<FaCalendarAlt className="text-green-600" />}
                   endContent={<MdKeyboardArrowDown />}
-                  className={`${
+                  className={` bg-amber-300 ${
                     selectedFilter !== 'all' 
-                      ? 'bg-purple-100 border-2 border-purple-400 text-purple-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-purple-300'
+                      ? 'bg-green-700 border-2 rounded-md border-gray-400 text-green-700 font-semibold' 
+                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   } transition-all`}
                 >
                   {getFilterLabel()}
@@ -154,11 +213,13 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                   if (selected) onFilterChange(selected);
                 }}
                 selectionMode="single"
+                className='bg-white rounded-md'
+
               >
                 {filterOptions.map((option) => (
                   <DropdownItem 
                     key={option.key}
-                    startContent={<option.icon className="text-purple-600" />}
+                    startContent={<option.icon className="text-green-600" />}
                   >
                     {option.label}
                   </DropdownItem>
@@ -176,8 +237,8 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                   endContent={<MdKeyboardArrowDown />}
                   className={`${
                     selectedStatus !== 'all' 
-                      ? 'bg-green-100 border-2 border-green-400 text-green-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-green-300'
+                      ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
+                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   } transition-all`}
                 >
                   {getStatusLabel()}
@@ -190,9 +251,11 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                   if (selected) onStatusChange(selected);
                 }}
                 selectionMode="single"
+                className='bg-white rounded-md'
               >
                 {statusOptions.map((option) => (
                   <DropdownItem 
+                  className=' p-1.5'
                     key={option.key}
                     startContent={<FaCheckCircle className="text-green-600" />}
                   >

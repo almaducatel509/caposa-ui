@@ -50,17 +50,8 @@ const MemberCard: React.FC<MemberCardProps> = ({
     >
       <CardBody className="p-0">
         {/* Header avec genre et status */}
-        <div className="relative bg-linear-to-br from-purple-50 to-pink-50 p-6 pb-16">
-          <div className="flex justify-between items-start mb-4">
-            {/* Badge Genre */}
-            {member.gender && (
-              <div className={`flex items-center gap-1.5 ${getGenderColor(member.gender)} backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm`}>
-                <FaVenusMars className="text-sm" />
-                <span className="text-xs font-semibold">{genderLabel}</span>
-              </div>
-            )}
-          </div>
-
+        <div className="relative bg-linear-to-br from-purple-50 to-gray-200 p-6 pb-16">
+         
           {/* Avatar centré */}
           <div className="flex justify-center">
             <Avatar
@@ -73,7 +64,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
           </div>
         </div>
 
-        {/* Informations principales */} m pa
+        {/* Informations principales */}
         <div className="px-6 pt-4 pb-5 -mt-8 relative">
           {/* Nom et âge */}
           <div className="text-center mb-4">
@@ -88,9 +79,14 @@ const MemberCard: React.FC<MemberCardProps> = ({
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <FaEnvelope className="text-gray-400 shrink-0" />
                 <span className="truncate">{safeString(member.email)}</span>
+                <span className="text-red-800">email here</span>
               </div>
             )}
-            
+             <div className="flex items-center gap-2 text-xs text-gray-600">
+                <FaEnvelope className="text-gray-400 shrink-0" />
+                <span className="truncate">{safeString(member.email)}</span>
+                <span className="text-red-800">email null</span>
+              </div>
             {member.phone_number && (
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <FaPhone className="text-gray-400 shrink-0" />
@@ -112,7 +108,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <FaCreditCard className="text-gray-400 shrink-0" />
                 <span className="truncate">
-                  {firstAccount.account_type} — {safeString(firstAccount.account_number)}
+                  {safeString(firstAccount.account_number)}
                 </span>
               </div>
             )}
@@ -120,33 +116,6 @@ const MemberCard: React.FC<MemberCardProps> = ({
 
           {/* Divider */}
           <div className="h-px bg-gray-200 my-4"></div>
-
-          {/* Actions buttons */}
-          <div className="flex gap-2 mb-4">
-            <Button
-              size="sm"
-              variant="flat"
-              color="default"
-              className="flex-1 font-medium"
-              startContent={<FaCalendar className="text-sm" />}
-              onPress={() => onView(member)}
-            >
-              Profil
-            </Button>
-            
-            {onViewTransactions && (
-              <Button
-                size="sm"
-                variant="flat"
-                color="success"
-                className="flex-1 font-medium"
-                startContent={<FaMoneyBillWave className="text-sm" />}
-                onPress={() => onViewTransactions(member)}
-              >
-                Transactions
-              </Button>
-            )}
-          </div>
 
           {/* Action icons */}
           <div className="flex justify-center gap-2 pt-4 border-t border-gray-100">

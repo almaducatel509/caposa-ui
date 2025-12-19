@@ -75,21 +75,51 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
       {/* Header avec recherche et actions principales */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         {/* Recherche */}
-        <div className="flex-1 w-full lg:max-w-xl">
-          <Input
-            isClearable
-            size="lg"
-            placeholder="Rechercher un employé par nom, email, téléphone..."
-            value={filterValue}
-            startContent={<FiSearch className="text-gray-400" size={20} />}
-            onClear={onClear}
-            onValueChange={onSearchChange}
-            classNames={{
-              base: "w-full",
-              inputWrapper: "bg-white shadow-sm border-2 border-transparent hover:border-blue-200 focus-within:border-blue-500 transition-colors h-12",
-              input: "text-sm"
-            }}
+        <div className="relative w-full lg:max-w-xl">
+          {/* Search icon (always visible) */}
+          <FiSearch
+            size={20}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
           />
+
+          {/* Input */}
+          <input
+            type="text"
+            value={filterValue}
+            placeholder="Rechercher un employé par nom, email, téléphone..."
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="
+              w-full h-12 pl-12 pr-12
+              rounded-xl text-sm
+              bg-white shadow-sm
+              border-2 border-transparent
+              hover:border-blue-200
+              focus:border-blue-500 focus:outline-none
+              transition-colors
+            "
+          />
+
+          {/* Clear button (only when text exists) */}
+          {filterValue && (
+            <button
+              type="button"
+              onClick={() => {
+                onSearchChange("");
+                onClear();
+              }}
+              className="
+                absolute right-3 top-1/2 -translate-y-1/2
+                p-1 rounded-full
+                text-gray-400
+                hover:text-gray-600
+                hover:bg-gray-100
+                transition
+              "
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Actions */}
@@ -98,7 +128,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
             color="success"
             startContent={<FaPlus size={16} />}
             onPress={onAdd}
-            className="flex-1 lg:flex-none bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6"
+            className="flex-1 lg:flex-none bg-linear-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6"
           >
             Ajouter
           </Button>
@@ -124,7 +154,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
       </div>
 
       {/* Filtres avancés */}
-      <div className="bg-gradient-to-r from-blue-50 via-white to-indigo-50 rounded-xl p-4 shadow-sm border border-blue-100">
+      <div className="bg-linear-to-r from-blue-50 via-white to-indigo-50 rounded-xl p-4 shadow-sm border border-blue-100">
         <div className="flex flex-wrap items-center gap-3">
           {/* Badge nombre de résultats */}
           <div className="flex items-center gap-2">
@@ -149,12 +179,12 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                 <Button
                   variant="flat"
                   size="md"
-                  startContent={<FaCalendarAlt className="text-blue-600" />}
+                  startContent={<FaCalendarAlt className="text-green-600" />}
                   endContent={<MdKeyboardArrowDown />}
                   className={`${
                     selectedFilter !== 'all' 
-                      ? 'bg-blue-100 border-2 border-blue-400 text-blue-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-blue-300'
+                      ? 'bg-blue-100 border-2 border-gray-400 text-green-700 font-semibold' 
+                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   } transition-all`}
                 >
                   {getFilterLabel()}
@@ -167,11 +197,13 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                   if (selected) onFilterChange(selected);
                 }}
                 selectionMode="single"
+                className='bg-white rounded-md'
+
               >
                 {filterOptions.map((option) => (
                   <DropdownItem 
                     key={option.key}
-                    startContent={<option.icon className="text-blue-600" />}
+                    startContent={<option.icon className="text-blue-green" />}
                   >
                     {option.label}
                   </DropdownItem>
@@ -189,8 +221,8 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                   endContent={<MdKeyboardArrowDown />}
                   className={`${
                     selectedBranch !== 'all' 
-                      ? 'bg-indigo-100 border-2 border-indigo-400 text-green-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-indigo-300'
+                      ? 'bg-indigo-100 border-2 border-gray-400 text-green-700 font-semibold' 
+                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   } transition-all`}
                 >
                   {getBranchLabel()}
@@ -203,11 +235,13 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                   if (selected) onBranchChange(selected);
                 }}
                 selectionMode="single"
+                className='bg-white rounded-md'
+
               >
                 {branchOptions.map((option) => (
                   <DropdownItem 
                     key={option.key}
-                    startContent={<FaMapMarkerAlt className="text-indigo-600" />}
+                    startContent={<FaMapMarkerAlt className="text-green-600" />}
                   >
                     {option.label}
                   </DropdownItem>
@@ -225,8 +259,8 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                   endContent={<MdKeyboardArrowDown />}
                   className={`${
                     selectedStatus !== 'all' 
-                      ? 'bg-green-100 border-2 border-green-400 text-green-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-green-300'
+                      ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
+                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   } transition-all`}
                 >
                   {getStatusLabel()}
@@ -239,6 +273,8 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                   if (selected) onStatusChange(selected);
                 }}
                 selectionMode="single"
+                className='bg-white rounded-md'
+
               >
                 {statusOptions.map((option) => (
                   <DropdownItem 
