@@ -46,14 +46,10 @@ export default function HolidaysDashboard() {
   // }
 
   return (
-    <div className="w-full bg-white p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Jours fériés
-        </h1>
-      </div>
-
-      <HolidayCalendar holidays={holidays} />
+    <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
+      <div className="px-6 py-6">      
+      <HolidayCalendar  />
     </div>
+    </main>
   );
 }

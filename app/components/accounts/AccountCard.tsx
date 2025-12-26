@@ -101,10 +101,10 @@ const AccountCard: React.FC<AccountCardProps> = ({
         {/* Numéro de compte */}
         <div className="mb-4">
           <h3 className="text-lg font-bold text-[#2c2e2f] mb-1">
-            {account.noCompte || 'N/A'}
+            {account.account_number || 'N/A'}
           </h3>
           <p className="text-sm text-[#2c2e2f]/60">
-            {account.member_name || account.id_membre || 'Membre inconnu'}
+            {account.id_membre || account.id_membre || 'Membre inconnu'}
           </p>
         </div>
 

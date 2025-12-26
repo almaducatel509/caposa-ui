@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardBody, Button } from "@heroui/react";
-import { FaUsers } from "react-icons/fa6";
+import { FaUsers, FaUserTie } from "react-icons/fa6";
+import { LiaUserTieSolid } from "react-icons/lia";
 
 // Types et API
 import { fetchEmployees } from '@/app/lib/api/employee';
 import { fetchBranches } from '@/app/lib/api/branche';
 import { fetchPosts } from '@/app/lib/api/post';
+import PageHeader from '@/app/components/header';
 
 // Composants
 import EmployeeFilterBar from '@/app/components/employees/EmployeeFilterBar';
@@ -17,10 +19,14 @@ import EditEmployeeModal from '@/app/components/employees/EditEmployeeModal';
 import DeleteEmployeeModal from '@/app/components/employees/DeleteEmployeeModal';
 import EmployeeTransactionModal from '@/app/components/employees/EmployeeTransactionModal';
 import { BranchData, EmployeeData, PostData } from '@/app/components/employees/validations';
+import { PiUsersThin } from 'react-icons/pi';
 
 interface EmployeeGridProps {
   employees?: EmployeeData[];
   onSuccess?: () => void;
+  isLoading: boolean;
+  error: string | null;
+  onRetry?: () => void;
 }
 
 const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees, onSuccess: parentOnSuccess }) => {
@@ -65,7 +71,7 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
       setEmployees(existingEmployees);
     } catch (err) {
       console.error(err);
-      setError("Impossible de charger les données de l'employé.");
+      setError("Impossible de charger les employés.");
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +86,14 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
       loadEmployees();
     }
   }, [initialEmployees]);
+
+  const header = (
+    <PageHeader
+      title="Gestion des Employés"
+      subtitle="Gérez les employés, leurs rôles et affectations"
+      icon={<PiUsersThin   className="text-5xl " />}
+    />
+  );
 
   // Filtrage avancé
   const filteredEmployees = useMemo(() => {
@@ -174,9 +188,10 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-green-50/30 min-h-screen">
+      <div className="flex flex-col gap-6 p-6 min-h-screen">
+              {header}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <Card key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
               <CardBody className="p-6 space-y-4">
                 <div className="flex flex-col items-center">
@@ -198,7 +213,8 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-green-50/30 min-h-screen">
+    <div className="flex flex-col gap-6 p-6 ">
+      {header}
       {error && (
         <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
           <p className="text-red-700 font-medium">{error}</p>

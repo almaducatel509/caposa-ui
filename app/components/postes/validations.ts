@@ -12,4 +12,12 @@ export const postSchema = z.object({
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // Define the type for the Post interface
-export type Post = z.infer<typeof postSchema>;
+export type PostDataBase = z.infer<typeof postSchema>;
+export interface PostData{
+  id:string;
+  name:string;
+  description:string;
+  deposit:boolean;
+  withdrawal:boolean;
+  transfert:boolean;
+}

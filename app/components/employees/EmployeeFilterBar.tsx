@@ -138,7 +138,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
             onPress={onImport}
             isLoading={importLoading}
             isDisabled={importLoading}
-            className="flex-1 lg:flex-none border-2 border-slate-300 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 transition-all"
+            className="flex-1 lg:flex-none border-2 border-green-600 bg-white  text-green-600 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 transition-all"
           >
             {importLoading ? "Import..." : "Importer"}
           </Button>
@@ -146,7 +146,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
             variant="bordered"
             startContent={<FaDownload size={16} />}
             onPress={onExport}
-            className="flex-1 lg:flex-none border-2 border-green-600 text-green-600 hover:bg-blue-50 font-medium h-12 px-6 transition-all"
+            className="flex-1 lg:flex-none border-2 border-green-600 bg-white  text-green-600 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 transition-all"
           >
             Exporter
           </Button>

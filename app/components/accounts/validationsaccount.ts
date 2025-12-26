@@ -5,6 +5,8 @@ import { z } from 'zod';
 ========================================================= */
 
 export interface AccountData {
+  [x: string]: any;
+  limiteCredit: any;
   // ⬇️ Champs exacts de l'API
   id: string;
   account_number: string;         // ← API renvoie "account_number"

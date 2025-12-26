@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal,
   ModalContent,
@@ -13,9 +13,8 @@ import {
   Chip,
   Avatar,
   Divider,
-  Spinner
 } from "@heroui/react";
-import { FaUniversity } from "react-icons/fa";
+import { FaUniversity, FaCheckCircle, FaPlayCircle } from "react-icons/fa";
 import { 
   FaBuilding, 
   FaEdit, 
@@ -36,41 +35,38 @@ import { Holiday, OpeningHour } from './validations';
 import { appConfig } from '@/config/appConfig';
 
 interface BranchDetailsModalProps {
-  isOpen: boolean;                   // Modal ouvert/fermé
-  onClose: () => void;              // Fermer le modal
-  branch: Branch;                   // Données de la branche (jamais null)
-  onEdit?: (branch: Branch) => void;
-  openingHours?: OpeningHour[];  // ✅ Typé correctement maintenant
-  holidays?: Holiday[];             // Jours fériés déjà récupérés
-  isLoadingData?: boolean;        // 🆕 Ajoutez cette prop pour gérer le loading
-
+  isOpen: boolean;
+  onClose: () => void;
+  branch: Branch;
+onEdit?: (branch: Branch, mode: 'edit' | 'activate') => void;
+  openingHours?: OpeningHour[];
+  holidays?: Holiday[];
+  isLoadingData?: boolean;
 }
 
 const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
   isOpen,
   onClose,
   branch,
-  onEdit, //paramètre modifier
+  onEdit,
   openingHours = [],
   holidays: passedHolidays = [],
-  isLoadingData = false  // 
-
+  isLoadingData = false
 }) => {
-    // 🔍 DEBUG LOG
   console.log('🎯 BranchDetailsModal render:', {
     isOpen,
     branchName: branch?.branch_name,
+    branchStatus: branch?.status,
     openingHoursCount: openingHours.length,
     holidaysCount: passedHolidays.length,
     isLoadingData
   });
-// ❌ CONDITION 1: Si pas de branch, ne rien afficher
+
   if (!branch) {
     console.log('❌ Branch est null');
     return null;
   }
 
-  // ⏳ CONDITION 2: Si chargement, afficher loading simple
   if (isLoadingData || (!passedHolidays.length && !openingHours.length)) {
     console.log('⏳ Affichage loading');
     return (
@@ -92,27 +88,29 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
       </Modal>
     );
   }
-  // Utiliser useMemo pour éviter les boucles infinies
+
+  // 👇 NOUVEAU : Déterminer si la branche est active
+  const isActive = branch.status === 'active';
+  const hasConfiguration = branch.opening_hour && branch.holidays && Array.isArray(branch.holidays) && branch.holidays.length > 0;
+
   const displayHolidays = useMemo(() => {
-    if (!branch || !passedHolidays.length) return [];
+    const branchHolidays = branch?.holidays || [];
+    if (!branch || !passedHolidays.length || !Array.isArray(branchHolidays)) return [];
     return passedHolidays.filter(holiday => 
-      branch.holidays.includes(holiday.id)
+      branchHolidays.includes(holiday.id)
     );
   }, [branch?.holidays, passedHolidays]);
 
-  // Trouver les heures d'ouverture pour cette branche
   const branchOpeningHours = useMemo(() => {
     return openingHours.find(oh => oh.id === branch?.opening_hour);
   }, [openingHours, branch?.opening_hour]);
-  
-// Dans BranchDetailsModal, modifiez la logique :
-const openingHourDisplay = useMemo(() => {
+
+  const openingHourDisplay = useMemo(() => {
     if (branchOpeningHours?.schedule) {
       return branchOpeningHours.schedule;
     }
     return 'Heures non définies';
   }, [branchOpeningHours]);
-
 
   const totalStaff = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
   
@@ -125,23 +123,22 @@ const openingHourDisplay = useMemo(() => {
   const category = getBranchCategory();
 
   const formatDate = (dateString: string) => {
-  if (!dateString) return "Date inconnue";
-  try {
-    // Traiter différemment selon le format
-    const date = dateString.includes('T') 
-      ? new Date(dateString)  // Avec heure
-      : new Date(dateString + 'T12:00:00');  // Sans heure, ajouter midi local
-    
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric'
-    };
-    return date.toLocaleDateString(appConfig.dateFormat, options);
-  } catch (error) {
-    return dateString;
-  }
-};
+    if (!dateString) return "Date inconnue";
+    try {
+      const date = dateString.includes('T') 
+        ? new Date(dateString)
+        : new Date(dateString + 'T12:00:00');
+      
+      const options: Intl.DateTimeFormatOptions = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric'
+      };
+      return date.toLocaleDateString(appConfig.dateFormat, options);
+    } catch (error) {
+      return dateString;
+    }
+  };
 
   return (
     <Modal 
@@ -157,7 +154,7 @@ const openingHourDisplay = useMemo(() => {
     >
       <ModalContent>
         <ModalHeader 
-          className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white"
+          className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white"
         >
           <Avatar
             icon={<FaBuilding />}
@@ -166,13 +163,31 @@ const openingHourDisplay = useMemo(() => {
               icon: "text-white"
             }}
           />
-          <div>
+          <div className="flex-1">
             <h3 className="text-xl font-bold">{branch.branch_name}</h3>
             <p className="text-sm opacity-90">Détails complets de la branche</p>
           </div>
-          <div className="ml-auto">
+          <div className="flex items-center gap-2">
+            {/* 👇 NOUVEAU : Badge de statut */}
+            {isActive ? (
+              <Chip 
+                startContent={<FaCheckCircle />}
+                className="bg-green-500 text-white border border-white/30"
+                size="sm"
+              >
+                Active
+              </Chip>
+            ) : (
+              <Chip 
+                startContent={<FaPlayCircle />}
+                className="bg-orange-500 text-white border border-white/30"
+                size="sm"
+              >
+                Inactive
+              </Chip>
+            )}
             <Chip 
-              className={` bg-[#1e7367] text-white border border-white/30`}
+              className="bg-[#1e7367] text-white border border-white/30"
               size="sm"
             >
               {branch.branch_code}
@@ -181,6 +196,28 @@ const openingHourDisplay = useMemo(() => {
         </ModalHeader>
         
         <ModalBody className="p-6 space-y-6 border overflow-y-auto max-h-[85vh]">
+          {/* 👇 NOUVEAU : Alerte si branche inactive */}
+          {!isActive && (
+            <Card className="border-2 border-orange-400 bg-orange-50">
+              <CardBody className="p-4">
+                <div className="flex items-start gap-3">
+                  <FaPlayCircle className="text-orange-500 text-xl mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-orange-800 mb-1">
+                      Branche inactive
+                    </h4>
+                    <p className="text-sm text-orange-700">
+                      {!hasConfiguration 
+                        ? "Cette branche n'a pas encore été configurée. Définissez les horaires et jours fériés pour l'activer."
+                        : "Cette branche est configurée mais inactive. Activez-la pour la rendre opérationnelle."
+                      }
+                    </p>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Informations générales */}
@@ -213,34 +250,51 @@ const openingHourDisplay = useMemo(() => {
                         </span>
                       </div>
                     </div>
+                    
                     <Divider />
+                    
                     <div className="flex items-center justify-between p-2">
                       <span className="text-gray-600 text-sm">Créée le :</span>
                       <span className="text-sm font-medium text-[#2c2e2f]">
                         {formatDate(branch.created_at || "")}
                       </span>
                     </div>
+                    
                     <Divider />
+                    
                     <div className="flex items-center justify-between p-2">
                       <span className="text-gray-600 text-sm">Dernière modification :</span>
                       <span className="text-sm font-medium text-[#2c2e2f]">
                         {formatDate(branch.updated_at || "")}
                       </span>
                     </div>
-{/* //  updated_at?: string; */}
 
                     <Divider />
+                    
                     <div className="flex items-center justify-between p-2">
-                    <span className="text-gray-600 text-sm">Catégorie :</span>
-                    <Chip size="sm" className={`${category.bgColor} text-white`}>
-                      {category.text}
-                    </Chip>
-                  </div>
+                      <span className="text-gray-600 text-sm">Catégorie :</span>
+                      <Chip size="sm" className={`${category.bgColor} text-white`}>
+                        {category.text}
+                      </Chip>
+                    </div>
+                    
+                    <Divider />
+                    
+                    {/* 👇 NOUVEAU : Statut détaillé */}
+                    <div className="flex items-center justify-between p-2">
+                      <span className="text-gray-600 text-sm">Statut :</span>
+                      <Chip 
+                        size="sm" 
+                        className={isActive ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}
+                      >
+                        {isActive ? "Opérationnelle" : "En attente d'activation"}
+                      </Chip>
+                    </div>
                   </div>
                 </CardBody>
               </Card>
 
-            {/* Contact */}
+              {/* Contact & Horaires */}
               <Card className="border border-[#1e7367]/20">
                 <CardBody className="p-5">
                   <h4 className="font-semibold text-[#2c2e2f] mb-4 flex items-center gap-2">
@@ -277,17 +331,28 @@ const openingHourDisplay = useMemo(() => {
                       </div>
                     </div>
                     
-                    <div className="flex items-start gap-3 p-3 bg-[#f8bf2c]/5 rounded-lg">
-                      <FaClock className="text-[#f8bf2c] w-4 h-4 mt-1" />
+                    {/* 👇 MODIFIÉ : Affichage conditionnel des horaires */}
+                    <div className={`flex items-start gap-3 p-3 rounded-lg ${
+                      branchOpeningHours ? 'bg-[#f8bf2c]/5' : 'bg-gray-100'
+                    }`}>
+                      <FaClock className={`w-4 h-4 mt-1 ${
+                        branchOpeningHours ? 'text-[#f8bf2c]' : 'text-gray-400'
+                      }`} />
                       <div className="flex-1">
                         <p className="text-xs text-gray-600">Heures d'ouverture</p>
-                        <div className="text-sm font-medium text-[#2c2e2f] leading-relaxed">
-                          {openingHourDisplay.split('\n').map((line, index) => (
-                            <div key={index} className="mb-1">
-                              {line.trim()}
-                            </div>
-                          ))}
-                        </div>
+                        {branchOpeningHours ? (
+                          <div className="text-sm font-medium text-[#2c2e2f] leading-relaxed">
+                            {openingHourDisplay.split('\n').map((line, index) => (
+                              <div key={index} className="mb-1">
+                                {line.trim()}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">
+                            Non configuré
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -412,10 +477,15 @@ const openingHourDisplay = useMemo(() => {
                       })}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <FaCalendarAlt className="text-gray-300 text-4xl mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">Aucun jour férié configuré pour cette branche</p>
-                    <p className="text-gray-400 text-xs mt-1">La branche suit les horaires normaux toute l'année</p>
+                    <p className="text-gray-500 text-sm font-medium">Aucun jour férié configuré</p>
+                    <p className="text-gray-400 text-xs mt-1">
+                      {isActive 
+                        ? "La branche suit les horaires normaux toute l'année" 
+                        : "Les jours fériés seront définis lors de l'activation"
+                      }
+                    </p>
                   </div>
                 )}
               </CardBody>
@@ -432,23 +502,38 @@ const openingHourDisplay = useMemo(() => {
             Fermer
           </Button>
           
+          {/* 👇 MODIFIÉ : Boutons conditionnels selon le statut */}
           {onEdit && (
-            <Button 
-              className="bg-[#34963d] text-white hover:bg-[#1e7367] transition-colors"
-              startContent={<FaEdit />}
-              onPress={() => {
-                onEdit(branch);
-                onClose();
-              }}
-            >
-              Modifier
-            </Button>
+            <>
+              {!isActive ? (
+                <Button 
+                  className="bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                  startContent={<FaPlayCircle />}
+                  onPress={() => {
+                    onEdit(branch, 'activate'); // 👈 Toujours passer le mode
+                    onClose();
+                  }}
+                >
+                  Activer la branche
+                </Button>
+              ) : (
+                <Button 
+                  className="bg-[#34963d] text-white hover:bg-[#1e7367] transition-colors"
+                  startContent={<FaEdit />}
+                  onPress={() => {
+                    onEdit(branch, 'edit'); // 👈 Toujours passer le mode
+                    onClose();
+                  }}
+                >
+                  Modifier
+                </Button>
+              )}
+            </>
           )}
         </ModalFooter>
       </ModalContent>
     </Modal>
   );
 };
-
 
 export default BranchDetailsModal;

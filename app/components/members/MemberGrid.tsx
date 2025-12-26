@@ -15,10 +15,15 @@ import MemberDetailModal from '@/app/components/members/MemberDetailModal';
 import EditMemberModal from '@/app/components/members/EditMemberModal';
 import DeleteMemberModal from '@/app/components/members/DeleteMemberModal';
 import { MemberData } from '@/app/components/members/validations';
+import PageHeader from '../header';
+import { PiUsersFourThin } from 'react-icons/pi';
 
 interface MemberGridProps {
   members?: MemberData[];
   onSuccess?: () => void;
+  isLoading: boolean;
+  error: string | null;
+  onRetry?: () => void;
 }
 
 const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSuccess: parentOnSuccess }) => {
@@ -70,6 +75,13 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
       loadMembers();
     }
   }, [initialMembers]);
+  const header = (
+    <PageHeader
+      title="Gestion des Membres"
+      subtitle="Gérez tous les membres et leurs informations"
+      icon={<PiUsersFourThin   className="text-5xl" />}
+    />
+  );
 
   // Filtrage avancé
   const filteredMembers = useMemo(() => {
@@ -133,9 +145,10 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
+      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
+              {header}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <Card key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
               <CardBody className="p-6 space-y-4">
                 <div className="flex flex-col items-center">
@@ -155,9 +168,12 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
       </div>
     );
   }
-
+ /* =======================
+     RENDER
+  ======================= */
   return (
-    <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
+    <div className="flex flex-col gap-6 p-6 bg-linear-to-br min-h-screen">
+      {header}
       {error && (
         <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
           <p className="text-red-700 font-medium">{error}</p>
@@ -178,11 +194,6 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
         onExport={() => console.log('Export')}
         totalCount={filteredMembers.length} 
       />
-
-      <div className="flex items-center gap-2 px-1">
-        <div className="w-1.5 h-8 bg-purple-700 rounded-full"></div>
-        <span className="text-sm font-semibold text-gray-700">{filteredMembers.length} membre(s) trouvé(s)</span>
-      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredMembers.length > 0 ? (

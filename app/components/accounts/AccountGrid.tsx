@@ -1,232 +1,232 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import { AccountData } from "./validationsaccount";
 import { mockAccounts } from "./mockAccountData";
 
-// ✅ IMPORT DES MODALS
-import AccountDetailModal from './modals/AccountDetailModal';
-import EditAccountModal from './modals/EditAccountModal';
-import CloseAccountModal from './modals/CloseAccountModal';
+// UI
+import AccountFilterBar from "./AccountFilterBar";
 
-// ============= COMPONENT =============
+// Modals
+import AccountDetailModal from "./modals/AccountDetailModal";
+import EditAccountModal from "./modals/EditAccountModal";
+import CloseAccountModal from "./modals/CloseAccountModal";
+import { FaBriefcase, FaUsers, FaWallet } from "react-icons/fa";
+import PageHeader from "../header";
+import { Card, CardBody } from "@heroui/card";
+import { Button } from "@heroui/react";
+import { TfiWallet } from "react-icons/tfi";
+
 const AccountGrid: React.FC = () => {
-  // ============= STATES =============
+  /* =======================
+     STATES – DATA
+  ======================= */
   const [accounts, setAccounts] = useState<AccountData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Modal states
-  const [selectedAccount, setSelectedAccount] = useState<AccountData | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showCloseModal, setShowCloseModal] = useState(false);
+  /* =======================
+     STATES – FILTERS
+  ======================= */
+  const [search, setSearch] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
 
-  // ============= CHARGEMENT DES DONNÉES =============
+  /* =======================
+     STATES – MODALS
+  ======================= */
+  const [selectedAccount, setSelectedAccount] =
+    useState<AccountData | null>(null);
+
+  const [showDetail, setShowDetail] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showClose, setShowClose] = useState(false);
+
+  /* =======================
+     LOAD MOCK DATA
+  ======================= */
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        // Simule un délai d'API
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setAccounts(mockAccounts);
-      } catch (error) {
-        console.error("Erreur chargement:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    const load = async () => {
+      setLoading(true);
+      await new Promise((r) => setTimeout(r, 500));
+      setAccounts(mockAccounts);
+      setLoading(false);
     };
-    
-    loadData();
+    load();
   }, []);
+ const header = (
+    <PageHeader 
+      title="Gestion des Comptes"
+      subtitle="Consultez et gérez tous les comptes bancaires"
+      icon={<TfiWallet  className="text-4xl 0" />}
+    />
+  );
 
-  // ============= HANDLERS =============
+  /* =======================
+     FILTER LOGIC
+  ======================= */
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter((acc) => {
+      const matchSearch =
+        acc.account_number
+          ?.toLowerCase()
+          .includes(search.toLowerCase()) ||
+        acc.member_details?.full_name
+          ?.toLowerCase()
+          .includes(search.toLowerCase());
+
+      const matchType =
+        selectedType === "all" || acc.typeCompte === selectedType;
+
+      const matchStatus =
+        selectedStatus === "all" || acc.statutCompte === selectedStatus;
+
+      return matchSearch && matchType && matchStatus;
+    });
+  }, [accounts, search, selectedType, selectedStatus]);
+
+  /* =======================
+     HANDLERS
+  ======================= */
   const handleAdd = () => {
-    console.log("🆕 Créer nouveau compte");
-    setSelectedAccount(null);  // null = mode CREATE
-    setShowEditModal(true);
-  };
-
-  const handleView = (account: AccountData) => {
-    console.log("👁️ Voir détails:", account.account_number);
-    setSelectedAccount(account);
-    setShowDetailModal(true);
-  };
-
-  const handleEdit = (account: AccountData) => {
-    console.log("✏️ Modifier:", account.account_number);
-    setSelectedAccount(account);
-    setShowEditModal(true);
-  };
-
-  const handleClose = (account: AccountData) => {
-    console.log("🔒 Fermer le compte:", account.account_number);
-    setSelectedAccount(account);
-    setShowCloseModal(true);
-  };
-
-  const handleSuccess = (updatedAccount: AccountData) => {
-    console.log("✅ Succès:", updatedAccount);
-    
-    if (selectedAccount) {
-      // MODE EDIT: Mettre à jour le compte existant
-      setAccounts(prev => prev.map(a => 
-        a.id === updatedAccount.id ? updatedAccount : a
-      ));
-    } else {
-      // MODE CREATE: Ajouter le nouveau compte
-      setAccounts(prev => [...prev, updatedAccount]);
-    }
-    
-    setShowEditModal(false);
     setSelectedAccount(null);
+    setShowEdit(true);
   };
 
-  const handleCloseSuccess = () => {
-    console.log("✅ Compte fermé (soft delete)");
-    
-    if (selectedAccount) {
-      // Mettre à jour le statut localement
-      setAccounts(prev => prev.map(a => 
-        a.id === selectedAccount.id 
-          ? { ...a, statutCompte: 'ferme' as const, dateFermeture: new Date().toISOString().split('T')[0] }
-          : a
-      ));
-    }
-    
-    setShowCloseModal(false);
-    setShowDetailModal(false);
-    setSelectedAccount(null);
+  const handleView = (acc: AccountData) => {
+    setSelectedAccount(acc);
+    setShowDetail(true);
   };
 
-  // ============= LOADING =============
-  if (isLoading) {
+  const handleEdit = (acc: AccountData) => {
+    setSelectedAccount(acc);
+    setShowEdit(true);
+  };
+
+  const handleCloseAccount = (acc: AccountData) => {
+    setSelectedAccount(acc);
+    setShowClose(true);
+  };
+
+  /* =======================
+     LOADING        
+     <div className="animate-spin h-12 w-12 rounded-full border-b-4 border-emerald-600" />
+
+  ======================= */
+ if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-700 font-medium">Chargement des comptes...</p>
+      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
+              {header}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="h-50 bg-white shadow-sm rounded-xl overflow-hidden">
+              <CardBody className="p-6 space-y-4">
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
-  // ============= RENDER =============
+  /* =======================
+     RENDER
+  ======================= */
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
-      {/* HEADER */}
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Comptes Bancaires</h1>
-          <p className="text-gray-600 mt-1">{accounts.length} compte(s) total</p>
-        </div>
-        
-        <button
-          onClick={handleAdd}
-          className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-        >
-          ➕ Ajouter un Compte
-        </button>
-      </div>
+ <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
+      {header}
+           {/* FILTER BAR */}
+      <AccountFilterBar
+        filterValue={search}
+        selectedType={selectedType}
+        selectedStatus={selectedStatus}
+        totalCount={filteredAccounts.length}
+        onSearchChange={setSearch}
+        onClear={() => setSearch("")}
+        onTypeChange={setSelectedType}
+        onStatusChange={setSelectedStatus}
+        onAdd={handleAdd}
+        onImport={() => console.log("IMPORT")}
+        onExport={() => console.log("EXPORT")}
+      />
 
-      {/* GRID DE CARDS */}
-      {accounts.length === 0 ? (
-        // État vide
-        <div className="text-center py-20">
-          <div className="text-6xl mb-4">💼</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
-            Aucun compte
-          </h3>
-          <p className="text-gray-500 mb-6">
-            Commencez par ajouter votre premier compte
-          </p>
-          <button
-            onClick={handleAdd}
-            className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
-          >
-            ➕ Ajouter un Compte
-          </button>
+      {/* GRID */}
+      {filteredAccounts.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">
+          Aucun compte trouvé
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {accounts.map((account) => (
+          {filteredAccounts.map((account) => (
             <div
               key={account.id}
-              className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+              className="bg-white p-6 rounded-xl shadow border"
             >
-              {/* Header Card */}
-              <div className="flex justify-between items-start mb-4">
+              {/* HEADER */}
+              <div className="flex justify-between mb-3">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="font-bold text-lg">
                     {account.account_number}
                   </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {account.member_details?.full_name || 
-                     `${account.member_details?.first_name || ''} ${account.member_details?.last_name || ''}`.trim() ||
-                     account.id_membre}
+                  <p className="text-sm text-gray-600">
+                    {account.member_details?.full_name ||
+                      account.id_membre}
                   </p>
                 </div>
-                
-                {/* Badge Statut */}
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  account.statutCompte === 'actif' 
-                    ? 'bg-green-100 text-green-800'
-                    : account.statutCompte === 'suspendu'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {account.statutCompte?.toUpperCase() || 'INCONNU'}
+
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    account.statutCompte === "actif"
+                      ? "bg-green-100 text-green-700"
+                      : account.statutCompte === "suspendu"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {account.statutCompte}
                 </span>
               </div>
 
-              {/* Infos Compte */}
-              <div className="space-y-3 mb-4">
+              {/* INFO */}
+              <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Type:</span>
-                  <span className="text-sm font-semibold text-gray-900 capitalize">
+                  <span>Type</span>
+                  <span className="font-semibold capitalize">
                     {account.typeCompte}
                   </span>
                 </div>
-                
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Solde:</span>
-                  <span className="text-lg font-bold text-green-600">
-                    {account.soldeActuel?.toLocaleString() || '0'} HTG
-                  </span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Ouverture:</span>
-                  <span className="text-sm text-gray-900">
-                    {account.dateOuverture 
-                      ? new Date(account.dateOuverture).toLocaleDateString('fr-CA')
-                      : 'N/A'
-                    }
+                  <span>Solde</span>
+                  <span className="font-bold text-emerald-600">
+                    {account.soldeActuel} HTG
                   </span>
                 </div>
               </div>
 
-              {/* Boutons Actions */}
-              <div className="flex gap-2 pt-4 border-t border-gray-200">
+              {/* ACTIONS */}
+              <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => handleView(account)}
-                  className="flex-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-sm font-medium transition-colors"
+                  className="flex-1 text-sm bg-blue-50 text-blue-700 rounded-lg py-2"
                 >
-                  👁️ Voir
+                  Voir
                 </button>
-                
                 <button
                   onClick={() => handleEdit(account)}
-                  className="flex-1 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-sm font-medium transition-colors"
+                  className="flex-1 text-sm bg-green-50 text-green-700 rounded-lg py-2"
                 >
-                  ✏️ Modifier
+                  Modifier
                 </button>
-                
                 <button
-                  onClick={() => handleClose(account)}
-                  className="flex-1 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-sm font-medium transition-colors"
-                  title="Fermer le compte"
+                  onClick={() => handleCloseAccount(account)}
+                  className="flex-1 text-sm bg-orange-50 text-orange-700 rounded-lg py-2"
                 >
-                  🔒 Fermer
+                  Fermer
                 </button>
               </div>
             </div>
@@ -234,43 +234,37 @@ const AccountGrid: React.FC = () => {
         </div>
       )}
 
-      {/* ============= MODALS ============= */}
-      
-      {/* Modal Détails */}
+      {/* MODALS */}
       <AccountDetailModal
-        isOpen={showDetailModal}           // true = ouvert, false = fermé
-        account={selectedAccount}          // peut être null sans problème
-        onClose={() => {
-          setShowDetailModal(false);       // on ferme le modal
-          setSelectedAccount(null);        // on nettoie la sélection
-        }}
+        isOpen={showDetail}
+        account={selectedAccount}
+        onClose={() => setShowDetail(false)}
         onEdit={() => {
-          setShowDetailModal(false);       // fermer le détail
-          setShowEditModal(true);          // ouvrir l’édition
+          setShowDetail(false);
+          setShowEdit(true);
         }}
       />
 
-      {/* Modal Create/Edit */}
-     <EditAccountModal
-        isOpen={showEditModal}             // contrôle l’affichage
-        account={selectedAccount}          // null = création
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedAccount(null);
+      <EditAccountModal
+        isOpen={showEdit}
+        account={selectedAccount}
+        onClose={() => setShowEdit(false)}
+        onSuccess={(acc) => {
+          setAccounts((prev) =>
+            prev.some((a) => a.id === acc.id)
+              ? prev.map((a) => (a.id === acc.id ? acc : a))
+              : [...prev, acc]
+          );
+          setShowEdit(false);
         }}
-        onSuccess={handleSuccess}
       />
 
-      {/* Modal Fermeture de compte */}
-        <CloseAccountModal
-          isOpen={showCloseModal}
-          onClose={() => {
-            setShowCloseModal(false);
-            setSelectedAccount(null);
-          }}
-          account={selectedAccount}
-          onSuccess={handleCloseSuccess}
-        />
+      <CloseAccountModal
+        isOpen={showClose}
+        account={selectedAccount}
+        onClose={() => setShowClose(false)}
+        onSuccess={() => setShowClose(false)}
+      />
     </div>
   );
 };

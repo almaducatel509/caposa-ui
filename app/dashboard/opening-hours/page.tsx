@@ -3,10 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchOpeningHours } from '@/app/lib/api/opening_hour';
-import Hours_table from '@/app/components/OpeningHours/Hours_table';
+import ScheduleGrid from '@/app/components/OpeningHours/ScheduleGrid';
 
-// 🔒 Typage sécurisé pour les données de l'API
-export type OpeningHours = {
+/* ========= TYPES ========= */
+
+export type OpeningHrs = {
   id: string;
   monday: string;
   tuesday: string;
@@ -20,44 +21,38 @@ export type OpeningHours = {
   status: 'active' | 'paused' | 'vacation';
 };
 
-// 🔄 Conversion des données API vers le type local
-export const convertToOpeningHours = (apiData: any): OpeningHours => {
-  return {
-    id: apiData.id,
-    monday: apiData.monday,
-    tuesday: apiData.tuesday,
-    wednesday: apiData.wednesday,
-    thursday: apiData.thursday,
-    friday: apiData.friday,
-    saturday: apiData.saturday || null,
-    sunday: apiData.sunday || null,
-    created_at: new Date(apiData.created_at).toLocaleString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }),
-    updated_at: apiData.updated_at,
-    status: apiData.status || 'active'
-  };
-};
+
+/* ========= DATA MAPPING ========= */
+
+export const convertToOpeningHours = (apiData: any): OpeningHrs => ({
+  id: apiData.id,
+  monday: apiData.monday,
+  tuesday: apiData.tuesday,
+  wednesday: apiData.wednesday,
+  thursday: apiData.thursday,
+  friday: apiData.friday,
+  saturday: apiData.saturday ?? null,  // ✅ null au lieu de undefined
+  sunday: apiData.sunday ?? null,      // ✅ null au lieu de undefined
+  created_at: apiData.created_at,
+  updated_at: apiData.updated_at,
+  status: apiData.status || 'active',
+});
+
+/* ========= PAGE ========= */
 
 const OpeningHoursPage = () => {
-  const [openingHours, setOpeningHours] = useState<OpeningHours[]>([]);
+  const [openingHours, setOpeningHours] = useState<OpeningHrs[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadOpeningHours = async () => {
     try {
       setLoading(true);
-      const apiData: any[] = await fetchOpeningHours();
-      const convertedData = apiData.map(convertToOpeningHours);
-      setOpeningHours(convertedData);
+      const apiData = await fetchOpeningHours();
+      setOpeningHours(apiData.map(convertToOpeningHours));
       setError(null);
-    } catch (error) {
-      console.error('Error fetching opening hours:', error);
+    } catch (err) {
+      console.error(err);
       setError("Erreur lors de la récupération des horaires d'ouverture");
       setOpeningHours([]);
     } finally {
@@ -69,22 +64,24 @@ const OpeningHoursPage = () => {
     loadOpeningHours();
   }, []);
 
+  /* ========= STATES ========= */
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+      <div className="flex justify-center items-center h-[60vh]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-emerald-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen text-red-500">
-        <div className="text-center">
-          <p className="text-2xl mb-4">{error}</p>
+      <div className="flex justify-center items-center h-[60vh] text-red-500">
+        <div className="text-center space-y-4">
+          <p className="text-lg font-medium">{error}</p>
           <button
             onClick={loadOpeningHours}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
           >
             Réessayer
           </button>
@@ -93,20 +90,13 @@ const OpeningHoursPage = () => {
     );
   }
 
+  /* ========= RENDER ========= */
+
   return (
-    <div className="w-full bg-white">
-      <div className="flex w-full items-center justify-between">
-        <h1 className="text-2xl">Horaires d'ouverture</h1>
-      </div>
-      <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-        {/* Des composants comme des cartes statistiques peuvent être insérés ici */}
-      </div>
-      <Hours_table
-        hourtable={openingHours}
-        holidays={[]}
-        branches={[]}
-        onRefresh={loadOpeningHours}
+    <div className="w-full">
+    <ScheduleGrid
       />
+
     </div>
   );
 };

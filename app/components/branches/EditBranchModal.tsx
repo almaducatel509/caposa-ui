@@ -11,23 +11,23 @@ import {
   ModalFooter
 } from "@heroui/react";
 import { FaEdit, FaPlus } from "react-icons/fa";
-import { BranchData, OpeningHour, Holiday, ErrorMessages, branchSchema } from "./validations";
+import { BranchData, OpeningHour, Holiday, ErrorMessages, branchBaseSchema, branchActivationSchema } from "./validations";
 import { fetchOpeningHours, fetchHolidays, updateBranch, createBranch, fetchBranches, getBranchById } from "@/app/lib/api/branche";
 import BranchFormFields from "./BranchFormFields";
 
-// Interface Branch (ajoutez-la si elle n'existe pas)
+// Interface Branch
 interface Branch extends BranchData {
   id: string;
   branch_code: string;
 }
 
-// ✅ Props corrigées pour correspondre à l'utilisation dans BranchesTable
 interface EditBranchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   branch: Branch | null;
   isEditMode: boolean;
+  mode?: 'create' | 'edit' | 'activate'; // 👈 AJOUT
   holidays?: Holiday[];    
 }
 
@@ -37,14 +37,15 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   onSuccess,
   branch,
   isEditMode,
+  mode = 'create', // 👈 AJOUT avec valeur par défaut
   holidays: passedHolidays = [],
- 
 }) => {
   console.log('🎯 BranchEditModal render:', {
     isOpen,
     branchName: branch?.branch_name,
     holidaysCount: passedHolidays.length,
-    isEditMode
+    isEditMode,
+    mode // 👈 AJOUT au log
   });
  
   const [formData, setFormData] = useState<BranchData>({
@@ -59,29 +60,26 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     opening_date: "",
     opening_hour: "",
     holidays: [],
+    status: 'inactive', // 👈 AJOUT
   });
 
   const [errors, setErrors] = useState<ErrorMessages<BranchData>>({});
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
-   // ✅ RENOMMAGE : holidays → localHolidays pour éviter le conflit
   const [localHolidays, setLocalHolidays] = useState<Holiday[]>([]);
-  
   const [branches, setBranches] = useState<BranchData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-
-  // ✅ LOGIQUE HOLIDAYS AMÉLIORÉE
   const holidaysToUse = passedHolidays.length > 0 ? passedHolidays : localHolidays;
 
   console.log('🎯 DEBUG holidays:', {
-  passedHolidaysCount: passedHolidays.length,
-  localHolidaysCount: localHolidays.length,
-  holidaysToUseCount: holidaysToUse.length,
-  usingPassedHolidays: passedHolidays.length > 0
-});
+    passedHolidaysCount: passedHolidays.length,
+    localHolidaysCount: localHolidays.length,
+    holidaysToUseCount: holidaysToUse.length,
+    usingPassedHolidays: passedHolidays.length > 0
+  });
 
   // Calcul dynamique du nombre de postes
   const calculateTotalPosts = (tellers: number, clerks: number, creditOfficers: number) => {
@@ -109,7 +107,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       try {
         setIsLoading(true);
         
-        // Charger les données de base (horaires et jours fériés)
         const [hours, days, existingBranches] = await Promise.all([
           fetchOpeningHours(),
           fetchHolidays(),
@@ -120,20 +117,15 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
         setLocalHolidays(days);
         setBranches(existingBranches);
         
-        // ✅ Initialiser les données selon le mode
         if (isEditMode && branch) {
-          // Mode édition : charger les données de la branche
           let branchData;
           
           if (branch.id) {
-            // Charger les données fraîches depuis l'API
             branchData = await getBranchById(branch.id);
           } else {
-            // Utiliser les données passées en props
             branchData = branch;
           }
           
-          // Format the holidays array properly from branch data
           if (branchData && branchData.holidays) {
             type HolidayItem = string | { id: string };
             
@@ -143,7 +135,8 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             
             const updatedData = {
               ...branchData,
-              holidays: holidayIds
+              holidays: holidayIds,
+              status: mode === 'activate' ? 'active' : (branchData.status || 'inactive'), // 👈 AJOUT
             };
             
             updatedData.number_of_posts = calculateTotalPosts(
@@ -157,7 +150,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             setFormData(branchData || formData);
           }
         } else {
-          // Mode création : garder les données vides
+          // Mode création
           setFormData({
             branch_name: "",
             branch_address: "",
@@ -170,6 +163,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             opening_date: "",
             opening_hour: "",
             holidays: [],
+            status: 'inactive', // 👈 AJOUT
           });
         }
         
@@ -181,11 +175,10 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       }
     };
     
-    // ✅ Charger les données quand le modal s'ouvre
     if (isOpen) {
       loadData();
     }
-  }, [isOpen, isEditMode, branch]);
+  }, [isOpen, isEditMode, branch, mode]); // 👈 AJOUT mode dans les dépendances
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -216,7 +209,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   const isDuplicateBranch = (): string | null => {
     const found = branches.find(
       (b: BranchData) =>
-        b.id !== branch?.id && // ✅ Utiliser branch?.id au lieu de branchId
+        b.id !== branch?.id &&
         (b.branch_name === formData.branch_name ||
         b.branch_email === formData.branch_email ||
         b.branch_phone_number === formData.branch_phone_number)
@@ -229,6 +222,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     return null;
   };
 
+  // 👇 VALIDATION ADAPTÉE AU MODE
   const validate = () => {
     const updatedFormData = {
       ...formData,
@@ -236,10 +230,14 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
         formData.number_of_tellers,
         formData.number_of_clerks,
         formData.number_of_credit_officers
-      )
+      ),
+      status: mode === 'activate' ? 'active' : formData.status,
     };
     
-    const result = branchSchema.safeParse(updatedFormData);
+    // 👇 CHOIX DU SCHÉMA SELON LE MODE
+    const schema = mode === 'activate' ? branchActivationSchema : branchBaseSchema;
+    const result = schema.safeParse(updatedFormData);
+    
     if (!result.success) {
       const fieldErrors: ErrorMessages<BranchData> = {};
       result.error.errors.forEach((e) => {
@@ -277,15 +275,18 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           formData.number_of_tellers,
           formData.number_of_clerks,
           formData.number_of_credit_officers
-        )
+        ),
+        status: mode === 'activate' ? 'active' : formData.status, // 👈 AJOUT
       };
       
       if (isEditMode && branch?.id) {
-        // ✅ Mode édition
         await updateBranch(branch.id, updatedFormData);
-        setSuccessMessage("La branche a été modifiée avec succès !");
+        setSuccessMessage(
+          mode === 'activate' 
+            ? "La branche a été activée avec succès !" 
+            : "La branche a été modifiée avec succès !"
+        );
       } else {
-        // ✅ Mode création
         await createBranch(updatedFormData);
         setSuccessMessage("La branche a été créée avec succès !");
       }
@@ -298,13 +299,16 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       }
     } catch (error) {
       console.error("Erreur lors de la sauvegarde :", error);
-      setApiError(`Une erreur est survenue lors de la ${isEditMode ? 'modification' : 'création'}.`);
+      setApiError(
+        `Une erreur est survenue lors de ${
+          mode === 'activate' ? "l'activation" : isEditMode ? 'la modification' : 'la création'
+        }.`
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ✅ Retourner null si le modal est fermé
   if (!isOpen) return null;
 
   if (isLoading) {
@@ -322,6 +326,19 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     );
   }
 
+  // 👇 TITRE DYNAMIQUE SELON LE MODE
+  const getModalTitle = () => {
+    if (mode === 'activate') return "Activer la branche";
+    if (isEditMode) return "Modifier la branche";
+    return "Nouvelle branche";
+  };
+
+  const getModalSubtitle = () => {
+    if (mode === 'activate') return "Configurer les horaires et activer";
+    if (isEditMode) return "Mettre à jour les informations";
+    return "Créer une nouvelle branche";
+  };
+
   return (
     <Modal 
       isOpen={isOpen} 
@@ -331,23 +348,19 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       scrollBehavior="inside"
       classNames={{
         base: "max-h-[95vh]",
-        wrapper: "z-[9999]",           // ← Very high z-index for modal wrapper
-        backdrop: "z-[9998]",          // ← Backdrop just below wrapper
+        wrapper: "z-[9999]",
+        backdrop: "z-[9998]",
         body: "overflow-y-auto max-h-[85vh] px-6 shadow-inner"
       }}
-      // className="z-[50]" // ✅ Ensure dropdown appears over everything
     >
       <ModalContent>
         <ModalHeader 
-          className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white"
-        >          {isEditMode ? <FaEdit /> : <FaPlus />}
+          className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white"
+        >
+          {mode === 'activate' ? <FaEdit /> : isEditMode ? <FaEdit /> : <FaPlus />}
           <div>
-            <h3 className="text-lg font-bold">
-              {isEditMode ? "Modifier la branche" : "Nouvelle branche"}
-            </h3>
-            <p className="text-sm opacity-90">
-              {isEditMode ? "Mettre à jour les informations" : "Créer une nouvelle branche"}
-            </p>
+            <h3 className="text-lg font-bold">{getModalTitle()}</h3>
+            <p className="text-sm opacity-90">{getModalSubtitle()}</p>
           </div>
         </ModalHeader>
         
@@ -368,13 +381,14 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             formData={formData}
             errors={errors}
             openingHours={openingHours}
-            holidays={holidaysToUse} // ✅ ici !
+            holidays={holidaysToUse}
             handleChange={handleChange}
             handleChangeDate={handleChangeDate}
             handleHolidaySelection={handleHolidaySelection}
             isSubmitting={isSubmitting}
             isEditMode={isEditMode}
-            branch={branch}  // ← branch est déjà de type BranchData
+            branch={branch}
+            mode={mode} // 👈 AJOUT
           />
         </ModalBody>
         
@@ -394,8 +408,8 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             isDisabled={isSubmitting}
           >
             {isSubmitting 
-              ? (isEditMode ? "Modification..." : "Création...") 
-              : (isEditMode ? "Modifier" : "Créer")
+              ? (mode === 'activate' ? "Activation..." : isEditMode ? "Modification..." : "Création...") 
+              : (mode === 'activate' ? "Activer" : isEditMode ? "Modifier" : "Créer")
             }
           </Button>
         </ModalFooter>

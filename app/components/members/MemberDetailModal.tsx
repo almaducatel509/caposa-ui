@@ -74,7 +74,7 @@ const age = member.date_of_birthday ? calculateAge(member.date_of_birthday) : nu
       scrollBehavior="inside"
     >
       <ModalContent>
-       <ModalHeader className="flex items-center gap-3 bg-gradient-to-r from-[#34963d] to-[#1e7367] text-white p-6">
+       <ModalHeader className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white p-6">
          <UserAvatar
             user={{
               ...member,

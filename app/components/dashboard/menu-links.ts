@@ -1,5 +1,6 @@
 import {
-  AiOutlineHome, AiOutlineBranches
+  AiOutlineHome, AiOutlineBranches,
+  AiOutlineSchedule
 } from "react-icons/ai";
 import {
   HiOutlineUserGroup, HiOutlineDocumentDuplicate, HiOutlineChartBar
@@ -8,14 +9,14 @@ import {
   MdOutlineSupervisorAccount, MdOutlineHolidayVillage
 } from "react-icons/md";
 import {
-  GrTransaction, GrSchedule
+  GrTransaction, 
 } from "react-icons/gr";
 import { TfiLayoutListPost } from "react-icons/tfi";
-import { LuFolderTree } from "react-icons/lu";
+import { LuCalendarClock, LuFolderTree } from "react-icons/lu";
 import { TbBrandUbuntu } from "react-icons/tb";
 import { FaHandHoldingUsd, FaClipboardList, FaMoneyCheckAlt, FaExchangeAlt } from "react-icons/fa";
 import { GiTwoCoins, GiReceiveMoney, GiPayMoney, } from "react-icons/gi";
-import { RiDashboardLine, RiFileList3Line, RiBarChart2Line } from "react-icons/ri";
+import { RiDashboardLine, RiFileList3Line, RiBarChart2Line,  } from "react-icons/ri";
 import { BsFileEarmarkCheck, BsFileEarmarkBarGraph, BsShieldCheck } from "react-icons/bs";
 import { IconType } from "react-icons";
 import { PiVaultFill } from "react-icons/pi";
@@ -103,10 +104,10 @@ export const links: MainLink[] = [
     ],
   },
 
-  { name: 'Horaires', href: '/dashboard/opening-hours', icon: GrSchedule },
+  { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },
   { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
   { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
-  { name: 'Jours Fériés', href: '/dashboard/holidays', icon: MdOutlineHolidayVillage },
+  { name: 'Calendrier', href: '/dashboard/holidays', icon:  AiOutlineSchedule  },
 
   { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
   { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: FiSettings, }

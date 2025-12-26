@@ -56,12 +56,14 @@ export type HolidayDataBase = z.infer<typeof holidaySchema>;
 export interface HolidayData extends HolidayDataBase {
   id: string;
   date: string;
-  description: string;
+  description: string; // obligatoire
   type: "ferie" | "local" | "interne" | "election" | "maintenance" | "autre"; // obligatoire
   scope: "national" | "regional" | "branch" | "autre"; // obligatoire
-  branch_code?: string;
-  created_at?: string;
-  updated_at?: string;
+  branch_code?: string; // si scope = branch  created_at?: string;
+  comment?: string; // pourquoi on modifie obligatoire
+  modified_by?: string; // id de l’admin obligatoire
+  created_at?: string; //automatic
+  updated_at?: string;//automatic
 }
 
 // Generic type for handling error messages

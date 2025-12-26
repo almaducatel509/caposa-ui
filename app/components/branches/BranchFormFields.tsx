@@ -24,7 +24,8 @@ interface BranchFormFieldsProps {
   handleHolidaySelection: (selected: any) => void;
   isSubmitting: boolean;
   isEditMode?: boolean;    
-  branch?: BranchData| null;       
+  branch?: BranchData | null;
+  mode?: 'create' | 'edit' | 'activate'; // 👈 NOUVEAU
 }
 
 const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
@@ -37,9 +38,12 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
   handleHolidaySelection,
   isSubmitting,
   isEditMode,
-  branch
+  branch,
+  mode = 'create', // 👈 valeur par défaut
 }) => {
   const isEdit = isEditMode && !!branch;
+  const isActivationMode = mode === 'activate'; // 👈 NOUVEAU
+  const isConfigDisabled = mode === 'create'; // 👈 NOUVEAU
 
   const isDateEditable = !isEdit || (
     branch?.created_at &&
@@ -67,7 +71,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
       <Card className="shadow-md border border-gray-100">
         <CardBody className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+            <div className="w-2 h-6 bg-linear-to-b from-blue-500 to-blue-600 rounded-full"></div>
             <h3 className="text-lg font-semibold text-gray-800">Informations de Base</h3>
           </div>
           
@@ -107,7 +111,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
       <Card className="shadow-md border border-gray-100">
         <CardBody className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+            <div className="w-2 h-6 bg-linear-to-b from-green-500 to-green-600 rounded-full"></div>
             <h3 className="text-lg font-semibold text-gray-800">Personnel et Postes</h3>
           </div>
           
@@ -118,7 +122,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
                 <span className="text-lg">📊</span>
                 Total des Postes
               </label>
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-lg p-4 text-center">
+              <div className="bg-linear-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">{formData.number_of_posts}</div>
                 <div className="text-xs text-green-500 mt-1">Employe(s)</div>
               </div>
@@ -161,7 +165,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
       <Card className="shadow-md border border-gray-100">
         <CardBody className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
+            <div className="w-2 h-6 bg-linear-to-b from-purple-500 to-purple-600 rounded-full"></div>
             <h3 className="text-lg font-semibold text-gray-800">Configuration et Horaires</h3>
           </div>
           
@@ -178,7 +182,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
                 )}
               </label>
               <DateInput
-                value={parseDate(formData.opening_date || appConfig.defaultDate)}
+                value={parseDate(formData.opening_date || appConfig.defaultDate) as any}
                 onChange={handleChangeDate}
                 isDisabled={!isDateEditable || isSubmitting}
                 variant="bordered"
@@ -195,45 +199,58 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
                 <span className="text-lg">🕒</span>
                 Heures d'Ouverture
+                {isActivationMode && <span className="text-red-500">*</span>}
               </label>
               <Card className="border border-gray-200 shadow-sm">
                 <CardBody className="p-3">
-                  <Listbox
-                    selectionMode="single"
-                    selectedKeys={formData.opening_hour ? new Set([String(formData.opening_hour)]) : new Set()}
-                    onSelectionChange={(keys) => {
-                      const selectedArray = Array.from(keys);
-                      const selectedValue = selectedArray.length > 0 ? selectedArray[0] : "";
-                      handleChange({ 
-                        target: { 
-                          name: "opening_hour", 
-                          value: selectedValue 
-                        } 
-                      } as React.ChangeEvent<HTMLInputElement>);
-                    }}
-                    classNames={{
-                      base: "w-full",
-                      list: "max-h-[180px] overflow-y-auto",
-                    }}
-                    emptyContent="Aucun horaire disponible"
-                  >
-                    {openingHours.map((h) => (
-                      <ListboxItem 
-                        key={String(h.id)} 
-                        textValue={h.schedule.split('\n')[0]}
-                        className="py-2"
-                      >
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium text-gray-800">
-                            {h.schedule.split('\n')[0]}
+                  <div className={isConfigDisabled || isSubmitting ? "pointer-events-none opacity-50" : ""}>
+                    <Listbox
+                      selectionMode="single"
+                      selectedKeys={formData.opening_hour ? new Set([String(formData.opening_hour)]) : new Set()}
+                      onSelectionChange={(keys) => {
+                        const selectedArray = Array.from(keys);
+                        const selectedValue = selectedArray.length > 0 ? selectedArray[0] : "";
+                        handleChange({ 
+                          target: { 
+                            name: "opening_hour", 
+                            value: selectedValue 
+                          } 
+                        } as React.ChangeEvent<HTMLInputElement>);
+                      }}
+                      classNames={{
+                        base: "w-full",
+                        list: "max-h-[180px] overflow-y-auto",
+                      }}
+                      emptyContent="Aucun horaire disponible"
+                    >
+                      {openingHours.map((h) => (
+                        <ListboxItem 
+                          key={String(h.id)} 
+                          textValue={h.schedule.split('\n')[0]}
+                          className="py-2"
+                        >
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium text-gray-800">
+                              {h.schedule.split('\n')[0]}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {h.schedule.split('\n').slice(1, 3).join(' • ')}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {h.schedule.split('\n').slice(1, 3).join(' • ')}
-                          </div>
-                        </div>
-                      </ListboxItem>
-                    ))}
-                  </Listbox>
+                        </ListboxItem>
+                      ))}
+                    </Listbox>
+                  </div>
+                  {isConfigDisabled && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Les horaires seront définis lors de l'activation.
+                    </p>
+                  )}
+                  {isActivationMode && errors.opening_hour && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.opening_hour}
+                    </p>
+                  )}
                 </CardBody>
               </Card>
             </div>
@@ -243,39 +260,52 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
                 <span className="text-lg">🎉</span>
                 Jours Fériés
+                {isActivationMode && <span className="text-red-500">*</span>}
                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                   {selectedHolidayKeys.size} sélectionné(s)
                 </span>
               </label>
               <Card className="border border-gray-200 shadow-sm">
                 <CardBody className="p-3">
-                  <Listbox
-                    selectionMode="multiple"
-                    selectedKeys={selectedHolidayKeys}
-                    onSelectionChange={handleHolidaySelection}
-                    classNames={{
-                      base: "w-full",
-                      list: "max-h-[180px] overflow-y-auto",
-                    }}
-                    emptyContent="Aucun jour férié disponible"
-                  >
-                    {holidays.map((holiday) => (
-                      <ListboxItem 
-                        key={holiday.id} 
-                        textValue={`${holiday.date} - ${holiday.description}`}
-                        className="py-2"
-                      >
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium text-gray-800">
-                            {holiday.date}
+                  <div className={isConfigDisabled || isSubmitting ? "pointer-events-none opacity-50" : ""}>
+                    <Listbox
+                      selectionMode="multiple"
+                      selectedKeys={selectedHolidayKeys}
+                      onSelectionChange={handleHolidaySelection}
+                      classNames={{
+                        base: "w-full",
+                        list: "max-h-[180px] overflow-y-auto",
+                      }}
+                      emptyContent="Aucun jour férié disponible"
+                    >
+                      {holidays.map((holiday) => (
+                        <ListboxItem 
+                          key={holiday.id} 
+                          textValue={`${holiday.date} - ${holiday.description}`}
+                          className="py-2"
+                        >
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium text-gray-800">
+                              {holiday.date}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {holiday.description}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {holiday.description}
-                          </div>
-                        </div>
-                      </ListboxItem>
-                    ))}
-                  </Listbox>
+                        </ListboxItem>
+                      ))}
+                    </Listbox>
+                  </div>
+                  {isConfigDisabled && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Les jours fériés seront définis lors de l'activation.
+                    </p>
+                  )}
+                  {isActivationMode && errors.holidays && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.holidays}
+                    </p>
+                  )}
                 </CardBody>
               </Card>
             </div>

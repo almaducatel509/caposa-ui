@@ -1,85 +1,100 @@
-import { useState, useMemo, useCallback } from 'react';
-import React from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  Chip,
-  Tooltip,
-  Input,
-} from "@heroui/react";
-import { LuPlus } from "react-icons/lu";
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Card, CardBody, Button, Chip, Input } from "@heroui/react";
 import { FiSearch } from "react-icons/fi";
-import { TfiExport, TfiImport } from 'react-icons/tfi';
-import { FaRegTrashCan } from "react-icons/fa6";
+import { LuPlus } from "react-icons/lu";
+import { TfiExport, TfiImport } from "react-icons/tfi";
+import { FaBuildingWheat, FaRegTrashCan } from "react-icons/fa6";
 import { FiEdit } from "react-icons/fi";
 
-// Import des modals
-import CreatePostModal from './CreatePostModal';
-import EditPostModal from './EditPostModal';
-import DeletePostModal from './DeletePostModal';
+import {  PostData } from "./validations";
+import { fetchPosts } from "@/app/lib/api/post";
 
-export default function PostTable({ postes, onRefresh }: { 
-  postes: any[], 
-  onRefresh?: () => void 
-}) {
-  const [filterValue, setFilterValue] = useState('');
+import PostCard from "./PostCard";
+import CreatePostModal from "./CreatePostModal";
+import EditPostModal from "./EditPostModal";
+import DeletePostModal from "./DeletePostModal";
+import { PiBankLight } from "react-icons/pi";
+import PageHeader from "../header";
+import PostFilterBar from "./PostFilterBar";
+import { BsBuilding } from "react-icons/bs";
+
+
+export interface Post extends PostData {
+  id: string;
+  name: string;
+}
+interface PostTableProps {
+  posts?: Post[];
+}
+
+const ROWS_PER_PAGE = 8;
+
+const PostTable: React.FC<PostTableProps> =  ({ posts: initialPosts }) => {
+  const [posts, setPosts] = useState<Post[]>(initialPosts || []);
+  const [filterValue, setFilterValue] = useState("");
   const [page, setPage] = useState(1);
-  const rowsPerPage = 8;
-  
-  // États des modals
-  const [selectedPost, setSelectedPost] = useState(null);
+  const [isLoading, setIsLoading] = useState(!initialPosts);
+
+  // modals
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filtrer les postes par nom et description
-  const filteredItems = useMemo(() => {
-    return postes.filter(post => {
-      if (post.name && typeof post.name === 'string') {
-        const searchTerm = filterValue.toLowerCase();
-        return post.name.toLowerCase().includes(searchTerm) ||
-               (post.description && post.description.toLowerCase().includes(searchTerm));
+  // const loadPosts = async () => {
+  //   const data = await fetchPosts();
+  //   setPosts(data);
+  // };
+  const loadPosts = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await fetchPosts();
+        setPosts(data);
+      } catch (error) {
+        console.error("Erreur lors du chargement des post:", error);
+        setError("Impossible de charger les post. Veuillez réessayer.");
+      } finally {
+        setIsLoading(false);
       }
-      return false;
-    });
-  }, [postes, filterValue]);
-  
-  const pages = Math.ceil(filteredItems.length / rowsPerPage);
+    };
+
+  useEffect(() => {
+    loadPosts();
+  }, [initialPosts]);
+
+  // Filtered posts
+ // Filtered posts
+const filteredPosts = useMemo(() => {
+  const term = filterValue.toLowerCase();
+  return posts.filter((p) => {
+    // Filtre par recherche textuelle
+    const matchesSearch = 
+      p.name.toLowerCase().includes(term) ||
+      p.description.toLowerCase().includes(term);
+    
+    // Filtre par permission (si ton model Post a un champ "permission")
+    
+    return matchesSearch ;
+  });
+}, [posts, filterValue,]); // 🆕 Ajouter selectedPermission
   const itemsToDisplay = useMemo(() => {
-    const start = (page - 1) * rowsPerPage;
-    return filteredItems.slice(start, start + rowsPerPage);
-  }, [page, filteredItems]);
+    const start = (page - 1) * ROWS_PER_PAGE;
+    return filteredPosts.slice(start, start + ROWS_PER_PAGE);
+  }, [page, filteredPosts]);
 
-  const onSearchChange = useCallback((value?: string) => {
-    setFilterValue(value || '');
-    setPage(1);
-  }, []);
+  // Callbacks
+  
+  const handleCreate = () => setShowCreateModal(true);
 
-  const onClear = useCallback(() => {
-    setFilterValue('');
-    setPage(1);
-  }, []);
-
-  const getPermissionChips = (post: any) => {
-    const permissions = [];
-    if (post.deposit) permissions.push({ key: 'deposit', label: 'Dépôt', icon: '💰', color: 'success' as const });
-    if (post.withdrawal) permissions.push({ key: 'withdrawal', label: 'Retrait', icon: '💸', color: 'warning' as const });
-    if (post.transfer) permissions.push({ key: 'transfer', label: 'Transfert', icon: '🔄', color: 'primary' as const });
-    return permissions;
-  };
-
-  // Gestionnaires des modals
-  const handleCreate = () => {
-    setShowCreateModal(true);
-  };
-
-  const handleEdit = (post: any) => {
+  const handleEdit = (post: Post) => {
     setSelectedPost(post);
     setShowEditModal(true);
   };
-
-  const handleDelete = (post: any) => {
+  const handleDelete = (post: Post) => {
     setSelectedPost(post);
     setShowDeleteModal(true);
   };
@@ -89,231 +104,131 @@ export default function PostTable({ postes, onRefresh }: {
     setShowEditModal(false);
     setShowDeleteModal(false);
     setSelectedPost(null);
-    if (onRefresh) {
-      onRefresh();
-    }
+    loadPosts();
   };
+ 
 
-  return (
-    <div className="space-y-6">
-      {/* Header avec recherche et actions */}
-      <Card className="shadow-md border border-gray-100">
-        <CardBody className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            {/* Recherche */}
-            <div className="flex-1 max-w-md">
-              <Input
-                isClearable
-                placeholder="Rechercher un poste..."
-                startContent={<FiSearch className="text-gray-400" />}
-                value={filterValue}
-                onClear={onClear}
-                onValueChange={onSearchChange}
-                variant="bordered"
-                classNames={{
-                  input: "text-sm",
-                  inputWrapper: "border-gray-200 hover:border-green-400 focus-within:border-green-500"
-                }}
-              />
-            </div>
+  const onSearchChange = useCallback((value?: string) => {
+    setFilterValue(value || '');
+  }, []);
 
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                color="success"
-                variant="solid"
-                startContent={<LuPlus />}
-                onPress={handleCreate}
-                className="bg-green-600 text-white"
-              >
-                Nouveau Poste
-              </Button>
-              <Button 
-                color="primary" 
-                variant="bordered" 
-                startContent={<TfiImport className="w-4 h-4" />}
-                size="sm"
-              >
-                Importer
-              </Button>
-              <Button 
-                color="primary" 
-                variant="bordered" 
-                startContent={<TfiExport className="w-4 h-4" />}
-                size="sm"
-              >
-                Exporter
-              </Button>
-            </div>
-          </div>
+  const onClear = useCallback(() => {
+    setFilterValue('');
+  }, []);
 
-          {/* Statistiques */}
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
-                {filteredItems.length} poste(s) trouvé(s)
-              </span>
-            </div>
-            {filterValue && (
-              <Chip size="sm" variant="flat" color="primary">
-                Filtré par: "{filterValue}"
-              </Chip>
-            )}
-          </div>
-        </CardBody>
-      </Card>
-      {/* Grille de postes */}
-      {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {itemsToDisplay.map((post) => (
-            <Card 
-              key={post.id} 
-              className="shadow-md hover:shadow-lg transition-shadow border border-gray-100"
-            >
+if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4 p-4 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
               <CardBody className="p-4">
-                <div className="space-y-4">
-                  {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-800 mb-1">
-                        {post.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {post.description}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 ml-2">
-                      <Tooltip content="Modifier">
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          className="text-green-600 hover:bg-green-50"
-                          onPress={() => handleEdit(post)}
-                        >
-                          <FiEdit className="w-4 h-4" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content="Supprimer">
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          color="danger"
-                          onPress={() => handleDelete(post)}
-                        >
-                          <FaRegTrashCan className="w-4 h-4" />
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </div>
-
-                  {/* Permissions */}
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Permissions
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {getPermissionChips(post).length > 0 ? (
-                        getPermissionChips(post).map((permission) => (
-                          <Chip
-                            key={permission.key}
-                            color={permission.color}
-                            variant="flat"
-                            size="sm"
-                            startContent={<span className="text-xs">{permission.icon}</span>}
-                            classNames={{
-                              content: "text-xs font-medium"
-                            }}
-                          >
-                            {permission.label}
-                          </Chip>
-                        ))
-                      ) : (
-                        <Chip 
-                          size="sm" 
-                          variant="flat" 
-                          color="default"
-                          classNames={{
-                            content: "text-xs"
-                          }}
-                        >
-                          Aucune permission
-                        </Chip>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
               </CardBody>
             </Card>
           ))}
         </div>
-      ) : (
-        /* État vide */
-        (<Card className="shadow-md border border-gray-100">
-          <CardBody className="p-12 text-center">
-            <div className="space-y-4">
-              <div className="text-6xl">🏷️</div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  {filterValue ? "Aucun poste trouvé" : "Aucun poste disponible"}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {filterValue 
-                    ? "Essayez de modifier vos critères de recherche"
-                    : "Commencez par créer votre premier poste"
-                  }
-                </p>
-              </div>
-              <div className="flex justify-center gap-2">
-                {filterValue ? (
-                  <Button 
-                    onPress={onClear} 
-                    variant="bordered"
-                    className="text-green-600 border-green-300"
-                  >
-                    Effacer les filtres
-                  </Button>
-                ) : (
-                  <Button
-                    color="success"
-                    startContent={<LuPlus />}
-                    onPress={handleCreate}
-                    className="bg-green-600 text-white"
-                  >
-                    Créer votre premier poste
-                  </Button>
-                )}
-              </div>
+      </div>
+    );
+  }
+  
+  function handleExport(): void {
+    throw new Error("Function not implemented.");
+  }
+
+  return (
+ <div className="flex flex-col gap-4 p-4 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+          <p className="text-red-700">{error}</p>
+          <Button size="sm" onClick={loadPosts} className="mt-2 bg-red-600 text-white">
+            Réessayer
+          </Button>
+        </div>
+      )}
+ {/* Header */}
+      <PageHeader 
+        title="Gestion des Postes" 
+        subtitle="Gérez tous les Postes et leurs informations"
+        icon={<BsBuilding className="text-4xl" />}
+      />   
+      
+      <PostFilterBar
+        filterValue={filterValue}
+        onSearchChange={onSearchChange}
+        onClear={onClear}
+        onAdd={handleCreate}
+        onExport={handleExport}
+        totalCount={filteredPosts.length}
+      />
+      <div className="text-sm text-[#2c2e2f]/70">
+        {filteredPosts.length} résultat(s) trouvé(s)
+      </div>
+ {/* Grid de cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredPosts.length > 0 ? (
+          filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12">
+            <div className="text-8xl mb-4">
+              <FaBuildingWheat />
             </div>
-          </CardBody>
-        </Card>)
-      )}
+            <h3 className="text-xl font-semibold text-[#2c2e2f] mb-2">
+              {filterValue ? "Aucune post trouvée" : "Aucune post"}
+            </h3>
+            <p className="text-[#2c2e2f]/70 mb-4">
+              {filterValue 
+                ? "Essayez de modifier vos critères de recherche"
+                : "Commencez par ajouter votre première post"
+              }
+            </p>
+            {filterValue ? (
+              <Button onClick={onClear} variant="light" className="text-[#34963d]">
+                Effacer les filtres
+              </Button>
+            ) : (
+              <Button onClick={handleCreate} className="bg-[#34963d] text-white">
+                Ajouter un post
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+      
       {/* Modals */}
-      {showCreateModal && (
-        <CreatePostModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={handleSuccess}
+      {showCreateModal && 
+        <CreatePostModal 
+          isOpen={showCreateModal} 
+          onClose={() => setShowCreateModal(false)} 
+          onSuccess={handleSuccess} 
         />
-      )}
-      {showEditModal && selectedPost && (
-        <EditPostModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onSuccess={handleSuccess}
-          post={selectedPost}
+      }
+      {showEditModal && selectedPost &&
+        <EditPostModal 
+          isOpen={showEditModal} 
+          onClose={() => setShowEditModal(false)} 
+          onSuccess={handleSuccess} post={selectedPost} 
         />
-      )}
-      {showDeleteModal && selectedPost && (
-        <DeletePostModal
-          isOpen={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          onSuccess={handleSuccess}
-          post={selectedPost}
+      }
+
+      {showDeleteModal && selectedPost && 
+      <DeletePostModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onSuccess={handleSuccess} 
+        post={selectedPost} 
         />
-      )}
+      }
     </div>
   );
-}
+};
+
+export default PostTable;

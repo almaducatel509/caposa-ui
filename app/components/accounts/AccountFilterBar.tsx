@@ -1,101 +1,323 @@
-'use client';
-import React from 'react';
-import { Button } from "@heroui/react";
-import { FaPlus, FaSync, FaFileImport, FaFileExport } from "react-icons/fa";
+"use client";
+
+import React from "react";
+import {
+  Input,
+  Button,
+  Chip,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/react";
+import {
+  FaPlus,
+  FaUpload,
+  FaDownload,
+  FaFilter,
+  FaCheckCircle,
+  FaWallet,
+  FaCalendarAlt,
+} from "react-icons/fa";
+import { FiSearch } from "react-icons/fi";
+import { MdKeyboardArrowDown, MdOutlineSavings } from "react-icons/md";
+import { CiFilter, CiMoneyCheck1 } from "react-icons/ci";
+import { RiLuggageDepositLine } from "react-icons/ri";
 
 interface AccountFilterBarProps {
-  search: string;
-  type: string;
-  status: string;
-  onSearchChange: (value: string) => void;
-  onTypeChange: (value: string) => void;
-  onStatusChange: (value: string) => void;
+
+  filterValue: string;
+  selectedType: string;
+  selectedStatus: string;
+  onSearchChange: (value: string) => void; // ✅ SANS ?
+  onClear: () => void;
+  onTypeChange: (key: string) => void;
+  onStatusChange: (key: string) => void;
   onAdd: () => void;
-  onRefresh: () => void;
   onImport?: () => void;
   onExport?: () => void;
-  onClear?: () => void;
   totalCount: number;
+  importLoading?: boolean;
 }
 
+
 const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
-  search,
-  type,
-  status,
+  filterValue,
+  selectedType,
+  selectedStatus,
   onSearchChange,
+  onClear,
   onTypeChange,
   onStatusChange,
   onAdd,
-  onRefresh,
   onImport,
   onExport,
-  onClear,
   totalCount,
+  importLoading = false,
 }) => {
-  return (
-    <div className="bg-white p-4 rounded-lg border shadow-sm space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input
-          type="text"
-          placeholder="Rechercher par nom ou numéro..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="border rounded-md px-3 py-2"
-        />
-        <select
-          value={type}
-          onChange={(e) => onTypeChange(e.target.value)}
-          className="border rounded-md px-3 py-2"
-        >
-          <option value="all">Tous les types</option>
-          <option value="epargne">Épargne</option>
-          <option value="cheques">Chèques</option>
-          <option value="terme">Terme</option>
-        </select>
-        <select
-          value={status}
-          onChange={(e) => onStatusChange(e.target.value)}
-          className="border rounded-md px-3 py-2"
-        >
-          <option value="all">Tous les statuts</option>
-          <option value="actif">Actif</option>
-          <option value="ferme">Fermé</option>
-          <option value="suspendu">Suspendu</option>
-        </select>
-      </div>
+  const typeOptions = [
+    { key: "all", label: "Tous les types",icon: CiFilter  },
+    { key: "epargne", label: "Épargne", icon: MdOutlineSavings  },
+    { key: "cheques", label: "Chèques",icon: CiMoneyCheck1  },
+    { key: "terme", label: "Terme", icon: RiLuggageDepositLine   },
+  ];
 
-      <div className="flex justify-between items-center flex-wrap gap-3">
-        <p className="text-sm text-gray-600">{totalCount} compte(s) trouvé(s)</p>
-        <div className="flex flex-wrap gap-2">
-          {onClear && (
-            <Button onPress={onClear} variant="light" className="text-gray-700">
-              Réinitialiser
-            </Button>
-          )}
-          {onImport && (
-            <Button onPress={onImport} variant="bordered" startContent={<FaFileImport />}>
-              Importer
-            </Button>
-          )}
-          {onExport && (
-            <Button onPress={onExport} variant="bordered" startContent={<FaFileExport />}>
-              Exporter
-            </Button>
-          )}
-          <Button onPress={onRefresh} variant="bordered" color="default" startContent={<FaSync />}>
-            Actualiser
-          </Button>
-          <Button 
-            color="primary" 
-            startContent={<FaPlus size={14} />}
-            onPress={onAdd}
-            className="border-2 border-green-600 h-10 px-4"
-            size="sm"
-          > Nouveau Compte
-          </Button>
+  const statusOptions = [
+    { key: "all", label: "Tous les statuts" },
+    { key: "actif", label: "Actifs" },
+    { key: "ferme", label: "Fermés" },
+    { key: "suspendu", label: "Suspendus" },
+  ];
+
+  const getTypeLabel =
+    () => typeOptions.find((o) => o.key === selectedType)?.label || "Type";
+  const getStatusLabel =
+    () => statusOptions.find((o) => o.key === selectedStatus)?.label || "Statut";
+
+  const activeFiltersCount = [
+    selectedType !== "all",
+    selectedStatus !== "all",
+  ].filter(Boolean).length;
+
+ 
+
+  return (
+    <div className="space-y-4">
+          {/* Header avec recherche et actions principales */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            
+             <div className="relative w-full lg:max-w-xl">
+                      {/* Search icon (always visible) */}
+                <FiSearch
+                  size={20}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+      
+                {/* Input */}
+                <input
+                  type="text"
+                  value={filterValue}
+                  placeholder="Rechercher un membre par nom, email, téléphone..."
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="
+                    w-full h-12 pl-12 pr-12
+                    rounded-xl text-sm
+                    bg-white shadow-sm
+                    border-2 border-transparent
+                    hover:border-blue-200
+                    focus:border-blue-500 focus:outline-none
+                    transition-colors
+                  "
+                />
+      
+                {/* Clear button (only when text exists) */}
+                {filterValue && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSearchChange("");
+                      onClear();
+                    }}
+                    className="
+                      absolute right-3 top-1/2 -translate-y-1/2
+                      p-1 rounded-md
+                      text-gray-400
+                      hover:text-gray-600
+                      hover:bg-gray-100
+                      transition
+                    "
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+    
+            {/* Actions */}
+            <div className="flex gap-2 w-full lg:w-auto">
+              <Button
+                color="success"
+                startContent={<FaPlus size={16} />}
+                onPress={onAdd}
+                className="flex-1 lg:flex-none 
+                  bg-linear-to-r from-green-600 to-green-700
+                 text-white 
+                  font-semibold 
+                  shadow-lg 
+                  hover:shadow-xl 
+                  transition-all h-12 px-6
+                  rounded-md
+                "
+              >
+                Ajouter
+              </Button>
+              <Button
+                variant="bordered"
+                startContent={<FaUpload size={16} />}
+                onPress={onImport}
+                isLoading={importLoading}
+                isDisabled={importLoading}
+                className="rounded-md
+                  flex-1 lg:flex-none 
+                  border-2 
+                  border-slate-300 
+                  hover:border-slate-400 
+                  hover:bg-slate-50 
+                  font-medium 
+                  h-12 
+                  px-6 
+                  transition-all"
+              >
+                {importLoading ? "Import..." : "Importer"}
+              </Button>
+              <Button
+                variant="bordered"
+                startContent={<FaDownload size={16} />}
+                onPress={onExport}
+                className="              
+                 rounded-md
+                  flex-1 lg:flex-none 
+                  border-2 
+                  border-green-600
+                  text-green-600 
+                  hover:bg-green-50
+                  font-medium 
+                  h-12
+                  px-6
+                  transition-all"
+              >
+                Exporter
+              </Button>
+            </div>
+          </div>
+    
+          {/* Filtres avancés */}
+          <div className="bg-linear-to-r from-purple-50 via-white to-pink-50 rounded-xl p-4 shadow-sm border border-purple-100">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Badge nombre de résultats */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-600">Résultats:</span>
+                <Chip 
+                  size="lg" 
+                  variant="flat" 
+                  color="secondary"
+                  className="font-bold text-base px-4"
+                >
+                  {totalCount}
+                </Chip>
+              </div>
+    
+              <div className="h-8 w-px bg-gray-300 hidden sm:block" />
+    
+              {/* Filtres dropdown */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Filtre période */}
+                <Dropdown>
+                  <DropdownTrigger>
+                    <Button
+                      variant="flat"
+                      size="md"
+                      startContent={<FaCalendarAlt className="text-green-600" />}
+                      endContent={<MdKeyboardArrowDown />}
+                      className={` bg-amber-300 ${
+                        selectedType !== 'all' 
+                          ? 'bg-white border-2 rounded-md border-gray-400 text-green-700 font-semibold' 
+                          : 'bg-white border-2 border-gray-200 hover:border-gray-300'
+                      } transition-all`}
+                    >
+                      {getTypeLabel()}
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu
+                    selectedKeys={[selectedType]}
+                    onSelectionChange={(keys) => {
+                      const selected = Array.from(keys)[0]?.toString();
+                      if (selected) onTypeChange(selected);
+                    }}
+
+                    selectionMode="single"
+                    className='bg-white rounded-md'
+    
+                  >
+                    {typeOptions.map((option) => (
+                      <DropdownItem 
+                        key={option.key}
+                        startContent={<option.icon className="text-green-600" />}
+                      >
+                        {option.label}
+                      </DropdownItem>
+                    ))}
+                  </DropdownMenu>
+                </Dropdown>
+    
+                {/* Filtre statut */}
+                <Dropdown>
+                  <DropdownTrigger>
+                    <Button
+                      variant="flat"
+                      size="md"
+                      startContent={<FaCheckCircle className="text-green-600" />}
+                      endContent={<MdKeyboardArrowDown />}
+                      className={`${
+                        selectedStatus !== 'all' 
+                          ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
+                          : 'bg-white border-2 border-gray-200 hover:border-gray-300'
+                      } transition-all`}
+                    >
+                      {getStatusLabel()}
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu
+                    selectedKeys={[selectedStatus]}
+                    onSelectionChange={(keys) => {
+                      const selected = Array.from(keys)[0]?.toString();
+                      if (selected) onStatusChange(selected);
+                    }}
+                    selectionMode="single"
+                    className='bg-white rounded-md'
+                  >
+                    {statusOptions.map((option) => (
+                      <DropdownItem 
+                      className=' p-1.5'
+                        key={option.key}
+                        startContent={<FaCheckCircle className="text-green-600" />}
+                      >
+                        {option.label}
+                      </DropdownItem>
+                    ))}
+                  </DropdownMenu>
+                </Dropdown>
+    
+                {/* Badge filtres actifs */}
+                {activeFiltersCount > 0 && (
+                  <>
+                    <div className="h-8 w-px bg-gray-300 hidden sm:block" />
+                    <Chip 
+                      size="sm" 
+                      variant="flat" 
+                      color="warning"
+                      className="font-semibold"
+                    >
+                      {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
+                    </Chip>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      color="danger"
+                      onPress={() => {
+                        onTypeChange('all');
+                        onStatusChange('all');
+                      }}
+                      className="font-medium"
+                    >
+                      Réinitialiser
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
   );
 };
 

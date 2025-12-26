@@ -1,6 +1,5 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import Search from '@/app/components/search';
 import BranchTable from '@/app/components/branches/branchesTable';
 import { fetchBranches } from '@/app/lib/api/branche';
 
@@ -27,15 +26,12 @@ const BranchDashboard = () => {
     return <div>Loading branches...</div>;
   }
   return (
-    <div className="w-full bg-white">
-      <div className="flex w-full items-center justify-between">
-        <h1 className={` text-2xl`}>Branches</h1>
+    <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
+      <div className="px-6 py-6">
+        <BranchTable branches={branches} />
       </div>
-      <div className="mt-4 mb-4 flex items-center justify-between gap-2 md:mt-8">
-        {/* card */} 
-      </div>
-      <BranchTable branches={branches} />
-    </div>
+    </main>
     )
   }
   export default BranchDashboard;
+ 

@@ -51,8 +51,10 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
     { key: 'suspended', label: 'Suspendus', color: 'danger' },
   ];
 
-  const getFilterLabel = () => filterOptions.find(opt => opt.key === selectedFilter)?.label || 'Période';
-  const getStatusLabel = () => statusOptions.find(opt => opt.key === selectedStatus)?.label || 'Tous les statuts';
+  const getFilterLabel = 
+  () => filterOptions.find(opt => opt.key === selectedFilter)?.label || 'Période';
+  const getStatusLabel = 
+  () => statusOptions.find(opt => opt.key === selectedStatus)?.label || 'Tous les statuts';
 
   const activeFiltersCount = [
     selectedFilter !== 'all',
