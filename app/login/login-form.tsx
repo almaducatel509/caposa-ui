@@ -130,9 +130,9 @@ const LoginForm = () => {
                       name="remember"
                       className="w-4 h-4 border-2 border-gray-300 rounded text-emerald-600 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
                     />
-                    <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900">
+                    {/* <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900">
                       Se souvenir de moi
-                    </span>
+                    </span> */}
                   </label>
                   <a 
                     href="#" 

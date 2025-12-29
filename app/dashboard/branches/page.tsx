@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import BranchTable from '@/app/components/branches/branchesTable';
+import BranchTable from '@/app/components/branches/branchesGrid';
 import { fetchBranches } from '@/app/lib/api/branche';
 
 const BranchDashboard = () => {

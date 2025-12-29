@@ -104,7 +104,7 @@ export interface BranchData {
   opening_date: string;
   
   // References
-  opening_hour?: string; // UUID reference
+  opening_hour: string; // UUID reference
   holidays?: string[]; // UUID array
   
   // Détails retournés par l'API (populate)

@@ -1,29 +1,107 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardBody, Button } from "@heroui/react";
-import { BranchData } from './validations';
-import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
-import { Holiday, OpeningHour } from './validations';
-
-// ✅ IMPORTS DES COMPOSANTS - Vérifiez que les noms correspondent aux exports
-import BranchFilterBar from './BranchFilterBar';
-import BranchDetailsModal from './BranchDetailsModal';  // ← Modal de détails
-import EditBranchModal from './EditBranchModal';        // ← Modal d'édition
-import DeleteBranchModal from './DeleteBranchModal';    // ← Modal de suppression
-import BranchCard from './BranchCard';                  // ← Carte de branche (VERSION MODERNE)
 import { FaBuildingWheat } from 'react-icons/fa6';
-import { PiBankLight, PiUsersFourThin } from 'react-icons/pi';
-import PageHeader from '../header';
+import { PiBankLight } from 'react-icons/pi';
 
-export interface Branch extends BranchData {
-  id: string;
-  branch_code: string;
+// Imports des composants
+import BranchCard from './BranchCard';
+import BranchFilterBar from './BranchFilterBar';
+import PageHeader from '../header';
+import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
+import BranchDetailsModal from './BranchDetailsModal';
+import DeleteBranchModal from './DeleteBranchModal';
+import EditBranchModal from './EditBranchModal';
+import { ScheduleForm } from '../ScheduleForm';
+import type { Branch, Holiday, OpeningHour } from "@/types/branche";
+
+// Types
+interface BranchData {
+  branch_name: string;
+  branch_address: string;
+  branch_phone_number: string;
+  branch_email: string;
+  number_of_tellers: number;
+  number_of_clerks: number;
+  number_of_credit_officers: number;
+  status: 'active' | 'inactive';
+  opening_date: string;
 }
+
+
 
 interface BranchesTableProps {
   branches?: Branch[];
 }
+
+// Composant Loading Skeleton
+const LoadingSkeleton = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {[...Array(6)].map((_, i) => (
+      <div key={i} className="bg-white rounded-xl p-6 border-2 border-gray-200 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded mb-4 w-1/3"></div>
+        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+        <div className="h-20 bg-gray-100 rounded mb-4"></div>
+        <div className="h-16 bg-gray-50 rounded"></div>
+      </div>
+    ))}
+  </div>
+);
+
+// Composant Error Display
+const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
+  <div className="p-6 bg-red-50 border-2 border-red-200 rounded-lg mb-6">
+    <p className="text-red-700 mb-3">{error}</p>
+    <button
+      onClick={onRetry}
+      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+    >
+      Réessayer
+    </button>
+  </div>
+);
+
+// Composant Empty State
+const EmptyState = ({ 
+  hasFilter, 
+  onClear, 
+  onAdd 
+}: { 
+  hasFilter: boolean; 
+  onClear: () => void; 
+  onAdd: () => void; 
+}) => (
+  <div className="col-span-full text-center py-16">
+    <div className="text-8xl mb-6 flex justify-center text-gray-300">
+      <FaBuildingWheat />
+    </div>
+    <h3 className="text-2xl font-semibold text-[#2c2e2f] mb-3">
+      {hasFilter ? "Aucune branche trouvée" : "Aucune branche"}
+    </h3>
+    <p className="text-[#2c2e2f]/70 mb-6 max-w-md mx-auto">
+      {hasFilter 
+        ? "Essayez de modifier vos critères de recherche"
+        : "Commencez par ajouter votre première branche"
+      }
+    </p>
+    {hasFilter ? (
+      <button
+        onClick={onClear}
+        className="px-6 py-3 bg-gray-100 text-[#34963d] rounded-lg hover:bg-gray-200 transition-colors font-medium"
+      >
+        Effacer les filtres
+      </button>
+    ) : (
+      <button
+        onClick={onAdd}
+        className="px-6 py-3 bg-[#34963d] text-white rounded-lg hover:bg-[#2d7a31] transition-colors font-medium"
+      >
+        Ajouter une branche
+      </button>
+    )}
+  </div>
+);
 
 const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches }) => {
   // États de référence
@@ -33,6 +111,8 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
   const [isLoadingReferenceData, setIsLoadingReferenceData] = useState(true);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+
 
   // États de filtrage
   const [filterValue, setFilterValue] = useState('');
@@ -43,7 +123,7 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
   // États des modals
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editModalMode, setEditModalMode] = useState<'create' | 'edit' | 'activate'>('create'); // 👈 AJOUT
+  const [editModalMode, setEditModalMode] = useState<'create' | 'edit' | 'activate'>('create');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -61,6 +141,8 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
     try {
       setIsLoading(true);
       setError(null);
+      
+      // 🔌 IMPORT: import { fetchBranches } from '@/app/lib/api/branche';
       const data = await fetchBranches();
       setBranches(data);
     } catch (error) {
@@ -73,7 +155,7 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
 
   useEffect(() => {
     loadBranches();
-  }, [initialBranches]);
+  }, []);
 
   // Chargement des données de référence
   const loadReferenceData = async () => {
@@ -81,6 +163,7 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
       setIsLoadingReferenceData(true);
       console.log('🔄 Chargement des données de référence...');
       
+      // 🔌 IMPORT: import { fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
       const [holidaysData, openingHoursData] = await Promise.all([
         fetchHolidays(),
         fetchOpeningHours()
@@ -96,7 +179,7 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
         holidays: holidaysData.length,
         openingHours: openingHoursData.length,
       });
-
+      
     } catch (error) {
       console.error('❌ Erreur lors du chargement des données de référence:', error);
       setHolidays([]);
@@ -145,8 +228,12 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
         break;
     }
 
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(branch => branch.status === selectedStatus);
+    }
+
     return filtered.sort((a, b) => a.branch_name.localeCompare(b.branch_name));
-  }, [branches, debouncedValue, selectedSize]);
+  }, [branches, debouncedValue, selectedSize, selectedStatus]);
 
   // Gestionnaires d'événements
   const handleExport = useCallback(() => {
@@ -171,38 +258,27 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
   }, [filteredBranches]);
 
   const handleAdd = () => {
-    console.log("🆕 Creating new branch"); 
     setSelectedBranch(null);
     setIsEditMode(false);
-    setEditModalMode('create'); // 👈 AJOUT
+    setEditModalMode('create');
     setShowEditModal(true);
   };
 
   const handleEdit = (branch: Branch) => {
-    console.log("📝 Editing branch:", branch); 
     setSelectedBranch(branch);
     setIsEditMode(true);
-    setEditModalMode('edit'); // 👈 AJOUT
+    setEditModalMode('edit');
     setShowEditModal(true);
   };
 
-  // 👇 NOUVEAU : Handler pour l'activation
-  const handleActivate = (branch: Branch) => {
+    const handleActivate = (branch: Branch) => {
     console.log("🚀 Activating branch:", branch);
     setSelectedBranch(branch);
     setIsEditMode(true);
-    setEditModalMode('activate'); // 👈 Mode activation
+    setEditModalMode('activate');
     setShowEditModal(true);
-  };
+    setShowScheduleForm(true); 
 
-  // 👇 MODIFIÉ : Handler unifié depuis BranchDetailsModal
-  const handleEditFromDetails = (branch: Branch, mode: 'edit' | 'activate') => {
-    console.log(`📝 ${mode === 'activate' ? 'Activating' : 'Editing'} branch:`, branch);
-    setSelectedBranch(branch);
-    setIsEditMode(true);
-    setEditModalMode(mode);
-    setShowDetailsModal(false); // Fermer le modal de détails
-    setShowEditModal(true);
   };
 
   const handleDelete = (branch: Branch) => {
@@ -211,7 +287,6 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
   };
 
   const handleViewDetails = (branch: Branch) => {
-    console.log('🎯 handleViewDetails appelé avec:', branch.branch_name);
     setSelectedBranch(branch);
     setShowDetailsModal(true);
   };
@@ -239,110 +314,104 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
     setSelectedStatus(key);
   }, []);
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-4 p-4 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardBody className="p-4">
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-              </CardBody>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-4 p-4 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
-          <p className="text-red-700">{error}</p>
-          <Button size="sm" onClick={loadBranches} className="mt-2 bg-red-600 text-white">
-            Réessayer
-          </Button>
-        </div>
-      )}
-
+    <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
+      {/* Header */}
       <PageHeader 
         title="Gestion des branches" 
         subtitle="Gérez toutes les branches et leurs informations"
         icon={<PiBankLight  className="text-5xl" />}
       />
 
-      <BranchFilterBar
-        filterValue={filterValue}
-        selectedSize={selectedSize}
-        selectedStatus={selectedStatus}
-        onSearchChange={onSearchChange}
-        onClear={onClear}
-        onSizeChange={onSizeChange}
-        onStatusChange={onStatusChange}
-        onAdd={handleAdd}
-        onExport={handleExport}
-        totalCount={filteredBranches.length}
-      />
 
-      <div className="text-sm text-[#2c2e2f]/70">
-        {filteredBranches.length} résultat(s) trouvé(s)
-      </div>
+      {/* Error State */}
+      {error && <ErrorDisplay error={error} onRetry={loadBranches} />}
+
+      {/* Filter Bar */}
+      {!isLoading && (
+        <BranchFilterBar
+          filterValue={filterValue}
+          selectedSize={selectedSize}
+          selectedStatus={selectedStatus}
+          onSearchChange={onSearchChange}
+          onClear={onClear}
+          onSizeChange={onSizeChange}
+          onStatusChange={onStatusChange}
+          onAdd={handleAdd}
+          onExport={handleExport}
+          totalCount={filteredBranches.length}
+        />
+      )}
+
+      {/* Results Count */}
+      {!isLoading && (
+        <div className="text-sm text-[#2c2e2f]/70 font-medium">
+          {filteredBranches.length} résultat(s) trouvé(s)
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && <LoadingSkeleton />}
 
       {/* Grid de cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBranches.length > 0 ? (
-          filteredBranches.map((branch) => (
-            <BranchCard
-              key={branch.id}
-              branch={branch}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onViewDetails={handleViewDetails}
-              onActivate={handleActivate} // 👈 AJOUT
+      {!isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBranches.length > 0 ? (
+            filteredBranches.map((branch) => (
+              <BranchCard
+                key={branch.id}
+                branch={branch}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onViewDetails={handleViewDetails}
+                onActivate={handleActivate}
+              />
+            ))
+          ) : (
+            <EmptyState
+              hasFilter={!!filterValue || selectedSize !== 'all' || selectedStatus !== 'all'}
+              onClear={onClear}
+              onAdd={handleAdd}
             />
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12">
-            <div className="text-8xl mb-4">
-              <FaBuildingWheat />
-            </div>
-            <h3 className="text-xl font-semibold text-[#2c2e2f] mb-2">
-              {filterValue ? "Aucune branche trouvée" : "Aucune branche"}
-            </h3>
-            <p className="text-[#2c2e2f]/70 mb-4">
-              {filterValue 
-                ? "Essayez de modifier vos critères de recherche"
-                : "Commencez par ajouter votre première branche"
-              }
-            </p>
-            {filterValue ? (
-              <Button onClick={onClear} variant="light" className="text-[#34963d]">
-                Effacer les filtres
-              </Button>
-            ) : (
-              <Button onClick={handleAdd} className="bg-[#34963d] text-white">
-                Ajouter une branche
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Modals */}
-      {showEditModal && (
+      {showScheduleForm && selectedBranch && (
+        <ScheduleForm
+          branchId={selectedBranch.id}
+          branchName={selectedBranch.branch_name}
+          onSuccess={async (scheduleData) => {
+            console.log("✅ Horaire créé :", scheduleData);
+
+            // 🔌 API plus tard
+            // await createOpeningHours(selectedBranch.id, scheduleData);
+            // await activateBranch(selectedBranch.id);
+
+            setShowScheduleForm(false);
+            setSelectedBranch(null);
+            loadBranches();
+          }}
+          onCancel={() => {
+            setShowScheduleForm(false);
+            setSelectedBranch(null);
+          }}
+        />
+      )}
+
+      {/* CREATE / EDIT */}
+      {showEditModal && editModalMode !== 'activate' && (
         <EditBranchModal
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
           onSuccess={handleSuccess}
           branch={selectedBranch}
           isEditMode={isEditMode}
-          mode={editModalMode} // 👈 AJOUT
+          mode={editModalMode}
           holidays={holidays}
         />
       )}
+
 
       {showDeleteModal && selectedBranch && (
         <DeleteBranchModal
@@ -353,16 +422,21 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
         />
       )}
 
-      {/* ✅ MODAL DE DÉTAILS AVEC BONS PROPS */}
       {showDetailsModal && selectedBranch && (
         <BranchDetailsModal
           isOpen={showDetailsModal}
           onClose={() => setShowDetailsModal(false)}
           branch={selectedBranch}
-          onEdit={handleEditFromDetails} // 👈 Handler unifié
+          onEdit={(branch, mode) => {
+            setSelectedBranch(branch);
+            setIsEditMode(true);
+            setEditModalMode(mode);
+            setShowDetailsModal(false);
+            setShowEditModal(true);
+          }}
           openingHours={openingHours}
           holidays={holidays}
-          isLoadingData={isLoadingReferenceData && (holidays.length === 0 || openingHours.length === 0)}
+          isLoadingData={isLoadingReferenceData}
         />
       )}
     </div>
