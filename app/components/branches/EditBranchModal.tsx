@@ -1,25 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, ChangeEvent } from "react";
-import {
-  Button,
-  Spinner,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter
-} from "@heroui/react";
+import { Modal } from "@/app/components/ui/Modal";
+import { X } from "lucide-react";
+
 import { FaEdit, FaPlus } from "react-icons/fa";
-import { BranchData, OpeningHour, Holiday, ErrorMessages, branchBaseSchema, branchActivationSchema } from "./validations";
+import { BranchData, ErrorMessages, branchBaseSchema, branchActivationSchema, BranchFormData } from "./validations";
 import { fetchOpeningHours, fetchHolidays, updateBranch, createBranch, fetchBranches, getBranchById } from "@/app/lib/api/branche";
 import BranchFormFields from "./BranchFormFields";
-
-// Interface Branch
-interface Branch extends BranchData {
-  id: string;
-  branch_code: string;
-}
+import type { Branch, Holiday, OpeningHour } from "@/types/branche";
 
 interface EditBranchModalProps {
   isOpen: boolean;
@@ -27,17 +16,17 @@ interface EditBranchModalProps {
   onSuccess: () => void;
   branch: Branch | null;
   isEditMode: boolean;
-  mode?: 'create' | 'edit' | 'activate'; // 👈 AJOUT
-  holidays?: Holiday[];    
+  mode?: "create" | "edit"; 
+  holidays?: Holiday[];
 }
 
-const EditBranchModal: React.FC<EditBranchModalProps> = ({ 
+const EditBranchModal: React.FC<EditBranchModalProps> = ({
   isOpen,
-  onClose, 
+  onClose,
   onSuccess,
   branch,
   isEditMode,
-  mode = 'create', // 👈 AJOUT avec valeur par défaut
+  mode = "create",
   holidays: passedHolidays = [],
 }) => {
   console.log('🎯 BranchEditModal render:', {
@@ -45,22 +34,23 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     branchName: branch?.branch_name,
     holidaysCount: passedHolidays.length,
     isEditMode,
-    mode // 👈 AJOUT au log
+    mode 
   });
- 
-  const [formData, setFormData] = useState<BranchData>({
+    const [formData, setFormData] = useState<BranchFormData>({
     branch_name: "",
     branch_address: "",
     branch_phone_number: "",
     branch_email: "",
+    department_code: "OUEST",
+    city: "",
     number_of_posts: 0,
     number_of_tellers: 0,
     number_of_clerks: 0,
     number_of_credit_officers: 0,
     opening_date: "",
-    opening_hour: "",
+    opening_hour: undefined,
     holidays: [],
-    status: 'inactive', // 👈 AJOUT
+    status: "inactive", // reste pour le backend mais n'est plus géré comme "activate"
   });
 
   const [errors, setErrors] = useState<ErrorMessages<BranchData>>({});
@@ -87,98 +77,66 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   };
 
   // Mettre à jour le nombre de postes chaque fois que les sous-valeurs changent
-  useEffect(() => {
-    if (!isLoading) {
-      const totalPosts = calculateTotalPosts(
-        formData.number_of_tellers,
-        formData.number_of_clerks,
-        formData.number_of_credit_officers
-      );
-      
-      setFormData(prev => ({
-        ...prev,
-        number_of_posts: totalPosts
-      }));
-    }
-  }, [formData.number_of_tellers, formData.number_of_clerks, formData.number_of_credit_officers, isLoading]);
+ useEffect(() => {
+    const totalPosts = calculateTotalPosts(
+      formData.number_of_tellers,
+      formData.number_of_clerks,
+      formData.number_of_credit_officers
+    );
+    setFormData((prev) => ({ ...prev, number_of_posts: totalPosts }));
+  }, [formData.number_of_tellers, formData.number_of_clerks, formData.number_of_credit_officers]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        
         const [hours, days, existingBranches] = await Promise.all([
           fetchOpeningHours(),
           fetchHolidays(),
           fetchBranches(),
         ]);
-        
         setOpeningHours(hours);
         setLocalHolidays(days);
         setBranches(existingBranches);
-        
+
         if (isEditMode && branch) {
-          let branchData;
-          
-          if (branch.id) {
-            branchData = await getBranchById(branch.id);
-          } else {
-            branchData = branch;
-          }
-          
-          if (branchData && branchData.holidays) {
-            type HolidayItem = string | { id: string };
-            
-            const holidayIds = Array.isArray(branchData.holidays) 
-              ? branchData.holidays.map((h: HolidayItem) => typeof h === 'object' ? h.id : h)
-              : [];
-            
-            const updatedData = {
-              ...branchData,
-              holidays: holidayIds,
-              status: mode === 'activate' ? 'active' : (branchData.status || 'inactive'), // 👈 AJOUT
-            };
-            
-            updatedData.number_of_posts = calculateTotalPosts(
-              updatedData.number_of_tellers,
-              updatedData.number_of_clerks,
-              updatedData.number_of_credit_officers
-            );
-            
-            setFormData(updatedData);
-          } else {
-            setFormData(branchData || formData);
-          }
-        } else {
-          // Mode création
+          const branchDataFromApi = branch.id ? await getBranchById(branch.id) : branch;
+
+          const holidayIds = Array.isArray(branchDataFromApi.holidays)
+            ? branchDataFromApi.holidays.map((h: Holiday) => (typeof h === "object" ? h.id : h))
+            : [];
+
           setFormData({
-            branch_name: "",
-            branch_address: "",
-            branch_phone_number: "",
-            branch_email: "",
-            number_of_posts: 0,
-            number_of_tellers: 0,
-            number_of_clerks: 0,
-            number_of_credit_officers: 0,
-            opening_date: "",
-            opening_hour: "",
-            holidays: [],
-            status: 'inactive', // 👈 AJOUT
+            branch_name: branchDataFromApi.branch_name,
+            branch_address: branchDataFromApi.branch_address,
+            branch_phone_number: branchDataFromApi.branch_phone_number,
+            branch_email: branchDataFromApi.branch_email,
+            department_code: branchDataFromApi.department_code ?? "OUEST",
+            city: branchDataFromApi.city ?? "",
+            number_of_tellers: branchDataFromApi.number_of_tellers,
+            number_of_clerks: branchDataFromApi.number_of_clerks,
+            number_of_credit_officers: branchDataFromApi.number_of_credit_officers,
+            number_of_posts: calculateTotalPosts(
+              branchDataFromApi.number_of_tellers,
+              branchDataFromApi.number_of_clerks,
+              branchDataFromApi.number_of_credit_officers
+            ),
+            opening_date: branchDataFromApi.opening_date,
+            opening_hour: branchDataFromApi.opening_hour,
+            holidays: holidayIds,
+            status: branchDataFromApi.status ?? "inactive",
           });
         }
-        
       } catch (error) {
-        console.error("Erreur lors du chargement des données :", error);
+        console.error(error);
         setApiError("Impossible de charger les données de la branche.");
       } finally {
         setIsLoading(false);
       }
     };
-    
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen, isEditMode, branch, mode]); // 👈 AJOUT mode dans les dépendances
+
+    if (isOpen) loadData();
+  }, [isOpen, isEditMode, branch]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -223,21 +181,8 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   };
 
   // 👇 VALIDATION ADAPTÉE AU MODE
-  const validate = () => {
-    const updatedFormData = {
-      ...formData,
-      number_of_posts: calculateTotalPosts(
-        formData.number_of_tellers,
-        formData.number_of_clerks,
-        formData.number_of_credit_officers
-      ),
-      status: mode === 'activate' ? 'active' : formData.status,
-    };
-    
-    // 👇 CHOIX DU SCHÉMA SELON LE MODE
-    const schema = mode === 'activate' ? branchActivationSchema : branchBaseSchema;
-    const result = schema.safeParse(updatedFormData);
-    
+   const validate = () => {
+    const result = branchBaseSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: ErrorMessages<BranchData> = {};
       result.error.errors.forEach((e) => {
@@ -251,59 +196,95 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     return true;
   };
 
-  const handleSubmit = async () => {
+  // const handleSubmit = async () => {
+  //   setIsSubmitting(true);
+  //   setApiError(null);
+  //   setSuccessMessage(null);
+
+  //   if (!validate()) {
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   const duplicate = isDuplicateBranch();
+  //   if (duplicate) {
+  //     setApiError(duplicate);
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const updatedFormData = {
+  //       ...formData,
+  //       number_of_posts: calculateTotalPosts(
+  //         formData.number_of_tellers,
+  //         formData.number_of_clerks,
+  //         formData.number_of_credit_officers
+  //       ),
+  //       status: mode === 'activate' ? 'active' : formData.status, // 👈 AJOUT
+  //     };
+      
+  //     if (isEditMode && branch?.id) {
+  //       await updateBranch(branch.id, updatedFormData);
+  //       setSuccessMessage(
+  //         mode === 'activate' 
+  //           ? "La branche a été activée avec succès !" 
+  //           : "La branche a été modifiée avec succès !"
+  //       );
+  //     } else {
+  //       await createBranch(updatedFormData);
+  //       setSuccessMessage("La branche a été créée avec succès !");
+  //     }
+      
+  //     if (onSuccess) {
+  //       setTimeout(() => {
+  //         onSuccess();
+  //         onClose();
+  //       }, 1500);
+  //     }
+  //   } catch (error) {
+  //     console.error("Erreur lors de la sauvegarde :", error);
+  //     setApiError(
+  //       `Une erreur est survenue lors de ${
+  //         mode === 'activate' ? "l'activation" : isEditMode ? 'la modification' : 'la création'
+  //       }.`
+  //     );
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
+ const handleSubmit = async () => {
     setIsSubmitting(true);
     setApiError(null);
     setSuccessMessage(null);
 
-    if (!validate()) {
-      setIsSubmitting(false);
-      return;
-    }
-
+    if (!validate()) { setIsSubmitting(false); return; }
     const duplicate = isDuplicateBranch();
-    if (duplicate) {
-      setApiError(duplicate);
-      setIsSubmitting(false);
-      return;
-    }
+    if (duplicate) { setApiError(duplicate); setIsSubmitting(false); return; }
 
     try {
-      const updatedFormData = {
+      const payload: BranchData = {
         ...formData,
-        number_of_posts: calculateTotalPosts(
-          formData.number_of_tellers,
-          formData.number_of_clerks,
-          formData.number_of_credit_officers
-        ),
-        status: mode === 'activate' ? 'active' : formData.status, // 👈 AJOUT
+        id: branch?.id ?? crypto.randomUUID(),
+        branch_code: branch?.branch_code ?? "",
+        number_of_posts: formData.number_of_posts ?? 0,
+        opening_hour: formData.opening_hour ?? "",
+        created_at: branch?.created_at,
+        updated_at: new Date().toISOString(),
+        department_code: formData.department_code,
+        city: formData.city,
+        status: formData.status,
       };
-      
-      if (isEditMode && branch?.id) {
-        await updateBranch(branch.id, updatedFormData);
-        setSuccessMessage(
-          mode === 'activate' 
-            ? "La branche a été activée avec succès !" 
-            : "La branche a été modifiée avec succès !"
-        );
-      } else {
-        await createBranch(updatedFormData);
-        setSuccessMessage("La branche a été créée avec succès !");
-      }
-      
-      if (onSuccess) {
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 1500);
-      }
+
+      if (isEditMode && branch?.id) await updateBranch(branch.id, payload);
+      else await createBranch(payload);
+
+      setSuccessMessage(isEditMode ? "Branche modifiée avec succès !" : "Branche créée avec succès !");
+      onSuccess && setTimeout(() => { onSuccess(); onClose(); }, 1500);
     } catch (error) {
-      console.error("Erreur lors de la sauvegarde :", error);
-      setApiError(
-        `Une erreur est survenue lors de ${
-          mode === 'activate' ? "l'activation" : isEditMode ? 'la modification' : 'la création'
-        }.`
-      );
+      console.error(error);
+      setApiError("Une erreur est survenue lors de la sauvegarde de la branche.");
     } finally {
       setIsSubmitting(false);
     }
@@ -311,71 +292,29 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
 
   if (!isOpen) return null;
 
-  if (isLoading) {
+  if (isLoading) 
     return (
-      <Modal isOpen={isOpen} onClose={onClose} size="md">
-        <ModalContent>
-          <ModalBody className="flex justify-center items-center p-8">
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+          <div className="flex justify-center items-center p-8">
             <div className="flex flex-col items-center gap-3">
-              <Spinner size="lg" className="text-[#34963d]" />
+            <div className="flex justify-center py-12">
+              <div className="animate-spin w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full" />
+            </div>
               <span className="text-[#34963d]">Chargement...</span>
             </div>
-          </ModalBody>
-        </ModalContent>
+          </div>
       </Modal>
     );
-  }
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+        <div className="bg-linear-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-t-2xl relative">
+          <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10"><X size={20} /></button>
+          <h3 className="text-xl font-bold">{isEditMode ? "Modifier la branche" : "Nouvelle branche"}</h3>
+        </div>
 
-  // 👇 TITRE DYNAMIQUE SELON LE MODE
-  const getModalTitle = () => {
-    if (mode === 'activate') return "Activer la branche";
-    if (isEditMode) return "Modifier la branche";
-    return "Nouvelle branche";
-  };
-
-  const getModalSubtitle = () => {
-    if (mode === 'activate') return "Configurer les horaires et activer";
-    if (isEditMode) return "Mettre à jour les informations";
-    return "Créer une nouvelle branche";
-  };
-
-  return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      size="5xl"
-      placement="center"
-      scrollBehavior="inside"
-      classNames={{
-        base: "max-h-[95vh]",
-        wrapper: "z-[9999]",
-        backdrop: "z-[9998]",
-        body: "overflow-y-auto max-h-[85vh] px-6 shadow-inner"
-      }}
-    >
-      <ModalContent>
-        <ModalHeader 
-          className="flex items-center gap-3 bg-linear-to-r from-[#34963d] to-[#1e7367] text-white"
-        >
-          {mode === 'activate' ? <FaEdit /> : isEditMode ? <FaEdit /> : <FaPlus />}
-          <div>
-            <h3 className="text-lg font-bold">{getModalTitle()}</h3>
-            <p className="text-sm opacity-90">{getModalSubtitle()}</p>
-          </div>
-        </ModalHeader>
-        
-        <ModalBody className="p-6 space-y-6 border overflow-y-auto max-h-[85vh]">
-          {apiError && (
-            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded mb-4">
-              {apiError}
-            </div>
-          )}
-          
-          {successMessage && (
-            <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded mb-4">
-              {successMessage}
-            </div>
-          )}
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          {apiError && <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">{apiError}</div>}
+          {successMessage && <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">{successMessage}</div>}
 
           <BranchFormFields
             formData={formData}
@@ -388,34 +327,18 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             isSubmitting={isSubmitting}
             isEditMode={isEditMode}
             branch={branch}
-            mode={mode} // 👈 AJOUT
+            mode={mode}
           />
-        </ModalBody>
-        
-        <ModalFooter className="bg-gray-50">
-          <Button 
-            variant="light" 
-            onPress={onClose}
-            isDisabled={isSubmitting}
-            className="text-[#2c2e2f]"
-          >
-            Annuler
-          </Button>
-          <Button 
-            className="bg-[#34963d] text-white hover:bg-[#1e7367] transition-colors"
-            onPress={handleSubmit}
-            isLoading={isSubmitting}
-            isDisabled={isSubmitting}
-          >
-            {isSubmitting 
-              ? (mode === 'activate' ? "Activation..." : isEditMode ? "Modification..." : "Création...") 
-              : (mode === 'activate' ? "Activer" : isEditMode ? "Modifier" : "Créer")
-            }
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  );
+        </div>
+
+        <div className="border-t bg-gray-50 p-4 flex justify-end gap-3 rounded-b-2xl">
+          <button onClick={onClose} disabled={isSubmitting} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">Annuler</button>
+          <button onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold">
+            {isSubmitting ? "En cours..." : isEditMode ? "Modifier" : "Créer"}
+          </button>
+        </div>
+      </Modal>
+    );
 };
 
 export default EditBranchModal;

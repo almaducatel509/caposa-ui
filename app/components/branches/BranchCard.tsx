@@ -1,11 +1,16 @@
 "use client";
 
 import React from 'react';
-import { FaBuilding, FaEdit, FaTrash, FaEye, FaPlayCircle } from "react-icons/fa";
 import { BsTelephone, BsPeople } from "react-icons/bs";
 import { MdMailOutline } from "react-icons/md";
 import { GrMapLocation } from 'react-icons/gr';
-import type { Branch, Holiday, OpeningHour } from "@/types/branche";
+import type { Branch,  } from "@/types/branche";
+import { GoTrash } from "react-icons/go";
+import { IoCheckmarkDoneSharp } from "react-icons/io5";
+import { CiViewTimeline } from "react-icons/ci";
+import { LiaEdit } from "react-icons/lia";
+import { CiBank } from "react-icons/ci";
+
 
 interface BranchCardProps {
   branch: Branch;
@@ -58,7 +63,7 @@ const BranchCard: React.FC<BranchCardProps> = ({
       {/* Nom et code */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <FaBuilding className="text-[#34963d] text-lg" />
+          <CiBank  className="text-black text-3xl" />
           <h3 className="text-lg font-bold text-[#2c2e2f]">
             {branch.branch_name}
           </h3>
@@ -101,42 +106,55 @@ const BranchCard: React.FC<BranchCardProps> = ({
         <span>Ouverte le: </span>
         <span className="font-medium">{formatDate(branch.opening_date)}</span>
       </div>
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex gap-2 pt-4 border-t border-gray-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Voir */}
         <button
           onClick={() => onViewDetails(branch)}
-          className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-green-600 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="group flex-1 flex items-center justify-center gap-2 bg-blue-50 text-green-600 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
-          <FaEye />
-          Voir
+          <CiViewTimeline  />
+          <span className="opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-xs transition-all duration-200 overflow-hidden">
+            Voir
+          </span>
         </button>
-        
-        {!isActive && onActivate ? (
+{/* Bouton Modifier — toujours visible */}
+        <button
+          onClick={() => onEdit(branch)}
+          className="group flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <LiaEdit />
+          <span className="opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-xs transition-all duration-200 overflow-hidden">
+            Modifier
+          </span>
+        </button>
+
+        {/* Bouton Activer — seulement si la branche n'est pas active */}
+        {!isActive && onActivate && (
           <button
             onClick={() => onActivate(branch)}
-            className="flex-1 flex items-center justify-center gap-2 bg-orange-50 text-orange-600 hover:bg-orange-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="group flex-1 flex items-center justify-center gap-2 bg-orange-50 text-orange-600 hover:bg-orange-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            <FaPlayCircle />
-            Activer
-          </button>
-        ) : (
-          <button
-            onClick={() => onEdit(branch)}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            <FaEdit />
-            Modifier
+            <IoCheckmarkDoneSharp  />
+            <span className="opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-xs transition-all duration-200 overflow-hidden">
+              Activer
+            </span>
           </button>
         )}
-        
+        {/* Delete */}
         <button
           onClick={() => onDelete(branch)}
-          className="flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 p-2 rounded-lg transition-colors"
+          className="group flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 p-2 rounded-lg transition-colors"
         >
-          <FaTrash />
+          <GoTrash  />
+          <span className="opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-xs transition-all duration-200 overflow-hidden ml-1">
+            Supprimer
+          </span>
         </button>
       </div>
+
     </div>
   );
 };

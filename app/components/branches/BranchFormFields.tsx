@@ -1,317 +1,422 @@
 "use client";
 
-import React from "react";
-import {
-  Input,
-  DateInput,
-  Listbox,
-  ListboxItem,
-  Card,
-  CardBody,
-  Divider
-} from "@heroui/react";
-import { parseDate } from "@internationalized/date";
-import { BranchData, OpeningHour, Holiday, ErrorMessages } from "./validations";
-import { appConfig } from "@/config/appConfig";
+import React, { useEffect, useState } from "react";
 
+// Types importés (à remplacer par vos vrais imports)
+type DepartmentCode = 'OUEST' | 'SUDEST' | 'NORD' | 'NORDEST' | 'ARTIBONITE' | 'CENTRE' | 'SUD' | 'GRAND_ANSE' | 'NORD_OUEST' | 'NIPPES';
+
+interface BranchFormData {
+  branch_name: string;
+  branch_address: string;
+  branch_phone_number: string;
+  branch_email: string;
+  department_code: DepartmentCode;
+  city: string;
+  number_of_tellers: number;
+  number_of_clerks: number;
+  number_of_credit_officers: number;
+  number_of_posts?: number;
+  opening_date: string;
+  opening_hour?: string;
+  holidays?: string[];
+  status?: 'inactive' | 'active';
+}
+
+interface BranchData extends BranchFormData {
+  id: string;
+  branch_code: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+type ErrorMessages<T> = Partial<Record<keyof T, string>>;
+
+// Mock data pour la démo
+const HAITI_DEPARTMENTS = [
+  { code: "OUEST" as DepartmentCode, name: "Ouest" },
+  { code: "NORD" as DepartmentCode, name: "Nord" },
+  { code: "SUD" as DepartmentCode, name: "Sud" },
+  { code: "ARTIBONITE" as DepartmentCode, name: "Artibonite" },
+  { code: "CENTRE" as DepartmentCode, name: "Centre" },
+  { code: "SUDEST" as DepartmentCode, name: "Sud-Est" },
+  { code: "NORDEST" as DepartmentCode, name: "Nord-Est" },
+  { code: "GRAND_ANSE" as DepartmentCode, name: "Grand'Anse" },
+  { code: "NORD_OUEST" as DepartmentCode, name: "Nord-Ouest" },
+  { code: "NIPPES" as DepartmentCode, name: "Nippes" },
+];
+
+const CITIES_BY_DEPARTMENT: Record<DepartmentCode, string[]> = {
+  OUEST: ["Port-au-Prince", "Pétion-Ville", "Carrefour"],
+  NORD: ["Cap-Haïtien", "Limonade", "Quartier Morin"],
+  SUD: ["Les Cayes", "Port-Salut", "Aquin"],
+  ARTIBONITE: ["Gonaïves", "Saint-Marc", "Dessalines"],
+  CENTRE: ["Hinche", "Mirebalais", "Lascahobas"],
+  SUDEST: ["Jacmel", "Marigot", "Cayes-Jacmel"],
+  NORDEST: ["Fort-Liberté", "Ouanaminthe", "Trou-du-Nord"],
+  GRAND_ANSE: ["Jérémie", "Anse-d'Hainault", "Corail"],
+  NORD_OUEST: ["Port-de-Paix", "Saint-Louis-du-Nord", "Môle-Saint-Nicolas"],
+  NIPPES: ["Miragoâne", "Petit-Goâve", "Anse-à-Veau"],
+};
+
+const getCitiesByDepartment = (code: DepartmentCode): string[] => {
+  return CITIES_BY_DEPARTMENT[code] || [];
+};
+
+// ================= LOCATION SELECTOR =================
+interface HaitiLocationSelectorProps {
+  departmentCode: DepartmentCode | "";
+  city: string;
+  onDepartmentChange: (code: DepartmentCode | "") => void;
+  onCityChange: (city: string) => void;
+  disabled?: boolean;
+}
+
+const HaitiLocationSelector: React.FC<HaitiLocationSelectorProps> = ({
+  departmentCode,
+  city,
+  onDepartmentChange,
+  onCityChange,
+  disabled = false,
+}) => {
+  const [cities, setCities] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (departmentCode) {
+      const list = getCitiesByDepartment(departmentCode as DepartmentCode);
+      setCities(list);
+      if (city && !list.includes(city)) onCityChange("");
+    } else {
+      setCities([]);
+      onCityChange("");
+    }
+  }, [departmentCode, city, onCityChange]);
+
+  return (
+    <>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <span className="text-lg">🗺️</span>
+          Département
+        </label>
+        <select
+          value={departmentCode}
+          onChange={(e) => onDepartmentChange(e.target.value as DepartmentCode | "")}
+          disabled={disabled}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+        >
+          <option value="">Sélectionnez un département</option>
+          {HAITI_DEPARTMENTS.map((d) => (
+            <option key={d.code} value={d.code}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <span className="text-lg">🏙️</span>
+          Ville
+        </label>
+        <select
+          value={city}
+          onChange={(e) => onCityChange(e.target.value)}
+          disabled={!departmentCode || disabled}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
+        >
+          <option value="">
+            {departmentCode ? "Sélectionnez une ville" : "Choisissez d'abord un département"}
+          </option>
+          {cities.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+};
+
+// ================= MAIN COMPONENT (EXPORT) =================
 interface BranchFormFieldsProps {
-  formData: BranchData;
-  errors: ErrorMessages<BranchData>;
-  openingHours: OpeningHour[];
-  holidays: Holiday[];
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleChangeDate: (date: any) => void;
-  handleHolidaySelection: (selected: any) => void;
+  formData: BranchFormData;
+  errors: ErrorMessages<BranchFormData>;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   isSubmitting: boolean;
-  isEditMode?: boolean;    
+  isEditMode?: boolean;
   branch?: BranchData | null;
-  mode?: 'create' | 'edit' | 'activate'; // 👈 NOUVEAU
+  mode?: "create" | "edit" | "activate";
 }
 
 const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
   formData,
   errors,
-  openingHours,
-  holidays,
   handleChange,
-  handleChangeDate,
-  handleHolidaySelection,
   isSubmitting,
-  isEditMode,
-  branch,
-  mode = 'create', // 👈 valeur par défaut
 }) => {
-  const isEdit = isEditMode && !!branch;
-  const isActivationMode = mode === 'activate'; // 👈 NOUVEAU
-  const isConfigDisabled = mode === 'create'; // 👈 NOUVEAU
 
-  const isDateEditable = !isEdit || (
-    branch?.created_at &&
-    new Date().getTime() - new Date(branch.created_at).getTime() <= 24 * 60 * 60 * 1000
-  );
-
-  const selectedHolidayKeys = React.useMemo(() => {
-    let holidaysToProcess = formData.holidays;
-    
-    if (isEdit && (!formData.holidays || formData.holidays.length === 0) && branch?.holidays) {
-      holidaysToProcess = branch.holidays;
-    }
-
-    if (!holidaysToProcess || !Array.isArray(holidaysToProcess)) {
-      return new Set<string>();
-    }
-    
-    const converted = holidaysToProcess.map(id => String(id));
-    return new Set(converted);
-  }, [formData.holidays, branch?.holidays, isEdit]);
+  const totalPosts =
+    (formData.number_of_tellers || 0) +
+    (formData.number_of_clerks || 0) +
+    (formData.number_of_credit_officers || 0);
 
   return (
     <div className="space-y-6">
-      {/* Section 1: Informations de Base */}
-      <Card className="shadow-md border border-gray-100">
-        <CardBody className="p-6">
+      {/* ================= Section 1: Informations de Base ================= */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-linear-to-b from-blue-500 to-blue-600 rounded-full"></div>
+            <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
             <h3 className="text-lg font-semibold text-gray-800">Informations de Base</h3>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { name: "branch_name", label: "Nom de la Branche", icon: "🏢" },
-              { name: "branch_address", label: "Adresse Complète", icon: "📍" },
-              { name: "branch_phone_number", label: "Numéro de Téléphone", icon: "📞" },
-              { name: "branch_email", label: "Adresse Email", icon: "✉️" },
-            ].map((field) => (
-              <div key={field.name} className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <span className="text-lg">{field.icon}</span>
-                  {field.label}
-                </label>
-                <Input
-                  name={field.name}
-                  value={(formData as any)[field.name] || ""}
-                  onChange={handleChange}
-                  isInvalid={!!errors[field.name as keyof BranchData]}
-                  errorMessage={errors[field.name as keyof BranchData]}
-                  isDisabled={isSubmitting}
-                  variant="bordered"
-                  size="sm"
-                  classNames={{
-                    input: "text-sm",
-                    inputWrapper: "border-gray-200 hover:border-blue-400 focus-within:border-blue-500"
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
 
-      {/* Section 2: Personnel et Postes */}
-      <Card className="shadow-md border border-gray-100">
-        <CardBody className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-linear-to-b from-green-500 to-green-600 rounded-full"></div>
-            <h3 className="text-lg font-semibold text-gray-800">Personnel et Postes</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Total automatique */}
-            <div className="md:col-span-2 lg:col-span-1">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                <span className="text-lg">📊</span>
-                Total des Postes
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Nom de la Branche */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">🏢</span>
+                Nom de la Branche
               </label>
-              <div className="bg-linear-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{formData.number_of_posts}</div>
-                <div className="text-xs text-green-500 mt-1">Employe(s)</div>
-              </div>
+              <input
+                type="text"
+                name="branch_name"
+                value={formData.branch_name || ""}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.branch_name ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.branch_name && (
+                <p className="text-xs text-red-500">{errors.branch_name}</p>
+              )}
             </div>
 
-            {/* Champs numériques */}
-            {[
-              { name: "number_of_tellers", label: "Caissiers", icon: "💰", color: "text-yellow-600" },
-              { name: "number_of_clerks", label: "Personnel", icon: "👥", color: "text-blue-600" },
-              { name: "number_of_credit_officers", label: "Agents de Crédit", icon: "💼", color: "text-purple-600" },
-            ].map((field) => (
-              <div key={field.name} className="space-y-2">
-                <label className={`text-sm font-medium text-gray-700 flex items-center gap-2`}>
-                  <span className="text-lg">{field.icon}</span>
-                  {field.label}
-                </label>
-                <Input
-                  name={field.name}
-                  type="number"
-                  value={String((formData as any)[field.name] || 0)}
-                  onChange={handleChange}
-                  isInvalid={!!errors[field.name as keyof BranchData]}
-                  errorMessage={errors[field.name as keyof BranchData]}
-                  isDisabled={isSubmitting}
-                  variant="bordered"
-                  size="sm"
-                  min="0"
-                  classNames={{
-                    input: "text-sm text-center font-medium",
-                    inputWrapper: "border-gray-200 hover:border-green-400 focus-within:border-green-500"
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
+            {/* Téléphone */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">📞</span>
+                Numéro de Téléphone
+              </label>
+              <input
+                type="tel"
+                name="branch_phone_number"
+                value={formData.branch_phone_number || ""}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.branch_phone_number ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.branch_phone_number && (
+                <p className="text-xs text-red-500">{errors.branch_phone_number}</p>
+              )}
+            </div>
 
-      {/* Section 3: Configuration et Horaires */}
-      <Card className="shadow-md border border-gray-100">
-        <CardBody className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-linear-to-b from-purple-500 to-purple-600 rounded-full"></div>
-            <h3 className="text-lg font-semibold text-gray-800">Configuration et Horaires</h3>
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">✉️</span>
+                Adresse Email
+              </label>
+              <input
+                type="email"
+                name="branch_email"
+                value={formData.branch_email || ""}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.branch_email ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.branch_email && (
+                <p className="text-xs text-red-500">{errors.branch_email}</p>
+              )}
+            </div>
+
+            {/* Adresse Complète */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Adresse (numéro et rue)
+              </label>
+              <input
+                type="text"
+                name="branch_address"
+                placeholder="Ex. : 13 Rue Capois"
+                value={formData.branch_address || ""}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.branch_address ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              <p className="text-xs text-gray-500">
+                Saisissez uniquement le numéro et le nom de la rue. La ville et le département sont sélectionnés plus bas.
+              </p>
+              {errors.branch_address && (
+                <p className="text-xs text-red-500">{errors.branch_address}</p>
+              )}
+            </div>
+
+            {/* Département + Ville */}
+            <HaitiLocationSelector
+              departmentCode={formData.department_code || ""}
+              city={formData.city || ""}
+              onDepartmentChange={(code) =>
+                handleChange({
+                  target: { name: "department_code", value: code },
+                } as React.ChangeEvent<HTMLInputElement>)
+              }
+              onCityChange={(city) =>
+                handleChange({
+                  target: { name: "city", value: city },
+                } as React.ChangeEvent<HTMLInputElement>)
+              }
+              disabled={isSubmitting}
+            />
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Date d'ouverture */}
+
+          {(errors.department_code || errors.city) && (
+            <div className="mt-2 space-y-1">
+              {errors.department_code && (
+                <p className="text-xs text-red-500">{errors.department_code}</p>
+              )}
+              {errors.city && <p className="text-xs text-red-500">{errors.city}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================= Section 2: Personnel et Postes ================= */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-6 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+            <h3 className="text-lg font-semibold text-gray-800">Personnel et Postes</h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Caissiers */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">💰</span>
+                Caissiers
+              </label>
+              <input
+                type="number"
+                name="number_of_tellers"
+                value={formData.number_of_tellers || 0}
+                onChange={handleChange}
+                min="0"
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg text-center font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.number_of_tellers ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.number_of_tellers && (
+                <p className="text-xs text-red-500">{errors.number_of_tellers}</p>
+              )}
+            </div>
+
+            {/* Personnel */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">👥</span>
+                Personnel
+              </label>
+              <input
+                type="number"
+                name="number_of_clerks"
+                value={formData.number_of_clerks || 0}
+                onChange={handleChange}
+                min="0"
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg text-center font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.number_of_clerks ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.number_of_clerks && (
+                <p className="text-xs text-red-500">{errors.number_of_clerks}</p>
+              )}
+            </div>
+
+            {/* Agents de Crédit */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">💼</span>
+                Agents de Crédit
+              </label>
+              <input
+                type="number"
+                name="number_of_credit_officers"
+                value={formData.number_of_credit_officers || 0}
+                onChange={handleChange}
+                min="0"
+                disabled={isSubmitting}
+                className={`w-full p-3 border rounded-lg text-center font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  errors.number_of_credit_officers ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.number_of_credit_officers && (
+                <p className="text-xs text-red-500">{errors.number_of_credit_officers}</p>
+              )}
+            </div>
+
+            {/* Postes (total) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <span className="text-lg">🪑</span>
+                Postes (total)
+              </label>
+              <input
+                type="number"
+                value={totalPosts}
+                readOnly
+                className="w-full p-3 border rounded-lg text-center font-medium bg-gray-50 border-gray-200 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500">
+                Somme des caissiers, personnel et agents de crédit.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= Section 3: Date d'Ouverture ================= */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
+            <h3 className="text-lg font-semibold text-gray-800">Date d'Ouverture</h3>
+          </div>
+
+          <div className="max-w-md">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <span className="text-lg">📅</span>
                 Date d'Ouverture
-                {!isDateEditable && (
-                  <span className="ml-2 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-full font-medium border border-red-200">
-                    Non modifiable après 24h
-                  </span>
-                )}
-              </label>
-              <DateInput
-                value={parseDate(formData.opening_date || appConfig.defaultDate) as any}
-                onChange={handleChangeDate}
-                isDisabled={!isDateEditable || isSubmitting}
-                variant="bordered"
-                size="sm"
-                classNames={{
-                  input: "text-sm",
-                  inputWrapper: "border-gray-200 hover:border-purple-400 focus-within:border-purple-500"
-                }}
-              />
-            </div>
-
-            {/* Heures d'ouverture */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                <span className="text-lg">🕒</span>
-                Heures d'Ouverture
-                {isActivationMode && <span className="text-red-500">*</span>}
-              </label>
-              <Card className="border border-gray-200 shadow-sm">
-                <CardBody className="p-3">
-                  <div className={isConfigDisabled || isSubmitting ? "pointer-events-none opacity-50" : ""}>
-                    <Listbox
-                      selectionMode="single"
-                      selectedKeys={formData.opening_hour ? new Set([String(formData.opening_hour)]) : new Set()}
-                      onSelectionChange={(keys) => {
-                        const selectedArray = Array.from(keys);
-                        const selectedValue = selectedArray.length > 0 ? selectedArray[0] : "";
-                        handleChange({ 
-                          target: { 
-                            name: "opening_hour", 
-                            value: selectedValue 
-                          } 
-                        } as React.ChangeEvent<HTMLInputElement>);
-                      }}
-                      classNames={{
-                        base: "w-full",
-                        list: "max-h-[180px] overflow-y-auto",
-                      }}
-                      emptyContent="Aucun horaire disponible"
-                    >
-                      {openingHours.map((h) => (
-                        <ListboxItem 
-                          key={String(h.id)} 
-                          textValue={h.schedule.split('\n')[0]}
-                          className="py-2"
-                        >
-                          <div className="space-y-1">
-                            <div className="text-sm font-medium text-gray-800">
-                              {h.schedule.split('\n')[0]}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {h.schedule.split('\n').slice(1, 3).join(' • ')}
-                            </div>
-                          </div>
-                        </ListboxItem>
-                      ))}
-                    </Listbox>
-                  </div>
-                  {isConfigDisabled && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Les horaires seront définis lors de l'activation.
-                    </p>
-                  )}
-                  {isActivationMode && errors.opening_hour && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.opening_hour}
-                    </p>
-                  )}
-                </CardBody>
-              </Card>
-            </div>
-
-            {/* Jours fériés */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                <span className="text-lg">🎉</span>
-                Jours Fériés
-                {isActivationMode && <span className="text-red-500">*</span>}
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  {selectedHolidayKeys.size} sélectionné(s)
+                <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium border border-blue-200">
+                  Date de création
                 </span>
               </label>
-              <Card className="border border-gray-200 shadow-sm">
-                <CardBody className="p-3">
-                  <div className={isConfigDisabled || isSubmitting ? "pointer-events-none opacity-50" : ""}>
-                    <Listbox
-                      selectionMode="multiple"
-                      selectedKeys={selectedHolidayKeys}
-                      onSelectionChange={handleHolidaySelection}
-                      classNames={{
-                        base: "w-full",
-                        list: "max-h-[180px] overflow-y-auto",
-                      }}
-                      emptyContent="Aucun jour férié disponible"
-                    >
-                      {holidays.map((holiday) => (
-                        <ListboxItem 
-                          key={holiday.id} 
-                          textValue={`${holiday.date} - ${holiday.description}`}
-                          className="py-2"
-                        >
-                          <div className="space-y-1">
-                            <div className="text-sm font-medium text-gray-800">
-                              {holiday.date}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {holiday.description}
-                            </div>
-                          </div>
-                        </ListboxItem>
-                      ))}
-                    </Listbox>
-                  </div>
-                  {isConfigDisabled && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Les jours fériés seront définis lors de l'activation.
-                    </p>
-                  )}
-                  {isActivationMode && errors.holidays && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.holidays}
-                    </p>
-                  )}
-                </CardBody>
-              </Card>
+              <input
+                type="date"
+                value={formData.opening_date || ""}
+                readOnly
+                disabled
+                className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                📌 Cette date est automatiquement définie lors de la création de la branche
+              </p>
+              <p className="text-xs text-gray-500">
+                💡 Les horaires d'ouverture et jours fériés sont configurés au niveau de la ville
+              </p>
             </div>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

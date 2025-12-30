@@ -33,12 +33,12 @@ export const branchBaseSchema = z.object({
   ] as const),
   city: z.string().min(1, 'City is required'),
   
-  number_of_posts: z.number().min(1, 'Number of posts must be at least 1'),
   number_of_tellers: z.number().min(1, 'Number of tellers must be at least 1'),
   number_of_clerks: z.number().min(1, 'Number of clerks must be at least 1'),
   number_of_credit_officers: z.number().min(1, 'Number of credit officers must be at least 1'),
   opening_date: z.string().min(1, 'Opening date is required'),
-  
+  number_of_posts: z.number().optional(),
+
   // ❗ OPTIONNELS tant que la branche n'est pas activée
   opening_hour: z.string().uuid('Opening hour must be a valid UUID').optional(),
   holidays: z.array(z.string().uuid('Holiday must be a valid UUID')).optional(),
@@ -76,10 +76,11 @@ export const branchSchemaByMode = (mode: 'create' | 'activate') =>
 ===================================================== */
 
 // Données utilisées dans les formulaires
-export type BranchDataBase = z.infer<typeof branchBaseSchema>;
+// 🔹 FORMULAIRE
+export type BranchFormData = z.infer<typeof branchBaseSchema>;
 
 // Données complètes pour activation
-export type BranchActivationData = z.infer<typeof branchActivationSchema>;
+export type BranchActivationFormData = z.infer<typeof branchActivationSchema>;
 
 // Données API
 export interface BranchData {

@@ -15,22 +15,8 @@ import EditBranchModal from './EditBranchModal';
 import { ScheduleForm } from '../ScheduleForm';
 import type { Branch, Holiday, OpeningHour } from "@/types/branche";
 
-// Types
-interface BranchData {
-  branch_name: string;
-  branch_address: string;
-  branch_phone_number: string;
-  branch_email: string;
-  number_of_tellers: number;
-  number_of_clerks: number;
-  number_of_credit_officers: number;
-  status: 'active' | 'inactive';
-  opening_date: string;
-}
 
-
-
-interface BranchesTableProps {
+interface BranchesGridProps {
   branches?: Branch[];
 }
 
@@ -103,7 +89,7 @@ const EmptyState = ({
   </div>
 );
 
-const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches }) => {
+const BranchesGrid: React.FC<BranchesGridProps> = ({ branches: initialBranches }) => {
   // États de référence
   const [branches, setBranches] = useState<Branch[]>(initialBranches || []);
   const [isLoading, setIsLoading] = useState(!initialBranches);
@@ -112,6 +98,8 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+const [showScheduleModal, setShowScheduleModal] = useState(false);
+const [branchToActivate, setBranchToActivate] = useState<Branch | null>(null);
 
 
   // États de filtrage
@@ -428,7 +416,7 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
           onClose={() => setShowDetailsModal(false)}
           branch={selectedBranch}
           onEdit={(branch, mode) => {
-            setSelectedBranch(branch);
+            // setSelectedBranch(branch);
             setIsEditMode(true);
             setEditModalMode(mode);
             setShowDetailsModal(false);
@@ -443,4 +431,4 @@ const BranchesTable: React.FC<BranchesTableProps> = ({ branches: initialBranches
   );
 };
 
-export default BranchesTable;
+export default BranchesGrid;

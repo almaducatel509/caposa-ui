@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -42,8 +43,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = 'lg' })
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl`}>
-        {children}
+      <div className={`relative ${sizeClasses[size]} w-full bg-white rounded-2xl shadow-2xl`}>
+        <div className="max-h-[85vh] overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -308,7 +311,7 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-6">
           {/* Alert si inactive */}
           {!isActive && (
             <div className="bg-orange-50 border-2 border-orange-400 rounded-xl p-4">
@@ -318,8 +321,8 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
                   <h4 className="font-semibold text-orange-800 mb-1">Branche inactive</h4>
                   <p className="text-sm text-orange-700">
                     {!hasConfiguration 
-                      ? "Cette branche n'a pas encore été configurée. Définissez les horaires et jours fériés pour l'activer."
-                      : "Cette branche est configurée mais inactive. Activez-la pour la rendre opérationnelle."
+                      ? "Cette branche vient d’être créée et n’a pas encore d’horaire. Rendez-vous dans la section « Horaires » pour créer un horaire et permettre son activation."
+                      : "Cette branche est configurée mais reste inactive. Rendez-vous « Modifier » pour mettre à jour ses informations."
                     }
                   </p>
                 </div>
@@ -410,7 +413,7 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
                   </div>
                 </div>
 
-                {/* 🎯 LIEN VERS HORAIRES DÉTAILLÉS */}
+                {/* 🎯 HORAIRES - Afficher détails OU bouton activer */}
                 <div className={`p-3 rounded-lg border-2 ${
                   branchOpeningHours ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'
                 }`}>
@@ -427,13 +430,24 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
                       </div>
                     </div>
                     
-                    {branchOpeningHours && (
+                    {branchOpeningHours ? (
                       <button
                         onClick={() => setShowScheduleModal(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
                       >
                         Voir détails
                         <FaExternalLinkAlt size={12} />
+                      </button>
+                    ) : !isActive && onEdit && (
+                      <button
+                        onClick={() => {
+                          onEdit(branch, 'activate');
+                          onClose();
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <FaPlayCircle size={14} />
+                        Fermer
                       </button>
                     )}
                   </div>
@@ -531,35 +545,7 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
             className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
           >
             Fermer
-          </button>
-          
-          {onEdit && (
-            <>
-              {!isActive ? (
-                <button
-                  onClick={() => {
-                    onEdit(branch, 'activate');
-                    onClose();
-                  }}
-                  className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  <FaPlayCircle />
-                  Activer la branche
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    onEdit(branch, 'edit');
-                    onClose();
-                  }}
-                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-                >
-                  <FaEdit />
-                  Modifier
-                </button>
-              )}
-            </>
-          )}
+          </button>        
         </div>
       </Modal>
 
