@@ -13,6 +13,7 @@ export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // Define the type for the Post interface
 export type PostDataBase = z.infer<typeof postSchema>;
+
 export interface PostData{
   id:string;
   name:string;

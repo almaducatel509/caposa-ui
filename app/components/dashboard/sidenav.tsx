@@ -33,16 +33,16 @@ export default function SideNav() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 relative z-50">
+    <div className="flex h-full flex-col bg-gray-50 relative z-50 shadow-sm shadow-green-700/30 ">
       {/* Logo Header */}
       <Link
-        className="mb-2 flex h-16 items-center justify-center bg-green-600 p-4 shrink-0"
+        className="mb-2 flex h-16 items-center justify-center bg-white p-4 shrink-0"
         href="/"
       >
-        <div className="w-12 text-white">
+        <div className="w-12 text-green-600">
           <GiReceiveMoney className="w-full h-full" />
         </div>
-        <span className="ml-3 text-white text-xl font-bold hidden md:block">OripioFin</span>
+        <span className="ml-3 text-green-600 text-xl font-bold hidden md:block">OripioFin</span>
       </Link>
 
       {/* Scrollable Menu Area */}

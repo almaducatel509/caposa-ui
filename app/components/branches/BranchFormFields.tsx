@@ -1,35 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { BranchData, BranchFormData, ErrorMessages } from "./validations";
 
 // Types importés (à remplacer par vos vrais imports)
 type DepartmentCode = 'OUEST' | 'SUDEST' | 'NORD' | 'NORDEST' | 'ARTIBONITE' | 'CENTRE' | 'SUD' | 'GRAND_ANSE' | 'NORD_OUEST' | 'NIPPES';
-
-interface BranchFormData {
-  branch_name: string;
-  branch_address: string;
-  branch_phone_number: string;
-  branch_email: string;
-  department_code: DepartmentCode;
-  city: string;
-  number_of_tellers: number;
-  number_of_clerks: number;
-  number_of_credit_officers: number;
-  number_of_posts?: number;
-  opening_date: string;
-  opening_hour?: string;
-  holidays?: string[];
-  status?: 'inactive' | 'active';
-}
-
-interface BranchData extends BranchFormData {
-  id: string;
-  branch_code: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // Mock data pour la démo
 const HAITI_DEPARTMENTS = [
@@ -154,6 +129,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
   errors,
   handleChange,
   isSubmitting,
+  isEditMode,
 }) => {
 
   const totalPosts =
@@ -166,11 +142,20 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
       {/* ================= Section 1: Informations de Base ================= */}
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
-            <h3 className="text-lg font-semibold text-gray-800">Informations de Base</h3>
+                {/* En-tête */}
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <div className="w-2.5 h-2.5 bg-green-600 rounded-full mr-2"></div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {isEditMode ? "Modifier la Branche" : "Créer une Nouvelle Branche"}
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              {isEditMode
+                ? "Mettez à jour les informations et permissions de la branche"
+                : "Définissez les informations de la branche"}
+            </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Nom de la Branche */}
             <div className="space-y-2">
@@ -387,7 +372,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
+            <div className="w-2 h-6 bg-linear-to-b from-purple-500 to-purple-600 rounded-full"></div>
             <h3 className="text-lg font-semibold text-gray-800">Date d'Ouverture</h3>
           </div>
 

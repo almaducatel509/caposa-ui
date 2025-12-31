@@ -10,7 +10,16 @@ export const fetchPosts = async () => {
     return [];
   }
 };
-
+// Function to get branch by ID
+export const getPostById = async (id: string) => {
+  try {
+    const response = await AxiosInstance.get(`/posts/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la branche :", error);
+    return [];
+  }
+};
 // Fonction pour créer un nouveau post
 export const createPost = async (postData: any) => {
   try {

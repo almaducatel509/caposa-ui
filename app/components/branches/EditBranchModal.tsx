@@ -307,14 +307,21 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     );
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-        <div className="bg-linear-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-t-2xl relative">
-          <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10"><X size={20} /></button>
+        <div className="bg-linear-to-r from-green-600 to-green-700 text-white p-6 rounded-t-2xl relative">
+          <button 
+          onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10"
+          >
+            <X size={20} />
+          </button>
           <h3 className="text-xl font-bold">{isEditMode ? "Modifier la branche" : "Nouvelle branche"}</h3>
+          <p className="text-sm opacity-90 mt-1">
+            {isEditMode ? "Mettre à jour les informations de la branche" : "Créer un nouvelle branche"}
+          </p>
         </div>
 
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
           {apiError && <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">{apiError}</div>}
-          {successMessage && <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">{successMessage}</div>}
+          {successMessage && <div className="p-3 bg-red-100 border border-green-400 text-green-700 rounded">{successMessage}</div>}
 
           <BranchFormFields
             formData={formData}
@@ -333,7 +340,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
 
         <div className="border-t bg-gray-50 p-4 flex justify-end gap-3 rounded-b-2xl">
           <button onClick={onClose} disabled={isSubmitting} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">Annuler</button>
-          <button onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold">
+          <button onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">
             {isSubmitting ? "En cours..." : isEditMode ? "Modifier" : "Créer"}
           </button>
         </div>

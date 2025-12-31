@@ -23,7 +23,7 @@ const PostFilterBar: React.FC<PostFilterBarProps> = ({
   onExport,
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Recherche + actions */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         <div className="relative w-full lg:max-w-xl">
@@ -48,21 +48,57 @@ const PostFilterBar: React.FC<PostFilterBarProps> = ({
             </button>
           )}
         </div>
-
         <div className="flex gap-2 w-full lg:w-auto">
-          <Button color="success" startContent={<FaPlus />} onPress={onAdd} className="flex-1 lg:flex-none bg-green-600 text-white">
+          {/* Nouveau Poste */}
+          <Button
+            startContent={<FaPlus />}
+            onPress={onAdd}
+            className="
+              flex-1 lg:flex-none
+              bg-green-600 
+              hover:bg-green-700
+              text-white
+              rounded-lg
+              shadow-sm
+              hover:shadow-md
+              transition-all
+            "
+          >
             Nouveau Poste
           </Button>
-          <Button variant="bordered" startContent={<FaDownload />} onPress={onExport} className="flex-1 lg:flex-none border-2 border-green-600 text-green-600 hover:bg-green-50">
+          {/* Exporter */}
+          <Button
+            variant="bordered"
+            startContent={<FaDownload />}
+            onPress={onExport}
+            className="
+              flex-1 lg:flex-none
+              border border-gray-300
+              text-gray-700
+              hover:bg-gray-100
+              rounded-lg
+              transition-all
+            "
+          >
             Exporter
           </Button>
         </div>
       </div>
 
       {/* Résultats */}
-      <div className="bg-linear-to-r from-green-50 via-white to-emerald-50 rounded-xl p-4 ">
-          <span className="text-sm font-medium text-gray-600">Résultats :</span>
-          <Chip size="lg" variant="flat" color="success">{totalCount}</Chip>
+      <div className=" border border-gray-100 bg-linear-to-r from-green-50 via-white to-emerald-50 rounded-xl p-4 shadow-xs shadow-green-700/20 ">
+          <span className="text-md font-semibold text-gray-600 pr-2">Résultats :</span>
+          <div className="
+            inline-flex items-center 
+            px-3 py-1.5 
+            bg-green-600/10 
+            text-green-700 
+            border border-green-200 
+            rounded-md 
+            text-sm font-medium
+          ">
+            {totalCount} Poste(s)
+          </div>
       </div>
     </div>
   );
