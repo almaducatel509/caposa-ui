@@ -172,18 +172,19 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
           <div className="h-8 w-px bg-gray-300 hidden sm:block" />
 
           {/* Taille */}
-          <Dropdown>
+          <Dropdown className="bg-green-100 border rounded-md border-gray-400 font-semibold">
             <DropdownTrigger>
-              <Button
+             <Button
                 variant="flat"
                 startContent={<FaBuilding />}
                 endContent={<MdKeyboardArrowDown />}
                 className={selectedSize !== "all"
-                  ? "bg-green-100 border-2 border-green-400 font-semibold"
-                  : "bg-white border-2 border-gray-200"}
+                  ? "bg-green-100 border-2 border-green-400 rounded-md font-semibold"
+                  : "bg-white border-2 border-gray-200 rounded-md"}
               >
                 {getSizeLabel()}
               </Button>
+
             </DropdownTrigger>
 
             <DropdownMenu
@@ -203,15 +204,15 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
           </Dropdown>
 
           {/* Statut */}
-          <Dropdown>
+          <Dropdown className="bg-green-100 border rounded-md border-gray-400 font-semibold">
             <DropdownTrigger>
               <Button
                 variant="flat"
                 startContent={<FaCheckCircle />}
                 endContent={<MdKeyboardArrowDown />}
                 className={selectedStatus !== "all"
-                  ? "bg-green-100 border-2 border-green-400 font-semibold"
-                  : "bg-white border-2 border-gray-200"}
+                  ? "bg-green-100 border-2 border-green-400 rounded-md font-semibold"
+                  : "bg-white border-2 border-gray-200 rounded-md"}
               >
                 {getStatusLabel()}
               </Button>
@@ -226,7 +227,7 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
               }}
             >
               {statusOptions.map(opt => (
-                <DropdownItem key={opt.key}>
+                <DropdownItem key={opt.key} className="rounded-md" >
                   {opt.label}
                 </DropdownItem>
               ))}

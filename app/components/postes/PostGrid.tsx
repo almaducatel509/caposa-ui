@@ -119,7 +119,7 @@ const PostGrid: React.FC<PostTableProps> = ({ posts: initialPosts }) => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen">
+      <div className="flex flex-col gap-4 p-4 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="animate-pulse bg-white rounded-lg shadow-md border border-gray-200">
@@ -135,7 +135,7 @@ const PostGrid: React.FC<PostTableProps> = ({ posts: initialPosts }) => {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen">
+    <div className="flex flex-col gap-4 p-4 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
           <p className="text-red-700">{error}</p>

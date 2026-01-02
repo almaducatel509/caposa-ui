@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, MapPin, MessageSquare, User, Search, Plus, Download, X } from "lucide-react";
-import { PiBankLight } from "react-icons/pi";
+import { ChevronLeft, ChevronRight, Calendar, MapPin, MessageSquare, User, Search, Plus, Download, X, Edit2, Trash2 } from "lucide-react";
 import PageHeader from "../header";
 import { TbCalendarCog } from "react-icons/tb";
-import {Popover, PopoverTrigger, PopoverContent, Button} from "@heroui/react";
-import { CiMenuKebab } from "react-icons/ci";
+import EditHolidayModal from "./EditHolidayModal";
+import DeleteHolidayModal from "./DeleteHolidayModal";
 
 // ================= TYPES =================
 interface Holiday {
@@ -14,8 +13,10 @@ interface Holiday {
   type: "ferie" | "local" | "interne" | "election" | "maintenance" | "autre";
   scope: "national" | "regional" | "branch" | "autre";
   branch_code?: string;
-  commentaire?: string;
-  modifie_par?: string;
+  comment?: string;
+  modified_by?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface Branch {
@@ -38,8 +39,8 @@ const sampleHolidays: Holiday[] = [
     description: "Jour de l'An", 
     type: "ferie", 
     scope: "national",
-    commentaire: "Férié bancaire national",
-    modifie_par: "Admin Système"
+    comment: "Férié bancaire national",
+    modified_by: "Admin Système"
   },
   { 
     id: "2", 
@@ -48,8 +49,8 @@ const sampleHolidays: Holiday[] = [
     type: "local", 
     scope: "branch", 
     branch_code: "002",
-    commentaire: "Événement culturel régional",
-    modifie_par: "Jean Pierre"
+    comment: "Événement culturel régional",
+    modified_by: "Jean Pierre"
   },
   { 
     id: "3", 
@@ -57,8 +58,8 @@ const sampleHolidays: Holiday[] = [
     description: "Réunion CA", 
     type: "interne", 
     scope: "national",
-    commentaire: "Conseil d'administration trimestriel",
-    modifie_par: "Marie Dupont"
+    comment: "Conseil d'administration trimestriel",
+    modified_by: "Marie Dupont"
   },
   { 
     id: "4", 
@@ -66,8 +67,8 @@ const sampleHolidays: Holiday[] = [
     description: "Maintenance Serveurs", 
     type: "maintenance", 
     scope: "national",
-    commentaire: "Mise à jour infrastructure",
-    modifie_par: "IT Team"
+    comment: "Mise à jour infrastructure",
+    modified_by: "IT Team"
   },
   { 
     id: "5", 
@@ -109,29 +110,39 @@ const typeColors: Record<string, string> = {
 const getDayPriorityColor = (holidays: Holiday[]): string => {
   if (holidays.length === 0) return 'bg-white hover:bg-gray-50';
   
-  // Priorité 1: Férié national
   if (holidays.some(h => h.type === 'ferie' && h.scope === 'national')) {
     return 'bg-red-50 border-red-300 hover:bg-red-100';
   }
   
-  // Priorité 2: Élections
   if (holidays.some(h => h.type === 'election')) {
     return 'bg-blue-50 border-blue-300 hover:bg-blue-100';
   }
   
-  // Priorité 3: Local/Exception
   if (holidays.some(h => h.type === 'local' || h.scope === 'branch')) {
     return 'bg-orange-50 border-orange-300 hover:bg-orange-100';
   }
   
-  // Priorité 4: Interne/Maintenance
   return 'bg-gray-50 border-gray-300 hover:bg-gray-100';
 };
 
 // ================= EVENT DETAIL CARD =================
-const EventDetailCard = ({ holiday, branch, canEdit }: any) => (
+interface EventDetailCardProps {
+  holiday: Holiday;
+  branch?: Branch;
+  canEdit: boolean;
+  onEdit: (holiday: Holiday) => void;
+  onDelete: (holiday: Holiday) => void;
+}
+
+const EventDetailCard: React.FC<EventDetailCardProps> = ({ 
+  holiday, 
+  branch, 
+  canEdit, 
+  onEdit, 
+  onDelete 
+}) => (
   <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
-    {/* Header */}
+    {/* Header avec badges et boutons */}
     <div className="flex justify-between items-start mb-3">
       <div className="flex gap-2 flex-wrap">
         <span className={`${typeColors[holiday.type]} px-3 py-1 rounded-full text-xs font-semibold`}>
@@ -142,16 +153,25 @@ const EventDetailCard = ({ holiday, branch, canEdit }: any) => (
         </span>
       </div>
       
-      {canEdit && (
-        <div className="flex gap-2">
-          <button className="p-1.5 hover:bg-gray-100 rounded text-gray-600">
-            ✏️
+      {/* Boutons toujours visibles si canEdit */}
+      {/* {canEdit && ( */}
+        <div className="flex gap-1">
+          <button
+            onClick={() => onEdit(holiday)}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-emerald-600 transition-colors"
+            title="Modifier"
+          >
+            <Edit2 size={18} />
           </button>
-          <button className="p-1.5 hover:bg-red-50 rounded text-red-600">
-            🗑️
+          <button
+            onClick={() => onDelete(holiday)}
+            className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors"
+            title="Supprimer"
+          >
+            <Trash2 size={18} />
           </button>
         </div>
-      )}
+      {/* )} */}
     </div>
 
     {/* Content */}
@@ -166,17 +186,17 @@ const EventDetailCard = ({ holiday, branch, canEdit }: any) => (
         </div>
       )}
       
-      {holiday.commentaire && (
+      {holiday.comment && (
         <div className="flex items-start gap-2">
           <MessageSquare size={14} className="mt-0.5 text-blue-600 flex-shrink-0" />
-          <span className="italic text-gray-700">"{holiday.commentaire}"</span>
+          <span className="italic text-gray-700">"{holiday.comment}"</span>
         </div>
       )}
       
-      {holiday.modifie_par && (
+      {holiday.modified_by && (
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <User size={12} className="flex-shrink-0" />
-          <span>Modifié par {holiday.modifie_par}</span>
+          <span>Modifié par {holiday.modified_by}</span>
         </div>
       )}
     </div>
@@ -192,21 +212,28 @@ export default function HolidayCalendar() {
   const [selectedScope, setSelectedScope] = useState("all");
   const [selectedBranch, setSelectedBranch] = useState("all");
 
+  // Modals
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
   // User permissions (simulated)
-  const user = {
-    role: 'directeur', // 'employe' | 'directeur' | 'admin'
-    branch_code: '002'
-  };
+  // const user = {
+  //   role: 'directeur', // 'employe' | 'directeur' | 'admin'
+  //   branch_code: '002'
+  // };
+// on mettera la restriction de edit dans bd
+  // const canEditHoliday = (holiday: Holiday) => {
+  //   if (user.role === 'admin') return true;
+  //   if (user.role === 'directeur') {
+  //     return holiday.scope === 'branch' && holiday.branch_code === user.branch_code;
+  //   }
+  //   return false;
+  // };
 
-  const canEditHoliday = (holiday: Holiday) => {
-    if (user.role === 'admin') return true;
-    if (user.role === 'directeur') {
-      return holiday.scope === 'branch' && holiday.branch_code === user.branch_code;
-    }
-    return false;
-  };
-
-  const canAddHoliday = user.role === 'directeur' || user.role === 'admin';
+  // const canAddHoliday = user.role === 'directeur' || user.role === 'admin';
 
   // Filtering
   const filteredHolidays = useMemo(() => {
@@ -247,17 +274,58 @@ export default function HolidayCalendar() {
     ? holidaysForDate(selectedDay) 
     : filteredHolidays.slice(0, 10);
 
+  // Handlers
+  const handleCreate = () => {
+    setSelectedHoliday(null);
+    setIsEditMode(false);
+    setShowCreateModal(true);
+    setShowEditModal(true);
+  };
+
+  const handleEdit = (holiday: Holiday) => {
+    setSelectedHoliday(holiday);
+    setIsEditMode(true);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (holiday: Holiday) => {
+    setSelectedHoliday(holiday);
+    setShowDeleteModal(true);
+  };
+
+  const handleSuccess = () => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setSelectedHoliday(null);
+    setIsEditMode(false);
+    // TODO: Recharger les données
+  };
+
   // ================= RENDER =================
   return (
-    <div className="min-h-screen  p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
             <PageHeader 
               title="Gestion de calendrier" 
               subtitle="Gérez le calendrier et ses informations"
-              icon={<TbCalendarCog   className="text-5xl" />}
+              icon={<TbCalendarCog className="text-5xl" />}
             />
+    
+            {/* {canAddHoliday && ( */}
+              <button
+                onClick={handleCreate}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors shadow-md whitespace-nowrap"
+              >
+                <Plus size={20} />
+                <span>Ajouter un jour férié</span>
+              </button>
+            {/* )}   */}
+          </div>
+          
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Search */}
@@ -284,7 +352,7 @@ export default function HolidayCalendar() {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Tous les types</option>
               <option value="ferie">Férié</option>
@@ -299,7 +367,7 @@ export default function HolidayCalendar() {
             <select
               value={selectedScope}
               onChange={(e) => setSelectedScope(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Toutes les portées</option>
               <option value="national">National</option>
@@ -311,7 +379,7 @@ export default function HolidayCalendar() {
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Toutes les succursales</option>
               {sampleBranches.map(branch => (
@@ -321,12 +389,6 @@ export default function HolidayCalendar() {
 
             {/* Actions */}
             <div className="flex gap-2">
-              {/* {canAddHoliday && (
-                <button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                  <Plus size={18} />
-                  <span className="hidden sm:inline">Ajouter</span>
-                </button>
-              )} */}
               <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
                 <Download size={18} />
                 <span className="hidden sm:inline">Export</span>
@@ -442,23 +504,20 @@ export default function HolidayCalendar() {
                 >
                   Voir tout
                 </button>
-                
               )}
-
-             
-
             </div>
 
             {/* Event List */}
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 ">
               {eventsToShow.length > 0 ? (
                 eventsToShow.map((holiday) => (
                   <EventDetailCard
                     key={holiday.id}
                     holiday={holiday}
                     branch={sampleBranches.find(b => b.id === holiday.branch_code)}
-                    canEdit={canEditHoliday(holiday)}
-                  />
+                    // canEdit={canEditHoliday(holiday)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete} canEdit={false}                  />
                 ))
               ) : (
                 <div className="text-center py-12 text-gray-400">
@@ -476,6 +535,35 @@ export default function HolidayCalendar() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {showEditModal && (
+        <EditHolidayModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setShowCreateModal(false);
+            setSelectedHoliday(null);
+            setIsEditMode(false);
+          }}
+          onSuccess={handleSuccess}
+          holiday={selectedHoliday}
+          isEditMode={isEditMode}
+          mode={isEditMode ? "edit" : "create"}
+        />
+      )}
+
+      {showDeleteModal && selectedHoliday && (
+        <DeleteHolidayModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedHoliday(null);
+          }}
+          onSuccess={handleSuccess}
+          holiday={selectedHoliday}
+        />
+      )}
     </div>
   );
 }

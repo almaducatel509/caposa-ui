@@ -17,7 +17,6 @@ interface HolidayCalendarFilterBarProps {
   selectedBranch: string;
   branches: Branch[];
   totalCount: number;
-
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
   onTypeChange: (value: string) => void;

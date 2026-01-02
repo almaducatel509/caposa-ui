@@ -56,7 +56,7 @@ const PostFormFields: React.FC<PostFormFieldsProps> = ({
       {/* Section 1: Informations de Base */}
       <div className="bg-white shadow-md border border-gray-100 rounded-lg p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+          <div className="w-2 h-6 bg-linear-to-b from-blue-500 to-blue-600 rounded-full"></div>
           <h3 className="text-lg font-semibold text-gray-800">Informations de Base</h3>
         </div>
 
