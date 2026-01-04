@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, CardBody, Chip, Button, Avatar } from "@heroui/react";
-import { FaEye, FaEdit, FaTrash, FaMoneyBillWave, FaEnvelope, FaPhone, FaMapMarkerAlt, FaVenusMars, FaCalendar, FaCreditCard } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaMoneyBillWave, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCreditCard } from "react-icons/fa";
 import { formatGender, MemberData } from "./validations";
 
 interface MemberCardProps {
@@ -29,9 +28,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
   const firstAccount = member.accounts?.[0];
   const genderLabel = formatGender(member.gender);
 
-  
-
-// Couleur du badge genre
+  // Couleur du badge genre
   const getGenderColor = (gender?: string) => {
     switch (gender?.toUpperCase()) {
       case 'M':
@@ -44,23 +41,37 @@ const MemberCard: React.FC<MemberCardProps> = ({
         return 'bg-purple-100 text-purple-700';
     }
   };
+
+  // Générer les initiales pour l'avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <Card 
-      className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-green-200 rounded-2xl overflow-hidden group"
-    >
-      <CardBody className="p-0">
+    <div className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-purple-200 rounded-2xl overflow-hidden group">
+      <div className="p-0">
         {/* Header avec genre et status */}
-        <div className="relative bg-linear-to-br from-purple-50 to-gray-200 p-6 pb-16">
-         
+        <div className="relative bg-gradient-to-br from-purple-50 to-gray-200 p-6 pb-16">
           {/* Avatar centré */}
           <div className="flex justify-center">
-            <Avatar
-              src={member.photo_profil || undefined}
-              alt={fullName}
-              className="w-24 h-24 border-4 border-white shadow-lg ring-2 ring-purple-100"
-              showFallback
-              name={fullName}
-            />
+            {member.photo_profil ? (
+              <img
+                src={member.photo_profil}
+                alt={fullName}
+                className="w-24 h-24 rounded-full border-4 border-white shadow-lg ring-2 ring-purple-100 object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg ring-2 ring-purple-100 bg-purple-600 flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">
+                  {getInitials(fullName)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -79,14 +90,9 @@ const MemberCard: React.FC<MemberCardProps> = ({
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <FaEnvelope className="text-gray-400 shrink-0" />
                 <span className="truncate">{safeString(member.email)}</span>
-                <span className="text-red-800">email here</span>
               </div>
             )}
-             <div className="flex items-center gap-2 text-xs text-gray-600">
-                <FaEnvelope className="text-gray-400 shrink-0" />
-                <span className="truncate">{safeString(member.email)}</span>
-                <span className="text-red-800">email null</span>
-              </div>
+            
             {member.phone_number && (
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <FaPhone className="text-gray-400 shrink-0" />
@@ -119,59 +125,43 @@ const MemberCard: React.FC<MemberCardProps> = ({
 
           {/* Action icons */}
           <div className="flex justify-center gap-2 pt-4 border-t border-gray-100">
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="primary"
-              onPress={() => onView(member)}
-              className="hover:bg-blue-50"
+            <button
+              onClick={() => onView(member)}
+              className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
               title="Voir les détails"
             >
               <FaEye className="text-base" />
-            </Button>
+            </button>
             
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="warning"
-              onPress={() => onEdit(member)}
-              className="hover:bg-orange-50"
+            <button
+              onClick={() => onEdit(member)}
+              className="p-2 rounded-lg hover:bg-orange-50 text-orange-600 transition-colors"
               title="Modifier"
             >
               <FaEdit className="text-base" />
-            </Button>
+            </button>
             
             {onViewTransactions && (
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                color="secondary"
-                onPress={() => onViewTransactions(member)}
-                className="hover:bg-purple-50"
+              <button
+                onClick={() => onViewTransactions(member)}
+                className="p-2 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors"
                 title="Voir les transactions"
               >
                 <FaMoneyBillWave className="text-base" />
-              </Button>
+              </button>
             )}
             
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="danger"
-              onPress={() => onDelete(member)}
-              className="hover:bg-red-50"
+            <button
+              onClick={() => onDelete(member)}
+              className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
               title="Supprimer"
             >
               <FaTrash className="text-base" />
-            </Button>
+            </button>
           </div>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 };
 

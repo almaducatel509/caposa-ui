@@ -71,7 +71,7 @@ const DeletePostModal: React.FC<DeletePostModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="3xl">
-      <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-2xl relative">
+      <div className="bg-linear-to-r from-red-500 to-red-600 text-white p-6 rounded-t-2xl relative">
         <button
           onClick={onClose}
           disabled={isDeleting}
@@ -151,7 +151,7 @@ const DeletePostModal: React.FC<DeletePostModalProps> = ({
         {/* Conseil */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <Lightbulb className="text-amber-500 flex-shrink-0 mt-0.5" size={24} />
+            <Lightbulb className="text-amber-500 shrink-0 mt-0.5" size={24} />
             <div className="text-sm text-amber-800">
               <div className="font-medium mb-1">Conseil :</div>
               <p>

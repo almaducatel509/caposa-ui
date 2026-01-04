@@ -1,7 +1,6 @@
 "use client";
 
-import React from 'react';
-import { Input, Button, Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
+import React, { useState, useRef, useEffect } from 'react';
 import { FaPlus, FaUpload, FaDownload, FaFilter, FaCalendarAlt, FaMapMarkerAlt, FaCheckCircle } from "react-icons/fa";
 import { FiSearch } from 'react-icons/fi';
 import { MdKeyboardArrowDown } from 'react-icons/md';
@@ -23,6 +22,44 @@ interface EmployeeFilterBarProps {
   totalCount: number;
   importLoading?: boolean;
 }
+
+// Custom Dropdown Component
+const CustomDropdown: React.FC<{
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ trigger, children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div onClick={() => setIsOpen(!isOpen)}>
+        {trigger}
+      </div>
+      {isOpen && (
+        <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[200px]">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   filterValue,
@@ -124,32 +161,37 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
 
         {/* Actions */}
         <div className="flex gap-2 w-full lg:w-auto">
-          <Button
-            color="success"
-            startContent={<FaPlus size={16} />}
-            onPress={onAdd}
-            className="flex-1 lg:flex-none bg-linear-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6"
+          <button
+            onClick={onAdd}
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-linear-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-lg"
           >
+            <FaPlus size={16} />
             Ajouter
-          </Button>
-          <Button
-            variant="bordered"
-            startContent={<FaUpload size={16} />}
-            onPress={onImport}
-            isLoading={importLoading}
-            isDisabled={importLoading}
-            className="flex-1 lg:flex-none border-2 border-green-600 bg-white  text-green-600 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 transition-all"
+          </button>
+          <button
+            onClick={onImport}
+            disabled={importLoading}
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-green-600 bg-white text-green-600 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {importLoading ? "Import..." : "Importer"}
-          </Button>
-          <Button
-            variant="bordered"
-            startContent={<FaDownload size={16} />}
-            onPress={onExport}
-            className="flex-1 lg:flex-none border-2 border-green-600 bg-white  text-green-600 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 transition-all"
+            {importLoading ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full" />
+                Import...
+              </>
+            ) : (
+              <>
+                <FaUpload size={16} />
+                Importer
+              </>
+            )}
+          </button>
+          <button
+            onClick={onExport}
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-green-600 bg-white text-green-600 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 rounded-lg transition-all"
           >
+            <FaDownload size={16} />
             Exporter
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -159,14 +201,9 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
           {/* Badge nombre de résultats */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-600">Résultats:</span>
-            <Chip 
-              size="lg" 
-              variant="flat" 
-              color="primary"
-              className="font-bold text-base px-4"
-            >
+            <span className="bg-blue-100 text-blue-700 font-bold text-base px-4 py-1 rounded-lg">
               {totalCount}
-            </Chip>
+            </span>
           </div>
 
           <div className="h-8 w-px bg-gray-300 hidden sm:block" />
@@ -174,144 +211,112 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
           {/* Filtres dropdown */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Filtre période */}
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  variant="flat"
-                  size="md"
-                  startContent={<FaCalendarAlt className="text-green-600" />}
-                  endContent={<MdKeyboardArrowDown />}
-                  className={`${
+            <CustomDropdown
+              trigger={
+                <button
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     selectedFilter !== 'all' 
                       ? 'bg-blue-100 border-2 border-gray-400 text-green-700 font-semibold' 
                       : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                  } transition-all`}
+                  }`}
                 >
-                  {getFilterLabel()}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                selectedKeys={[selectedFilter]}
-                onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0]?.toString();
-                  if (selected) onFilterChange(selected);
-                }}
-                selectionMode="single"
-                className='bg-white rounded-md'
-
-              >
-                {filterOptions.map((option) => (
-                  <DropdownItem 
-                    key={option.key}
-                    startContent={<option.icon className="text-blue-green" />}
-                  >
-                    {option.label}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
+                  <FaCalendarAlt className="text-green-600" />
+                  <span>{getFilterLabel()}</span>
+                  <MdKeyboardArrowDown />
+                </button>
+              }
+            >
+              {filterOptions.map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => onFilterChange(option.key)}
+                  className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                    selectedFilter === option.key ? 'bg-blue-50 text-blue-700 font-semibold' : ''
+                  }`}
+                >
+                  <option.icon className="text-green-600" />
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </CustomDropdown>
 
             {/* Filtre branche */}
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  variant="flat"
-                  size="md"
-                  startContent={<FaMapMarkerAlt className="text-green-600" />}
-                  endContent={<MdKeyboardArrowDown />}
-                  className={`${
+            <CustomDropdown
+              trigger={
+                <button
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     selectedBranch !== 'all' 
                       ? 'bg-indigo-100 border-2 border-gray-400 text-green-700 font-semibold' 
                       : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                  } transition-all`}
+                  }`}
                 >
-                  {getBranchLabel()}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                selectedKeys={[selectedBranch]}
-                onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0]?.toString();
-                  if (selected) onBranchChange(selected);
-                }}
-                selectionMode="single"
-                className='bg-white rounded-md'
-
-              >
-                {branchOptions.map((option) => (
-                  <DropdownItem 
-                    key={option.key}
-                    startContent={<FaMapMarkerAlt className="text-green-600" />}
-                  >
-                    {option.label}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
+                  <FaMapMarkerAlt className="text-green-600" />
+                  <span>{getBranchLabel()}</span>
+                  <MdKeyboardArrowDown />
+                </button>
+              }
+            >
+              {branchOptions.map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => onBranchChange(option.key)}
+                  className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                    selectedBranch === option.key ? 'bg-indigo-50 text-indigo-700 font-semibold' : ''
+                  }`}
+                >
+                  <FaMapMarkerAlt className="text-green-600" />
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </CustomDropdown>
 
             {/* Filtre statut */}
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  variant="flat"
-                  size="md"
-                  startContent={<FaCheckCircle className="text-green-600" />}
-                  endContent={<MdKeyboardArrowDown />}
-                  className={`${
+            <CustomDropdown
+              trigger={
+                <button
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     selectedStatus !== 'all' 
                       ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
                       : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                  } transition-all`}
+                  }`}
                 >
-                  {getStatusLabel()}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                selectedKeys={[selectedStatus]}
-                onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0]?.toString();
-                  if (selected) onStatusChange(selected);
-                }}
-                selectionMode="single"
-                className='bg-white rounded-md'
-
-              >
-                {statusOptions.map((option) => (
-                  <DropdownItem 
-                    key={option.key}
-                    startContent={<FaCheckCircle className="text-green-600" />}
-                  >
-                    {option.label}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
+                  <FaCheckCircle className="text-green-600" />
+                  <span>{getStatusLabel()}</span>
+                  <MdKeyboardArrowDown />
+                </button>
+              }
+            >
+              {statusOptions.map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => onStatusChange(option.key)}
+                  className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                    selectedStatus === option.key ? 'bg-green-50 text-green-700 font-semibold' : ''
+                  }`}
+                >
+                  <FaCheckCircle className="text-green-600" />
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </CustomDropdown>
 
             {/* Badge filtres actifs */}
             {activeFiltersCount > 0 && (
               <>
                 <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-                <Chip 
-                  size="sm" 
-                  variant="flat" 
-                  color="warning"
-                  className="font-semibold"
-                >
+                <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-lg text-sm font-semibold">
                   {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
-                </Chip>
-                <Button
-                  size="sm"
-                  variant="light"
-                  color="danger"
-                  onPress={() => {
+                </span>
+                <button
+                  onClick={() => {
                     onFilterChange('all');
                     onBranchChange('all');
                     onStatusChange('all');
                   }}
-                  className="font-medium"
+                  className="text-red-600 hover:text-red-700 font-medium px-3 py-1 hover:bg-red-50 rounded-lg transition-colors text-sm"
                 >
                   Réinitialiser
-                </Button>
+                </button>
               </>
             )}
           </div>

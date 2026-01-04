@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardBody, Button } from "@heroui/react";
-import { FaUsers, FaUserTie } from "react-icons/fa6";
-import { LiaUserTieSolid } from "react-icons/lia";
+import { FaUsers } from "react-icons/fa6";
 
 // Types et API
 import { fetchEmployees } from '@/app/lib/api/employee';
@@ -186,14 +184,15 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
   const onClear = useCallback(() => setFilterValue(''), []);
 
   // Loading state
+ // Loading state
   if (isLoading) {
     return (
       <div className="flex flex-col gap-6 p-6 min-h-screen">
-              {header}
+        {header}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
-              <CardBody className="p-6 space-y-4">
+            <div key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
+              <div className="p-6 space-y-4">
                 <div className="flex flex-col items-center">
                   <div className="w-24 h-24 rounded-full bg-gray-200 animate-pulse mb-4"></div>
                   <div className="h-5 w-32 bg-gray-200 animate-pulse rounded mb-2"></div>
@@ -204,21 +203,26 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </div>
     );
   }
 
-  return (
+ return (
     <div className="flex flex-col gap-6 p-6 ">
       {header}
       {error && (
         <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
           <p className="text-red-700 font-medium">{error}</p>
-          <Button size="sm" onClick={loadEmployees} className="mt-3 bg-red-600 hover:bg-red-700 text-white font-medium shadow-md">Réessayer</Button>
+          <button 
+            onClick={loadEmployees} 
+            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium shadow-md rounded-lg text-sm"
+          >
+            Réessayer
+          </button>
         </div>
       )}
 
@@ -263,16 +267,20 @@ const EmployeeGrid: React.FC<EmployeeGridProps> = ({ employees: initialEmployees
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">{filterValue ? "Aucun employé trouvé" : "Aucun employé"}</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">{filterValue ? "Essayez de modifier vos critères de recherche" : "Commencez par ajouter votre premier employé"}</p>
-            <Button 
-              onPress={filterValue ? onClear : handleAdd} 
-              size="lg"
-              className={filterValue ? "border-2 border-green-700 bg-white text-green-700 hover:bg-green-50 font-semibold shadow-md" : "bg-green-700 hover:bg-green-800 text-white font-semibold shadow-lg"}
+            <button 
+              onClick={filterValue ? onClear : handleAdd}
+              className={`px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
+                filterValue 
+                  ? "border-2 border-green-700 bg-white text-green-700 hover:bg-green-50" 
+                  : "bg-green-700 hover:bg-green-800 text-white"
+              }`}
             >
               {filterValue ? "Effacer les filtres" : "Ajouter un employé"}
-            </Button>
+            </button>
           </div>
         )}
       </div>
+
 
       {/* MODALS */}
       <EmployeeDetailModal

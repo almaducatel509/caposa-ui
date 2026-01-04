@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card, CardBody, Button, Avatar, Chip } from "@heroui/react";
-import { FaEye, FaEdit, FaTrash, FaReceipt, FaCalendar, FaPhone, FaEnvelope, FaMapMarkerAlt, FaVenusMars } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaReceipt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaVenusMars } from "react-icons/fa";
 
 // Import des types et helpers depuis validations
 import { EmployeeData, formatGender, getEmployeeStatus } from '@/app/components/employees/validations';
@@ -36,10 +35,10 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   // Couleur du statut
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'warning';
-      case 'suspended': return 'danger';
-      default: return 'success';
+      case 'active': return 'bg-green-200/70 text-green-700';
+      case 'inactive': return 'bg-yellow-200/70 text-yellow-700';
+      case 'suspended': return 'bg-red-200/70 text-red-700';
+      default: return 'bg-green-200/70 text-green-700';
     }
   };
 
@@ -67,13 +66,21 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
     }
   };
 
+  // Générer les initiales pour l'avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <Card 
-      className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-green-200 rounded-2xl overflow-hidden group"
-    >
-      <CardBody className="p-0">
+    <div className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-green-200 rounded-2xl overflow-hidden group">
+      <div className="p-0">
         {/* Header avec genre et status */}
-        <div className="relative bg-linear-to-br from-green-50 to-blue-50 p-6 pb-16">
+        <div className="relative bg-gradient-to-br from-green-50 to-blue-50 p-6 pb-16">
           <div className="flex justify-between items-start mb-4">
             {/* Badge Genre */}
             {employee.gender && (
@@ -84,26 +91,26 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             )}
             
             {/* Status */}
-           <Chip 
-            size="sm" 
-            color={getStatusColor(status)}
-            variant="flat"
-            className="font-medium bg-green-200/70 text-green-700 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm"
-          >
-            {getStatusLabel(status)}
-          </Chip>
-
+            <span className={`${getStatusColor(status)} font-medium backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm text-xs`}>
+              {getStatusLabel(status)}
+            </span>
           </div>
 
           {/* Avatar centré */}
           <div className="flex justify-center">
-            <Avatar
-              src={employee.photo_profil || undefined}
-              alt={fullName}
-              className="w-24 h-24 border-4 border-white shadow-lg ring-2 ring-green-100"
-              showFallback
-              name={fullName}
-            />
+            {employee.photo_profil ? (
+              <img
+                src={employee.photo_profil}
+                alt={fullName}
+                className="w-24 h-24 rounded-full border-4 border-white shadow-lg ring-2 ring-green-100 object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg ring-2 ring-green-100 bg-green-600 flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">
+                  {getInitials(fullName)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -116,7 +123,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             </h3>
            
             {employee.posts_details?.length ? (
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2 justify-center">
                 {employee.posts_details.map(post => (
                   <span
                     key={post.id}
@@ -129,7 +136,6 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             ) : (
               <span className="text-xs text-gray-400">No post</span>
             )}
-
           </div>
 
           {/* Informations de contact */}
@@ -161,57 +167,41 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
           {/* Action icons */}
           <div className="flex justify-center gap-2 mt-4 pt-4 border-t border-gray-100">
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="primary"
-              onPress={() => onView(employee)}
-              className="hover:bg-blue-50"
+            <button
+              onClick={() => onView(employee)}
+              className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
               title="Voir les détails"
             >
               <FaEye className="text-base" />
-            </Button>
+            </button>
             
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="warning"
-              onPress={() => onEdit(employee)}
-              className="hover:bg-orange-50"
+            <button
+              onClick={() => onEdit(employee)}
+              className="p-2 rounded-lg hover:bg-orange-50 text-orange-600 transition-colors"
               title="Modifier"
             >
               <FaEdit className="text-base" />
-            </Button>
+            </button>
             
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="secondary"
-              onPress={() => onViewTransactions(employee)}
-              className="hover:bg-purple-50"
+            <button
+              onClick={() => onViewTransactions(employee)}
+              className="p-2 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors"
               title="Voir les transactions"
             >
               <FaReceipt className="text-base" />
-            </Button>
+            </button>
             
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="danger"
-              onPress={() => onDelete(employee)}
-              className="hover:bg-red-50"
+            <button
+              onClick={() => onDelete(employee)}
+              className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
               title="Supprimer"
             >
               <FaTrash className="text-base" />
-            </Button>
+            </button>
           </div>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 };
 
