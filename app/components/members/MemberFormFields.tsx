@@ -2,10 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
-import { BranchData } from '../branches/validations';
-import { PostData } from '../employees/validations';
-import { ErrorMessages } from './validations';
-import type { MemberUiForm, FieldErrors, MemberData } from './validations';
+import type { MemberUiForm, FieldErrors } from './validations';
 import type { DepartmentCode } from '@/app/data/haitiLocations';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +27,6 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
     errors: FieldErrors<MemberUiForm>;
     // make it a React state updater to allow setErrors(prev => ...)
     setErrors?: React.Dispatch<React.SetStateAction<FieldErrors<MemberUiForm>>>;
-    branches?: any[];
     posts?: any[];
     isEditMode?: boolean;
     onKeepPasswordChange?: (keepCurrent: boolean) => void;  //  prop to communicate password choice
@@ -40,7 +36,6 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
   setFormData, 
   errors, 
   setErrors,
-  branches = [],  
   isEditMode = false,
   onKeepPasswordChange
 }) => {

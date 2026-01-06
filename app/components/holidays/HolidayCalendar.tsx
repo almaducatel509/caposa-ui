@@ -141,7 +141,12 @@ const EventDetailCard: React.FC<EventDetailCardProps> = ({
   onEdit, 
   onDelete 
 }) => (
-  <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+  <div className=" rounded-lg p-4 
+        hover:shadow-md 
+        transition-shadow 
+        bg-linear-to-r from-green-50 via-white to-emerald-50  
+        shadow-sm"
+  >
     {/* Header avec badges et boutons */}
     <div className="flex justify-between items-start mb-3">
       <div className="flex gap-2 flex-wrap">
@@ -158,14 +163,14 @@ const EventDetailCard: React.FC<EventDetailCardProps> = ({
         <div className="flex gap-1">
           <button
             onClick={() => onEdit(holiday)}
-            className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-emerald-600 transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg text-emerald-600 hover:text-emerald-600 transition-colors"
             title="Modifier"
           >
             <Edit2 size={18} />
           </button>
           <button
             onClick={() => onDelete(holiday)}
-            className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors"
+            className="p-2 hover:bg-red-50 rounded-lg text-emerald-600 hover:text-red-600 transition-colors"
             title="Supprimer"
           >
             <Trash2 size={18} />
@@ -181,21 +186,21 @@ const EventDetailCard: React.FC<EventDetailCardProps> = ({
     <div className="space-y-2 text-sm text-gray-600">
       {branch && (
         <div className="flex items-center gap-2">
-          <MapPin size={14} className="text-emerald-600 flex-shrink-0" />
+          <MapPin size={14} className="text-emerald-600 shrink-0" />
           <span>{branch.branch_name}</span>
         </div>
       )}
       
       {holiday.comment && (
         <div className="flex items-start gap-2">
-          <MessageSquare size={14} className="mt-0.5 text-blue-600 flex-shrink-0" />
+          <MessageSquare size={14} className="mt-0.5 text-blue-600 shrink-0" />
           <span className="italic text-gray-700">"{holiday.comment}"</span>
         </div>
       )}
       
       {holiday.modified_by && (
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <User size={12} className="flex-shrink-0" />
+          <User size={12} className="shrink-0" />
           <span>Modifié par {holiday.modified_by}</span>
         </div>
       )}
@@ -318,10 +323,10 @@ export default function HolidayCalendar() {
             {/* {canAddHoliday && ( */}
               <button
                 onClick={handleCreate}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors shadow-md whitespace-nowrap"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-3 rounded-lg flex items-center gap-2 transition-colors shadow-md whitespace-nowrap"
               >
                 <Plus size={20} />
-                <span>Ajouter un jour férié</span>
+                <span>Ajouter</span>
               </button>
             {/* )}   */}
           </div>
@@ -330,13 +335,13 @@ export default function HolidayCalendar() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" size={18} />
               <input
                 type="text"
                 placeholder="Rechercher..."
                 value={filterValue}
                 onChange={(e) => setFilterValue(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:border-transparent"
               />
               {filterValue && (
                 <button
@@ -412,7 +417,7 @@ export default function HolidayCalendar() {
                 onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <ChevronLeft className="text-gray-600" />
+                <ChevronLeft className="text-emerald-600" />
               </button>
               <h2 className="font-bold text-xl text-gray-900">
                 {currentDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
@@ -421,7 +426,7 @@ export default function HolidayCalendar() {
                 onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <ChevronRight className="text-gray-600" />
+                <ChevronRight className="text-emerald-600" />
               </button>
             </div>
 
@@ -435,7 +440,7 @@ export default function HolidayCalendar() {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-2 bg">
               {days.map((day, idx) =>
                 day ? (
                   <button

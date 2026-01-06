@@ -1,8 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
 
-// Using your existing interfaces
-import { BranchData, PostData, EmployeeFormData, ErrorMessages } from './validations';
+import React, { useState, useEffect } from 'react';
+import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
+import type { DepartmentCode } from '@/app/data/haitiLocations';
+
+import { BranchData, Post, EmployeeFormData, ErrorMessages } from './validations';
 import { EmailField } from './EmailField';
 import EmployeePhotoField from './EmployeePhotoField';
 
@@ -12,9 +14,9 @@ const EmployeeFormFields: React.FC<{
   errors: ErrorMessages<EmployeeFormData>;
   setErrors?: (errors: Partial<ErrorMessages<EmployeeFormData>>) => void;
   branches?: BranchData[];
-  posts?: PostData[];
+  posts?: Post[];
   isEditMode?: boolean;
-  onKeepPasswordChange?: (keepCurrent: boolean) => void; // New prop to communicate password choice
+  onKeepPasswordChange?: (keepCurrent: boolean) => void;
 }> = ({ 
   formData, 
   setFormData, 
@@ -27,7 +29,12 @@ const EmployeeFormFields: React.FC<{
 }) => {
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [keepCurrentPassword, setKeepCurrentPassword] = useState(true); // Default: keep current password
+  const [keepCurrentPassword, setKeepCurrentPassword] = useState(true);
+  
+  // ✅ Local state for Haiti address components
+  const [departmentCode, setDepartmentCode] = useState<DepartmentCode>(HAITI_DEPARTMENTS[0].code);
+  const [city, setCity] = useState<string>('');
+  const [street, setStreet] = useState<string>('');
 
   console.log('📋 Professional Employee Form:', {
     mode: isEditMode ? 'EDIT' : 'CREATE',
@@ -36,7 +43,38 @@ const EmployeeFormFields: React.FC<{
     formData: formData
   });
 
-  // Calculate form completion percentage for professional touch
+  // ✅ Parse existing address in edit mode
+  useEffect(() => {
+    if (isEditMode && formData.address) {
+      // Try to parse "35, Tozin, Limonade" format
+      const parts = formData.address.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        setStreet(parts[0] || '');
+        setCity(parts[1] || '');
+        // Try to find department from city
+        const dept = HAITI_DEPARTMENTS.find(d => 
+          getCitiesByDepartment(d.code)?.includes(parts[1])
+        );
+        if (dept) setDepartmentCode(dept.code);
+      } else {
+        setStreet(formData.address);
+      }
+    }
+  }, [isEditMode, formData.address]);
+
+  // ✅ Compose full address when components change
+  useEffect(() => {
+    const full = [street.trim(), city.trim()].filter(Boolean).join(', ');
+    if (full !== formData.address) {
+      setFormData({ address: full });
+    }
+  }, [street, city]);
+
+  const clearFieldError = (key: keyof EmployeeFormData) => {
+    if (!setErrors) return;
+    setErrors({ [key]: undefined });
+  };
+
   const calculateCompletion = () => {
     const fields = [
       formData.user.username,
@@ -52,8 +90,6 @@ const EmployeeFormFields: React.FC<{
       formData.posts?.length > 0 ? 'has_posts' : ''
     ];
     
-    // For CREATE mode, include passwords
-    // For EDIT mode, include passwords only if user wants to change them
     if (!isEditMode) {
       fields.push(formData.user.password, formData.user.confirm_password);
     } else if (!keepCurrentPassword) {
@@ -66,7 +102,6 @@ const EmployeeFormFields: React.FC<{
 
   const completionPercentage = calculateCompletion();
 
-  // Communicate password choice to parent component
   useEffect(() => {
     if (onKeepPasswordChange) {
       onKeepPasswordChange(keepCurrentPassword);
@@ -83,74 +118,48 @@ const EmployeeFormFields: React.FC<{
   };
 
   const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    console.log('🏢 Branch selected:', value);
-    setFormData({ branch: value });
+    setFormData({ branch: e.target.value });
   };
 
   const handlePostChange = (postId: string, isChecked: boolean) => {
     const currentPosts = formData.posts || [];
-    let newPosts;
+    const newPosts = isChecked 
+      ? [...currentPosts, postId]
+      : currentPosts.filter(id => id !== postId);
     
-    if (isChecked) {
-      newPosts = [...currentPosts, postId];
-    } else {
-      newPosts = currentPosts.filter(id => id !== postId);
-    }
-    
-    console.log('💼 Posts updated:', newPosts);
     setFormData({ posts: newPosts });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setFormData({ photo_profil: file });
-  };
-
-  const handlePasswordChange = () => {
-    setShowPasswordModal(true);
-    // This would open a separate modal for password management
-    console.log('🔐 Opening password change modal...');
   };
 
   return (
     <div className="space-y-6">
       {/* Professional Progress Indicator */}
-      <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">
-            Form Completion
-          </span>
-          <span className="text-sm font-bold text-green-600">
-            {completionPercentage}%
-          </span>
+          <span className="text-sm font-medium text-gray-700">Form Completion</span>
+          <span className="text-sm font-bold text-green-600">{completionPercentage}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
-            className="bg-linear-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
+            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
             style={{ width: `${completionPercentage}%` }}
           ></div>
         </div>
       </div>
 
       {/* User Account Section */}
-      {/* Il faut aussi verifier si le emp en question a deja un compte */}
-
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <span className="text-xl mr-2">👤</span> User Account
+          <span className="text-xl mr-2">👤</span> Compte Utilisateur
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Username *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nom d'utilisateur *</label>
             <input
               type="text"
               value={formData.user.username}
               onChange={(e) => handleUserFieldChange('username', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Enter username"
+              placeholder="Entrer le nom d'utilisateur"
             />
             {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
           </div>
@@ -159,16 +168,14 @@ const EmployeeFormFields: React.FC<{
             value={formData.user.email}
             onChange={(value) => handleUserFieldChange('email', value)}
             context="employee"
-            error={errors.email}  // ← Gère les erreurs serveur
+            error={errors.email}
             required
           />
 
-          {/* Password Management - PROFESSIONAL APPROACH */}
+          {/* Password Management */}
           {isEditMode ? (
-            /* EDIT MODE: Professional Password Management with Choice */
             <div className="md:col-span-2 space-y-4">
-              {/* Keep Current Password Checkbox */}
-              <div className="bg-linear-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
                 <label className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -176,7 +183,6 @@ const EmployeeFormFields: React.FC<{
                     onChange={(e) => {
                       setKeepCurrentPassword(e.target.checked);
                       if (e.target.checked) {
-                        // Clear password fields when keeping current
                         handleUserFieldChange('password', '');
                         handleUserFieldChange('confirm_password', '');
                       }
@@ -186,84 +192,70 @@ const EmployeeFormFields: React.FC<{
                   <div className="flex items-center space-x-2">
                     <span className="text-blue-600 text-lg">🔐</span>
                     <div>
-                      <span className="font-semibold text-blue-800">Keep current password</span>
-                      <p className="text-sm text-blue-600">Recommended - only uncheck if you want to change the password</p>
+                      <span className="font-semibold text-blue-800">Garder le mot de passe actuel</span>
+                      <p className="text-sm text-blue-600">Recommandé - décocher uniquement pour changer</p>
                     </div>
                   </div>
                 </label>
               </div>
 
-              {/* Password Fields - Only show if user wants to change */}
               {!keepCurrentPassword && (
                 <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 space-y-4">
                   <div className="flex items-center space-x-2 mb-3">
                     <span className="text-orange-600 text-lg">⚠️</span>
-                    <h4 className="font-semibold text-orange-800">Change Password</h4>
+                    <h4 className="font-semibold text-orange-800">Changer le mot de passe</h4>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        New Password *
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau mot de passe *</label>
                       <input
                         type="password"
                         value={formData.user.password}
                         onChange={(e) => handleUserFieldChange('password', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                        placeholder="Enter new password"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                        placeholder="Entrer le nouveau mot de passe"
                       />
                       {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Confirm New Password *
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe *</label>
                       <input
                         type="password"
                         value={formData.user.confirm_password}
                         onChange={(e) => handleUserFieldChange('confirm_password', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                        placeholder="Confirm new password"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                        placeholder="Confirmer le mot de passe"
                       />
                       {errors.confirm_password && <p className="text-red-500 text-sm mt-1">{errors.confirm_password}</p>}
                     </div>
-                  </div>
-                  
-                  <div className="text-sm text-orange-700 bg-orange-100 p-3 rounded">
-                    <strong>Note:</strong> Changing the password will require the employee to use the new password for their next login.
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            /* CREATE MODE: Standard Password Fields */
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe *</label>
                 <input
                   type="password"
                   value={formData.user.password}
                   onChange={(e) => handleUserFieldChange('password', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-                  placeholder="Enter password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  placeholder="Entrer le mot de passe"
                 />
                 {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe *</label>
                 <input
                   type="password"
                   value={formData.user.confirm_password}
                   onChange={(e) => handleUserFieldChange('confirm_password', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-                  placeholder="Confirm password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  placeholder="Confirmer le mot de passe"
                 />
                 {errors.confirm_password && <p className="text-red-500 text-sm mt-1">{errors.confirm_password}</p>}
               </div>
@@ -275,107 +267,141 @@ const EmployeeFormFields: React.FC<{
       {/* Personal Information Section */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <span className="text-xl mr-2">👨‍💼</span> Personal Information
+          <span className="text-xl mr-2">👨‍💼</span> Informations Personnelles
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              First Name *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
             <input
               type="text"
               value={formData.first_name}
               onChange={(e) => setFormData({ first_name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Enter first name"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              placeholder="Entrer le prénom"
             />
             {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Last Name *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
             <input
               type="text"
               value={formData.last_name}
               onChange={(e) => setFormData({ last_name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Enter last name"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              placeholder="Entrer le nom"
             />
             {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Date of Birth *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date de naissance *</label>
             <input
               type="date"
               value={formData.date_of_birth}
               onChange={(e) => setFormData({ date_of_birth: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             />
             {errors.date_of_birth && <p className="text-red-500 text-sm mt-1">{errors.date_of_birth}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gender *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Genre *</label>
             <select
               value={formData.gender}
               onChange={(e) => setFormData({ gender: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             >
-              <option value="">Select gender</option>
-              <option value="M">Male</option>
-              <option value="F">Female</option>
-              <option value="other">Other</option>
+              <option value="">Sélectionner le genre</option>
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+              <option value="other">Autre</option>
             </select>
             {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone *</label>
             <input
               type="tel"
               value={formData.phone_number}
               onChange={(e) => setFormData({ phone_number: e.target.value.replace(/\D/g, '') })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Enter phone number (digits only)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              placeholder="Numéro de téléphone"
             />
             {errors.phone_number && <p className="text-red-500 text-sm mt-1">{errors.phone_number}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Payment Reference *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Référence de paiement *</label>
             <input
               type="text"
               value={formData.payment_ref}
               onChange={(e) => setFormData({ payment_ref: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Enter payment reference"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              placeholder="Référence de paiement"
             />
             {errors.payment_ref && <p className="text-red-500 text-sm mt-1">{errors.payment_ref}</p>}
           </div>
 
+          {/* ✅ Haiti Address Components */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Département *</label>
+            <select
+              value={departmentCode}
+              onChange={(e) => {
+                const code = e.target.value as DepartmentCode;
+                setDepartmentCode(code);
+                setCity(''); // Reset city when department changes
+                clearFieldError('address');
+              }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            >
+              <option value="">Sélectionner un département</option>
+              {HAITI_DEPARTMENTS.map((d) => (
+                <option key={d.code} value={d.code}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ville *</label>
+            <select
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+                clearFieldError('address');
+              }}
+              disabled={!departmentCode}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="">Sélectionner une ville</option>
+              {departmentCode && getCitiesByDepartment(departmentCode)?.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address *
-            </label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ address: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Enter full address"
-              rows={3}
+            <label className="block text-sm font-medium text-gray-700 mb-2">Rue / Numéro de maison *</label>
+            <input
+              type="text"
+              value={street}
+              onChange={(e) => {
+                setStreet(e.target.value);
+                clearFieldError('address');
+              }}
+              placeholder="Ex: 35, Tozin"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             />
             {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+            <p className="text-xs text-gray-500 mt-1">
+              Adresse complète: <strong>{formData.address || '—'}</strong>
+            </p>
           </div>
 
           <div className="md:col-span-2">
@@ -383,80 +409,57 @@ const EmployeeFormFields: React.FC<{
               value={formData.photo_profil}
               isEditMode={isEditMode}
               error={errors.photo_profil}
-              onChange={(file) =>
-                setFormData({
-                  photo_profil: file,
-                  remove_photo: false // reset si nouvelle photo
-                })
-              }
-              onRemove={() =>
-                setFormData({
-                  photo_profil: null,
-                  remove_photo: true // 🔥 envoyé à Django
-                })
-              }
+              onChange={(file) => setFormData({ photo_profil: file, remove_photo: false })}
+              onRemove={() => setFormData({ photo_profil: null, remove_photo: true })}
             />
           </div>
-
         </div>
       </div>
 
       {/* Work Assignment Section */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <span className="text-xl mr-2">🏢</span> Work Assignment
+          <span className="text-xl mr-2">🏢</span> Affectation de Travail
         </h3>
         
-        {/* Branch Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Branch * 
-            <span className="text-xs text-gray-500 ml-2">({branches.length} available)</span>
+            Branche * <span className="text-xs text-gray-500 ml-2">({branches.length} disponibles)</span>
           </label>
           <select
             value={formData.branch || ''}
             onChange={handleBranchChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer hover:border-gray-400 transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
           >
-            <option value="">Choose a branch</option>
-            {branches.map((branch, index) => {
-              console.log(`🏢 Rendering Branch ${index}:`, branch.id, branch.branch_name);
-              return (
-                <option key={branch.id} value={branch.id}>
-                  {branch.branch_name}
-                </option>
-              );
-            })}
+            <option value="">Choisir une branche</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.branch_name}
+              </option>
+            ))}
           </select>
           {errors.branch && <p className="text-red-500 text-sm mt-1">{errors.branch}</p>}
         </div>
 
-        {/* Posts Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            Posts * 
-            <span className="text-xs text-gray-500 ml-2">({posts.length} available)</span>
+            Postes * <span className="text-xs text-gray-500 ml-2">({posts.length} disponibles)</span>
             {formData.posts && formData.posts.length > 0 && (
               <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                {formData.posts.length} selected
+                {formData.posts.length} sélectionnés
               </span>
             )}
           </label>
           <div className="border border-gray-300 rounded-lg p-4 bg-white max-h-40 overflow-y-auto">
             {posts.map((post) => (
-              <label 
-                key={post.id} 
-                className="flex items-center space-x-3 py-2 hover:bg-gray-50 cursor-pointer rounded transition-colors"
-              >
+              <label key={post.id} className="flex items-center space-x-3 py-2 hover:bg-gray-50 cursor-pointer rounded">
                 <input
                   type="checkbox"
                   checked={formData.posts?.includes(post.id) || false}
                   onChange={(e) => handlePostChange(post.id, e.target.checked)}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span className="text-gray-900 select-none">
-                  {post.name || post.post_name}
-                </span>
+                <span className="text-gray-900">{post.name || post.post_name}</span>
               </label>
             ))}
           </div>
@@ -464,16 +467,16 @@ const EmployeeFormFields: React.FC<{
         </div>
       </div>
 
-      {/* Current Selections Summary */}
+      {/* Summary */}
       {(formData.branch || (formData.posts && formData.posts.length > 0)) && (
-        <div className="bg-linear-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
           <h4 className="font-medium text-green-800 mb-2 flex items-center">
-            <span className="mr-2">✅</span> Work Assignment Summary
+            <span className="mr-2">✅</span> Résumé de l'affectation
           </h4>
           
           {formData.branch && (
             <div className="mb-2">
-              <span className="text-sm font-medium text-green-700">Branch: </span>
+              <span className="text-sm font-medium text-green-700">Branche: </span>
               <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                 {branches.find(b => b.id === formData.branch)?.branch_name || 'Unknown'}
               </span>
@@ -482,17 +485,12 @@ const EmployeeFormFields: React.FC<{
 
           {formData.posts && formData.posts.length > 0 && (
             <div>
-              <span className="text-sm font-medium text-blue-700">
-                Posts ({formData.posts.length}): 
-              </span>
+              <span className="text-sm font-medium text-blue-700">Postes ({formData.posts.length}): </span>
               <div className="flex flex-wrap gap-2 mt-1">
                 {formData.posts.map(postId => {
                   const post = posts.find(p => p.id === postId);
                   return (
-                    <span 
-                      key={postId} 
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                    >
+                    <span key={postId} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                       {post?.name || post?.post_name || 'Unknown'}
                     </span>
                   );

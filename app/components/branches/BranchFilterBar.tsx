@@ -153,20 +153,15 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
       </div>
 
       {/* 🎛️ Filtres */}
-      <div className="bg-linear-to-r from-purple-50 via-white to-pink-50 rounded-xl p-4 shadow-sm border border-purple-100">
+      <div className="bg-linear-to-r from-amber-50 via-white to-amber-50 rounded-xl p-4 shadow-sm border border-blue-100">
         <div className="flex flex-wrap items-center gap-3">
 
           {/* Résultats */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-600">Résultats:</span>
-            <Chip 
-              size="lg" 
-              variant="flat" 
-              color="secondary"
-              className="font-bold text-base px-4"
-            >
+           <span className="bg-amber-100 text-amber-400 font-bold text-base px-4 py-1 rounded-lg">
               {totalCount}
-            </Chip>
+            </span>
           </div>
 
           <div className="h-8 w-px bg-gray-300 hidden sm:block" />

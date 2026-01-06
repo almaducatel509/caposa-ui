@@ -3,6 +3,7 @@
 import React from "react";
 import { FaEye, FaEdit, FaTrash, FaMoneyBillWave, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCreditCard } from "react-icons/fa";
 import { formatGender, MemberData } from "./validations";
+import { PiCheckFat } from "react-icons/pi";
 
 interface MemberCardProps {
   member: MemberData;
@@ -56,7 +57,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
     <div className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-purple-200 rounded-2xl overflow-hidden group">
       <div className="p-0">
         {/* Header avec genre et status */}
-        <div className="relative bg-gradient-to-br from-purple-50 to-gray-200 p-6 pb-16">
+        <div className="relative bg-linear-to-br from-purple-50 to-gray-200 p-6 pb-16">
           {/* Avatar centré */}
           <div className="flex justify-center">
             {member.photo_profil ? (
@@ -157,6 +158,12 @@ const MemberCard: React.FC<MemberCardProps> = ({
               title="Supprimer"
             >
               <FaTrash className="text-base" />
+            </button>
+            <button   
+              className={ "text-blue-600 hover:bg-blue-100 w-8 p-2 rounded-xl" }
+              title="Active"
+            >
+              <PiCheckFat />
             </button>
           </div>
         </div>

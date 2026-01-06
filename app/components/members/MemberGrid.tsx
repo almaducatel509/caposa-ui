@@ -1,63 +1,59 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardBody, Button } from "@heroui/react";
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FaUsers } from "react-icons/fa6";
+import { PiUsersFourThin } from 'react-icons/pi';
 
-// Types et API
+// API
 import { fetchMembers } from '@/app/lib/api/members';
 import { fetchBranches } from '@/app/lib/api/branche';
 
-// Composants
+// UI
+import PageHeader from '../header';
 import MemberFilterBar from '@/app/components/members/MemberFilterBar';
 import MemberCard from '@/app/components/members/MemberCard';
+
+// Modals
 import MemberDetailModal from '@/app/components/members/MemberDetailModal';
 import EditMemberModal from '@/app/components/members/EditMemberModal';
 import DeleteMemberModal from '@/app/components/members/DeleteMemberModal';
+
+// Types
 import { MemberData } from '@/app/components/members/validations';
-import PageHeader from '../header';
-import { PiUsersFourThin } from 'react-icons/pi';
 
-interface MemberGridProps {
-  members?: MemberData[];
-  onSuccess?: () => void;
-  isLoading: boolean;
-  error: string | null;
-  onRetry?: () => void;
-}
-
-const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSuccess: parentOnSuccess }) => {
+/* ======================================================
+   MemberGrid
+====================================================== */
+const MemberGrid: React.FC = () => {
+  // DATA
   const [members, setMembers] = useState<MemberData[]>([]);
+
+  // UI STATES
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // États de filtrage
+  // FILTERS
   const [filterValue, setFilterValue] = useState('');
-  const [debouncedValue, setDebouncedValue] = useState(filterValue);
+  const [debouncedValue, setDebouncedValue] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [selectedBranch, setSelectedBranch] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // États modals
+  // MODALS
   const [selectedMember, setSelectedMember] = useState<MemberData | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(filterValue), 300);
-    return () => clearTimeout(timer);
-  }, [filterValue]);
-
-  // Charger données
+  /* ======================================================
+     Load data
+  ====================================================== */
   const loadMembers = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const existingMembers = await fetchMembers();
-      setMembers(existingMembers);
+      const membersData = await fetchMembers();
+      setMembers(membersData);
     } catch (err) {
       console.error(err);
       setError("Impossible de charger les données des membres.");
@@ -67,23 +63,20 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
   };
 
   useEffect(() => {
-    if (initialMembers && initialMembers.length) {
-      setMembers(initialMembers);
-      setIsLoading(false);
-      setError(null);
-    } else {
-      loadMembers();
-    }
-  }, [initialMembers]);
-  const header = (
-    <PageHeader
-      title="Gestion des Membres"
-      subtitle="Gérez tous les membres et leurs informations"
-      icon={<PiUsersFourThin   className="text-5xl" />}
-    />
-  );
+    loadMembers();
+  }, []);
 
-  // Filtrage avancé
+  /* ======================================================
+     Debounce search
+  ====================================================== */
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(filterValue), 300);
+    return () => clearTimeout(timer);
+  }, [filterValue]);
+
+  /* ======================================================
+     FILTER + SORT
+  ====================================================== */
   const filteredMembers = useMemo(() => {
     let filtered = members;
 
@@ -117,40 +110,54 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
     }
 
     return filtered.sort((a, b) => (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
-  }, [members, debouncedValue, selectedFilter, selectedBranch, selectedStatus]);
+  }, [members, debouncedValue, selectedFilter]);
 
-  // Gestionnaires
-  const handleAdd = () => { setSelectedMember(null); setShowEditModal(true); };
-  const handleView = (member: MemberData) => { setSelectedMember(member); setShowDetailModal(true); };
-  const handleEdit = (member: MemberData) => { setSelectedMember(member); setShowEditModal(true); };
-  const handleDelete = (member: MemberData) => { setSelectedMember(member); setShowDeleteModal(true); };
-  const handleViewTransactions = (member: MemberData) => { setSelectedMember(member); setShowTransactionModal(true); };
-
-  const handleDeleteSuccess = () => {
-    loadMembers(); // Recharger la liste complète
-    setSelectedMember(null);
-    setShowDetailModal(false);
-    setShowDeleteModal(false);
+  /* ======================================================
+     Handlers
+  ====================================================== */
+  const handleAdd = () => { 
+    setSelectedMember(null); 
+    setShowEditModal(true); 
   };
 
-  // ✅ CORRECTION 1: Handler pour EditMemberModal - accepte void, pas de paramètre
-  const handleEditSuccess = () => {
-    loadMembers(); // Recharger la liste complète après modification
-    setShowEditModal(false);
+  const handleView = (e: MemberData) => {
+    setSelectedMember(e);
+    setShowDetailModal(true);
+  };
+
+  const handleEdit = (e: MemberData) => {
+    setSelectedMember(e);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (e: MemberData) => {
+    setSelectedMember(e);
+    setShowDeleteModal(true);
+  };
+
+  const handleViewTransactions = (e: MemberData) => {
+    setSelectedMember(e);
+    setShowTransactionModal(true);
   };
 
   const onSearchChange = useCallback((v?: string) => setFilterValue(v || ''), []);
   const onClear = useCallback(() => setFilterValue(''), []);
 
-  // Loading state
+  /* ======================================================
+     Loading State
+  ====================================================== */
   if (isLoading) {
     return (
       <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
-              {header}
+        <PageHeader
+          title="Gestion des Membres"
+          subtitle="Gérez tous les membres et leurs informations"
+          icon={<PiUsersFourThin className="text-5xl" />}
+        />
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
-              <CardBody className="p-6 space-y-4">
+            <div key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
+              <div className="p-6 space-y-4">
                 <div className="flex flex-col items-center">
                   <div className="w-24 h-24 rounded-full bg-gray-200 animate-pulse mb-4"></div>
                   <div className="h-5 w-32 bg-gray-200 animate-pulse rounded mb-2"></div>
@@ -161,23 +168,34 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </div>
     );
   }
- /* =======================
+
+  /* ======================================================
      RENDER
-  ======================= */
+  ====================================================== */
   return (
     <div className="flex flex-col gap-6 p-6 bg-linear-to-br min-h-screen">
-      {header}
+      <PageHeader
+        title="Gestion des Membres"
+        subtitle="Gérez tous les membres et leurs informations"
+        icon={<PiUsersFourThin className="text-5xl" />}
+      />
+
       {error && (
         <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
           <p className="text-red-700 font-medium">{error}</p>
-          <Button size="sm" onClick={loadMembers} className="mt-3 bg-red-600 hover:bg-red-700 text-white font-medium shadow-md">Réessayer</Button>
+          <button 
+            onClick={loadMembers} 
+            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium shadow-md rounded-lg text-sm"
+          >
+            Réessayer
+          </button>
         </div>
       )}
 
@@ -212,46 +230,50 @@ const MemberGrid: React.FC<MemberGridProps> = ({ members: initialMembers, onSucc
             <div className="inline-flex items-center justify-center w-24 h-24 bg-purple-100 rounded-full mb-6">
               <FaUsers className="text-5xl text-purple-700" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">{filterValue ? "Aucun membre trouvé" : "Aucun membre"}</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">{filterValue ? "Essayez de modifier vos critères de recherche" : "Commencez par ajouter votre premier membre"}</p>
-            <Button 
-              onPress={filterValue ? onClear : handleAdd} 
-              size="lg"
-              className={filterValue ? "border-2 border-purple-700 bg-white text-purple-700 hover:bg-purple-50 font-semibold shadow-md" : "bg-purple-700 hover:bg-purple-800 text-white font-semibold shadow-lg"}
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {filterValue ? "Aucun membre trouvé" : "Aucun membre"}
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              {filterValue ? "Essayez de modifier vos critères de recherche" : "Commencez par ajouter votre premier membre"}
+            </p>
+            <button 
+              onClick={filterValue ? onClear : handleAdd}
+              className={`px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
+                filterValue 
+                  ? "border-2 border-purple-700 bg-white text-purple-700 hover:bg-purple-50" 
+                  : "bg-purple-700 hover:bg-purple-800 text-white"
+              }`}
             >
               {filterValue ? "Effacer les filtres" : "Ajouter un membre"}
-            </Button>
+            </button>
           </div>
         )}
       </div>
 
       {/* MODALS */}
-      {/* ✅ CORRECTION 2: Condition pour s'assurer que selectedMember n'est pas null */}
-      {selectedMember && (
-        <MemberDetailModal
-          isOpen={showDetailModal}
-          onClose={() => setShowDetailModal(false)}
-          member={selectedMember}
-          onEdit={() => { setShowDetailModal(false); setShowEditModal(true); }}
-        />
-      )}
-      
+      <MemberDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        member={selectedMember}
+        onEdit={() => {
+          setShowDetailModal(false);
+          setShowEditModal(true);
+        }}
+      />
+
       <EditMemberModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         member={selectedMember}
-        onSuccess={handleEditSuccess}
+        onSuccess={loadMembers}
       />
-      
-      {/* ✅ CORRECTION 3: Condition pour s'assurer que selectedMember n'est pas null */}
-      {selectedMember && (
-        <DeleteMemberModal
+
+      <DeleteMemberModal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
           member={selectedMember}
-          onSuccess={handleDeleteSuccess}
-        />
-      )}
+          onSuccess={loadMembers}
+      />
     </div>
   );
 };

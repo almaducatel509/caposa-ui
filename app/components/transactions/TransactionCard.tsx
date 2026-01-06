@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import { Button, Chip } from "@heroui/react";
 import { TransactionData } from './types';
 import { FaEye, FaEdit, FaTrash, FaClock, FaCheckCircle, FaTimesCircle, FaBolt } from "react-icons/fa";
 
@@ -19,7 +18,6 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
   onDelete,
   onProcess
 }) => {
-  // Fonction pour obtenir l'icône et la couleur selon le type
   const getTypeInfo = (type: string) => {
     switch (type) {
       case 'deposit':
@@ -35,43 +33,42 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
     }
   };
 
-  // Fonction pour obtenir le statut
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'pending':
         return { 
           icon: <FaClock />, 
-          color: 'warning', 
+          bgColor: 'bg-orange-100',
+          textColor: 'text-orange-700',
           label: 'En attente',
-          textColor: 'text-orange-600'
         };
       case 'completed':
         return { 
           icon: <FaCheckCircle />, 
-          color: 'success', 
+          bgColor: 'bg-green-100',
+          textColor: 'text-green-700',
           label: 'Complété',
-          textColor: 'text-green-600'
         };
       case 'failed':
         return { 
           icon: <FaTimesCircle />, 
-          color: 'danger', 
+          bgColor: 'bg-red-100',
+          textColor: 'text-red-700',
           label: 'Échoué',
-          textColor: 'text-red-600'
         };
       case 'processing':
         return { 
           icon: <FaBolt />, 
-          color: 'primary', 
+          bgColor: 'bg-blue-100',
+          textColor: 'text-blue-700',
           label: 'En cours',
-          textColor: 'text-blue-600'
         };
       default:
         return { 
           icon: <FaClock />, 
-          color: 'default', 
+          bgColor: 'bg-gray-100',
+          textColor: 'text-gray-700',
           label: 'Inconnu',
-          textColor: 'text-gray-600'
         };
     }
   };
@@ -109,14 +106,12 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
             <p className="text-sm text-gray-500">#{transaction.reference || transaction.id}</p>
           </div>
         </div>
-        <Chip
-          color={statusInfo.color as any}
-          variant="flat"
-          startContent={statusInfo.icon}
-          size="sm"
-        >
-          {statusInfo.label}
-        </Chip>
+        
+        {/* Status Badge */}
+        <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+          {statusInfo.icon}
+          <span>{statusInfo.label}</span>
+        </span>
       </div>
 
       {/* Montant */}
@@ -188,47 +183,39 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-        <Button
-          size="sm"
-          variant="ghost"
-          startContent={<FaEye />}
+        <button
           onClick={() => onView(transaction)}
-          className="text-blue-600 hover:bg-blue-50"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
         >
-          Voir
-        </Button>
+          <FaEye />
+          <span>Voir</span>
+        </button>
         
-        <Button
-          size="sm"
-          variant="ghost"
-          startContent={<FaEdit />}
+        <button
           onClick={() => onEdit(transaction)}
-          className="text-green-600 hover:bg-green-50"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
         >
-          Modifier
-        </Button>
+          <FaEdit />
+          <span>Modifier</span>
+        </button>
 
         {transaction.status === 'pending' && (
-          <Button
-            size="sm"
-            variant="ghost"
-            startContent={<FaBolt />}
+          <button
             onClick={() => onProcess(transaction)}
-            className="text-purple-600 hover:bg-purple-50"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
           >
-            Traiter
-          </Button>
+            <FaBolt />
+            <span>Traiter</span>
+          </button>
         )}
 
-        <Button
-          size="sm"
-          variant="ghost"
-          startContent={<FaTrash />}
+        <button
           onClick={() => onDelete(transaction)}
-          className="text-red-600 hover:bg-red-50 ml-auto"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto"
         >
-          Supprimer
-        </Button>
+          <FaTrash />
+          <span>Supprimer</span>
+        </button>
       </div>
     </div>
   );

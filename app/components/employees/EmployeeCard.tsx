@@ -1,5 +1,8 @@
 import React from 'react';
 import { FaEye, FaEdit, FaTrash, FaReceipt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaVenusMars } from "react-icons/fa";
+import { PiCheckFat, PiCheckFill, PiCheckSquareOffsetLight, PiUserCircleCheckFill } from "react-icons/pi";
+import clsx from "clsx";
+
 
 // Import des types et helpers depuis validations
 import { EmployeeData, formatGender, getEmployeeStatus } from '@/app/components/employees/validations';
@@ -21,11 +24,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
 }) => {
   const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'Sans nom';
   
-  // Récupérer le poste principal - vérifie d'abord posts_details, sinon affiche un message par défaut
-  const primaryPost = employee.posts_details && employee.posts_details.length > 0
-    ? (employee.posts_details[0].name || employee.posts_details[0].post_name || 'Poste non défini')
-    : 'Aucun poste assigné';
-  
+ 
   const branchName = employee.branch_details?.branch_name || 'Succursale non définie';
   
   // Utiliser les helpers de validation
@@ -51,20 +50,22 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
       default: return 'Actif';
     }
   };
+  console.log("EMPLOYEE CARD DATA", employee);
 
-  // Couleur du badge genre
-  const getGenderColor = (gender?: string) => {
-    switch (gender?.toUpperCase()) {
-      case 'M':
-      case 'MALE':
-        return 'bg-blue-100 text-blue-700';
-      case 'F':
-      case 'FEMALE':
-        return 'bg-pink-100 text-pink-700';
-      default:
-        return 'bg-purple-100 text-purple-700';
-    }
-  };
+
+  // // Couleur du badge genre
+  // const getGenderColor = (gender?: string) => {
+  //   switch (gender?.toUpperCase()) {
+  //     case 'M':
+  //     case 'MALE':
+  //       return 'bg-blue-100 text-blue-700';
+  //     case 'F':
+  //     case 'FEMALE':
+  //       return 'bg-pink-100 text-pink-700';
+  //     default:
+  //       return 'bg-purple-100 text-purple-700';
+  //   }
+  // };
 
   // Générer les initiales pour l'avatar fallback
   const getInitials = (name: string) => {
@@ -80,24 +81,12 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
     <div className="h-full bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-green-200 rounded-2xl overflow-hidden group">
       <div className="p-0">
         {/* Header avec genre et status */}
-        <div className="relative bg-gradient-to-br from-green-50 to-blue-50 p-6 pb-16">
-          <div className="flex justify-between items-start mb-4">
-            {/* Badge Genre */}
-            {employee.gender && (
-              <div className={`flex items-center gap-1.5 ${getGenderColor(employee.gender)} backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm`}>
-                <FaVenusMars className="text-sm" />
-                <span className="text-xs font-semibold">{genderLabel}</span>
-              </div>
-            )}
-            
-            {/* Status */}
-            <span className={`${getStatusColor(status)} font-medium backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm text-xs`}>
-              {getStatusLabel(status)}
-            </span>
-          </div>
+        <div className="relative bg-linear-to-br from-green-50 to-blue-50  pb-16">
+         {/* Avatar centré */}    
 
-          {/* Avatar centré */}
+
           <div className="flex justify-center">
+
             {employee.photo_profil ? (
               <img
                 src={employee.photo_profil}
@@ -122,21 +111,20 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
               {fullName}
             </h3>
            
-            {employee.posts_details?.length ? (
-              <div className="flex flex-wrap gap-2 mt-2 justify-center">
-                {employee.posts_details.map(post => (
-                  <span
-                    key={post.id}
-                    className="px-3 py-1 text-xs rounded-full bg-emerald-100 text-emerald-700"
-                  >
-                    {post.post_name || post.name}
-                  </span>
-                ))}
-              </div>
+            {employee.posts_details && employee.posts_details.length > 0 ? (
+              employee.posts_details.map((post) => (
+                <span 
+                  key={post.id}
+                  className="capitalize px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-700"
+                >
+                  {post.name}
+                </span>
+              ))
             ) : (
-              <span className="text-xs text-gray-400">No post</span>
+              <p className="font-medium">Aucun poste assigné</p>
             )}
-          </div>
+
+        </div>
 
           {/* Informations de contact */}
           <div className="space-y-2.5 mb-4">
@@ -163,7 +151,6 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-gray-200 my-4"></div>
 
           {/* Action icons */}
           <div className="flex justify-center gap-2 mt-4 pt-4 border-t border-gray-100">
@@ -198,7 +185,16 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             >
               <FaTrash className="text-base" />
             </button>
+            
+            <button
+             
+              className={ "text-blue-600 hover:bg-blue-100 w-8 p-2 rounded-xl" }
+              title="Active"
+            >
+              <PiCheckFat />
+            </button>
           </div>
+          
         </div>
       </div>
     </div>

@@ -45,12 +45,10 @@ export interface BranchDetails {
   branch_code?: string; // ✅ Permet null ET undefined
 }
 
-// Post details interface
-export interface PostDetails {
+export interface Post {
   id: string;
   name: string;
-  post_name: string;
-
+  post_name?: string;
 }
 
 // Employee data interface (what comes from API)
@@ -64,8 +62,8 @@ export interface EmployeeData {
   date_of_birth?: string;
   address?: string;
   gender?: string;
-  posts_details?: PostData[]; // ✅ TOUJOURS pour l'affichage
-  posts?: string[];
+  posts: string[];              // IDs
+  posts_details?: Post[];   
   photo_profil?: string | null;
   photo_url?: string | null;
   branch: string;
@@ -88,12 +86,12 @@ export interface BranchData {
   branch_code?: string;
 }
 
-// Post data interface
-export interface PostData {
-  id: string;
-  post_name: string;
-  name?: string; // Add name property for compatibility
-}
+// // Post data interface
+// export interface PostData {
+//   id: string;
+//   post_name: string;
+//   name?: string; // Add name property for compatibility
+// }
 
 // Form data interface (what the form uses)
 export type EmployeeFormData = {

@@ -45,7 +45,9 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
       default:
         return { color: "bg-green-100 text-green-700", text: "Actif", dot: "bg-green-500" };
     }
-  };
+  }
+  
+  ;console.log("EMPLOYEE CARD DATA", employee);
 
   const status = getStatusConfig(getEmployeeStatus(employee));
 

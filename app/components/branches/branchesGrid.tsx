@@ -331,13 +331,6 @@ const [branchToActivate, setBranchToActivate] = useState<Branch | null>(null);
         />
       )}
 
-      {/* Results Count */}
-      {!isLoading && (
-        <div className="text-sm text-[#2c2e2f]/70 font-medium">
-          {filteredBranches.length} résultat(s) trouvé(s)
-        </div>
-      )}
-
       {/* Loading State */}
       {isLoading && <LoadingSkeleton />}
 
