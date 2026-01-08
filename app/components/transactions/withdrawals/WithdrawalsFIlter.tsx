@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FaPlus, FaUpload, FaDownload, FaFilter, FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
-import { FiSearch } from 'react-icons/fi';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import { Search, Download, Filter, Calendar, CheckCircle } from 'lucide-react';
 
-interface MemberFilterBarProps {
+interface WithdrawalFilterBarProps {
   filterValue: string;
   selectedFilter: string;
   selectedStatus: string;
@@ -13,11 +11,8 @@ interface MemberFilterBarProps {
   onClear: () => void;
   onFilterChange: (key: string) => void;
   onStatusChange: (key: string) => void;
-  onAdd: () => void;
-  onImport: () => void;
   onExport: () => void;
   totalCount: number;
-  importLoading?: boolean;
 }
 
 // Custom Dropdown Component
@@ -58,7 +53,7 @@ const CustomDropdown: React.FC<{
   );
 };
 
-const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
+const WithdrawalFilterBar: React.FC<WithdrawalFilterBarProps> = ({
   filterValue,
   selectedFilter,
   selectedStatus,
@@ -66,24 +61,22 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   onClear,
   onFilterChange,
   onStatusChange,
-  onAdd,
-  onImport,
   onExport,
   totalCount,
-  importLoading = false,
 }) => {
   const filterOptions = [
-    { key: 'all', label: 'Tous', icon: FaFilter },
-    { key: 'recent', label: 'Récents (30j)', icon: FaCalendarAlt },
-    { key: 'thisMonth', label: 'Ce mois', icon: FaCalendarAlt },
-    { key: 'thisYear', label: 'Cette année', icon: FaCalendarAlt },
+    { key: 'all', label: 'Toutes les périodes', icon: Filter },
+    { key: 'recent', label: 'Récents (30j)', icon: Calendar },
+    { key: 'thisMonth', label: 'Ce mois', icon: Calendar },
+    { key: 'thisYear', label: 'Cette année', icon: Calendar },
   ];
 
   const statusOptions = [
     { key: 'all', label: 'Tous les statuts', color: 'default' },
-    { key: 'active', label: 'Actifs', color: 'success' },
-    { key: 'inactive', label: 'Inactifs', color: 'warning' },
-    { key: 'suspended', label: 'Suspendus', color: 'danger' },
+    { key: 'completed', label: 'Complétés', color: 'success' },
+    { key: 'pending', label: 'En attente', color: 'warning' },
+    { key: 'processing', label: 'En cours', color: 'info' },
+    { key: 'failed', label: 'Échoués', color: 'danger' },
   ];
 
   const getFilterLabel = () => filterOptions.find(opt => opt.key === selectedFilter)?.label || 'Période';
@@ -101,7 +94,7 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
         
         <div className="relative w-full lg:max-w-xl">
           {/* Search icon */}
-          <FiSearch
+          <Search
             size={20}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
           />
@@ -110,15 +103,15 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           <input
             type="text"
             value={filterValue}
-            placeholder="Rechercher un membre par nom, email, téléphone..."
+            placeholder="Rechercher par nom, référence, compte..."
             onChange={(e) => onSearchChange(e.target.value)}
             className="
               w-full h-12 pl-12 pr-12
               rounded-xl text-sm
               bg-white shadow-sm
               border-2 border-transparent
-              hover:border-blue-200
-              focus:border-blue-500 focus:outline-none
+              hover:border-rose-200
+              focus:border-rose-500 focus:outline-none
               transition-colors
             "
           />
@@ -149,41 +142,17 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
         {/* Actions */}
         <div className="flex gap-2 w-full lg:w-auto">
           <button
-            onClick={onAdd}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-linear-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-md"
-          >
-            <FaPlus size={16} />
-            Ajouter
-          </button>
-          <button
-            onClick={onImport}
-            disabled={importLoading}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-slate-300 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {importLoading ? (
-              <>
-                <div className="animate-spin w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full"></div>
-                Import...
-              </>
-            ) : (
-              <>
-                <FaUpload size={16} />
-                Importer
-              </>
-            )}
-          </button>
-          <button
             onClick={onExport}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-green-600 text-green-600 hover:bg-green-50 font-medium h-12 px-6 rounded-md transition-all"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-rose-600 text-rose-600 hover:bg-rose-50 font-medium h-12 px-6 rounded-xl transition-all"
           >
-            <FaDownload size={16} />
+            <Download size={16} />
             Exporter
           </button>
         </div>
       </div>
 
       {/* Filtres avancés */}
-      <div className="bg-linear-to-r from-purple-50 via-white to-pink-50 rounded-xl p-4 shadow-sm border border-purple-100">
+      <div className="bg-gradient-to-r from-purple-50 via-white to-pink-50 rounded-xl p-4 shadow-sm border border-purple-100">
         <div className="flex flex-wrap items-center gap-3">
           {/* Badge nombre de résultats */}
           <div className="flex items-center gap-2">
@@ -207,24 +176,27 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                       : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <FaCalendarAlt className="text-purple-600" />
+                  <Calendar className="text-purple-600" size={16} />
                   <span>{getFilterLabel()}</span>
-                  <MdKeyboardArrowDown />
+                  <span className="text-xs">▼</span>
                 </button>
               }
             >
-              {filterOptions.map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => onFilterChange(option.key)}
-                  className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
-                    selectedFilter === option.key ? 'bg-purple-50 text-purple-700 font-semibold' : ''
-                  }`}
-                >
-                  <option.icon className="text-purple-600" />
-                  <span>{option.label}</span>
-                </button>
-              ))}
+              {filterOptions.map((option) => {
+                const IconComponent = option.icon;
+                return (
+                  <button
+                    key={option.key}
+                    onClick={() => onFilterChange(option.key)}
+                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                      selectedFilter === option.key ? 'bg-purple-50 text-purple-700 font-semibold' : ''
+                    }`}
+                  >
+                    <IconComponent className="text-purple-600" size={16} />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
             </CustomDropdown>
 
             {/* Filtre statut */}
@@ -233,13 +205,13 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                 <button
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     selectedStatus !== 'all' 
-                      ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
+                      ? 'bg-rose-100 border-2 border-gray-400 text-rose-700 font-semibold' 
                       : 'bg-white border-2 border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <FaCheckCircle className="text-green-600" />
+                  <CheckCircle className="text-rose-600" size={16} />
                   <span>{getStatusLabel()}</span>
-                  <MdKeyboardArrowDown />
+                  <span className="text-xs">▼</span>
                 </button>
               }
             >
@@ -248,10 +220,10 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
                   key={option.key}
                   onClick={() => onStatusChange(option.key)}
                   className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
-                    selectedStatus === option.key ? 'bg-green-50 text-green-700 font-semibold' : ''
+                    selectedStatus === option.key ? 'bg-rose-50 text-rose-700 font-semibold' : ''
                   }`}
                 >
-                  <FaCheckCircle className="text-green-600" />
+                  <CheckCircle className="text-rose-600" size={16} />
                   <span>{option.label}</span>
                 </button>
               ))}
@@ -282,4 +254,4 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   );
 };
 
-export default MemberFilterBar;
+export default WithdrawalFilterBar;

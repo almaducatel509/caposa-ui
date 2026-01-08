@@ -49,7 +49,6 @@ const EmployeeGrid: React.FC = () => {
   /* ======================================================
      Load data
   ====================================================== */
-
   const loadEmployees = async () => {
     try {
       setIsLoading(true);
@@ -79,20 +78,17 @@ const EmployeeGrid: React.FC = () => {
   /* ======================================================
      Debounce search
   ====================================================== */
-
-//   useEffect(() => {
-//     const t = setTimeout(() => setDebouncedSearch(search), 300);
-//     return () => clearTimeout(t);
-//   }, [search]);
-// Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(filterValue), 300);
+    const timer = setTimeout(() => {
+      setDebouncedValue(filterValue.trim());
+    }, 300);
+
     return () => clearTimeout(timer);
   }, [filterValue]);
+
   /* ======================================================
      HYDRATION (clé de tout le système)
   ====================================================== */
-
   const hydrateEmployee = useCallback(
     (e: EmployeeData): EmployeeData => {
       const branch = branches.find(b => b.id === e.branch);
@@ -134,47 +130,79 @@ const EmployeeGrid: React.FC = () => {
   /* ======================================================
      FILTER + SORT
   ====================================================== */
+  const filteredEmployees = useMemo(() => {
+    let filtered = [...employees];
 
-   const filteredEmployees = useMemo(() => {
-      let filtered = employees;
-  
-      if (debouncedValue) {
-        const v = debouncedValue.toLowerCase();
-        filtered = filtered.filter(e =>
-          e.first_name?.toLowerCase().includes(v) ||
-          e.last_name?.toLowerCase().includes(v) ||
-          e.user?.email?.toLowerCase().includes(v) ||
-          e.phone_number?.toLowerCase().includes(v) ||
-          e.payment_ref?.toLowerCase().includes(v)
-        );
-      }
-  
-      if (selectedBranch !== 'all') filtered = filtered.filter(e => e.branch === selectedBranch);
-      if (selectedStatus !== 'all') filtered = filtered.filter(e => (e.status || 'active') === selectedStatus);
-  
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const currentMonth = today.getMonth();
-  
-      switch (selectedFilter) {
-        case 'recent':
-          filtered = filtered.filter(e => e.created_at && (today.getTime() - new Date(e.created_at).getTime()) / (1000 * 3600 * 24) <= 30);
-          break;
-        case 'thisMonth':
-          filtered = filtered.filter(e => e.created_at && new Date(e.created_at).getMonth() === currentMonth && new Date(e.created_at).getFullYear() === currentYear);
-          break;
-        case 'thisYear':
-          filtered = filtered.filter(e => e.created_at && new Date(e.created_at).getFullYear() === currentYear);
-          break;
-      }
-  
-      return filtered.sort((a, b) => (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
-    }, [employees, , selectedFilter, selectedBranch, ]);
-  
+    // 🔍 Recherche texte
+    if (debouncedValue) {
+      const v = debouncedValue.toLowerCase();
+      filtered = filtered.filter(e =>
+        e.first_name?.toLowerCase().includes(v) ||
+        e.last_name?.toLowerCase().includes(v) ||
+        e.user?.email?.toLowerCase().includes(v) ||
+        e.phone_number?.toLowerCase().includes(v) ||
+        e.payment_ref?.toLowerCase().includes(v)
+      );
+    }
+
+    // 🏢 Filtre branche
+    if (selectedBranch !== 'all') {
+      filtered = filtered.filter(e => e.branch === selectedBranch);
+    }
+
+    // ✅ Filtre statut
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(e => (e.status ?? 'active') === selectedStatus);
+    }
+
+    // 📅 Filtre période
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    if (selectedFilter === 'recent') {
+      filtered = filtered.filter(e =>
+        e.created_at &&
+        (now.getTime() - new Date(e.created_at).getTime()) / (1000 * 3600 * 24) <= 30
+      );
+    }
+
+    if (selectedFilter === 'thisMonth') {
+      filtered = filtered.filter(e => {
+        if (!e.created_at) return false;
+        const d = new Date(e.created_at);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+    }
+
+    if (selectedFilter === 'thisYear') {
+      filtered = filtered.filter(e => {
+        if (!e.created_at) return false;
+        return new Date(e.created_at).getFullYear() === currentYear;
+      });
+    }
+
+    // 🔽 Tri
+    return filtered.sort(
+      (a, b) =>
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime()
+    );
+  }, [
+    employees,
+    debouncedValue,
+    selectedBranch,
+    selectedStatus,
+    selectedFilter,
+  ]);
+
   /* ======================================================
      FINAL DATA (HYDRATED)
   ====================================================== */
-  const handleAdd = () => { setSelectedEmployee(null); setShowEditModal(true); };
+  const handleAdd = () => { 
+    setSelectedEmployee(null); 
+    setShowEditModal(true); 
+  };
 
   const hydratedEmployees = useMemo(
     () => filteredEmployees.map(hydrateEmployee),
@@ -184,7 +212,6 @@ const EmployeeGrid: React.FC = () => {
   /* ======================================================
      Handlers
   ====================================================== */
-
   const handleView = (e: EmployeeData) => {
     setSelectedEmployee(e);
     setShowDetailModal(true);
@@ -205,13 +232,45 @@ const EmployeeGrid: React.FC = () => {
     setShowTransactionModal(true);
   };
 
-const onSearchChange = useCallback((v?: string) => setFilterValue(v || ''), []);
+  const onSearchChange = useCallback((v?: string) => setFilterValue(v || ''), []);
   const onClear = useCallback(() => setFilterValue(''), []);
+
+  /* ======================================================
+     Loading State
+  ====================================================== */
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-blue-50/30 min-h-screen">
+        <PageHeader
+          title="Gestion des Employés"
+          subtitle="Gérez les employés, leurs rôles et affectations"
+          icon={<PiUsersThin className="text-5xl" />}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
+              <div className="p-6 space-y-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-24 h-24 rounded-full bg-gray-200 animate-pulse mb-4"></div>
+                  <div className="h-5 w-32 bg-gray-200 animate-pulse rounded mb-2"></div>
+                  <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   /* ======================================================
      RENDER
   ====================================================== */
-
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
@@ -235,11 +294,17 @@ const onSearchChange = useCallback((v?: string) => setFilterValue(v || ''), []);
         onImport={() => console.log('Import')}
         onExport={() => console.log('Export')}
         totalCount={filteredEmployees.length}
-     />
+      />
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
+        <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
+          <p className="text-red-700 font-medium">{error}</p>
+          <button 
+            onClick={loadEmployees}
+            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium shadow-md rounded-lg text-sm"
+          >
+            Réessayer
+          </button>
         </div>
       )}
 
@@ -257,8 +322,25 @@ const onSearchChange = useCallback((v?: string) => setFilterValue(v || ''), []);
           ))
         ) : (
           <div className="col-span-full text-center py-20">
-            <FaUsers className="text-5xl text-green-700 mx-auto mb-4" />
-            <p className="text-gray-600">Aucun employé trouvé</p>
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-6">
+              <FaUsers className="text-5xl text-green-700" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {filterValue ? "Aucun employé trouvé" : "Aucun employé"}
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              {filterValue ? "Essayez de modifier vos critères de recherche" : "Commencez par ajouter votre premier employé"}
+            </p>
+            <button 
+              onClick={filterValue ? onClear : handleAdd}
+              className={`px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
+                filterValue 
+                  ? "border-2 border-green-700 bg-white text-green-700 hover:bg-green-50" 
+                  : "bg-green-700 hover:bg-green-800 text-white"
+              }`}
+            >
+              {filterValue ? "Effacer les filtres" : "Ajouter un employé"}
+            </button>
           </div>
         )}
       </div>

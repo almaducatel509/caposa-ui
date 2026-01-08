@@ -1,6 +1,6 @@
 // Types pour les transactions
 export interface TransactionData {
-  id: string | number;
+  id: number;
   type: 'deposit' | 'withdrawal' | 'transfer' | 'loan';
   status: 'pending' | 'completed' | 'failed' | 'processing';
   amount: number;
@@ -15,8 +15,7 @@ export interface TransactionData {
   updated_at?: string;
   processed_at?: string;
   processed_by?: string;
-  
-  // Informations spécifiques aux prêts
+    // Informations spécifiques aux prêts
   loan_info?: {
     duration?: string;
     interest_rate?: number;

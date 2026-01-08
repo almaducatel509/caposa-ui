@@ -1,193 +1,146 @@
 'use client';
-import React from 'react';
-import { FaSearch, FaFilter, FaCalendarAlt } from "react-icons/fa";
 
-interface TransactionFiltersProps {
-  filters: {
-    search: string;
-    type: string;
-    status: string;
-    dateRange: string;
-  };
-  onFiltersChange: (filters: any) => void;
-  onRefresh: () => void;
+import React from 'react';
+import { FiSearch } from 'react-icons/fi';
+import { FaCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+
+/* ================= TYPES ================= */
+
+export interface TransactionFiltersState {
+  search: string;
+  type: string;
+  status: string;
+  dateRange: string;
 }
 
-const TransactionFilters: React.FC<TransactionFiltersProps> = ({ 
-  filters, 
-  onFiltersChange, 
-  onRefresh 
+interface TransactionFiltersProps {
+  filters: TransactionFiltersState;
+  onFiltersChange: (filters: TransactionFiltersState) => void;
+}
+
+/* ================= OPTIONS ================= */
+
+const TYPE_OPTIONS = [
+  { key: 'all', label: 'Tous' },
+  { key: 'deposit', label: 'Dépôts' },
+  { key: 'withdrawal', label: 'Retraits' },
+  { key: 'transfer', label: 'Virements' },
+  { key: 'loan', label: 'Prêts' },
+];
+
+const STATUS_OPTIONS = [
+  { key: 'all', label: 'Tous les statuts' },
+  { key: 'pending', label: 'En attente' },
+  { key: 'completed', label: 'Complété' },
+  { key: 'failed', label: 'Échoué' },
+];
+
+const DATE_OPTIONS = [
+  { key: 'all', label: 'Toutes les périodes' },
+  { key: 'today', label: "Aujourd’hui" },
+  { key: 'week', label: 'Cette semaine' },
+  { key: 'month', label: 'Ce mois' },
+];
+
+/* ================= COMPONENT ================= */
+
+const TransactionFilters: React.FC<TransactionFiltersProps> = ({
+  filters,
+  onFiltersChange,
 }) => {
-  const updateFilter = (key: string, value: string) => {
+  const update = (key: keyof TransactionFiltersState, value: string) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  const resetFilters = () => {
+  const reset = () => {
     onFiltersChange({
       search: '',
       type: 'all',
       status: 'all',
-      dateRange: 'all'
+      dateRange: 'all',
     });
   };
 
-  const transactionTypes = [
-    { key: 'all', label: 'Tous', icon: '📊' },
-    { key: 'deposit', label: 'Dépôts', icon: '💵' },
-    { key: 'withdrawal', label: 'Retraits', icon: '💸' },
-    { key: 'transfer', label: 'Virements', icon: '🔄' },
-    { key: 'loan', label: 'Prêts', icon: '🏦' }
-  ];
-
-  const statusTypes = [
-    { key: 'all', label: 'Tous', icon: '📋' },
-    { key: 'pending', label: 'En attente', icon: '⏳' },
-    { key: 'completed', label: 'Complété', icon: '✅' },
-    { key: 'failed', label: 'Échoué', icon: '❌' },
-    { key: 'processing', label: 'En cours', icon: '⚡' }
-  ];
-
-  const dateRanges = [
-    { key: 'all', label: 'Toutes', icon: '📅' },
-    { key: 'today', label: 'Aujourd\'hui', icon: '📅' },
-    { key: 'week', label: 'Cette semaine', icon: '📆' },
-    { key: 'month', label: 'Ce mois', icon: '🗓️' },
-    { key: 'quarter', label: 'Ce trimestre', icon: '📊' }
-  ];
+  const activeCount = [
+    filters.type !== 'all',
+    filters.status !== 'all',
+    filters.dateRange !== 'all',
+  ].filter(Boolean).length;
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 space-y-6">
-      {/* Barre de recherche */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <FaSearch />
-          </div>
-          <input
-            type="text"
-            placeholder="Rechercher une transaction (description, montant, référence...)"
-            value={filters.search}
-            onChange={(e) => updateFilter('search', e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          />
-        </div>
-        <button
-          onClick={resetFilters}
-          className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
-        >
-          <FaFilter />
-          <span>Réinitialiser</span>
-        </button>
+    <div className="space-y-4">
+
+      {/* 🔍 SEARCH */}
+      <div className="relative max-w-xl">
+        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          value={filters.search}
+          onChange={(e) => update('search', e.target.value)}
+          placeholder="Rechercher une transaction (référence, montant, note...)"
+          className="
+            w-full h-12 pl-12 pr-4 rounded-xl
+            bg-white shadow-sm
+            border-2 border-transparent
+            hover:border-violet-200
+            focus:border-violet-500 focus:outline-none
+          "
+        />
       </div>
 
-      {/* Filtres par type */}
-      <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-          <span>🏷️</span> Type de Transaction
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {transactionTypes.map((type) => (
-            <button
-              key={type.key}
-              onClick={() => updateFilter('type', type.key)}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 font-medium
-                ${filters.type === type.key 
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-md' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300 hover:bg-blue-50'
-                }
-              `}
-            >
-              <span className="text-sm">{type.icon}</span>
-              <span className="text-sm">{type.label}</span>
-            </button>
-          ))}
+      {/* 🎛 FILTER BAR */}
+      <div className="bg-violet-50 rounded-xl p-4 shadow-sm border border-violet-100">
+        <div className="flex flex-wrap gap-3 items-center">
+
+          {/* TYPE */}
+          <select
+            value={filters.type}
+            onChange={(e) => update('type', e.target.value)}
+            className="h-10 px-4 rounded-lg border bg-white"
+          >
+            {TYPE_OPTIONS.map(o => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+
+          {/* STATUS */}
+          <select
+            value={filters.status}
+            onChange={(e) => update('status', e.target.value)}
+            className="h-10 px-4 rounded-lg border bg-white"
+          >
+            {STATUS_OPTIONS.map(o => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+
+          {/* DATE */}
+          <select
+            value={filters.dateRange}
+            onChange={(e) => update('dateRange', e.target.value)}
+            className="h-10 px-4 rounded-lg border bg-white"
+          >
+            {DATE_OPTIONS.map(o => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+
+          {/* ACTIVE BADGE */}
+          {activeCount > 0 && (
+            <>
+              <span className="px-3 py-1 rounded-lg bg-yellow-100 text-yellow-800 text-sm font-semibold">
+                {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={reset}
+                className="text-red-600 hover:text-red-700 text-sm font-medium"
+              >
+                Réinitialiser
+              </button>
+            </>
+          )}
+
         </div>
       </div>
-
-      {/* Filtres par statut */}
-      <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-          <span>📊</span> Statut
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {statusTypes.map((status) => (
-            <button
-              key={status.key}
-              onClick={() => updateFilter('status', status.key)}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 font-medium
-                ${filters.status === status.key 
-                  ? 'bg-green-500 text-white border-green-500 shadow-md' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-green-300 hover:bg-green-50'
-                }
-              `}
-            >
-              <span className="text-sm">{status.icon}</span>
-              <span className="text-sm">{status.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Filtres par période */}
-      <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-          <FaCalendarAlt className="text-gray-600" /> Période
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {dateRanges.map((range) => (
-            <button
-              key={range.key}
-              onClick={() => updateFilter('dateRange', range.key)}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 font-medium
-                ${filters.dateRange === range.key 
-                  ? 'bg-purple-500 text-white border-purple-500 shadow-md' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-purple-300 hover:bg-purple-50'
-                }
-              `}
-            >
-              <span className="text-sm">{range.icon}</span>
-              <span className="text-sm">{range.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Résultats de filtrage */}
-      {(filters.search || filters.type !== 'all' || filters.status !== 'all' || filters.dateRange !== 'all') && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-blue-600">🔍</span>
-              <span className="text-blue-800 font-medium">Filtres actifs</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {filters.search && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded">
-                  Recherche: "{filters.search}"
-                </span>
-              )}
-              {filters.type !== 'all' && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded">
-                  Type: {transactionTypes.find(t => t.key === filters.type)?.label}
-                </span>
-              )}
-              {filters.status !== 'all' && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded">
-                  Statut: {statusTypes.find(s => s.key === filters.status)?.label}
-                </span>
-              )}
-              {filters.dateRange !== 'all' && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded">
-                  Période: {dateRanges.find(d => d.key === filters.dateRange)?.label}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

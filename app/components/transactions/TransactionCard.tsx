@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { TransactionData } from './types';
-import { FaEye, FaEdit, FaTrash, FaClock, FaCheckCircle, FaTimesCircle, FaBolt } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaBolt, FaArrowUp, FaArrowDown } from "react-icons/fa";
 
 interface TransactionCardProps {
   transaction: TransactionData;
@@ -18,63 +18,62 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
   onDelete,
   onProcess
 }) => {
-  const getTypeInfo = (type: string) => {
+  const getTypeConfig = (type: string) => {
     switch (type) {
       case 'deposit':
-        return { icon: '💵', color: 'text-green-600', bg: 'bg-green-50', label: 'Dépôt' };
+        return { 
+          gradient: 'from-emerald-500 to-teal-500',
+          icon: <FaArrowDown className="rotate-180" />,
+          label: 'Dépôt',
+          textColor: 'text-emerald-600'
+        };
       case 'withdrawal':
-        return { icon: '💸', color: 'text-red-600', bg: 'bg-red-50', label: 'Retrait' };
+        return { 
+          gradient: 'from-rose-500 to-pink-500',
+          icon: <FaArrowDown />,
+          label: 'Retrait',
+          textColor: 'text-rose-600'
+        };
       case 'transfer':
-        return { icon: '🔄', color: 'text-blue-600', bg: 'bg-blue-50', label: 'Virement' };
+        return { 
+          gradient: 'from-blue-500 to-indigo-500',
+          icon: <div className="flex gap-0.5"><FaArrowUp className="text-xs" /><FaArrowDown className="text-xs" /></div>,
+          label: 'Virement',
+          textColor: 'text-blue-600'
+        };
       case 'loan':
-        return { icon: '🏦', color: 'text-purple-600', bg: 'bg-purple-50', label: 'Prêt' };
+        return { 
+          gradient: 'from-violet-500 to-purple-500',
+          icon: <span className="text-sm">💰</span>,
+          label: 'Prêt',
+          textColor: 'text-violet-600'
+        };
       default:
-        return { icon: '📊', color: 'text-gray-600', bg: 'bg-gray-50', label: 'Autre' };
+        return { 
+          gradient: 'from-gray-500 to-slate-500',
+          icon: <span>📊</span>,
+          label: 'Autre',
+          textColor: 'text-gray-600'
+        };
     }
   };
 
-  const getStatusInfo = (status: string) => {
+  const getStatusDot = (status: string) => {
     switch (status) {
       case 'pending':
-        return { 
-          icon: <FaClock />, 
-          bgColor: 'bg-orange-100',
-          textColor: 'text-orange-700',
-          label: 'En attente',
-        };
+        return 'bg-amber-400 animate-pulse';
       case 'completed':
-        return { 
-          icon: <FaCheckCircle />, 
-          bgColor: 'bg-green-100',
-          textColor: 'text-green-700',
-          label: 'Complété',
-        };
+        return 'bg-emerald-500';
       case 'failed':
-        return { 
-          icon: <FaTimesCircle />, 
-          bgColor: 'bg-red-100',
-          textColor: 'text-red-700',
-          label: 'Échoué',
-        };
+        return 'bg-rose-500';
       case 'processing':
-        return { 
-          icon: <FaBolt />, 
-          bgColor: 'bg-blue-100',
-          textColor: 'text-blue-700',
-          label: 'En cours',
-        };
+        return 'bg-blue-500 animate-pulse';
       default:
-        return { 
-          icon: <FaClock />, 
-          bgColor: 'bg-gray-100',
-          textColor: 'text-gray-700',
-          label: 'Inconnu',
-        };
+        return 'bg-gray-400';
     }
   };
 
-  const typeInfo = getTypeInfo(transaction.type);
-  const statusInfo = getStatusInfo(transaction.status);
+  const typeConfig = getTypeConfig(transaction.type);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-CA', {
@@ -84,138 +83,92 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-CA', {
-      year: 'numeric',
-      month: 'short',
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `Il y a ${diffMins}min`;
+    if (diffHours < 24) return `Il y a ${diffHours}h`;
+    if (diffDays < 7) return `Il y a ${diffDays}j`;
+    
+    return date.toLocaleDateString('fr-CA', {
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short'
     });
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:border-gray-300">
-      {/* En-tête de la carte */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-3 rounded-lg ${typeInfo.bg}`}>
-            <span className="text-xl">{typeInfo.icon}</span>
+    <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl hover:border-gray-300 transition-all duration-300">
+      {/* Gradient Bar */}
+      <div className={`h-1.5 bg-linear-to-r ${typeConfig.gradient}`} />
+      
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 rounded-md bg-linear-to-br ${typeConfig.gradient} flex items-center justify-center text-white shadow-lg`}>
+              {typeConfig.icon}
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{typeConfig.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">#{transaction.reference || transaction.id}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{typeInfo.label}</h3>
-            <p className="text-sm text-gray-500">#{transaction.reference || transaction.id}</p>
+          
+          {/* Status Dot */}
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${getStatusDot(transaction.status)}`} />
           </div>
         </div>
-        
-        {/* Status Badge */}
-        <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.textColor}`}>
-          {statusInfo.icon}
-          <span>{statusInfo.label}</span>
-        </span>
-      </div>
 
-      {/* Montant */}
-      <div className="mb-4">
-        <p className={`text-3xl font-bold ${typeInfo.color}`}>
-          {formatCurrency(transaction.amount || 0)}
-        </p>
-        {transaction.currency && transaction.currency !== 'CAD' && (
-          <p className="text-sm text-gray-500">{transaction.currency}</p>
-        )}
-      </div>
+        {/* Amount */}
+        <div className="mb-4">
+          <p className={`text-3xl font-bold ${typeConfig.textColor} tracking-tight`}>
+            {formatCurrency(transaction.amount || 0)}
+          </p>
+        </div>
 
-      {/* Description */}
-      <div className="mb-4">
-        <p className="text-gray-800 font-medium line-clamp-2">
+        {/* Description */}
+        <p className="text-sm text-gray-700 font-medium line-clamp-2 mb-4">
           {transaction.description}
         </p>
-        {transaction.notes && (
-          <p className="text-sm text-gray-600 mt-1 line-clamp-1">
-            {transaction.notes}
-          </p>
-        )}
-      </div>
 
-      {/* Informations supplémentaires */}
-      <div className="space-y-2 mb-4">
-        {transaction.member_name && (
+        {/* Meta Info */}
+        <div className="flex items-center justify-between py-3 border-t border-gray-100">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">👤</span>
-            <span className="text-sm text-gray-700">{transaction.member_name}</span>
+            {transaction.member_name && (
+              <span className="text-xs text-gray-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                {transaction.member_name}
+              </span>
+            )}
           </div>
-        )}
-        
-        {transaction.account_number && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">🏛️</span>
-            <span className="text-sm text-gray-700">Compte: {transaction.account_number}</span>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">📅</span>
-          <span className="text-sm text-gray-700">
-            {formatDate(transaction.created_at || new Date().toISOString())}
-          </span>
+          <span className="text-xs text-gray-500 font-medium">{formatDate(transaction.created_at)}</span>
         </div>
 
-        {/* Spécial pour les prêts */}
-        {transaction.type === 'loan' && transaction.loan_info && (
-          <div className="bg-purple-50 p-3 rounded-lg mt-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-purple-600">🏦</span>
-              <span className="text-sm font-medium text-purple-800">Détails du Prêt</span>
-            </div>
-            <div className="space-y-1 text-xs text-purple-700">
-              {transaction.loan_info.duration && (
-                <p>Durée: {transaction.loan_info.duration}</p>
-              )}
-              {transaction.loan_info.interest_rate && (
-                <p>Taux: {transaction.loan_info.interest_rate}%</p>
-              )}
-              {transaction.loan_info.status && (
-                <p>Statut: {transaction.loan_info.status}</p>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-        <button
-          onClick={() => onView(transaction)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-        >
-          <FaEye />
-          <span>Voir</span>
-        </button>
-        
-        <button
-          onClick={() => onEdit(transaction)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-        >
-          <FaEdit />
-          <span>Modifier</span>
-        </button>
-
-        {transaction.status === 'pending' && (
+        {/* Actions */}
+        <div className="flex gap-2 pt-3">
           <button
-            onClick={() => onProcess(transaction)}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            onClick={() => onView(transaction)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
           >
-            <FaBolt />
-            <span>Traiter</span>
+            <FaEye className="text-sm" />
+            Voir
           </button>
-        )}
-
-        <button
-          onClick={() => onDelete(transaction)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto"
-        >
-          <FaTrash />
-          <span>Supprimer</span>
-        </button>
+          
+          {transaction.status === 'pending' && (
+            <button
+              onClick={() => onProcess(transaction)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-linear-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 rounded-md transition-all shadow-md"
+            >
+              <FaBolt className="text-sm" />
+              Traiter
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

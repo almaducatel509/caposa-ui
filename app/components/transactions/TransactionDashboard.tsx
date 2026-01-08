@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Button } from "@heroui/react";
 import TransactionStats from './TransactionStats';
 import TransactionFilters from './TransactionFilters';
 import TransactionGrid from './TransactionGrid';
@@ -19,7 +18,6 @@ const TransactionDashboard: React.FC = () => {
     dateRange: 'all'
   });
   
-  // Charger les transactions
   useEffect(() => {
     loadTransactions();
   }, []);
@@ -28,12 +26,10 @@ const TransactionDashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Chargement des transactions...');
       const data = await fetchTransactions();
       setTransactions(data);
-      console.log('✅ Transactions chargées:', data.length);
     } catch (err) {
-      console.error('❌ Erreur chargement transactions:', err);
+      console.error('Erreur chargement transactions:', err);
       setError('Erreur lors de la récupération des transactions.');
     } finally {
       setLoading(false);
@@ -45,27 +41,26 @@ const TransactionDashboard: React.FC = () => {
   };
 
   const handleNewTransaction = () => {
-    console.log('💰 Nouvelle transaction');
-    // TODO: Ouvrir modal de création
+    console.log('Nouvelle transaction');
   };
 
   if (loading) {
     return (
-      <div className="w-full p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord - Transactions</h1>
+      <div className="w-full p-6 min-h-screen">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+            <p className="text-gray-600 mt-1">Gestion financière</p>
+          </div>
         </div>
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="relative mb-4">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-600"></div>
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="relative mb-6">
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-gray-200 border-t-violet-500"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-blue-600 text-xl">💰</span>
+              <span className="text-3xl">💰</span>
             </div>
           </div>
-          <div className="text-center">
-            <p className="text-lg font-medium text-gray-700">Récupération des données</p>
-            <p className="text-sm text-gray-500 mt-1">Chargement des transactions en cours...</p>
-          </div>
+          <p className="text-lg font-semibold text-gray-700">Chargement...</p>
         </div>
       </div>
     );
@@ -73,64 +68,64 @@ const TransactionDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="w-full p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord - Transactions</h1>
+      <div className="w-full p-6">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+            <p className="text-gray-600 mt-1">Gestion financière</p>
+          </div>
         </div>
-        <div className="text-center py-16">
-          <span className="text-6xl mb-4 block">⚠️</span>
-          <h3 className="text-xl font-medium text-red-600 mb-2">Erreur de chargement</h3>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Button
-            color="primary"
-            startContent={<FaSync />}
+        <div className="text-center py-20">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-4xl">⚠️</span>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Erreur de chargement</h3>
+          <p className="text-gray-600 mb-8">{error}</p>
+          <button
             onClick={handleRefresh}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-semibold shadow-lg"
           >
+            <FaSync />
             Réessayer
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full p-4 space-y-6">
-      {/* En-tête avec titre et actions */}
+    <div className="w-full p-6 space-y-8">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord - Transactions</h1>
-          <p className="text-gray-600 mt-1">Gestion et suivi de toutes les transactions financières</p>
+          <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+          <p className="text-gray-600 mt-1">Gestion et suivi financier</p>
         </div>
         <div className="flex gap-3">
-          <Button
-            color="default"
-            variant="bordered"
-            startContent={<FaSync />}
+          <button
             onClick={handleRefresh}
+            className="flex items-center gap-2 px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors font-medium"
           >
+            <FaSync className="text-sm" />
             Actualiser
-          </Button>
-          <Button
-            color="primary"
-            startContent={<FaPlus />}
+          </button>
+          <button
             onClick={handleNewTransaction}
+            className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all font-semibold shadow-lg hover:shadow-xl"
           >
+            <FaPlus className="text-sm" />
             Nouvelle Transaction
-          </Button>
+          </button>
         </div>
       </div>
-
-      {/* Statistiques */}
+      {/* Stats */}
       <TransactionStats transactions={transactions} />
-
-      {/* Filtres */}
+      {/* Filters */}
       <TransactionFilters 
         filters={filters} 
         onFiltersChange={setFilters}
-        onRefresh={handleRefresh}
       />
-
-      {/* Grille des transactions */}
+      {/* Grid */}
       <TransactionGrid 
         transactions={transactions}
         filters={filters}

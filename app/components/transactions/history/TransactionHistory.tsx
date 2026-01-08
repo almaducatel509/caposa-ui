@@ -127,7 +127,6 @@ const TransactionDashboard: React.FC = () => {
       <TransactionFilters 
         filters={filters} 
         onFiltersChange={setFilters}
-        onRefresh={handleRefresh}
       />
 
       {/* Grille des transactions */}
