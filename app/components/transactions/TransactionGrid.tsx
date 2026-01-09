@@ -142,12 +142,12 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
   return (
     <div className="space-y-4">
       {/* Résumé des résultats */}
-      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-3">
           <span className="text-2xl">📊</span>
           <div>
             <p className="font-medium text-gray-900">
-              {filteredTransactions.length} transaction(s) affichée(s)
+              {filteredTransactions.length} transaction(s) affichée(s)  
             </p>
             <p className="text-sm text-gray-600">
               Sur un total de {transactions.length} transactions

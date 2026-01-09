@@ -4,8 +4,12 @@ import { TrendingDown, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-r
 import { mockTransactions } from './mockTransactions';
 import { TransactionData } from './types';
 import PageHeader from '../header';
-import { PiUsersFourThin } from 'react-icons/pi';
+import { PiHandWithdraw, PiUsersFourThin } from 'react-icons/pi';
 import WithdrawalFilterBar from './withdrawals/WithdrawalsFIlter';
+import { fetchTransactions } from '@/app/lib/api/transactions';
+import { BiImport, BiMoneyWithdraw } from 'react-icons/bi';
+import { FaSync } from 'react-icons/fa';
+import { GiReceiveMoney } from 'react-icons/gi';
 
 const Dashboard = () => {
   // États pour les filtres
@@ -13,7 +17,10 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<TransactionData[]>([]);
+  
   // Fonction pour gérer la sélection individuelle
   const handleRowSelect = (id: number) => {
     const newSelected = new Set(selectedRows);
@@ -145,19 +152,59 @@ const Dashboard = () => {
   const handleClear = () => {
     setSearchValue('');
   };
+const loadTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchTransactions();
+      setTransactions(data);
+    } catch (err) {
+      console.error('Erreur chargement transactions:', err);
+      setError('Erreur lors de la récupération des transactions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+ const handleRefresh = () => {
+    loadTransactions();
+  };
+
+  const handleNewTransaction = () => {
+    console.log('Nouvelle transaction');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className=" w-full space-y-8 min-h-screen 
+    bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 
+    p-4 md:p-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <PageHeader
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              
+          <div className="flex justify-between items-center">
+            <PageHeader
             title="Gestion des Retraits"
             subtitle="Gérez tous les retraits et leurs informations"
-            icon={<PiUsersFourThin className="text-5xl" />}
+            icon={<GiReceiveMoney   className="font-light text-4xl" />}
           />
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 px-5 py-2.5 border-2 border-green-600 text-green-600 rounded-4xl hover:bg-green-100 transition-colors font-medium"
+            >
+              <FaSync className="text-sm" />
+              Actualiser
+            </button>
+            <button
+              onClick={handleNewTransaction}
+              className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-green-500 to-emerald-600 text-white rounded-4xl hover:from-green-700 hover:to-emerald-700 transition-all font-semibold shadow-lg hover:shadow-xl"
+            >
+              <PiHandWithdraw   className="text-xl" />
+                Retirer 
+            </button>
+          </div>
         </div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-white rounded-2xl shadow-lg shadow-rose-100 p-6 border border-rose-100 hover:shadow-xl transition-shadow">
@@ -218,7 +265,7 @@ const Dashboard = () => {
 
         {/* Graphique */}
         {chartData.length > 0 && (
-          <div className="bg-gradient-to-br from-rose-500 via-rose-600 to-red-600 rounded-2xl shadow-lg p-6 border border-rose-400">
+          <div className="bg-linear-to-br from-rose-500 via-rose-600 to-red-600 rounded-2xl shadow-lg p-6 border border-rose-400">
             <h3 className="text-lg font-semibold text-white mb-4">Évolution des retraits</h3>
             <div className="relative" style={{ height: '200px' }}>
               <svg width="100%" height="100%" viewBox="0 0 800 200" preserveAspectRatio="none" className="overflow-visible">
@@ -327,7 +374,7 @@ const Dashboard = () => {
         {/* Liste des transactions - Style Table Fintech */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
           {/* Header de la table */}
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-6 py-4">
+          <div className="bg-linear-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-6 py-4">
             <div className="grid grid-cols-12 gap-4 items-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
               <div className="col-span-1 flex items-center gap-2">
                 <input
@@ -409,7 +456,7 @@ const Dashboard = () => {
 
                       {/* Colonne 1: Membre & Transaction */}
                       <div className="col-span-3 flex items-center gap-3">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <div className="shrink-0 w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center group-hover:scale-110 transition-transform">
                           <TrendingDown className="w-5 h-5 text-rose-600" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -511,7 +558,6 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-    </div>
   );
 };
 

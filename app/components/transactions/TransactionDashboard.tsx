@@ -5,7 +5,9 @@ import TransactionFilters from './TransactionFilters';
 import TransactionGrid from './TransactionGrid';
 import { TransactionData } from './types';
 import { fetchTransactions } from '@/app/lib/api/transactions';
-import { FaPlus, FaSync } from "react-icons/fa";
+import { BiImport } from "react-icons/bi";
+import PageHeader from '../header';
+import { FaSync } from 'react-icons/fa';
 
 const TransactionDashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
@@ -46,12 +48,12 @@ const TransactionDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="w-full p-6 min-h-screen">
+      <div className="w-full p-4 min-h-screen">
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-            <p className="text-gray-600 mt-1">Gestion financière</p>
-          </div>
+           <PageHeader
+            title="Transactions"
+            subtitle="Gestion et suivi financier"
+          />
         </div>
         <div className="flex flex-col items-center justify-center py-20">
           <div className="relative mb-6">
@@ -94,13 +96,17 @@ const TransactionDashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full p-6 space-y-8">
+    <div className="w-full p-4 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-          <p className="text-gray-600 mt-1">Gestion et suivi financier</p>
-        </div>
+      
+          <div className="flex justify-between items-center">
+            <PageHeader
+              title="Transactions"
+              subtitle="Gestion et suivi financier"
+            />
+          </div>
+        
         <div className="flex gap-3">
           <button
             onClick={handleRefresh}
@@ -113,18 +119,15 @@ const TransactionDashboard: React.FC = () => {
             onClick={handleNewTransaction}
             className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all font-semibold shadow-lg hover:shadow-xl"
           >
-            <FaPlus className="text-sm" />
-            Nouvelle Transaction
+            <BiImport  className="text-xl" />
+              Importer 
           </button>
         </div>
       </div>
       {/* Stats */}
       <TransactionStats transactions={transactions} />
       {/* Filters */}
-      <TransactionFilters 
-        filters={filters} 
-        onFiltersChange={setFilters}
-      />
+      
       {/* Grid */}
       <TransactionGrid 
         transactions={transactions}

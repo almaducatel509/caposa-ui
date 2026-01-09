@@ -110,13 +110,13 @@ const TransactionDashboard: React.FC = () => {
           >
             Actualiser
           </Button>
-          <Button
+          {/* <Button
             color="primary"
             startContent={<FaPlus />}
             onClick={handleNewTransaction}
           >
             Nouvelle Transaction
-          </Button>
+          </Button> */}
         </div>
       </div>
 
