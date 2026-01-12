@@ -22,7 +22,7 @@ export interface AccountData {
   id_membre?: string;             // ← Alias pour "member"
   typeCompte?: 'epargne' | 'cheques' | 'terme';  // ← Mappé depuis "account_type"
   soldeActuel?: number;           // ← Mappé depuis "balance"
-  statutCompte?: 'actif' | 'ferme' | 'suspendu';  // ← Mappé depuis "account_status"
+  statutCompte: 'actif' | 'ferme' | 'suspendu';  // ← Mappé depuis "account_status"
 
   // ⬇️ Champs optionnels pour la création/modification
   dateOuverture?: string;

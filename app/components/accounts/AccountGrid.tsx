@@ -9,12 +9,8 @@ import AccountFilterBar from "./AccountFilterBar";
 
 // Modals
 import AccountDetailModal from "./modals/AccountDetailModal";
-import EditAccountModal from "./modals/EditAccountModal";
 import CloseAccountModal from "./modals/CloseAccountModal";
-import { FaBriefcase, FaUsers, FaWallet } from "react-icons/fa";
 import PageHeader from "../header";
-import { Card, CardBody } from "@heroui/card";
-import { Button } from "@heroui/react";
 import { TfiWallet } from "react-icons/tfi";
 
 const AccountGrid: React.FC = () => {
@@ -53,11 +49,12 @@ const AccountGrid: React.FC = () => {
     };
     load();
   }, []);
- const header = (
+
+  const header = (
     <PageHeader 
       title="Gestion des Comptes"
       subtitle="Consultez et gérez tous les comptes bancaires"
-      icon={<TfiWallet  className="text-4xl 0" />}
+      icon={<TfiWallet className="text-4xl" />}
     />
   );
 
@@ -97,37 +94,62 @@ const AccountGrid: React.FC = () => {
     setShowDetail(true);
   };
 
-  const handleEdit = (acc: AccountData) => {
-    setSelectedAccount(acc);
-    setShowEdit(true);
-  };
-
   const handleCloseAccount = (acc: AccountData) => {
     setSelectedAccount(acc);
     setShowClose(true);
   };
+  
+  /* =======================
+     GET STATUS CONFIG
+  ======================= */
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'actif':
+        return { 
+          gradient: 'from-emerald-500 to-teal-500',
+          textColor: 'text-emerald-700',
+          bgColor: 'bg-emerald-50'
+        };
+      case 'ferme':
+        return { 
+          gradient: 'from-rose-500 to-pink-500',
+          textColor: 'text-rose-700',
+          bgColor: 'bg-rose-50'
+        };
+      case 'suspendu':
+        return { 
+          gradient: 'from-amber-500 to-orange-500',
+          textColor: 'text-amber-700',
+          bgColor: 'bg-amber-50'
+        };
+      default:
+        return { 
+          gradient: 'from-gray-500 to-slate-500',
+          textColor: 'text-gray-700',
+          bgColor: 'bg-gray-50'
+        };
+    }
+  };
 
   /* =======================
-     LOADING        
-     <div className="animate-spin h-12 w-12 rounded-full border-b-4 border-emerald-600" />
-
+     LOADING
   ======================= */
- if (loading) {
+  if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
-              {header}
+      <div className="flex flex-col gap-6 p-6 bg-gradient-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
+        {header}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="h-50 bg-white shadow-sm rounded-xl overflow-hidden">
-              <CardBody className="p-6 space-y-4">
+            <div key={i} className="h-50 bg-white shadow-sm rounded-xl overflow-hidden">
+              <div className="p-6 space-y-4">
                 <div className="space-y-3">
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                   <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -138,9 +160,10 @@ const AccountGrid: React.FC = () => {
      RENDER
   ======================= */
   return (
- <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
+    <div className="flex flex-col gap-6 p-6 bg-gradient-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
       {header}
-           {/* FILTER BAR */}
+      
+      {/* FILTER BAR */}
       <AccountFilterBar
         filterValue={search}
         selectedType={selectedType}
@@ -162,75 +185,71 @@ const AccountGrid: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAccounts.map((account) => (
-            <div
-              key={account.id}
-              className="bg-white p-6 rounded-xl shadow border"
-            >
-              {/* HEADER */}
-              <div className="flex justify-between mb-3">
-                <div>
-                  <h3 className="font-bold text-lg">
-                    {account.account_number}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {account.member_details?.full_name ||
-                      account.id_membre}
-                  </p>
-                </div>
+          {filteredAccounts.map((account) => {
+            const statusConfig = getStatusConfig(account.statutCompte);
+            
+            return (
+              <div
+                key={account.id}
+                className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow duration-200 overflow-hidden"
+              >
+                {/* Status Indicator Bar */}
+                <div className={`h-1.5 bg-gradient-to-r ${statusConfig.gradient}`} />
 
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    account.statutCompte === "actif"
-                      ? "bg-green-100 text-green-700"
-                      : account.statutCompte === "suspendu"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {account.statutCompte}
-                </span>
-              </div>
+                <div className="p-6">
+                  {/* HEADER */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900">
+                        {account.account_number}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {account.member_details?.full_name || account.id_membre}
+                      </p>
+                    </div>
 
-              {/* INFO */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Type</span>
-                  <span className="font-semibold capitalize">
-                    {account.typeCompte}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Solde</span>
-                  <span className="font-bold text-emerald-600">
-                    {account.soldeActuel} HTG
-                  </span>
-                </div>
-              </div>
+                    <span
+                      className={`px-3 py-1 rounded-xl text-xs font-bold ${statusConfig.bgColor} ${statusConfig.textColor}`}
+                    >
+                      {account.statutCompte}
+                    </span>
+                  </div>
 
-              {/* ACTIONS */}
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => handleView(account)}
-                  className="flex-1 text-sm bg-blue-50 text-blue-700 rounded-lg py-2"
-                >
-                  Voir
-                </button>
-                <button
-                  onClick={() => handleEdit(account)}
-                  className="flex-1 text-sm bg-green-50 text-green-700 rounded-lg py-2"
-                >
-                  Modifier
-                </button>
-                <button
-                  onClick={() => handleCloseAccount(account)}
-                  className="flex-1 text-sm bg-orange-50 text-orange-700 rounded-lg py-2"
-                >
-                  Fermer
-                </button>
+                  {/* INFO */}
+                  <div className="space-y-2.5 text-sm mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Type</span>
+                      <span className="font-semibold text-gray-900 capitalize">
+                        {account.typeCompte}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Solde</span>
+                      <span className="font-bold text-emerald-600 text-lg">
+                        {account.soldeActuel?.toLocaleString('fr-CA') || '0'} HTG
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ACTIONS */}
+                  <div className="flex gap-2 pt-4 border-t border-gray-100">
+                    <button
+                      onClick={() => handleView(account)}
+                      className="flex-1 text-sm bg-blue-500 text-white rounded-xl py-2.5 hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium"
+                    >
+                      Voir
+                    </button>
+                    <button
+                      onClick={() => handleCloseAccount(account)}
+                      className="flex-1 text-sm bg-orange-500 text-white rounded-xl py-2.5 hover:bg-orange-600 active:bg-orange-700 transition-colors font-medium"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -242,20 +261,6 @@ const AccountGrid: React.FC = () => {
         onEdit={() => {
           setShowDetail(false);
           setShowEdit(true);
-        }}
-      />
-
-      <EditAccountModal
-        isOpen={showEdit}
-        account={selectedAccount}
-        onClose={() => setShowEdit(false)}
-        onSuccess={(acc) => {
-          setAccounts((prev) =>
-            prev.some((a) => a.id === acc.id)
-              ? prev.map((a) => (a.id === acc.id ? acc : a))
-              : [...prev, acc]
-          );
-          setShowEdit(false);
         }}
       />
 

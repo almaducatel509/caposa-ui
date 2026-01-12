@@ -1,14 +1,104 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from '@heroui/react';
 import CompteFormFields from '../CompteFormFields';
-
 import { createAccountSchema, updateAccountSchema } from '../validationsaccount';
 import type { AccountData } from '../validationsaccount';
-
-// ⬇️ On importe maintenant UNIQUEMENT les fonctions API
 import { createAccount, updateAccount } from '@/app/lib/api/accounts';
+
+// ============= MODAL COMPONENT =============
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+}
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = 'lg' }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal Content */}
+      <div className={`relative bg-white rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col`}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// ============= BUTTON COMPONENT =============
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: 'primary' | 'secondary' | 'light';
+  disabled?: boolean;
+  loading?: boolean;
+  type?: 'button' | 'submit';
+}
+
+const Button: React.FC<ButtonProps> = ({ 
+  children, 
+  onClick, 
+  variant = 'primary', 
+  disabled = false,
+  loading = false,
+  type = 'button'
+}) => {
+  const baseClasses = "px-4 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variantClasses = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800",
+    secondary: "bg-gray-600 text-white hover:bg-gray-700 active:bg-gray-800",
+    light: "bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300"
+  };
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`${baseClasses} ${variantClasses[variant]} ${loading ? 'relative' : ''}`}
+    >
+      {loading && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        </span>
+      )}
+      <span className={loading ? 'invisible' : ''}>{children}</span>
+    </button>
+  );
+};
 
 // ============= TYPES =============
 interface EditAccountModalProps {
@@ -79,7 +169,6 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
     setFormData(prev => ({ ...prev, ...updates }));
     setSubmitError(null);
 
-    // Effacer l'erreur uniquement du champ modifié
     const updatedField = Object.keys(updates)[0];
     if (updatedField) {
       setErrors(prev => {
@@ -97,7 +186,6 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
 
     try {
       if (isEditMode) {
-        // ============= MODE EDIT =============
         const payload = {
           statutCompte: formData.statutCompte,
           tauxInteret: formData.tauxInteret,
@@ -116,12 +204,10 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
           return;
         }
 
-        // ⬇️ appel API via accounts.ts
         const updated = await updateAccount(account.id, validation.data);
         onSuccess(updated);
 
       } else {
-        // ============= MODE CREATE =============
         const payload = {
           id_membre: formData.id_membre,
           typeCompte: formData.typeCompte,
@@ -142,7 +228,6 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
           return;
         }
 
-        // ⬇️ appel API propre
         const created = await createAccount(validation.data);
         onSuccess(created);
       }
@@ -151,7 +236,6 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
       console.error("❌ Erreur soumission:", error);
 
       if (error?.errors) {
-        // Erreurs Zod renvoyées par accounts.ts
         const zodErrors: Record<string, string> = {};
         error.errors.forEach((e: any) => {
           if (e.path?.[0]) zodErrors[e.path[0]] = e.message;
@@ -168,65 +252,58 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
 
   // ============= RENDER =============
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => !isSubmitting && onClose()}
-      size="4xl"
-      scrollBehavior="outside"
-      isDismissable={!isSubmitting}
-      hideCloseButton={isSubmitting}
-      classNames={{
-        base: "bg-white",
-        //backdrop: "bg-black/50 backdrop-blur-sm",
-      }}
-      backdrop="opaque"
+    <Modal isOpen={isOpen} onClose={() => !isSubmitting && onClose()} size="4xl">
+      {/* Header */}
+      <div className="flex flex-col gap-1 border-b pb-4 px-6 pt-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {isEditMode ? "✏️ Modifier le Compte" : "🆕 Créer un Nouveau Compte"}
+        </h2>
+        <p className="text-sm text-gray-600">
+          {isEditMode 
+            ? `Modification du compte ${account.account_number}` 
+            : "Suivez les étapes pour créer un nouveau compte"}
+        </p>
+      </div>
 
-    >
-      <ModalContent>
-        <ModalHeader className="flex flex-col gap-1 border-b pb-4">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isEditMode ? "✏️ Modifier le Compte" : "🆕 Créer un Nouveau Compte"}
-          </h2>
-          <p className="text-sm text-gray-600">
-            {isEditMode 
-              ? `Modification du compte ${account.account_number}` 
-              : "Suivez les étapes pour créer un nouveau compte"}
-          </p>
-        </ModalHeader>
+      {/* Body */}
+      <div className="py-6 px-6 overflow-y-auto flex-1">
+        {submitError && (
+          <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+            <p className="text-red-800 font-semibold">❌ Erreur</p>
+            <p className="text-red-700 text-sm mt-1">{submitError}</p>
+          </div>
+        )}
 
-        <ModalBody className="py-6">
-          {submitError && (
-            <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-              <p className="text-red-800 font-semibold">❌ Erreur</p>
-              <p className="text-red-700 text-sm mt-1">{submitError}</p>
-            </div>
-          )}
+        <CompteFormFields
+          formData={formData}
+          setFormData={handleFormDataChange}
+          errors={errors}
+          setErrors={setErrors}
+          mode={isEditMode ? "edit" : "create"}
+        />
+      </div>
 
-          <CompteFormFields
-            formData={formData}
-            setFormData={handleFormDataChange}
-            errors={errors}
-            setErrors={setErrors}
-            mode={isEditMode ? "edit" : "create"}
-          />
-        </ModalBody>
-
-        <ModalFooter className="border-t pt-4">
-          <Button variant="light" onPress={onClose} isDisabled={isSubmitting}>
-            Annuler
-          </Button>
-          <Button
-            color="primary"
-            onPress={handleSubmit}
-            isLoading={isSubmitting}
-          >
-            {isSubmitting
-              ? isEditMode ? "Modification..." : "Création..."
-              : isEditMode ? "💾 Modifier" : "✅ Créer le Compte"
-            }
-          </Button>
-        </ModalFooter>
-      </ModalContent>
+      {/* Footer */}
+      <div className="border-t pt-4 px-6 pb-6 flex gap-3 justify-end">
+        <Button 
+          variant="light" 
+          onClick={onClose} 
+          disabled={isSubmitting}
+        >
+          Annuler
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSubmit}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+        >
+          {isSubmitting
+            ? isEditMode ? "Modification..." : "Création..."
+            : isEditMode ? "💾 Modifier" : "✅ Créer le Compte"
+          }
+        </Button>
+      </div>
     </Modal>
   );
 };

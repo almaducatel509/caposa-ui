@@ -1,7 +1,6 @@
 import React from 'react';
 import { FaEye, FaEdit, FaTrash, FaReceipt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaVenusMars } from "react-icons/fa";
-import { PiCheckFat, PiCheckFill, PiCheckSquareOffsetLight, PiUserCircleCheckFill } from "react-icons/pi";
-import clsx from "clsx";
+import { PiCheckFat, } from "react-icons/pi";
 
 
 // Import des types et helpers depuis validations

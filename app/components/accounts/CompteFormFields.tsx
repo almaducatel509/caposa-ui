@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Chip } from '@heroui/react';
 import CompteAutocomplete from './CompteAutocomplete';
 import { BANK_RULES, getRulesForAccountType } from '@/app/lib/bankRules';
 

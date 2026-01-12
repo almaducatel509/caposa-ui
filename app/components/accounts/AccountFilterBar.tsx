@@ -1,22 +1,11 @@
 "use client";
 
-import React from "react";
-import {
-  Input,
-  Button,
-  Chip,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-} from "@heroui/react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   FaPlus,
   FaUpload,
   FaDownload,
-  FaFilter,
   FaCheckCircle,
-  FaWallet,
   FaCalendarAlt,
 } from "react-icons/fa";
 import { FiSearch } from "react-icons/fi";
@@ -24,12 +13,144 @@ import { MdKeyboardArrowDown, MdOutlineSavings } from "react-icons/md";
 import { CiFilter, CiMoneyCheck1 } from "react-icons/ci";
 import { RiLuggageDepositLine } from "react-icons/ri";
 
-interface AccountFilterBarProps {
+// ============= DROPDOWN COMPONENT =============
+interface DropdownProps {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+}
 
+const Dropdown: React.FC<DropdownProps> = ({ trigger, children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div onClick={() => setIsOpen(!isOpen)}>
+        {trigger}
+      </div>
+      {isOpen && (
+        <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 min-w-[200px]">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============= CHIP COMPONENT =============
+interface ChipProps {
+  children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'default';
+  className?: string;
+}
+
+const Chip: React.FC<ChipProps> = ({ 
+  children, 
+  size = 'md', 
+  color = 'default',
+  className = ''
+}) => {
+  const sizeClasses = {
+    sm: 'px-2.5 py-1 text-xs',
+    md: 'px-3 py-1.5 text-sm',
+    lg: 'px-4 py-2 text-base'
+  };
+
+  const colorClasses = {
+    primary: 'bg-blue-100 text-blue-700',
+    secondary: 'bg-purple-100 text-purple-700',
+    success: 'bg-green-100 text-green-700',
+    warning: 'bg-yellow-100 text-yellow-700',
+    danger: 'bg-red-100 text-red-700',
+    default: 'bg-gray-100 text-gray-700'
+  };
+
+  return (
+    <span className={`inline-flex items-center rounded-xl font-semibold ${sizeClasses[size]} ${colorClasses[color]} ${className}`}>
+      {children}
+    </span>
+  );
+};
+
+// ============= BUTTON COMPONENT =============
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  startContent?: React.ReactNode;
+  endContent?: React.ReactNode;
+  variant?: 'solid' | 'bordered' | 'flat';
+  color?: 'primary' | 'success' | 'default';
+  size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+  loading?: boolean;
+  className?: string;
+}
+
+const Button: React.FC<ButtonProps> = ({
+  children,
+  onClick,
+  startContent,
+  endContent,
+  variant = 'solid',
+  color = 'default',
+  size = 'md',
+  disabled = false,
+  loading = false,
+  className = ''
+}) => {
+  const sizeClasses = {
+    sm: 'px-3 py-2 text-sm',
+    md: 'px-5 py-2.5 text-base',
+    lg: 'px-6 py-3 text-lg'
+  };
+
+  const baseClasses = "inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`${baseClasses} ${sizeClasses[size]} ${className}`}
+    >
+      {loading ? (
+        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      ) : (
+        <>
+          {startContent}
+          <span>{children}</span>
+          {endContent}
+        </>
+      )}
+    </button>
+  );
+};
+
+// ============= MAIN COMPONENT =============
+interface AccountFilterBarProps {
   filterValue: string;
   selectedType: string;
   selectedStatus: string;
-  onSearchChange: (value: string) => void; // ✅ SANS ?
+  onSearchChange: (value: string) => void;
   onClear: () => void;
   onTypeChange: (key: string) => void;
   onStatusChange: (key: string) => void;
@@ -39,7 +160,6 @@ interface AccountFilterBarProps {
   totalCount: number;
   importLoading?: boolean;
 }
-
 
 const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
   filterValue,
@@ -56,10 +176,10 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
   importLoading = false,
 }) => {
   const typeOptions = [
-    { key: "all", label: "Tous les types",icon: CiFilter  },
-    { key: "epargne", label: "Épargne", icon: MdOutlineSavings  },
-    { key: "cheques", label: "Chèques",icon: CiMoneyCheck1  },
-    { key: "terme", label: "Terme", icon: RiLuggageDepositLine   },
+    { key: "all", label: "Tous les types", icon: CiFilter },
+    { key: "epargne", label: "Épargne", icon: MdOutlineSavings },
+    { key: "cheques", label: "Chèques", icon: CiMoneyCheck1 },
+    { key: "terme", label: "Terme", icon: RiLuggageDepositLine },
   ];
 
   const statusOptions = [
@@ -69,255 +189,191 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
     { key: "suspendu", label: "Suspendus" },
   ];
 
-  const getTypeLabel =
-    () => typeOptions.find((o) => o.key === selectedType)?.label || "Type";
-  const getStatusLabel =
-    () => statusOptions.find((o) => o.key === selectedStatus)?.label || "Statut";
+  const getTypeLabel = () => 
+    typeOptions.find((o) => o.key === selectedType)?.label || "Type";
+  
+  const getStatusLabel = () => 
+    statusOptions.find((o) => o.key === selectedStatus)?.label || "Statut";
 
   const activeFiltersCount = [
     selectedType !== "all",
     selectedStatus !== "all",
   ].filter(Boolean).length;
 
- 
-
   return (
     <div className="space-y-4">
-          {/* Header avec recherche et actions principales */}
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            
-             <div className="relative w-full lg:max-w-xl">
-                      {/* Search icon (always visible) */}
-                <FiSearch
-                  size={20}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
-      
-                {/* Input */}
-                <input
-                  type="text"
-                  value={filterValue}
-                  placeholder="Rechercher un membre par nom, email, téléphone..."
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="
-                    w-full h-12 pl-12 pr-12
-                    rounded-xl text-sm
-                    bg-white shadow-sm
-                    border-2 border-transparent
-                    hover:border-blue-200
-                    focus:border-blue-500 focus:outline-none
-                    transition-colors
-                  "
-                />
-      
-                {/* Clear button (only when text exists) */}
-                {filterValue && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSearchChange("");
-                      onClear();
-                    }}
-                    className="
-                      absolute right-3 top-1/2 -translate-y-1/2
-                      p-1 rounded-md
-                      text-gray-400
-                      hover:text-gray-600
-                      hover:bg-gray-100
-                      transition
-                    "
-                    aria-label="Clear search"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-    
-            {/* Actions */}
-            <div className="flex gap-2 w-full lg:w-auto">
-              <Button
-                color="success"
-                startContent={<FaPlus size={16} />}
-                onPress={onAdd}
-                className="flex-1 lg:flex-none 
-                  bg-linear-to-r from-green-600 to-green-700
-                 text-white 
-                  font-semibold 
-                  shadow-lg 
-                  hover:shadow-xl 
-                  transition-all h-12 px-6
-                  rounded-md
-                "
-              >
-                Ajouter
-              </Button>
-              <Button
-                variant="bordered"
-                startContent={<FaUpload size={16} />}
-                onPress={onImport}
-                isLoading={importLoading}
-                isDisabled={importLoading}
-                className="rounded-md
-                  flex-1 lg:flex-none 
-                  border-2 
-                  border-slate-300 
-                  hover:border-slate-400 
-                  hover:bg-slate-50 
-                  font-medium 
-                  h-12 
-                  px-6 
-                  transition-all"
-              >
-                {importLoading ? "Import..." : "Importer"}
-              </Button>
-              <Button
-                variant="bordered"
-                startContent={<FaDownload size={16} />}
-                onPress={onExport}
-                className="              
-                 rounded-md
-                  flex-1 lg:flex-none 
-                  border-2 
-                  border-green-600
-                  text-green-600 
-                  hover:bg-green-50
-                  font-medium 
-                  h-12
-                  px-6
-                  transition-all"
-              >
-                Exporter
-              </Button>
-            </div>
-          </div>
-    
-          {/* Filtres avancés */}
-          <div className="bg-linear-to-r from-purple-50 via-white to-pink-50 rounded-xl p-4 shadow-sm border border-purple-100">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Badge nombre de résultats */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-600">Résultats:</span>
-                <Chip 
-                  size="lg" 
-                  variant="flat" 
-                  color="secondary"
-                  className="font-bold text-base px-4"
-                >
-                  {totalCount}
-                </Chip>
-              </div>
-    
-              <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-    
-              {/* Filtres dropdown */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Filtre période */}
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button
-                      variant="flat"
-                      size="md"
-                      startContent={<FaCalendarAlt className="text-green-600" />}
-                      endContent={<MdKeyboardArrowDown />}
-                      className={` bg-amber-300 ${
-                        selectedType !== 'all' 
-                          ? 'bg-white border-2 rounded-md border-gray-400 text-green-700 font-semibold' 
-                          : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                      } transition-all`}
-                    >
-                      {getTypeLabel()}
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu
-                    selectedKeys={[selectedType]}
-                    onSelectionChange={(keys) => {
-                      const selected = Array.from(keys)[0]?.toString();
-                      if (selected) onTypeChange(selected);
-                    }}
+      {/* Header avec recherche et actions principales */}
+      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+        <div className="relative w-full lg:max-w-xl">
+          <FiSearch
+            size={20}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          />
+          <input
+            type="text"
+            value={filterValue}
+            placeholder="Rechercher un membre par nom, email, téléphone..."
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="
+              w-full h-12 pl-12 pr-12
+              rounded-xl text-sm
+              bg-white shadow-sm
+              border border-gray-200
+              hover:border-blue-300
+              focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100
+              transition-all
+            "
+          />
+          {filterValue && (
+            <button
+              type="button"
+              onClick={() => {
+                onSearchChange("");
+                onClear();
+              }}
+              className="
+                absolute right-3 top-1/2 -translate-y-1/2
+                p-1.5 rounded-lg
+                text-gray-400
+                hover:text-gray-600
+                hover:bg-gray-100
+                transition-all
+              "
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
-                    selectionMode="single"
-                    className='bg-white rounded-md'
-    
+        {/* Actions - Flat Design */}
+        <div className="flex gap-2 w-full lg:w-auto">
+          <Button
+            startContent={<FaPlus size={16} />}
+            onClick={onAdd}
+            className="flex-1 lg:flex-none bg-green-500 text-white hover:bg-green-600 active:bg-green-700 shadow-sm h-12"
+          >
+            Ajouter
+          </Button>
+          <Button
+            startContent={<FaUpload size={16} />}
+            onClick={onImport}
+            loading={importLoading}
+            disabled={importLoading}
+            className="flex-1 lg:flex-none bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 border border-gray-300 h-12"
+          >
+            {importLoading ? "Import..." : "Importer"}
+          </Button>
+          <Button
+            startContent={<FaDownload size={16} />}
+            onClick={onExport}
+            className="flex-1 lg:flex-none bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 shadow-sm h-12"
+          >
+            Exporter
+          </Button>
+        </div>
+      </div>
+
+      {/* Filtres avancés - Flat Design */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Badge nombre de résultats */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-600">Résultats:</span>
+            <Chip size="lg" color="secondary" className="font-bold">
+              {totalCount}
+            </Chip>
+          </div>
+
+          <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+
+          {/* Filtres dropdown */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtre type */}
+            <Dropdown
+              trigger={
+                <button
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all border ${
+                    selectedType !== 'all'
+                      ? 'bg-green-50 border-green-400 text-green-700'
+                      : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <FaCalendarAlt className="text-green-600" size={16} />
+                  <span>{getTypeLabel()}</span>
+                  <MdKeyboardArrowDown size={18} />
+                </button>
+              }
+            >
+              {typeOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.key}
+                    onClick={() => onTypeChange(option.key)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors ${
+                      selectedType === option.key ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                    }`}
                   >
-                    {typeOptions.map((option) => (
-                      <DropdownItem 
-                        key={option.key}
-                        startContent={<option.icon className="text-green-600" />}
-                      >
-                        {option.label}
-                      </DropdownItem>
-                    ))}
-                  </DropdownMenu>
-                </Dropdown>
-    
-                {/* Filtre statut */}
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button
-                      variant="flat"
-                      size="md"
-                      startContent={<FaCheckCircle className="text-green-600" />}
-                      endContent={<MdKeyboardArrowDown />}
-                      className={`${
-                        selectedStatus !== 'all' 
-                          ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
-                          : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                      } transition-all`}
-                    >
-                      {getStatusLabel()}
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu
-                    selectedKeys={[selectedStatus]}
-                    onSelectionChange={(keys) => {
-                      const selected = Array.from(keys)[0]?.toString();
-                      if (selected) onStatusChange(selected);
-                    }}
-                    selectionMode="single"
-                    className='bg-white rounded-md'
-                  >
-                    {statusOptions.map((option) => (
-                      <DropdownItem 
-                      className=' p-1.5'
-                        key={option.key}
-                        startContent={<FaCheckCircle className="text-green-600" />}
-                      >
-                        {option.label}
-                      </DropdownItem>
-                    ))}
-                  </DropdownMenu>
-                </Dropdown>
-    
-                {/* Badge filtres actifs */}
-                {activeFiltersCount > 0 && (
-                  <>
-                    <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-                    <Chip 
-                      size="sm" 
-                      variant="flat" 
-                      color="warning"
-                      className="font-semibold"
-                    >
-                      {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
-                    </Chip>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      color="danger"
-                      onPress={() => {
-                        onTypeChange('all');
-                        onStatusChange('all');
-                      }}
-                      className="font-medium"
-                    >
-                      Réinitialiser
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
+                    <Icon className="text-green-600" size={18} />
+                    <span className="font-medium">{option.label}</span>
+                  </button>
+                );
+              })}
+            </Dropdown>
+
+            {/* Filtre statut */}
+            <Dropdown
+              trigger={
+                <button
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all border ${
+                    selectedStatus !== 'all'
+                      ? 'bg-blue-50 border-blue-400 text-blue-700'
+                      : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <FaCheckCircle className="text-blue-600" size={16} />
+                  <span>{getStatusLabel()}</span>
+                  <MdKeyboardArrowDown size={18} />
+                </button>
+              }
+            >
+              {statusOptions.map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => onStatusChange(option.key)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors ${
+                    selectedStatus === option.key ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                  }`}
+                >
+                  <FaCheckCircle className="text-blue-600" size={16} />
+                  <span className="font-medium">{option.label}</span>
+                </button>
+              ))}
+            </Dropdown>
+
+            {/* Badge filtres actifs */}
+            {activeFiltersCount > 0 && (
+              <>
+                <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+                <Chip size="sm" color="warning" className="font-semibold">
+                  {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
+                </Chip>
+                <button
+                  onClick={() => {
+                    onTypeChange('all');
+                    onStatusChange('all');
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  Réinitialiser
+                </button>
+              </>
+            )}
           </div>
         </div>
+      </div>
+    </div>
   );
 };
 
