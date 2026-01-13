@@ -12,6 +12,7 @@ import AccountDetailModal from "./modals/AccountDetailModal";
 import CloseAccountModal from "./modals/CloseAccountModal";
 import PageHeader from "../header";
 import { TfiWallet } from "react-icons/tfi";
+import EditAccountModal from "./modals/EditAccountModal";
 
 const AccountGrid: React.FC = () => {
   /* =======================
@@ -49,12 +50,12 @@ const AccountGrid: React.FC = () => {
     };
     load();
   }, []);
-
+//secondary: 'bg-[#DDEAD5] text-[#2E7D32]', // Vert sauge pâle — fond doux
   const header = (
     <PageHeader 
       title="Gestion des Comptes"
       subtitle="Consultez et gérez tous les comptes bancaires"
-      icon={<TfiWallet className="text-4xl" />}
+      icon={<TfiWallet className="text-4xl text-[#2E7D32]" />}
     />
   );
 
@@ -98,6 +99,20 @@ const AccountGrid: React.FC = () => {
     setSelectedAccount(acc);
     setShowClose(true);
   };
+
+  const handleSuccess = (account: AccountData) => {
+    if (selectedAccount) {
+      // Mode édition : mettre à jour le compte existant
+      setAccounts(prev => 
+        prev.map(acc => acc.id === account.id ? account : acc)
+      );
+    } else {
+      // Mode création : ajouter le nouveau compte
+      setAccounts(prev => [...prev, account]);
+    }
+    setShowEdit(false);
+    setSelectedAccount(null);
+  };
   
   /* =======================
      GET STATUS CONFIG
@@ -106,9 +121,9 @@ const AccountGrid: React.FC = () => {
     switch (status) {
       case 'actif':
         return { 
-          gradient: 'from-emerald-500 to-teal-500',
-          textColor: 'text-emerald-700',
-          bgColor: 'bg-emerald-50'
+          gradient: 'from-[#2e7d32b3] to-[#2E7D32]',
+          textColor: 'text-white',
+          bgColor: 'bg-[#2E7D32]'
         };
       case 'ferme':
         return { 
@@ -118,9 +133,9 @@ const AccountGrid: React.FC = () => {
         };
       case 'suspendu':
         return { 
-          gradient: 'from-amber-500 to-orange-500',
-          textColor: 'text-amber-700',
-          bgColor: 'bg-amber-50'
+          gradient: 'from-[#2E7D32] to-[#355C7D]',
+          textColor: 'text-white',
+          bgColor: 'bg-[#355C7D]'
         };
       default:
         return { 
@@ -136,7 +151,7 @@ const AccountGrid: React.FC = () => {
   ======================= */
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-6 bg-gradient-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
+      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
         {header}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(6)].map((_, i) => (
@@ -160,7 +175,7 @@ const AccountGrid: React.FC = () => {
      RENDER
   ======================= */
   return (
-    <div className="flex flex-col gap-6 p-6 bg-gradient-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
+    <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-purple-50/30 via-white to-pink-50/30 min-h-screen">
       {header}
       
       {/* FILTER BAR */}
@@ -194,9 +209,9 @@ const AccountGrid: React.FC = () => {
                 className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow duration-200 overflow-hidden"
               >
                 {/* Status Indicator Bar */}
-                <div className={`h-1.5 bg-gradient-to-r ${statusConfig.gradient}`} />
+                <div className={`h-1.5 bg-linear-to-r ${statusConfig.gradient}`} />
 
-                <div className="p-6">
+                <div className="p-6 bg">
                   {/* HEADER */}
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -225,7 +240,7 @@ const AccountGrid: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Solde</span>
-                      <span className="font-bold text-emerald-600 text-lg">
+                      <span className="font-bold text-[#2E7D32] text-lg">
                         {account.soldeActuel?.toLocaleString('fr-CA') || '0'} HTG
                       </span>
                     </div>
@@ -235,13 +250,13 @@ const AccountGrid: React.FC = () => {
                   <div className="flex gap-2 pt-4 border-t border-gray-100">
                     <button
                       onClick={() => handleView(account)}
-                      className="flex-1 text-sm bg-blue-500 text-white rounded-xl py-2.5 hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium"
+                      className="flex-1 text-sm bg-[#2E7D32] text-white rounded-3xl py-2.5 hover:bg-green-800 active:bg-green-800 transition-colors font-medium"
                     >
                       Voir
                     </button>
                     <button
                       onClick={() => handleCloseAccount(account)}
-                      className="flex-1 text-sm bg-orange-500 text-white rounded-xl py-2.5 hover:bg-orange-600 active:bg-orange-700 transition-colors font-medium"
+                      className="flex-1 text-sm bg-[#DDEAD5] text-[#2E7D32] rounded-3xl py-2.5 hover:bg-[#bbc7b3] active:bg-[#bbc7b3] transition-colors font-medium"
                     >
                       Fermer
                     </button>
@@ -263,7 +278,17 @@ const AccountGrid: React.FC = () => {
           setShowEdit(true);
         }}
       />
-
+      
+      <EditAccountModal 
+        isOpen={showEdit}
+        onClose={() => {
+          setShowEdit(false);
+          setSelectedAccount(null);
+        }}
+        onSuccess={handleSuccess}
+        account={selectedAccount}      
+      />
+      
       <CloseAccountModal
         isOpen={showClose}
         account={selectedAccount}

@@ -432,4 +432,4 @@ export default function CloseAccountModal({
       </div>
     </Modal>
   );
-}
+}    

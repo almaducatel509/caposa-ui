@@ -73,14 +73,15 @@ const Chip: React.FC<ChipProps> = ({
     lg: 'px-4 py-2 text-base'
   };
 
-  const colorClasses = {
-    primary: 'bg-blue-100 text-blue-700',
-    secondary: 'bg-purple-100 text-purple-700',
-    success: 'bg-green-100 text-green-700',
-    warning: 'bg-yellow-100 text-yellow-700',
-    danger: 'bg-red-100 text-red-700',
-    default: 'bg-gray-100 text-gray-700'
-  };
+const colorClasses = {
+  primary: 'bg-[#2E7D32] text-white',           // Vert profond — couleur principale
+  secondary: 'bg-[#DDEAD5] text-[#2E7D32]',     // Vert sauge pâle — fond doux
+  success: 'bg-[#C9B27C] text-[#2E7D32]',       // Or doux — succès avec accent vert
+  warning: 'bg-[#EDE7D6] text-[#6E6E6E]',       // Beige sable — avertissement neutre
+  danger: 'bg-[#355C7D] text-white',            // Bleu pétrole — sérieux, mais pas agressif
+  default: 'bg-[#F9F9F6] text-[#6E6E6E]'        // Ivoire + gris chaud — fond par défaut
+};
+
 
   return (
     <span className={`inline-flex items-center rounded-xl font-semibold ${sizeClasses[size]} ${colorClasses[color]} ${className}`}>
@@ -121,29 +122,23 @@ const Button: React.FC<ButtonProps> = ({
     lg: 'px-6 py-3 text-lg'
   };
 
-  const baseClasses = "inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
-
   return (
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${sizeClasses[size]} ${className}`}
+      className={`
+        inline-flex items-center justify-center gap-2 font-medium transition
+        ${sizeClasses[size]}
+        ${className}   
+      `}
     >
-      {loading ? (
-        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      ) : (
-        <>
-          {startContent}
-          <span>{children}</span>
-          {endContent}
-        </>
-      )}
+      {startContent}
+      {children}
+      {endContent}
     </button>
   );
 };
+
 
 // ============= MAIN COMPONENT =============
 interface AccountFilterBarProps {
@@ -219,8 +214,8 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
               rounded-xl text-sm
               bg-white shadow-sm
               border border-gray-200
-              hover:border-blue-300
-              focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100
+              hover:border-[#dcdcd1]
+              focus:border-[#DDEAD5] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5]
               transition-all
             "
           />
@@ -249,25 +244,28 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
         {/* Actions - Flat Design */}
         <div className="flex gap-2 w-full lg:w-auto">
           <Button
-            startContent={<FaPlus size={16} />}
+            startContent={<FaPlus size={12} />}
             onClick={onAdd}
-            className="flex-1 lg:flex-none bg-green-500 text-white hover:bg-green-600 active:bg-green-700 shadow-sm h-12"
+            className="text-sm rounded-3xl flex-1 lg:flex-none bg-[#2E7D32] text-white 
+           hover:bg-[#276A2B] active:bg-[#1F5623] shadow-sm h-10"
           >
             Ajouter
           </Button>
           <Button
-            startContent={<FaUpload size={16} />}
+            startContent={<FaUpload size={12} />}
             onClick={onImport}
             loading={importLoading}
             disabled={importLoading}
-            className="flex-1 lg:flex-none bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 border border-gray-300 h-12"
+            className=" text-sm rounded-3xl flex-1 lg:flex-none bg-[#F9F9F6] text-[#2E7D32] 
+           hover:bg-[#EDE7D6] active:bg-[#D6CFBF] border border-[#D6CFBF] h-10"
           >
             {importLoading ? "Import..." : "Importer"}
           </Button>
           <Button
-            startContent={<FaDownload size={16} />}
+            startContent={<FaDownload size={12} />}
             onClick={onExport}
-            className="flex-1 lg:flex-none bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 shadow-sm h-12"
+            className="text-sm rounded-3xl flex-1 lg:flex-none bg-[#DDEAD5] text-[#2E7D32] 
+           hover:bg-[#CFE0C5] active:bg-[#C0D5B5] shadow-sm h-10"
           >
             Exporter
           </Button>
@@ -279,8 +277,8 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
         <div className="flex flex-wrap items-center gap-3">
           {/* Badge nombre de résultats */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">Résultats:</span>
-            <Chip size="lg" color="secondary" className="font-bold">
+            <span className="text-sm font-medium  text-gray-600">Résultats:</span>
+            <Chip size="md" color="secondary" className="font-bold">
               {totalCount}
             </Chip>
           </div>
@@ -312,10 +310,10 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
                     key={option.key}
                     onClick={() => onTypeChange(option.key)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors ${
-                      selectedType === option.key ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                      selectedType === option.key ? 'bg-green-50 text-[#2E7D32]' : 'text-gray-700'
                     }`}
                   >
-                    <Icon className="text-green-600" size={18} />
+                    <Icon className="text-[#2E7D32]" size={18} />
                     <span className="font-medium">{option.label}</span>
                   </button>
                 );
@@ -328,11 +326,11 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
                 <button
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all border ${
                     selectedStatus !== 'all'
-                      ? 'bg-blue-50 border-blue-400 text-blue-700'
+                      ? 'bg-[#DDEAD5] border-green-400 text-[#2E7D32]'
                       : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
                   }`}
                 >
-                  <FaCheckCircle className="text-blue-600" size={16} />
+                  <FaCheckCircle className="text-[#2E7D32]" size={16} />
                   <span>{getStatusLabel()}</span>
                   <MdKeyboardArrowDown size={18} />
                 </button>
@@ -343,10 +341,10 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
                   key={option.key}
                   onClick={() => onStatusChange(option.key)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors ${
-                    selectedStatus === option.key ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                    selectedStatus === option.key ? 'bg-[#DDEAD5] text-[#2E7D32]' : 'text-gray-700'
                   }`}
                 >
-                  <FaCheckCircle className="text-blue-600" size={16} />
+                  <FaCheckCircle className="text-[#2E7D32]" size={16} />
                   <span className="font-medium">{option.label}</span>
                 </button>
               ))}
