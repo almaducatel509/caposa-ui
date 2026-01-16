@@ -1,5 +1,5 @@
 import PageHeader from "@/app/components/header"
-import DepositDashboard from "@/app/components/transactions/deposits/Depositdashboard"
+import TransferDashboard from "@/app/components/transactions/transfers/TransfertDashboard"
 import { FaSync } from "react-icons/fa"
 import { PiHandWithdraw } from "react-icons/pi"
 import { TfiWallet } from "react-icons/tfi"
@@ -28,7 +28,7 @@ export default function DepotDasboard() {
           </div>
         </div>
         <div className="">
-            <DepositDashboard />
+            <TransferDashboard />
         </div>   
      </main>
 

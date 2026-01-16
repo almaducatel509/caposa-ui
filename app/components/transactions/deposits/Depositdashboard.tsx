@@ -149,7 +149,7 @@ const DepositDashboard = () => {
     setSelectedRows(newSelected);
   };
 
-    const handleSelectAll = () => {
+  const handleSelectAll = () => {
     if (selectedRows.size === filteredDeposits.length) {
       setSelectedRows(new Set());
     } else {

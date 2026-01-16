@@ -8,15 +8,156 @@ import PageHeader from '../../header';
 import { PiHandWithdraw } from 'react-icons/pi';
 import { FaSync } from 'react-icons/fa';
 import { GiReceiveMoney } from 'react-icons/gi';
+import { withdrawalSchema } from '../validation/withdrawal';
+// Types
+interface WithdrawalData {
+  id: number;
+  idCompte: string;
+  typeTransaction: 'WITHDRAWAL';
+  codeAutorisation: string;
+  montantTransaction: number;
+  account_number?:string;
+  // Sous-type du retrait (équivalent de depositSubtype)
+  withdrawalSubtype: 'counter' | 'check' | 'transfer' |'loan_disbursement'| 'other';
+
+  // Motif du retrait (équivalent de source pour les dépôts)
+  motif: string;
+
+  description: string;
+  reference?:string;
+  // Vérification requise (comme pour les dépôts)
+  requiresVerification: boolean;
+
+  status: 'completed' | 'pending' | 'processing' | 'failed';
+
+  created_at: string;
+
+  // Nom du membre (comme dans DepositData)
+  member_name: string;
+}
+
+
+// KPI Card Component
+const KPICard = ({ icon: Icon, label, value, subValue, trend, color }: any) => (
+  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex items-start justify-between mb-4">
+      <div className={`p-3 rounded-xl ${color}`}>
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      {trend && (
+        <span className={`text-sm font-semibold ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {trend > 0 ? '+' : ''}{trend}%
+        </span>
+      )}
+    </div>
+    <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
+    <p className="text-sm text-gray-600">{label}</p>
+    {subValue && <p className="text-xs text-gray-500 mt-1">{subValue}</p>}
+  </div>
+);
 
 const Dashboard = () => {
   // États pour les filtres
+  const [periodFilter, setPeriodFilter] = useState<'day' | 'week' | 'month'>('week');
   const [searchValue, setSearchValue] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
   const [minAmount, setMinAmount] = useState<string>('');
   const [maxAmount, setMaxAmount] = useState<string>('');
+  const [subtypeFilter, setSubtypeFilter] = useState<string>('all');
+
+const generateSampleWithdrawals = (): WithdrawalData[] => {
+  const withdrawalSubtypes: Array<
+  'counter' | 'check' | 'transfer' | 'loan_disbursement' | 'other'
+  > = [
+    'counter',            // retrait au comptoir
+    'check',              // retrait par chèque
+    'transfer',           // transfert sortant
+    'loan_disbursement',  // décaissement d’un prêt
+    'other'               // cas particuliers
+  ];
+
+  const statuses: Array<'completed' | 'pending' | 'processing' | 'failed'> = [
+    'completed',
+    'completed',
+    'completed',
+    'pending',
+    'processing',
+    'failed'
+  ];
+
+  const members = ['Jean Dupont', 'Marie Paul', 'Alex Joseph', 'Sophie Laurent'];
+  const motifs = ['Paiement facture', 'Transfert sortant', 'Retrait comptoir', 'Autre'];
+
+  const data: WithdrawalData[] = [];
+  const daysBack = periodFilter === 'day' ? 1 : periodFilter === 'week' ? 7 : 30;
+  let attempts = 0;
+
+  for (let i = 0; i < 80 && attempts < 200; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
+
+    if (date.getDay() === 0 || date.getDay() === 6) {
+      i--;
+      attempts++;
+      continue;
+    }
+
+    date.setHours(
+      9 + Math.floor(Math.random() * 8),
+      Math.floor(Math.random() * 60),
+      0,
+      0
+    );
+
+    const subtype = withdrawalSubtypes[Math.floor(Math.random() * withdrawalSubtypes.length)];
+    const amount = Math.floor(Math.random() * 3000) + 100;
+
+    data.push({
+      id: i + 1,
+      idCompte: `ACC-${2000 + i}`,
+      codeAutorisation: `AUTHW-${10000 + i}`,
+      montantTransaction: amount,
+      account_number: `ACC-${2000 + i}`,
+      withdrawalSubtype: subtype,
+      motif: motifs[Math.floor(Math.random() * motifs.length)],
+      description: 'Retrait guichet',
+      reference: `WD-${1000 + i}`,
+      requiresVerification: amount > 2000 || subtype === 'check' || subtype === 'transfer',
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      created_at: date.toISOString(),
+      typeTransaction: 'WITHDRAWAL',
+      member_name: members[Math.floor(Math.random() * members.length)]
+    });
+
+    attempts++;
+  }
+
+  return data.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+};
+
+ const withdrawals = useMemo(() => generateSampleWithdrawals(), [periodFilter]);
+
+ 
+  // Filtrage des transactions
+  const filteredWithdrawals = useMemo(() => {
+    return withdrawals.filter(w => {
+      const matchesStatus = statusFilter === 'all' || w.status === statusFilter;
+      const matchesSearch = !searchValue || 
+        (w.member_name && w.member_name.toLowerCase().includes(searchValue.toLowerCase())) ||
+        w.description.toLowerCase().includes(searchValue.toLowerCase()) ||
+        (w.reference && w.reference.toLowerCase().includes(searchValue.toLowerCase())) ||
+        (w.account_number && w.account_number.toLowerCase().includes(searchValue.toLowerCase()));
+      const matchesSubtype = subtypeFilter === 'all' || w.withdrawalSubtype === subtypeFilter;
+
+      const matchesMinAmount = !minAmount || w.montantTransaction >= parseFloat(minAmount);
+      const matchesMaxAmount = !maxAmount || w.montantTransaction <= parseFloat(maxAmount);
+              return matchesSearch && matchesStatus && matchesSubtype && matchesMinAmount && matchesMaxAmount;
+    });  
+  }, [statusFilter, searchValue, periodFilter]);
+
   // Fonction pour gérer la sélection individuelle
   const handleRowSelect = (id: number) => {
     const newSelected = new Set(selectedRows);
@@ -29,11 +170,11 @@ const Dashboard = () => {
   };
 
   // Fonction pour tout sélectionner/désélectionner
-  const handleSelectAll = () => {
-    if (selectedRows.size === filteredTransactions.length) {
+   const handleSelectAll = () => {
+    if (selectedRows.size === filteredWithdrawals.length) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(filteredTransactions.map(t => t.id)));
+      setSelectedRows(new Set(filteredWithdrawals.map(w => w.id)));
     }
   };
 
@@ -43,35 +184,6 @@ const Dashboard = () => {
     processing: { icon: AlertCircle, label: 'En cours', color: 'text-blue-700', bg: 'bg-blue-100' },
     failed: { icon: XCircle, label: 'Échoué', color: 'text-rose-700', bg: 'bg-rose-100' }
   };
-
-  // Filtrage des transactions
-  const filteredTransactions = useMemo(() => {
-    return mockTransactions.filter(t => {
-      const matchStatus = statusFilter === 'all' || t.status === statusFilter;
-      const matchSearch = !searchValue || 
-        (t.member_name && t.member_name.toLowerCase().includes(searchValue.toLowerCase())) ||
-        t.description.toLowerCase().includes(searchValue.toLowerCase()) ||
-        (t.reference && t.reference.toLowerCase().includes(searchValue.toLowerCase())) ||
-        (t.account_number && t.account_number.toLowerCase().includes(searchValue.toLowerCase()));
-      
-      let matchPeriod = true;
-      if (periodFilter !== 'all') {
-        const date = new Date(t.created_at);
-        const now = new Date();
-        
-        if (periodFilter === 'recent') {
-          const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          matchPeriod = date >= thirtyDaysAgo;
-        } else if (periodFilter === 'thisMonth') {
-          matchPeriod = date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-        } else if (periodFilter === 'thisYear') {
-          matchPeriod = date.getFullYear() === now.getFullYear();
-        }
-      }
-      
-      return matchStatus && matchSearch && matchPeriod;
-    });
-  }, [statusFilter, searchValue, periodFilter]);
 
   // Calcul des statistiques
   const stats = useMemo(() => {
@@ -88,28 +200,79 @@ const Dashboard = () => {
 
   // Données pour les graphiques - Volume par jour
   const volumeByDay = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      return {
-        label: date.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric' }),
-        date: date.toISOString().split('T')[0],
-        count: 0,
-        amount: 0
-      };
-    });
+     const days = periodFilter === 'day' ? 9 : periodFilter === 'week' ? 5 : 22; // Heures ou jours ouvrables
+     const data = Array.from({ length: days }, (_, i) => {
+       const date = new Date();
+       
+       if (periodFilter === 'day') {
+         // Heures: 9h-17h
+         const hour = 9 + i;
+         date.setHours(hour, 0, 0, 0);
+         return { label: `${hour}h`, date: date.toISOString(), count: 0, amount: 0 };
+       } else {
+         // Jours: reculer et sauter les weekends
+         let daysBack = 0;
+         let workDaysCount = 0;
+         while (workDaysCount < days - i) {
+           daysBack++;
+           const tempDate = new Date();
+           tempDate.setDate(tempDate.getDate() - daysBack);
+           if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6) {
+             workDaysCount++;
+           }
+         }
+         date.setDate(date.getDate() - daysBack);
+         return {
+           label: date.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric' }),
+           date: date.toISOString().split('T')[0],
+           count: 0,
+           amount: 0
+         };
+       }
+     });
+ 
+     // Compter les dépôts par période
+     withdrawals.forEach(d => {
+       const depositDate = new Date(d.created_at);
+       const index = data.findIndex(item => {
+         if (periodFilter === 'day') {
+           return new Date(item.date).getHours() === depositDate.getHours();
+         } else {
+           return item.date === d.created_at.split('T')[0];
+         }
+       });
+       if (index >= 0) {
+         data[index].count++;
+         data[index].amount += d.montantTransaction;
+       }
+     });
+ 
+     return data;
+   }, [withdrawals, periodFilter]);
+   // Graphique: Répartition par type de retrait
 
-    mockTransactions.forEach(t => {
-      const depositDate = t.created_at.split('T')[0];
-      const index = last7Days.findIndex(item => item.date === depositDate);
-      if (index >= 0) {
-        last7Days[index].count++;
-        last7Days[index].amount += t.amount;
-      }
-    });
+  const subtypeDistribution = useMemo(() => {
+  const types = {
+    counter:            { count: 0, amount: 0, label: 'Comptoir',            color: '#10b981' },
+    check:              { count: 0, amount: 0, label: 'Chèque',              color: '#3b82f6' },
+    transfer:           { count: 0, amount: 0, label: 'Transfert sortant',   color: '#8b5cf6' },
+    loan_disbursement:  { count: 0, amount: 0, label: 'Décaissement prêt',   color: '#ec4899' },
+    other:              { count: 0, amount: 0, label: 'Autre',               color: '#f59e0b' }
+  };
 
-    return last7Days;
-  }, []);
+  withdrawals.forEach(w => {
+    types[w.withdrawalSubtype].count++;
+    types[w.withdrawalSubtype].amount += w.montantTransaction;
+  });
+
+  return Object.values(types).map(t => ({
+    name: t.label,
+    value: t.count,
+    amount: t.amount,
+    color: t.color
+  }));
+}, [withdrawals]);
+
 
   // Répartition par statut
   const statusDistribution = useMemo(() => {
@@ -130,8 +293,8 @@ const Dashboard = () => {
   
 
   // Groupement par date
-  const groupedTransactions = useMemo(() => {
-    const sorted = [...filteredTransactions].sort((a, b) => 
+  const groupedWithdrawal = useMemo(() => {
+    const sorted = [...filteredWithdrawals].sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
@@ -146,8 +309,8 @@ const Dashboard = () => {
       if (!acc[key]) acc[key] = [];
       acc[key].push(transaction);
       return acc;
-    }, {} as Record<string, TransactionData[]>);
-  }, [filteredTransactions]);
+    }, {} as Record<string, WithdrawalData[]>);
+  }, [filteredWithdrawals]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-CA', { 
@@ -281,7 +444,7 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
  {/* Répartition par type */}
-          {/* <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Répartition par Type</h3>
             <div className="flex items-center justify-between">
               <ResponsiveContainer width="50%" height={250}>
@@ -309,9 +472,9 @@ const Dashboard = () => {
                     <span className="text-sm font-semibold text-gray-900">{item.value}</span>
                   </div>
                 ))}
-              </div> */}
-            {/* </div>
-          </div> */}
+              </div> 
+             </div>
+          </div>
         {/* Statuts des retraits */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Statut des Retraits</h3>
@@ -336,7 +499,7 @@ const Dashboard = () => {
         {/* Header de la table */}
         <div className="flex items-center justify-between px-6 py-5 mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Liste des Retraits</h3>
-          <span className="text-sm text-gray-500">{filteredTransactions.length} résultats</span>
+          <span className="text-sm text-gray-500">{filteredWithdrawals.length} résultats</span>
         </div>
         {/* Filtres */}
         <div className=" px-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -363,15 +526,17 @@ const Dashboard = () => {
             <option value="failed">Échoué</option>
           </select>
 
-          <select
-            value={periodFilter}
-            onChange={(e) => setPeriodFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-600 cursor-pointer bg-white"
+         <select
+            value={subtypeFilter}
+            onChange={(e) => setSubtypeFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008152]"
           >
-            <option value="all">Toutes les périodes</option>
-            <option value="recent">30 derniers jours</option>
-            <option value="thisMonth">Ce mois</option>
-            <option value="thisYear">Cette année</option>
+            <option value="all">Tous les types</option>
+            <option value="counter">Comptoir</option>
+            <option value="check">Chèque</option>
+            <option value="transfer">Transfert sortant</option>
+            <option value="loan_disbursement">Décaissement prêt</option>
+            <option value="other">Autre</option>
           </select>
 
           <input
@@ -396,7 +561,7 @@ const Dashboard = () => {
             <div className="col-span-1 flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={selectedRows.size === filteredTransactions.length && filteredTransactions.length > 0}
+                checked={selectedRows.size === IDBTransaction.length && IDBTransaction.length > 0}
                 onChange={handleSelectAll}
                 className="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
               />
@@ -437,7 +602,7 @@ const Dashboard = () => {
 
         {/* Corps de la table */}
         <div className="divide-y divide-slate-100">
-          {Object.entries(groupedTransactions).map(([date, transactions]) => (
+          {Object.entries(groupedWithdrawal).map(([date, transactions]) => (
             <div key={date}>
               {/* Séparateur de date */}
               <div className="bg-slate-50 px-6 py-2 border-t border-slate-200">
@@ -497,7 +662,7 @@ const Dashboard = () => {
                     {/* Montant */}
                     <div className="col-span-2">
                       <p className="text-lg font-bold text-rose-600">
-                        {formatCurrency(transaction.amount)}
+                        {formatCurrency(transaction.montantTransaction)}
                       </p>
                       <p className="text-xs text-slate-500">CAD</p>
                     </div>
@@ -564,7 +729,7 @@ const Dashboard = () => {
         </div>
 
         {/* État vide */}
-        {filteredTransactions.length === 0 && (
+        {IDBTransaction.length === 0 && (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-8 h-8 text-slate-400" />
