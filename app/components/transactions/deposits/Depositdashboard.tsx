@@ -1,12 +1,8 @@
 'use client'
 import React, { useState, useMemo } from 'react';
-import { TfiWallet } from 'react-icons/tfi';
 import { BarChart, Bar, Cell, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, LineChart, Line } from 'recharts';
-import { Search, Filter, ChevronDown, Calendar, DollarSign, Users, TrendingUp, CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
-import { FaSync } from 'react-icons/fa';
-import { PiHandWithdraw } from 'react-icons/pi';
+import { Search, Calendar, DollarSign, Users, TrendingUp, CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
 
-// Types
 interface DepositData {
   id: number;
   idCompte: string;
@@ -67,8 +63,9 @@ const DepositDashboard = () => {
   const [minAmount, setMinAmount] = useState<string>('');
   const [maxAmount, setMaxAmount] = useState<string>('');
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
+  
   // Génération de données échantillon (Lun-Ven, 9h-17h)
-  const generateSampleDeposits = (): DepositData[] => {
+    const generateSampleDeposits = (): DepositData[] => {
     const subtypes: Array<'cash' | 'check' | 'transfer' | 'other'> = ['cash', 'check', 'transfer', 'other'];
     const statuses: Array<'completed' | 'pending' | 'processing' | 'failed'> = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
     const members = ['Alice Tremblay', 'Bob Martin', 'Charlie Dubois', 'Diana Roy', 'Ethan Gagnon', 'Fiona Côté', 'Gabriel Lavoie', 'Hannah Bergeron'];

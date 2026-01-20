@@ -60,13 +60,13 @@ export const links: MainLink[] = [
   },
   {
     name: 'Prêts',
-    href: '/dashboard/transactions/loans',
+    href: '/dashboard//loans',
     icon: FaHandHoldingUsd,
     hasSubmenu: true,
     subLinks: [
-      { name: 'Tous',    href: '/dashboard/transactions/loans', icon: FaClipboardList },
-      { name: 'Demandes', href: '/dashboard/transactions/loans/create', icon: FaMoneyCheckAlt },
-      { name: 'Actifs', href: '/dashboard/loans/active', icon: HiOutlineChartBar },
+      { name: 'Tous',    href: '/dashboard//loans', icon: FaClipboardList },
+      { name: 'Demandes', href: '/dashboard//loans/create', icon: FaMoneyCheckAlt },
+      { name: 'Actifs', href: '/dashboard/loans/actifs', icon: HiOutlineChartBar },
     ],
   },
   {

@@ -4,12 +4,12 @@ import { FaInfoCircle, FaLock } from "react-icons/fa";
 import {
   LoanFormData,
   validateLoanWithZod,
-} from "../validation/loanSchema";
+} from "../transactions/validation/loanSchema";
 import {
   calculateMonthlyPayment,
   calculateTotalInterest,
-} from "../validation/loanCalculations";
-import { validateLoanForm } from "../validation/loanLogic";
+} from "../transactions/validation/loanCalculations";
+import { validateLoanForm } from "../transactions/validation/loanLogic";
 
 type Errors = Record<string, string>;
 
