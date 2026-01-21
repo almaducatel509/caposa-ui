@@ -294,7 +294,7 @@ const ActiveLoansTable = () => {
 
   return (
     <div className="w-full min-h-screen bg-linear-to-br from-slate-50 via-purple-50 to-indigo-50 md:p-8">
-           {/* Filtres de période */}
+            {/* Filtres de période */}
       <div className="mb-6 flex gap-3">
         {(['all', 'week', 'month'] as const).map(period => (
           <button
