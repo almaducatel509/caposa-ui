@@ -1,4 +1,5 @@
 // app/analyse-financiere/page.tsx
+
 import { Metadata } from 'next';
 import FinancialAnalysisDashboard from '@/app/components/analyse/DashboardAnalyseFinancier';
 
