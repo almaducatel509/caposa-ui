@@ -33,3 +33,13 @@ export default function LoansPage() {
     </main>
   );
 }
+{/* <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Analyse Financière des Membres</h1>
+              <p className="text-gray-600">Évaluation de la capacité de remboursement et stabilité financière</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Total des membres</p>
+              <p className="text-3xl font-bold text-green-600">{stats.total}</p>
+            </div>
+          </div> */}

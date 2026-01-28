@@ -100,12 +100,12 @@ const TransactionDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
       
-          <div className="flex justify-between items-center">
-            <PageHeader
-              title="Transactions"
-              subtitle="Gestion et suivi financier"
-            />
-          </div>
+        <div className="flex justify-between items-center">
+          <PageHeader
+            title="Transactions"
+            subtitle="Gestion et suivi financier"
+          />
+        </div>
         
         <div className="flex gap-3">
           <button

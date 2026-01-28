@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { AlertTriangle, XCircle, CheckCircle, Bell, ChevronRight, Clock, User, FileText } from 'lucide-react';
 
 interface KpiData {
@@ -358,9 +359,21 @@ export default function KpiAlertsSection({ data, statusCounts }: Props) {
                   )}
                 </div>
 
-                <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm">
-                  Prendre en charge
-                </button>
+                {/* Bouton conditionnel selon la catégorie */}
+                {alert.category === 'financier' ? (
+                <Link href="/dashboard/analysis/kpis/alerts">
+                    <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm">
+                      Prendre en charge
+                    </button>
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => console.log('Alerte prise en charge:', alert.id, alert.category)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm"
+                  >
+                    Prendre en charge
+                  </button>
+                )}
               </div>
             </div>
           ))}

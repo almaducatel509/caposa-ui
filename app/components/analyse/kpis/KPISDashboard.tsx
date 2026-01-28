@@ -217,9 +217,9 @@ export default function KpisPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
+            <div className="bg-linear-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-linear-to-br from-red-400 to-red-600 flex items-center justify-center">
                   <XCircle className="w-6 h-6 text-white" />
                 </div>
                 <div>

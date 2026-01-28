@@ -1,24 +1,11 @@
-// ✔️ Analyse financière
-// revenu mensuel
-
-// dépenses
-
-// capacité de remboursement
-// export interface FinancialAnalysis {
-//   revenuMensuel: number;
-//   depensesMensuelles: number;
-//   capaciteRemboursement: number; // revenu - dépenses
-//   ratioEndettement: number; // (paiements mensuels / revenu)
-// }
 'use client'
 import React, { useState, useMemo } from 'react';
-import { Search, TrendingUp, TrendingDown, AlertCircle, CheckCircle, DollarSign, Calendar, FileText, X, ChevronRight, Activity, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, AlertCircle, CheckCircle, DollarSign, Calendar, FileText, X, ChevronRight, Activity, PieChart as PieChartIcon, BarChart3, AlertTriangle, Sun, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from 'recharts';
 import { FinancialHistoryEntry, MemberFinancialData } from '@/types/analyses';
 import MemberCard from './MemberCardAnalyse';
 import MemberDetailModal from './MemberDetailModal';
 
-// Types
 
 // Génération de données mock
 const generateMemberData = (): MemberFinancialData[] => {
@@ -123,6 +110,31 @@ for (let m = nbMois - 1; m >= 0; m--) {
   return data.sort((a, b) => b.scoreStabilite - a.scoreStabilite);
 };
 
+interface AnalysisCardProps {
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  color: string; // ex: "bg-green-500"
+  subValue?: string;
+}
+
+const AnalysisCard = ({ icon: Icon, label, value, subValue, trend, color }: any) => (  
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`p-3 rounded-xl ${color}`}>
+          <Icon className="w-6 h-6 text-white" />
+        </div>
+      </div>
+
+      <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
+      <p className="text-sm text-gray-600">{label}</p>
+
+      {subValue && (
+        <p className="text-xs text-gray-500 mt-1">{subValue}</p>
+      )}
+    </div>
+  );
+
 
 // Composant principal
 const FinancialAnalysisDashboard = () => {
@@ -159,103 +171,69 @@ const FinancialAnalysisDashboard = () => {
   }, [members]);
   
   return (
-    <div className="min-h-screen bg-linear-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <div className="w-full min-h-screen bg-linear-to-br from-slate-50 via-purple-50 to-indigo-50 md:p-8">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Analyse Financière des Membres</h1>
-              <p className="text-gray-600">Évaluation de la capacité de remboursement et stabilité financière</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Total des membres</p>
-              <p className="text-3xl font-bold text-purple-600">{stats.total}</p>
-            </div>
-          </div>
-          
-          {/* Stats rapides */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-xs text-green-600 mb-1">Score Élevé (75+)</p>
-              <p className="text-2xl font-bold text-green-700">{stats.high}</p>
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-xs text-yellow-600 mb-1">Score Moyen (50-74)</p>
-              <p className="text-2xl font-bold text-yellow-700">{stats.medium}</p>
-            </div>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-xs text-red-600 mb-1">Score Faible (&lt;50)</p>
-              <p className="text-2xl font-bold text-red-700">{stats.low}</p>
-            </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-              <p className="text-xs text-purple-600 mb-1">Score Moyen</p>
-              <p className="text-2xl font-bold text-purple-700">{stats.avgScore.toFixed(0)}</p>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-600 mb-1">Saisonniers</p>
-              <p className="text-2xl font-bold text-blue-700">{stats.saisonniers}</p>
-            </div>
-          </div>
-          
-          {/* Filtres et recherche */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher par nom, prénom ou ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setScoreFilter('all')}
-                className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                  scoreFilter === 'all'
-                    ? 'bg-purple-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
-                }`}
-              >
-                Tous
-              </button>
-              <button
-                onClick={() => setScoreFilter('high')}
-                className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                  scoreFilter === 'high'
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-green-400'
-                }`}
-              >
-                Élevé
-              </button>
-              <button
-                onClick={() => setScoreFilter('medium')}
-                className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                  scoreFilter === 'medium'
-                    ? 'bg-yellow-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-yellow-400'
-                }`}
-              >
-                Moyen
-              </button>
-              <button
-                onClick={() => setScoreFilter('low')}
-                className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                  scoreFilter === 'low'
-                    ? 'bg-red-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-red-400'
-                }`}
-              >
-                Faible
-              </button>
-            </div>
-          </div>
-        </div>
+            {/* Filtres */}
+      <div className="mb-6 flex gap-3">
+          {(['all', 'high', 'medium', 'low'] as const).map(score => (
+            <button
+              key={score}
+              onClick={() => setScoreFilter(score)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                scoreFilter === score
+                  ? score === 'all' ? 'bg-blue-600 text-white shadow-lg' :
+                    score === 'high' ? 'bg-green-600 text-white shadow-lg' :
+                    score === 'medium' ? 'bg-orange-500 text-white shadow-lg' :
+                    'bg-red-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              {score === 'all' ? 'Tous' : 
+              score === 'high' ? 'Élevé' : 
+              score === 'medium' ? 'Moyen' : 
+              'Faible'}
+            </button>
+          ))}
       </div>
-      
+      {/* stats */}
+      <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+        <AnalysisCard
+          icon={CheckCircle}
+          label="Score Élevé (75+)"
+          value={stats.high}
+          color="bg-green-500"
+        />
+
+        <AnalysisCard
+          icon={AlertTriangle}
+          label="Score Moyen (50-74)"
+          value={stats.medium}
+          color="bg-yellow-500"
+        />
+
+        <AnalysisCard
+          icon={XCircle}
+          label="Score Faible (<50)"
+          value={stats.low}
+          color="bg-red-500"
+        />
+
+        <AnalysisCard
+          icon={BarChart}
+          label="Score Moyen"
+          value={stats.avgScore.toFixed(0)}
+          color="bg-purple-500"
+        />
+
+        <AnalysisCard
+          icon={Sun}
+          label="Saisonniers"
+          value={stats.saisonniers}
+          color="bg-blue-500"
+        />
+
+      </div>
+    
       {/* Grille de membres */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {filteredMembers.length === 0 ? (

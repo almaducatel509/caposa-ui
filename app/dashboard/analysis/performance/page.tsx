@@ -1,14 +1,25 @@
 // app/Performance/page.tsx
 "use client";
 
+import AlertsList from "@/app/components/analyse/kpis/AlertsList";
 
 
 export default function PerformancePage() {
   return (
     <div className="w-full">
-Performance	Évaluer les résultats concrets (prêts accordés, remboursements, retards, croissance)// app/analyse-financiere/page.tsx
-<div>
-    {/* Oui Alma — **tu dois absolument séparer KPIs et Performance en deux pages distinctes** dans ton entité `Analyse`.  
+      <AlertsList/>
+    </div>
+  )
+}
+
+// export default function PerformancePage() {
+//   return (
+//     <div className="w-full">
+//     </AlertsList>
+//     <div>
+        {/* Performance	Évaluer les résultats concrets (prêts accordés, remboursements, retards, croissance)// app/analyse-financiere/page.tsx */}
+
+        {/* Oui Alma — **tu dois absolument séparer KPIs et Performance en deux pages distinctes** dans ton entité `Analyse`.
 Et voici pourquoi, en respectant ta logique métier, ton UX, et la réalité des caisses rurales.
 
 ---
@@ -28,11 +39,11 @@ Tu veux que l’agent sache **où il est** (KPIs) et **ce qu’il a accompli** (
 
 ### **2. UX claire et non ambiguë**
 
-Tu veux une interface **calme, premium, lisible**.  
+Tu veux une interface **calme, premium, lisible**.
 Si tu mélanges KPIs et Performance dans une seule page :
 
-- tu risques de **surcharger visuellement**  
-- tu perds la **logique d’analyse par bloc**  
+- tu risques de **surcharger visuellement**
+- tu perds la **logique d’analyse par bloc**
 - tu compliques la navigation pour l’agent
 
 ---
@@ -41,8 +52,8 @@ Si tu mélanges KPIs et Performance dans une seule page :
 
 En séparant les deux :
 
-- tu peux ajouter des **KPIs personnalisés** (par région, par agent, par type de membre)  
-- tu peux créer des **rapports de performance** exportables  
+- tu peux ajouter des **KPIs personnalisés** (par région, par agent, par type de membre)
+- tu peux créer des **rapports de performance** exportables
 - tu peux relier chaque page à des entités backend spécifiques (`KpiEntry`, `PerformanceSnapshot`, etc.)
 
 ---
@@ -68,7 +79,7 @@ En séparant les deux :
 
 Tu peux faire :
 
-- **KPIs** → avec des pastilles, barres, jauges, seuils colorés  
+- **KPIs** → avec des pastilles, barres, jauges, seuils colorés
 - **Performance** → avec des tableaux, graphiques, timelines
 
 ---
@@ -80,7 +91,4 @@ Tu veux que chaque agent puisse dire :
 Et ça, ça demande deux pages distinctes.
 
 Si tu veux, je peux t’aider à définir les composants React, les interfaces TypeScript, ou même les blocs Figma pour chaque page. */}
-</div>
-    </div>
-  );
-}
+ 

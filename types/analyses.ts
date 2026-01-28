@@ -31,3 +31,19 @@ export interface MemberFinancialData {
   nombrePrets: number;
   tauxRemboursement: number;
 }
+
+export function computeMemberStatus(member: MemberFinancialData) {
+  const pret = member.dernierPret;
+
+  if (!pret) return 'rembourse';
+
+  if (pret.statut === 'en_retard') return 'en_retard';
+  if (pret.statut === 'en_cours') return 'en_cours';
+
+  // Si remboursé mais risque élevé
+  if (pret.statut === 'rembourse' && member.ratioEndettement > 0.45) {
+    return 'en_cours';
+  }
+
+  return 'rembourse';
+}
