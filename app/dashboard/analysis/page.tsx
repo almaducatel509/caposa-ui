@@ -12,14 +12,6 @@ export const metadata: Metadata = {
   description: 'Évaluation de la capacité de remboursement et stabilité financière des membres',
 };
 
-// export default function AnalyseFinancierePage() {
-//   return (
-//     <div className="w-full">
-//       <FinancialAnalysisDashboard />
-//     </div>
-//   );
-// }
-
 export default function AnalyseFinancierePage() {
   return (
     <main className="w-full bg-white">

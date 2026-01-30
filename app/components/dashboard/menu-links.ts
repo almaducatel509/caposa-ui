@@ -89,7 +89,7 @@ export const links: MainLink[] = [
     subLinks: [
       { name: 'Dashboard', href: '/dashboard/analysis', icon: RiDashboardLine },
       { name: 'KPIs', href: '/dashboard/analysis/kpis', icon: RiBarChart2Line },
-      { name: 'Performance', href: '/dashboard/analysis/performance', icon: HiOutlineChartBar },
+      // { name: 'Performance', href: '/dashboard/analysis/performance', icon: HiOutlineChartBar },
     ],
   },
   {

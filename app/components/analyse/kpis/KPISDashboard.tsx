@@ -8,6 +8,7 @@ import KpiFinancialSection from './KpiFinancialSection';
 import KpiLiquiditySection from './KpiLiquiditySection';
 import KpiMembersSection from './KpiMembersSection';
 import KpiRadarChart from './KpiRadarChart';
+import PerformanceSummaryCard from '../performance/PerformanceSummaryCard';
 
 // Types
 export type PeriodFilter = 'jour' | 'semaine' | 'mois' | 'trimestre' | 'annee';
@@ -234,6 +235,9 @@ export default function KpisPage() {
 
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Performance globale */}
+        <PerformanceSummaryCard data={kpiData} />
+
         {/* KPIs Financiers */}
         <KpiFinancialSection data={kpiData} />
 
@@ -249,6 +253,23 @@ export default function KpisPage() {
         {/* Graphique Radar comparatif */}
         <KpiRadarChart data={kpiData} />
       </div>
+
     </div>
   );
 }
+// {/* <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+//         {/* KPIs Financiers */}
+//         <KpiFinancialSection data={kpiData} />
+
+//         {/* KPIs Liquidité */}
+//         <KpiLiquiditySection data={kpiData} />
+
+//         {/* KPIs Membres */}
+//         <KpiMembersSection data={kpiData} />
+
+//         {/* Alertes & Seuils */}
+//         <KpiAlertsSection data={kpiData} statusCounts={statusCounts} />
+
+//         {/* Graphique Radar comparatif */}
+//         <KpiRadarChart data={kpiData} />
+//       </div> */}
