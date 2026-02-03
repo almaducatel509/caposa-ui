@@ -3,12 +3,8 @@
 
 import React from 'react';
 import { Droplet, Shield, Wallet, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { KpiData } from '@/types/kpis';
 
-interface KpiData {
-  ratioLiquidite: number;
-  reservesObligatoires: number;
-  couvertureRisques: number;
-}
 
 interface Props {
   data: KpiData;

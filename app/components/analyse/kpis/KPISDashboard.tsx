@@ -9,57 +9,76 @@ import KpiLiquiditySection from './KpiLiquiditySection';
 import KpiMembersSection from './KpiMembersSection';
 import KpiRadarChart from './KpiRadarChart';
 import PerformanceSummaryCard from '../performance/PerformanceSummaryCard';
+import { KpiData } from '@/types/kpis';
 
 // Types
 export type PeriodFilter = 'jour' | 'semaine' | 'mois' | 'trimestre' | 'annee';
 export type RegionFilter = 'all' | 'nord' | 'sud' | 'est' | 'ouest' | 'centre';
 export type MemberTypeFilter = 'all' | 'particulier' | 'agriculteur' | 'commercant' | 'artisan';
 
-export interface KpiData {
-  // KPIs Financiers
-  ratioEndettement: number; // %
-  tauxRecouvrement: number; // %
-  capaciteRemboursementMoyenne: number; // HTG
-  ratioCreancesDouteuses: number; // %
-  
-  // KPIs Liquidité
-  ratioLiquidite: number; // ratio
-  reservesObligatoires: number; // %
-  couvertureRisques: number; // %
-  
-  // KPIs Membres
-  scoreStabiliteMoyen: number; // 0-100
-  tauxActiviteMembres: number; // %
-  ratioNouveauxMembres: number; // %
-  
-  // Meta
-  periode: string;
-  lastUpdate: Date;
-}
 
 // Génération de données mock
 const generateKpiData = (): KpiData => {
   return {
-    // Financiers
+    // ============================
+    // META
+    // ============================
+    periode: 'Décembre 2024',
+    lastUpdate: new Date(),
+
+    // ============================
+    // KPIs FINANCIERS
+    // ============================
     ratioEndettement: 28 + Math.random() * 15, // 28-43%
     tauxRecouvrement: 92 + Math.random() * 7, // 92-99%
     capaciteRemboursementMoyenne: 12000 + Math.random() * 8000,
     ratioCreancesDouteuses: 2 + Math.random() * 6, // 2-8%
-    
-    // Liquidité
+
+    // ============================
+    // KPIs LIQUIDITÉ
+    // ============================
     ratioLiquidite: 1.2 + Math.random() * 0.8, // 1.2-2.0
     reservesObligatoires: 8 + Math.random() * 4, // 8-12%
     couvertureRisques: 85 + Math.random() * 12, // 85-97%
-    
-    // Membres
+
+    // ============================
+    // KPIs MEMBRES
+    // ============================
     scoreStabiliteMoyen: 65 + Math.random() * 25, // 65-90
     tauxActiviteMembres: 75 + Math.random() * 20, // 75-95%
     ratioNouveauxMembres: 5 + Math.random() * 10, // 5-15%
-    
-    periode: 'Décembre 2024',
-    lastUpdate: new Date()
+
+    // ============================
+    // PERFORMANCE
+    // ============================
+    tauxRemboursement: 85 + Math.random() * 10, // 85-95%
+    performanceScore: 50 + Math.random() * 40, // 50-90
+
+    // ============================
+    // RAPPORTS — LIQUIDITÉ
+    // ============================
+    liquiditeDisponible: 500000 + Math.random() * 300000, // HTG
+    totalDepotsMembres: 2000000 + Math.random() * 1000000, // HTG
+
+    // ============================
+    // RAPPORTS — SOLVABILITÉ
+    // ============================
+    capitalPropre: 800000 + Math.random() * 400000,
+    actifsPonderes: 3000000 + Math.random() * 1500000,
+
+    // ============================
+    // RAPPORTS — PRÊTS EN SOUFFRANCE
+    // ============================
+    portefeuilleTotalPrets: 2500000 + Math.random() * 1500000,
+    montantEnSouffrance: 100000 + Math.random() * 200000,
+    repartitionSouffrance: {
+      jours30: 20000 + Math.random() * 20000,
+      jours60: 15000 + Math.random() * 15000,
+      jours90Plus: 30000 + Math.random() * 30000,
+    }
   };
 };
+
 
 export default function KpisPage() {
   const [kpiData] = useState<KpiData>(generateKpiData());

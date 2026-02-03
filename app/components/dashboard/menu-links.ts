@@ -96,12 +96,12 @@ export const links: MainLink[] = [
     name: 'Rapports',
     href: '/dashboard/reports',
     icon: HiOutlineDocumentDuplicate,
-    hasSubmenu: true,
-    subLinks: [
-      { name: 'Réglementaires', href: '/dashboard/reports/regulatory', icon: BsFileEarmarkCheck },
-      { name: 'Financiers', href: '/dashboard/reports/financial', icon: BsFileEarmarkBarGraph },
-      { name: 'Audit', href: '/dashboard/reports/audit', icon: BsShieldCheck },
-    ],
+    // hasSubmenu: true,
+    // subLinks: [
+    //   { name: 'Réglementaires', href: '/dashboard/reports/regulatory', icon: BsFileEarmarkCheck },
+    //   { name: 'Financiers', href: '/dashboard/reports/financial', icon: BsFileEarmarkBarGraph },
+    //   { name: 'Audit', href: '/dashboard/reports/audit', icon: BsShieldCheck },
+    // ],
   },
 
   { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },

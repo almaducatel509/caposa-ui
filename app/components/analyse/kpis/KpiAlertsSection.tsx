@@ -4,19 +4,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, XCircle, CheckCircle, Bell, ChevronRight, Clock, User, FileText } from 'lucide-react';
+import { KpiData } from '@/types/kpis';
 
-interface KpiData {
-  ratioEndettement: number;
-  tauxRecouvrement: number;
-  capaciteRemboursementMoyenne: number;
-  ratioCreancesDouteuses: number;
-  ratioLiquidite: number;
-  reservesObligatoires: number;
-  couvertureRisques: number;
-  scoreStabiliteMoyen: number;
-  tauxActiviteMembres: number;
-  ratioNouveauxMembres: number;
-}
 
 interface StatusCounts {
   bon: number;

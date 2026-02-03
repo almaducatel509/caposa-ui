@@ -3,17 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle2, Info } from 'lucide-react';
-
-interface KpiData {
-  ratioEndettement: number;
-  tauxRecouvrement: number;
-  ratioCreancesDouteuses: number;
-  ratioLiquidite: number;
-  reservesObligatoires: number;
-  couvertureRisques: number;
-  scoreStabiliteMoyen: number;
-  tauxActiviteMembres: number;
-}
+import { KpiData } from '@/types/kpis';
 
 interface PerformanceData {
   score: number; // 0-100

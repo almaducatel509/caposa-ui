@@ -3,13 +3,7 @@
 
 import React from 'react';
 import { TrendingDown, TrendingUp, DollarSign, AlertTriangle } from 'lucide-react';
-
-interface KpiData {
-  ratioEndettement: number;
-  tauxRecouvrement: number;
-  capaciteRemboursementMoyenne: number;
-  ratioCreancesDouteuses: number;
-}
+import { KpiData } from '@/types/kpis';
 
 interface Props {
   data: KpiData;

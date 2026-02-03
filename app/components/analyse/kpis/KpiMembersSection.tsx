@@ -3,12 +3,8 @@
 
 import React from 'react';
 import { Users, UserPlus, Activity, TrendingUp, Award } from 'lucide-react';
+import { KpiData } from '@/types/kpis';
 
-interface KpiData {
-  scoreStabiliteMoyen: number;
-  tauxActiviteMembres: number;
-  ratioNouveauxMembres: number;
-}
 
 interface Props {
   data: KpiData;

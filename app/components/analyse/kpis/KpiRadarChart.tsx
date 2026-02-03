@@ -4,17 +4,8 @@
 import React from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { TrendingUp, Target, BarChart3 } from 'lucide-react';
+import { KpiData } from '@/types/kpis';
 
-interface KpiData {
-  ratioEndettement: number;
-  tauxRecouvrement: number;
-  ratioCreancesDouteuses: number;
-  ratioLiquidite: number;
-  reservesObligatoires: number;
-  couvertureRisques: number;
-  scoreStabiliteMoyen: number;
-  tauxActiviteMembres: number;
-}
 
 interface Props {
   data: KpiData;
