@@ -1,9 +1,12 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import PostGrid from "@/app/components/postes/PostGrid";
+import { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 
-const PostDashboard: React.FC = () => {
+export const metadata: Metadata = {
+  title: "Postes | CAPOSA",
+  description: "Tout les postes qui utilises le system",
+};
+export default function  PostDashboard() {
 
   return (
     <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
@@ -14,4 +17,3 @@ const PostDashboard: React.FC = () => {
   );
 };
 
-export default PostDashboard;

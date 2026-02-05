@@ -21,6 +21,8 @@ import { BsFileEarmarkCheck, BsFileEarmarkBarGraph, BsShieldCheck } from "react-
 import { IconType } from "react-icons";
 import { PiVaultFill } from "react-icons/pi";
 import { FiSettings } from "react-icons/fi";
+// Nouveaux imports pour les rapports
+import { Droplet, AlertTriangle, Users, CheckCircle, LayoutGrid } from "lucide-react";
 
 
 interface SubLink {
@@ -60,12 +62,12 @@ export const links: MainLink[] = [
   },
   {
     name: 'Prêts',
-    href: '/dashboard//loans',
+    href: '/dashboard/loans',
     icon: FaHandHoldingUsd,
     hasSubmenu: true,
     subLinks: [
-      { name: 'Tous',    href: '/dashboard//loans', icon: FaClipboardList },
-      { name: 'Demandes', href: '/dashboard//loans/create', icon: FaMoneyCheckAlt },
+      { name: 'Tous', href: '/dashboard/loans', icon: FaClipboardList },
+      { name: 'Demandes', href: '/dashboard/loans/create', icon: FaMoneyCheckAlt },
       { name: 'Actifs', href: '/dashboard/loans/actifs', icon: HiOutlineChartBar },
     ],
   },
@@ -96,18 +98,45 @@ export const links: MainLink[] = [
     name: 'Rapports',
     href: '/dashboard/reports',
     icon: HiOutlineDocumentDuplicate,
-    // hasSubmenu: true,
-    // subLinks: [
-    //   { name: 'Réglementaires', href: '/dashboard/reports/regulatory', icon: BsFileEarmarkCheck },
-    //   { name: 'Financiers', href: '/dashboard/reports/financial', icon: BsFileEarmarkBarGraph },
-    //   { name: 'Audit', href: '/dashboard/reports/audit', icon: BsShieldCheck },
-    // ],
+    hasSubmenu: true,
+    subLinks: [
+      { 
+        name: 'Vue d\'ensemble', 
+        href: '/dashboard/reports', 
+        icon: LayoutGrid,
+        description: 'Tous les rapports réglementaires'
+      },
+      { 
+        name: 'Liquidité', 
+        href: '/dashboard/reports/liquidite', 
+        icon: Droplet,
+        description: 'Capacité à honorer les retraits'
+      },
+      { 
+        name: 'Qualité portefeuille', 
+        href: '/dashboard/reports/portefeuille', 
+        icon: AlertTriangle,
+        description: 'Prêts en souffrance'
+      },
+      { 
+        name: 'Endettement', 
+        href: '/dashboard/reports/endettement', 
+        icon: Users,
+        description: 'Prévention du surendettement'
+      },
+      { 
+        name: 'Conformité', 
+        href: '/dashboard/reports/conformite', 
+        icon: CheckCircle,
+        description: 'Statut réglementaire mensuel'
+      },
+    ],
   },
 
   { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },
   { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
   { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
-  { name: 'Calendrier', href: '/dashboard/holidays', icon:  AiOutlineSchedule  },
+  { name: 'Calendrier', href: '/dashboard/holidays', icon: AiOutlineSchedule  },
 
   { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
   { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: FiSettings, }

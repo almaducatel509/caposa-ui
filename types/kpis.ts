@@ -1,58 +1,100 @@
+// types/rapports.ts
+// Types étendus pour la génération de rapports réglementaires
+
 export interface KpiData {
-  // ============================
-  // META
-  // ============================
-  periode: string;       // ex: "2025-01"
-  lastUpdate: Date;
-
-  // ============================
-  // KPIs FINANCIERS
-  // ============================
-  ratioEndettement: number;             // %
-  tauxRecouvrement: number;             // %
+  // KPIs Financiers (existants)
+  ratioEndettement: number; // %
+  tauxRecouvrement: number; // %
   capaciteRemboursementMoyenne: number; // HTG
-  ratioCreancesDouteuses: number;       // %
+  ratioCreancesDouteuses: number; // %
+  
+  // KPIs Liquidité (existants)
+  ratioLiquidite: number; // ratio
+  reservesObligatoires: number; // %
+  couvertureRisques: number; // %
+  
+  // KPIs Membres (existants)
+  scoreStabiliteMoyen: number; // 0-100
+  tauxActiviteMembres: number; // %
+  ratioNouveauxMembres: number; // %
+  
+  // NOUVEAUX CHAMPS pour rapports réglementaires
+  // Liquidité absolue
+  liquiditeDisponible: number; // HTG (cash + banque)
+  totalDepotsMembres: number; // HTG
+  
+  // Solvabilité
+  capitalPropre: number; // HTG
+  actifsponderes: number; // HTG (ou total portefeuille simplifié)
+  
+  // Prêts en souffrance
+  portefeuilleTotalPrets: number; // HTG
+  montantEnSouffrance: number; // HTG
+  repartitionSouffrance: {
+    jours30: number; // HTG
+    jours60: number; // HTG
+    jours90Plus: number; // HTG
+  };
+  
+  // Meta
+  periode: string;
+  lastUpdate: Date;
+}
 
-  // ============================
-  // KPIs LIQUIDITÉ
-  // ============================
-  ratioLiquidite: number;               // %
-  reservesObligatoires: number;         // %
-  couvertureRisques: number;            // %
-
-  // ============================
-  // KPIs MEMBRES
-  // ============================
-  scoreStabiliteMoyen: number;          // 0-100
-  tauxActiviteMembres: number;          // %
-  ratioNouveauxMembres: number;         // %
-
-  // ============================
-  // PERFORMANCE
-  // ============================
-  tauxRemboursement: number;            // %
-  performanceScore: number;             // 0-100
-
-  // ============================
-  // RAPPORTS — LIQUIDITÉ
-  // ============================
-  liquiditeDisponible: number;          // cash + banque
+export interface RapportLiquiditeData {
+  date: Date;
+  periode: string;
+  liquiditeDisponible: number;
   totalDepotsMembres: number;
+  ratioLiquidite: number;
+  evolutionTrimestre: number; // %
+  seuilMinimal: number; // % (constante: 15)
+  statut: 'Conforme' | 'À surveiller' | 'Critique';
+}
 
-  // ============================
-  // RAPPORTS — SOLVABILITÉ
-  // ============================
+export interface RapportSolvabiliteData {
+  date: Date;
+  periode: string;
   capitalPropre: number;
-  actifsPonderes: number;
+  actifsponderes: number;
+  ratioSolvabilite: number;
+  seuilReglementaire: number; // % (constante: 10)
+  statut: 'Conforme' | 'Non conforme';
+}
 
-  // ============================
-  // RAPPORTS — PRÊTS EN SOUFFRANCE
-  // ============================
+export interface RapportConformiteData {
+  date: Date;
+  periode: string;
+  totalAlertes: number;
+  alertesCritiques: number;
+  seuilsDepasses: string[];
+  actionsRecommandees: string[];
+}
+
+export interface RapportPretsSouffranceData {
+  date: Date;
+  periode: string;
   portefeuilleTotalPrets: number;
   montantEnSouffrance: number;
-  repartitionSouffrance: {
+  pourcentagePortefeuille: number;
+  repartition: {
     jours30: number;
     jours60: number;
     jours90Plus: number;
   };
+  evolutionMensuelle: number; // %
+  statut: 'Stable' | 'À risque' | 'Critique';
 }
+
+// Helper pour formater la monnaie
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('fr-HT', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value) + ' G';
+};
+
+// Helper pour formater les pourcentages
+export const formatPercentage = (value: number, decimals: number = 1): string => {
+  return value.toFixed(decimals) + ' %';
+};
