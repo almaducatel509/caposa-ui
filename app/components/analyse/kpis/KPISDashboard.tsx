@@ -51,7 +51,6 @@ const generateKpiData = (): KpiData => {
     // ============================
     // PERFORMANCE
     // ============================
-    tauxRemboursement: 85 + Math.random() * 10, // 85-95%
     performanceScore: 50 + Math.random() * 40, // 50-90
 
     // ============================
@@ -201,9 +200,9 @@ export default function KpisPage() {
 
           {/* Status Overview */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-linear-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -213,9 +212,9 @@ export default function KpisPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
+            <div className="bg-linear-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-linear-to-br from-green-400 to-green-600 flex items-center justify-center">
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -225,9 +224,9 @@ export default function KpisPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-4">
+            <div className="bg-linear-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-white" />
                 </div>
                 <div>

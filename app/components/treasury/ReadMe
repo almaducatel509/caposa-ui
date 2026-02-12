@@ -1,0 +1,359 @@
+# Module Trésorerie - Vue d'ensemble & Remise de Caisse
+
+## 🎯 Objectif
+
+Créer une interface opérationnelle quotidienne pour gérer la trésorerie d'une caisse populaire, avec un focus particulier sur la **preuve numérique** plutôt que la gestion d'argent elle-même.
+
+> **Principe fondamental** : Tu ne gères pas l'argent. Tu gères la preuve. 🔒
+
+---
+
+## 📁 Structure des fichiers
+
+```
+treasury/
+├── TreasuryOverview.tsx          # Page principale - Vue d'ensemble
+├── CashHandoverModal.tsx         # Modal de remise de caisse (3 étapes)
+├── types.ts                      # Interfaces TypeScript
+└── README.md                     # Documentation
+```
+
+---
+
+## 🖥️ TreasuryOverview.tsx
+
+### Caractéristiques
+
+- **Design cohérent** avec le reste de l'application (inspiré de TransactionDashboard)
+- **Palette CAPOSA** :
+  - Vert principal : `#2E7D32`
+  - Bleu pétrole : `#355C7D`
+  - Or doux : `#C9B27C`
+  - Vert sauge : `#DDEAD5`
+  - Fond ivoire : `#F9F9F6`
+
+### Sections principales
+
+#### 1. Main Stats Cards (4 cartes)
+- **Encaisse Disponible** (vert CAPOSA) - Argent liquide en circulation
+- **Solde Coffre** (bleu pétrole) - Argent sécurisé
+- **Flux Entrants** (vert sauge) - Dépôts du jour
+- **Flux Sortants** (or doux) - Retraits du jour
+
+#### 2. État de la Caisse
+- Statut de la session active
+- Dernière remise de caisse enregistrée
+- Informations rapides
+
+#### 3. Alertes & Actions
+- Réconciliations en attente
+- Anomalies détectées
+- Accès rapide aux rapports
+
+#### 4. Réponses Rapides
+Répond aux 3 questions métier :
+- "Combien d'argent en caisse ?"
+- "Le coffre est-il équilibré ?"
+- "Y a-t-il des écarts ?"
+
+### Actions disponibles
+
+```tsx
+// Bouton 1 : Ouvrir une session de caisse
+<button onClick={handleOpenCashSession}>
+  Ouvrir Caisse
+</button>
+
+// Bouton 2 : Créer une remise de caisse
+<button onClick={() => setShowHandoverModal(true)}>
+  Remise de Caisse
+</button>
+```
+
+---
+
+## 🔄 CashHandoverModal.tsx
+
+### Workflow en 3 étapes
+
+#### Étape 1️⃣ : Formulaire (Saisie)
+
+**Champs obligatoires** :
+- Montant remis (`amount`)
+- Remis par (`handed_by`)
+- Vérifié par (`verified_by`)
+- Reçu par (`received_by`)
+- Notes (optionnel)
+
+**Validation critique** :
+```ts
+// Les 3 personnes DOIVENT être différentes
+const actors = [handedBy, verifiedBy, receivedBy];
+const unique = new Set(actors);
+
+if (unique.size !== 3) {
+  throw new Error("Les trois rôles doivent être assumés par des personnes différentes");
+}
+```
+
+#### Étape 2️⃣ : Signatures Numériques
+
+**3 signatures requises** :
+- ✅ Signature de celui qui remet
+- ✅ Signature de celui qui vérifie
+- ✅ Signature de celui qui reçoit
+
+**UI** :
+```
+┌───────────────────────────────────┐
+│ ✅ Remis par : Jean Dupont         │
+│    Signé le 10/02/2026 à 08:45    │
+└───────────────────────────────────┘
+
+┌───────────────────────────────────┐
+│ ⏳ Vérifié par : Marie Tremblay    │
+│    [Signer maintenant]            │
+└───────────────────────────────────┘
+
+┌───────────────────────────────────┐
+│ ⏳ Reçu par : Paul Martin          │
+│    En attente...                  │
+└───────────────────────────────────┘
+```
+
+#### Étape 3️⃣ : Confirmation Finale
+
+**Résumé** :
+- Montant (en gros)
+- Les 3 signatures validées
+- Notes éventuelles
+
+**Avertissement** :
+> ⚠️ Une fois confirmée, cette opération ne pourra plus être modifiée.
+
+**Checkbox obligatoire** :
+```tsx
+☑ Je confirme l'exactitude des informations et comprends 
+  que cette opération sera définitive et immuable.
+```
+
+**Action finale** :
+```tsx
+<button onClick={handleConfirm}>
+  🔒 Confirmer et Verrouiller
+</button>
+```
+
+---
+
+## 🔒 Règles métier implémentées
+
+### R1 - Séparation stricte des rôles
+```ts
+handed_by !== verified_by !== received_by
+```
+
+### R2 - Immuabilité après confirmation
+```ts
+if (status === 'confirmed') {
+  is_locked = true;
+  // Toute modification = REJET
+}
+```
+
+### R3 - Signatures obligatoires
+```ts
+canConfirm = 
+  signatures.handedBy && 
+  signatures.verifiedBy && 
+  signatures.receivedBy;
+```
+
+### R4 - Audit automatique
+```ts
+// À chaque action critique
+createAuditLog({
+  entity: 'cash_handover',
+  action: 'signature_added',
+  performed_by: currentUserId,
+  before_state: {...},
+  after_state: {...}
+});
+```
+
+---
+
+## 📊 Types de données
+
+### CashHandover (principal)
+```ts
+interface CashHandover {
+  id: string;
+  amount: number;
+  handed_by: string;
+  verified_by: string;
+  received_by: string;
+  handed_by_signature: string;
+  verified_by_signature: string;
+  received_by_signature: string;
+  branch_id: string;
+  handover_date: string;
+  status: 'draft' | 'confirmed' | 'locked';
+  is_locked: boolean;
+  notes?: string;
+}
+```
+
+### Autres entités
+- `CashSession` - Session de caisse ouverte/fermée
+- `CashMovement` - Mouvements d'argent
+- `VaultDeclaration` - Déclaration du coffre
+- `DailyClosing` - Clôture journalière
+- `Reconciliation` - Rapprochement
+- `AuditLog` - Journal d'audit
+
+---
+
+## 🎨 Design System
+
+### Couleurs CAPOSA
+
+```css
+/* Vert principal */
+--caposa-green: #2E7D32;
+--caposa-green-dark: #1B5E20;
+
+/* Bleu pétrole */
+--caposa-blue: #355C7D;
+--caposa-blue-dark: #2A4A5E;
+
+/* Or doux */
+--caposa-gold: #D4AF37;
+--caposa-gold-light: #C9B27C;
+
+/* Vert sauge */
+--caposa-sage: #DDEAD5;
+
+/* Neutrals */
+--caposa-ivory: #F9F9F6;
+--caposa-gray: #6E6E6E;
+```
+
+### Gradients utilisés
+
+```css
+/* Vert principal */
+bg-gradient-to-br from-[#2E7D32] to-[#1B5E20]
+
+/* Bleu pétrole */
+bg-gradient-to-br from-[#355C7D] to-[#2A4A5E]
+
+/* Vert sauge */
+bg-gradient-to-br from-[#81C784] to-[#66BB6A]
+
+/* Or doux */
+bg-gradient-to-br from-[#D4AF37] to-[#C9B27C]
+```
+
+---
+
+## 🚀 Prochaines étapes
+
+### Phase 1 : Intégration API ✅
+- [ ] Créer endpoints backend
+- [ ] Connecter formulaire à l'API
+- [ ] Implémenter audit log automatique
+- [ ] Générer PDF de preuve
+
+### Phase 2 : Session de Caisse
+- [ ] Modal "Ouvrir Caisse"
+- [ ] Suivi des opérations par session
+- [ ] Clôture de session avec calcul écart
+
+### Phase 3 : Réconciliation
+- [ ] Interface de vérification
+- [ ] Validation/Rejet d'écarts
+- [ ] Rapport d'audit
+
+### Phase 4 : Sécurité avancée
+- [ ] Signatures biométriques
+- [ ] Double facteur (2FA)
+- [ ] Blockchain pour immuabilité
+
+---
+
+## 🧪 Tests à implémenter
+
+```ts
+describe('CashHandover', () => {
+  test('Rejette si handed_by === received_by', () => {
+    // ❌ Doit échouer
+  });
+
+  test('Exige 3 signatures avant confirmation', () => {
+    // ❌ Doit échouer si < 3
+  });
+
+  test('Bloque modification après confirmation', () => {
+    // ❌ Doit rejeter
+  });
+
+  test('Crée audit log à chaque action', () => {
+    // ✅ Minimum 4 logs
+  });
+});
+```
+
+---
+
+## 📝 Messages d'erreur
+
+```ts
+const ERRORS = {
+  SAME_PERSON: "❌ La même personne ne peut pas remettre ET recevoir l'argent",
+  ALREADY_LOCKED: "🔒 Cette remise est verrouillée et ne peut plus être modifiée",
+  MISSING_SIGNATURES: "✍️ Les 3 signatures sont requises avant confirmation",
+  INVALID_AMOUNT: "💰 Le montant doit être strictement positif",
+  UNAUTHORIZED: "🚫 Vous n'êtes pas autorisé à signer cette remise"
+};
+```
+
+---
+
+## 📄 Format du reçu PDF (futur)
+
+```
+╔═══════════════════════════════════════════╗
+║   REÇU DE REMISE DE CAISSE                ║
+║   Caisse Populaire Caposa                 ║
+╚═══════════════════════════════════════════╝
+
+Référence : #RC-2026-02-10-001
+Date : 10 février 2026, 08:45
+
+────────────────────────────────────────────
+MONTANT REMIS : 2 000,00 $
+────────────────────────────────────────────
+
+✅ Remis par : Jean Dupont
+✅ Vérifié par : Marie Tremblay
+✅ Reçu par : Paul Martin
+
+Statut : CONFIRMÉ ET VERROUILLÉ 🔒
+
+[QR Code de vérification]
+```
+
+---
+
+## 💡 Rappels importants
+
+1. **Pas de grids** dans la vue d'ensemble (pas besoin de graphiques complexes)
+2. **Focus opérationnel** : répondre aux questions quotidiennes
+3. **Preuve > Argent** : on documente, on ne transfère pas
+4. **Cohérence visuelle** : palette CAPOSA uniquement
+5. **Simplicité** : interface claire, workflow en 3 étapes
+
+---
+
+**Tu ne gères pas l'argent. Tu gères la preuve. 🔒**

@@ -1,3 +1,26 @@
+//4. Quand le superviseur vérifie
+// Action humaine :
+
+// Le superviseur lit les écarts
+
+// Il valide ou rejette
+
+// Il demande des explications
+
+// Ton travail commence ici :
+
+// écran “Réconciliation”
+
+// tableau des écarts
+
+// bouton “Valider / Rejeter”
+
+// audit log
+
+// empêcher le superviseur de modifier les montants
+
+// Tu ne gères pas la validation.
+// Tu gères le contrôle interne.
 // components/rapports/RapportLiquidite.tsx
 'use client';
 

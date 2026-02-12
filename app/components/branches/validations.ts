@@ -32,7 +32,7 @@ export const branchBaseSchema = z.object({
     'CENTRE', 'SUD', 'GRAND_ANSE', 'NORD_OUEST', 'NIPPES'
   ] as const),
   city: z.string().min(1, 'City is required'),
-  
+  //nombre de caisse disponible pour Ainsi tu peux savoir quelle caisse a fait quel opération
   number_of_tellers: z.number().min(1, 'Number of tellers must be at least 1'),
   number_of_clerks: z.number().min(1, 'Number of clerks must be at least 1'),
   number_of_credit_officers: z.number().min(1, 'Number of credit officers must be at least 1'),

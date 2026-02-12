@@ -1,41 +1,82 @@
 // types/rapports.ts
 // Types étendus pour la génération de rapports réglementaires
 
+// export interface KpiData {
+//   // KPIs Financiers (existants)
+//   ratioEndettement: number; // %
+//   tauxRecouvrement: number; // %
+//   capaciteRemboursementMoyenne: number; // HTG
+//   ratioCreancesDouteuses: number; // %
+  
+//   // KPIs Liquidité (existants)
+//   ratioLiquidite: number; // ratio
+//   reservesObligatoires: number; // %
+//   couvertureRisques: number; // %
+  
+//   // KPIs Membres (existants)
+//   scoreStabiliteMoyen: number; // 0-100
+//   tauxActiviteMembres: number; // %
+//   ratioNouveauxMembres: number; // %
+  
+//   // NOUVEAUX CHAMPS pour rapports réglementaires
+//   // Liquidité absolue
+//   liquiditeDisponible: number; // HTG (cash + banque)
+//   totalDepotsMembres: number; // HTG
+  
+//   // Solvabilité
+//   capitalPropre: number; // HTG
+//   actifsponderes: number; // HTG (ou total portefeuille simplifié)
+  
+//   // Prêts en souffrance
+//   portefeuilleTotalPrets: number; // HTG
+//   montantEnSouffrance: number; // HTG
+//   repartitionSouffrance: {
+//     jours30: number; // HTG
+//     jours60: number; // HTG
+//     jours90Plus: number; // HTG
+//   };
+//   performanceScore:number;
+//   actifsPonderes:number;
+//   // Meta
+//   periode: string;
+//   lastUpdate: Date;
+// }
 export interface KpiData {
-  // KPIs Financiers (existants)
-  ratioEndettement: number; // %
-  tauxRecouvrement: number; // %
-  capaciteRemboursementMoyenne: number; // HTG
-  ratioCreancesDouteuses: number; // %
-  
-  // KPIs Liquidité (existants)
-  ratioLiquidite: number; // ratio
-  reservesObligatoires: number; // %
-  couvertureRisques: number; // %
-  
-  // KPIs Membres (existants)
-  scoreStabiliteMoyen: number; // 0-100
-  tauxActiviteMembres: number; // %
-  ratioNouveauxMembres: number; // %
-  
-  // NOUVEAUX CHAMPS pour rapports réglementaires
-  // Liquidité absolue
-  liquiditeDisponible: number; // HTG (cash + banque)
-  totalDepotsMembres: number; // HTG
-  
+  // KPIs Financiers
+  ratioEndettement: number;
+  tauxRecouvrement: number;
+  capaciteRemboursementMoyenne: number;
+  ratioCreancesDouteuses: number;
+
+  // KPIs Liquidité
+  ratioLiquidite: number;
+  reservesObligatoires: number;
+  couvertureRisques: number;
+
+  // KPIs Membres
+  scoreStabiliteMoyen: number;
+  tauxActiviteMembres: number;
+  ratioNouveauxMembres: number;
+
+  // Rapports réglementaires — Liquidité
+  liquiditeDisponible: number;
+  totalDepotsMembres: number;
+
   // Solvabilité
-  capitalPropre: number; // HTG
-  actifsponderes: number; // HTG (ou total portefeuille simplifié)
-  
+  capitalPropre: number;
+  actifsPonderes: number; // <-- version correcte
+
   // Prêts en souffrance
-  portefeuilleTotalPrets: number; // HTG
-  montantEnSouffrance: number; // HTG
+  portefeuilleTotalPrets: number;
+  montantEnSouffrance: number;
   repartitionSouffrance: {
-    jours30: number; // HTG
-    jours60: number; // HTG
-    jours90Plus: number; // HTG
+    jours30: number;
+    jours60: number;
+    jours90Plus: number;
   };
-  
+
+  performanceScore: number;
+
   // Meta
   periode: string;
   lastUpdate: Date;
