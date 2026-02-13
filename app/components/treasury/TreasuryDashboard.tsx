@@ -5,10 +5,12 @@ import { BiImport } from 'react-icons/bi';
 import PageHeader from '../header';
 import CashHandoverModal from './CashHandoverModal';
 import { TreasuryStats } from '@/types/tresorerie';
+import CashOpeningModal from './Encaisse/CashOpeningModal';
 
 
 const TreasuryOverview: React.FC = () => {
   const [showHandoverModal, setShowHandoverModal] = useState(false);
+  const [showOpeningModal, setShowOpeningModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Données mockées - à remplacer par fetch API
@@ -45,8 +47,7 @@ const TreasuryOverview: React.FC = () => {
   };
 
   const handleOpenCashSession = () => {
-    console.log('Ouvrir session de caisse');
-    // TODO: Implémenter ouverture session
+    setShowOpeningModal(true);
   };
 
   return (
@@ -259,6 +260,12 @@ const TreasuryOverview: React.FC = () => {
       <CashHandoverModal 
         isOpen={showHandoverModal}
         onClose={() => setShowHandoverModal(false)}
+      />
+
+      {/* Modal Ouverture de Caisse */}
+      <CashOpeningModal 
+        isOpen={showOpeningModal}
+        onClose={() => setShowOpeningModal(false)}
       />
     </div>
   );

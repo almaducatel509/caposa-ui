@@ -4,7 +4,6 @@ import { FaLock, FaExchangeAlt, FaCheckCircle, FaClipboardList } from 'react-ico
 import { BiImport, BiExport } from 'react-icons/bi';
 import VaultMovementModal from './VaultMovementModal';
 import VaultDeclarationModal from './VaultDeclarationModal';
-import PageHeader from '../../header';
 
 interface VaultStats {
   currentBalance: number;
@@ -60,43 +59,24 @@ const VaultOverview: React.FC = () => {
     setMovementType(type);
     setShowMovementModal(true);
   };
-
+  
+  
   const handleViewHistory = () => {
-    console.log('Voir historique des mouvements coffre');
-    // TODO: Navigation vers VaultMovementHistory
+    // Navigation vers page historique complète
+    window.location.href = 'http://localhost:3000/dashboard/treasury/vault/history';
+    // Ou avec Next.js router:
+    // router.push('/treasury/coffre/history');
+        console.log('Voir historique des mouvements coffre');
+
   };
 
   return (
     <div className="w-full p-4 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <PageHeader
-          title="Coffre"
-          subtitle="Gestion des réserves et mouvements"
-        />
-        
-        <div className="flex gap-3">
-          <button
-            onClick={handleViewHistory}
-            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#355C7D] text-[#355C7D] rounded-lg hover:bg-[#355C7D]/10 transition-colors font-medium"
-          >
-            <FaClipboardList className="text-sm" />
-            Historique
-          </button>
-          <button
-            onClick={() => setShowDeclarationModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C9B27C] text-white rounded-lg hover:from-[#C9B27C] hover:to-[#D4AF37] transition-all font-semibold shadow-lg hover:shadow-xl"
-          >
-            <FaClipboardList className="text-xl" />
-            Déclarer Coffre
-          </button>
-        </div>
-      </div>
 
       {/* Main Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Solde actuel - Bleu pétrole */}
-        <div className="bg-gradient-to-br from-[#355C7D] to-[#2A4A5E] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div className="bg-linear-to-br from-[#355C7D] to-[#2A4A5E] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <FaLock className="w-6 h-6 text-white" />
@@ -147,7 +127,7 @@ const VaultOverview: React.FC = () => {
         </div>
 
         {/* Mouvement net - Vert CAPOSA */}
-        <div className="bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div className="bg-linear-to-br from-[#2E7D32] to-[#1B5E20] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <FaExchangeAlt className="w-6 h-6 text-white" />
@@ -356,6 +336,129 @@ const VaultOverview: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Historique récent */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Mouvements Récents</h3>
+            <button
+              onClick={handleViewHistory}
+              className="text-sm text-[#355C7D] hover:text-[#2A4A5E] font-medium flex items-center gap-2"
+            >
+              Voir tout l'historique
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="divide-y divide-gray-100">
+            {/* Exemple de mouvements récents - à remplacer par données API */}
+            {[
+              {
+                id: 1,
+                type: 'out' as const,
+                amount: 2000,
+                time: '08:30',
+                performedBy: 'Luc Gagnon',
+                note: 'Fonds de caisse matinal'
+              },
+              {
+                id: 2,
+                type: 'in' as const,
+                amount: 5420,
+                time: '17:15',
+                performedBy: 'Marie Tremblay',
+                note: 'Remise caisse principale'
+              },
+              {
+                id: 3,
+                type: 'out' as const,
+                amount: 1500,
+                time: '09:45',
+                performedBy: 'Paul Martin',
+                note: 'Réapprovisionnement caisse 2'
+              },
+              {
+                id: 4,
+                type: 'in' as const,
+                amount: 3200,
+                time: '16:30',
+                performedBy: 'Sophie Lavoie',
+                note: 'Excédent caisse secondaire'
+              },
+              {
+                id: 5,
+                type: 'out' as const,
+                amount: 800,
+                time: '10:15',
+                performedBy: 'Luc Gagnon',
+                note: 'Monnaie pour change'
+              }
+            ].map((movement) => (
+              <div
+                key={movement.id}
+                className="px-6 py-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  {/* Icon & Type */}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    movement.type === 'in' 
+                      ? 'bg-green-100' 
+                      : 'bg-orange-100'
+                  }`}>
+                    {movement.type === 'in' ? (
+                      <BiImport className="w-6 h-6 text-green-600" />
+                    ) : (
+                      <BiExport className="w-6 h-6 text-orange-600" />
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                        movement.type === 'in'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {movement.type === 'in' ? 'ENTRÉE' : 'SORTIE'}
+                      </span>
+                      <span className="text-xs text-gray-500">{movement.time}</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">{movement.note}</p>
+                    <p className="text-xs text-gray-600">Par {movement.performedBy}</p>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="text-right">
+                    <p className={`text-lg font-bold ${
+                      movement.type === 'in' ? 'text-green-600' : 'text-orange-600'
+                    }`}>
+                      {movement.type === 'in' ? '+' : '-'} {formatCurrency(movement.amount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>    
+
+        {/* Footer avec lien vers historique complet */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <button
+            onClick={handleViewHistory}
+            className="w-full py-2 text-sm font-medium text-[#355C7D] hover:text-[#2A4A5E] transition-colors flex items-center justify-center gap-2"
+          >
+          
+            <FaClipboardList />
+            Afficher l'historique complet avec graphiques (ou non! on va voir)
+          </button>
+        </div>
+      </div>
+
+      
 
       {/* Modals */}
       <VaultMovementModal 

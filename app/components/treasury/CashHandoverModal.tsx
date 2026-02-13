@@ -147,9 +147,9 @@ const CashHandoverModal: React.FC<CashHandoverModalProps> = ({ isOpen, onClose }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] p-6 rounded-t-2xl">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Header - Fixe */}
+        <div className="bg-linear-to-r from-[#2E7D32] to-[#1B5E20] p-6 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-white">Remise de Caisse du Matin</h2>
@@ -171,8 +171,8 @@ const CashHandoverModal: React.FC<CashHandoverModalProps> = ({ isOpen, onClose }
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content - Scrollable */}
+        <div className="p-6 overflow-y-auto flex-1">
           {/* Étape 1: Formulaire */}
           {step === 'form' && (
             <div className="space-y-6">

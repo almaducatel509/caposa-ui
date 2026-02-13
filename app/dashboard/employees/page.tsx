@@ -32,12 +32,9 @@ export default function Members() {
   return (
     <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
       <div className="px-6 py-6">
-        <EmployeeGrid 
-          employees={employees}
-          isLoading={loading}
-          error={error}
-          onRetry={() => window.location.reload()}
-        />
+        //chaque fois que les employee ouvre leur espace de travail ils doivent entrer 
+        la machine et entrer leur numero d'employee et leur superviseur de ce jour doivent aussi rentrer leur numero et poste
+        <EmployeeGrid />
       </div>
     </main>
   );

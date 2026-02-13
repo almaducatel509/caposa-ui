@@ -8,6 +8,12 @@ const imageSchema = z.union([
   z.null()     // For no photo
 ]).optional();
 
+//Les agents de crédit collectent sur le terrain et reviennent avec :
+// cash
+
+// reçus
+
+// liste des membres visités
 export const employeeSchema = z.object({
   user: z.object({
     username: z.string().min(1, 'Username is required'),

@@ -3,7 +3,8 @@ import { FaEye, FaEdit, FaTrash, FaReceipt, FaPhone, FaEnvelope, FaMapMarkerAlt,
 import { PiCheckFat, } from "react-icons/pi";
 
 
-// Import des types et helpers depuis validations
+// Import des types et helpers depuis validations 
+// Les agents de crédit collectent sur le terrain et reviennent avec :cash reçus liste des membres visités
 import { EmployeeData, formatGender, getEmployeeStatus } from '@/app/components/employees/validations';
 
 interface EmployeeCardProps {
