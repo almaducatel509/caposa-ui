@@ -1,64 +1,6 @@
-// 2. Ajouter un tableau des écarts directement dans cet écran
-// Actuellement, l’utilisateur doit cliquer ailleurs pour voir les écarts.
-
-// Pour une petite caisse, il faut tout voir dans un seul écran :
-
-// Source	Attendu	Réel	Écart	Statut	Action
-// Agent Julie	150	100	-50	En attente	Expliquer
-// Dépôt #002	200	180	-20	Expliqué	Voir
-// Transaction TX-003	30	0	-30	Expliqué	Voir
-// Ça simplifie la vie du superviseur.
-
-// 🔧 3. Ajouter un horodatage complet
-// Tu as :
-
-// Révisé par : Marie Tremblay
-
-// Mais il manque :
-
-// Heure de révision
-
-// Heure de soumission
-
-// Heure de validation
-
-// Heure de verrouillage
-
-// Pour une petite caisse, c’est ce qui donne la crédibilité en audit.
-
-// 🔧 4. Ajouter un indicateur visuel “Prêt à valider”
-// Quand tous les écarts sont expliqués, affiche :
-
-// ✔ Tous les écarts sont expliqués — la journée peut être soumise pour validation
-
-// Ça rassure l’utilisateur et évite les erreurs.
-
-// 🔧 5. Ajouter un export PDF
-// C’est indispensable pour :
-
-// les audits
-
-// les archives papier
-
-// les signatures
-
-// les inspections externes
-
-// Un bouton simple :
-
-// 📄 Exporter le rapport PDF
-
-// 🔧 6. Ajouter un filtre rapide pour les écarts
-// Exemple :
-
-// [ ] Voir seulement les écarts en attente
-
-// [ ] Voir seulement les écarts expliqués
-
-// Ça rend la réconciliation beaucoup plus fluide.
 'use client';
 import React, { useState } from 'react';
-import { FaCheckCircle, FaExclamationTriangle, FaClock, FaMoneyBillWave, FaUniversity, FaUsers, FaStickyNote, FaLock, FaChartBar } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationTriangle, FaClock, FaMoneyBillWave, FaUniversity, FaUsers, FaStickyNote, FaLock, FaChartBar, FaFilePdf, FaFilter } from 'react-icons/fa';
 import { BiImport } from 'react-icons/bi';
 import DiscrepancySummaryTable from './DiscrepancySummaryTable';
 import AutomaticDiscrepancySummary from './AutomaticDiscrepancySummary';
@@ -72,8 +14,14 @@ interface DailyReport {
   actualCash: number;
   totalDiscrepancy: number;
   openedBy: string;
+  openedAt: string;
+  submittedBy?: string;
+  submittedAt?: string;
   reviewedBy?: string;
+  reviewedAt?: string;
   approvedBy?: string;
+  approvedAt?: string;
+  lockedAt?: string;
 }
 
 interface Transaction {
@@ -121,10 +69,12 @@ interface DiscrepancyCause {
 }
 
 type Tab = 'summary' | 'discrepancies' | 'transactions' | 'bank' | 'agents' | 'notes';
+type DiscrepancyFilter = 'all' | 'pending' | 'explained';
 
 const ReconciliationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('summary');
   const [newNote, setNewNote] = useState('');
+  const [discrepancyFilter, setDiscrepancyFilter] = useState<DiscrepancyFilter>('all');
 
   // Données mockées
   const report: DailyReport = {
@@ -136,7 +86,11 @@ const ReconciliationPage: React.FC = () => {
     actualCash: 7100.00,
     totalDiscrepancy: -30.00,
     openedBy: 'Jean Dupont',
-    reviewedBy: 'Marie Tremblay'
+    openedAt: '2026-02-13T08:00:00',
+    submittedBy: 'Jean Dupont',
+    submittedAt: '2026-02-13T17:00:00',
+    reviewedBy: 'Marie Tremblay',
+    reviewedAt: '2026-02-13T17:30:00'
   };
 
   const transactions: Transaction[] = [
@@ -207,6 +161,21 @@ const ReconciliationPage: React.FC = () => {
     });
   };
 
+  const formatDateOnly = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-CA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const formatTimeOnly = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('fr-CA', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const badges = {
       match: { bg: 'bg-green-100', text: 'text-green-800', icon: <FaCheckCircle />, label: 'Match' },
@@ -217,6 +186,8 @@ const ReconciliationPage: React.FC = () => {
       reviewed: { bg: 'bg-indigo-100', text: 'text-indigo-800', icon: <FaCheckCircle />, label: 'Révisé' },
       approved: { bg: 'bg-green-100', text: 'text-green-800', icon: <FaCheckCircle />, label: 'Approuvé' },
       locked: { bg: 'bg-gray-100', text: 'text-gray-800', icon: <FaLock />, label: 'Verrouillé' },
+      explained: { bg: 'bg-blue-100', text: 'text-blue-800', icon: <FaCheckCircle />, label: 'Expliqué' },
+      resolved: { bg: 'bg-green-100', text: 'text-green-800', icon: <FaCheckCircle />, label: 'Résolu' },
     };
     const badge = badges[status as keyof typeof badges] || badges.pending;
     return (
@@ -259,6 +230,23 @@ const ReconciliationPage: React.FC = () => {
     // TODO: API call
   };
 
+  const handleExportPDF = () => {
+    console.log('Exporter en PDF');
+    // TODO: Implement PDF generation
+    alert('📄 Export PDF en cours de développement...\n\nCette fonctionnalité permettra de générer un rapport PDF complet pour:\n• Les audits\n• Les archives papier\n• Les signatures\n• Les inspections externes');
+  };
+
+  const getFilteredDiscrepancies = () => {
+    if (discrepancyFilter === 'all') return discrepancyCauses;
+    if (discrepancyFilter === 'pending') return discrepancyCauses.filter(d => d.status === 'pending');
+    if (discrepancyFilter === 'explained') return discrepancyCauses.filter(d => d.status !== 'pending');
+    return discrepancyCauses;
+  };
+
+  const allDiscrepanciesExplained = discrepancyCauses.every(d => d.status !== 'pending');
+  const pendingCount = discrepancyCauses.filter(d => d.status === 'pending').length;
+  const explainedCount = discrepancyCauses.filter(d => d.status !== 'pending').length;
+
   return (
     <div className="w-full p-6 space-y-6">
       {/* Header */}
@@ -271,8 +259,38 @@ const ReconciliationPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           {getStatusBadge(report.status)}
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors shadow-md"
+          >
+            <FaFilePdf />
+            Exporter PDF
+          </button>
         </div>
       </div>
+
+      {/* Ready to Validate Indicator */}
+      {allDiscrepanciesExplained && report.status === 'submitted' && (
+        <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl p-5 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center">
+              <FaCheckCircle className="text-green-600 text-2xl" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-1">✅ Prêt à valider</h3>
+              <p className="text-green-100">
+                Tous les écarts sont expliqués — la journée peut être soumise pour validation
+              </p>
+            </div>
+            <button
+              onClick={handleSubmitForValidation}
+              className="px-6 py-3 bg-white text-green-700 rounded-lg hover:bg-green-50 font-bold transition-colors shadow-md"
+            >
+              Soumettre maintenant →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Résumé - Cards en haut */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -286,6 +304,7 @@ const ReconciliationPage: React.FC = () => {
           </div>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(report.openingCash)}</p>
           <p className="text-xs text-gray-500 mt-1">Ouvert par: {report.openedBy}</p>
+          <p className="text-xs text-gray-400">{formatTimeOnly(report.openedAt)}</p>
         </div>
 
         {/* Cash théorique */}
@@ -345,6 +364,156 @@ const ReconciliationPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Inline Discrepancy Table - Always visible on summary */}
+      {report.totalDiscrepancy !== 0 && activeTab === 'summary' && (
+        <div className="bg-white rounded-xl shadow-sm border-2 border-orange-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <FaExclamationTriangle className="text-orange-600" />
+              Tableau des Écarts — Vue Rapide
+            </h3>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setDiscrepancyFilter('all')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    discrepancyFilter === 'all' 
+                      ? 'bg-white text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <FaFilter className="inline mr-1" />
+                  Tous ({discrepancyCauses.length})
+                </button>
+                <button
+                  onClick={() => setDiscrepancyFilter('pending')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    discrepancyFilter === 'pending' 
+                      ? 'bg-orange-600 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  En attente ({pendingCount})
+                </button>
+                <button
+                  onClick={() => setDiscrepancyFilter('explained')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    discrepancyFilter === 'explained' 
+                      ? 'bg-green-600 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Expliqués ({explainedCount})
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-gray-300">
+                  <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Source</th>
+                  <th className="text-right py-3 px-4 text-sm font-bold text-gray-700">Attendu</th>
+                  <th className="text-right py-3 px-4 text-sm font-bold text-gray-700">Réel</th>
+                  <th className="text-right py-3 px-4 text-sm font-bold text-gray-700">Écart</th>
+                  <th className="text-center py-3 px-4 text-sm font-bold text-gray-700">Statut</th>
+                  <th className="text-center py-3 px-4 text-sm font-bold text-gray-700">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getFilteredDiscrepancies().map((disc) => {
+                  // Calculate expected and actual based on the discrepancy
+                  const actual = disc.amount < 0 ? Math.abs(disc.amount) : 0;
+                  const expected = disc.amount < 0 ? 0 : disc.amount;
+                  
+                  return (
+                    <tr 
+                      key={disc.source + disc.sourceName} 
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        disc.status === 'pending' ? 'bg-orange-50' : ''
+                      }`}
+                    >
+                      <td className="py-4 px-4">
+                        <div className="font-medium text-gray-900">{disc.sourceName}</div>
+                        {disc.note && (
+                          <div className="text-xs text-gray-600 mt-1 max-w-md">📝 {disc.note}</div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-right font-semibold">
+                        {formatCurrency(expected)}
+                      </td>
+                      <td className="py-4 px-4 text-right font-semibold">
+                        {formatCurrency(actual)}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className={`font-bold text-lg ${
+                          disc.amount === 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatCurrency(disc.amount)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {getStatusBadge(disc.status)}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {disc.status === 'pending' ? (
+                          <button
+                            onClick={() => {
+                              setActiveTab('discrepancies');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm transition-colors"
+                          >
+                            Expliquer
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setActiveTab('discrepancies');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors"
+                          >
+                            Voir
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                  <td className="py-4 px-4 font-bold text-gray-900">TOTAL</td>
+                  <td className="py-4 px-4"></td>
+                  <td className="py-4 px-4"></td>
+                  <td className="py-4 px-4 text-right">
+                    <span className={`font-bold text-xl ${
+                      report.totalDiscrepancy === 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formatCurrency(report.totalDiscrepancy)}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4"></td>
+                  <td className="py-4 px-4"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => setActiveTab('discrepancies')}
+              className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            >
+              <FaChartBar />
+              Voir l'analyse complète des écarts
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {/* Tab Headers */}
@@ -352,7 +521,7 @@ const ReconciliationPage: React.FC = () => {
           <div className="flex gap-1 -mb-px overflow-x-auto">
             {[
               { id: 'summary', label: 'Résumé', icon: <FaMoneyBillWave /> },
-              { id: 'discrepancies', label: 'Écarts détaillés', icon: <FaChartBar />, badge: report.totalDiscrepancy !== 0 ? Math.abs(report.totalDiscrepancy) : undefined },
+              { id: 'discrepancies', label: 'Écarts détaillés', icon: <FaChartBar />, badge: report.totalDiscrepancy !== 0 ? pendingCount : undefined },
               { id: 'transactions', label: 'Transactions', icon: <BiImport /> },
               { id: 'bank', label: 'Dépôts bancaires', icon: <FaUniversity /> },
               { id: 'agents', label: 'Agents de crédit', icon: <FaUsers /> },
@@ -369,7 +538,7 @@ const ReconciliationPage: React.FC = () => {
               >
                 {tab.icon}
                 {tab.label}
-                {tab.badge && (
+                {tab.badge && tab.badge > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
@@ -384,25 +553,6 @@ const ReconciliationPage: React.FC = () => {
           {/* Onglet Résumé */}
           {activeTab === 'summary' && (
             <div className="space-y-6">
-              {/* Analyse automatique des écarts */}
-              {report.totalDiscrepancy !== 0 && (
-                <div>
-                  <AutomaticDiscrepancySummary 
-                    totalDiscrepancy={report.totalDiscrepancy}
-                    causes={discrepancyCauses}
-                  />
-                  <div className="mt-4 flex justify-center">
-                    <button
-                      onClick={() => setActiveTab('discrepancies')}
-                      className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
-                    >
-                      <FaChartBar />
-                      Voir tous les écarts en détail
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Cash en caisse */}
                 <div className="p-5 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
@@ -756,6 +906,76 @@ const ReconciliationPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Timestamp Audit Trail */}
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <FaClock className="text-gray-600" />
+          Horodatage Complet — Piste d'Audit
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <p className="text-xs font-semibold text-gray-600 uppercase">Ouverture</p>
+            </div>
+            <p className="font-medium text-gray-900">{report.openedBy}</p>
+            <p className="text-sm text-gray-600">{formatDateOnly(report.openedAt)}</p>
+            <p className="text-lg font-bold text-blue-600">{formatTimeOnly(report.openedAt)}</p>
+          </div>
+
+          {report.submittedBy && report.submittedAt && (
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Soumission</p>
+              </div>
+              <p className="font-medium text-gray-900">{report.submittedBy}</p>
+              <p className="text-sm text-gray-600">{formatDateOnly(report.submittedAt)}</p>
+              <p className="text-lg font-bold text-purple-600">{formatTimeOnly(report.submittedAt)}</p>
+            </div>
+          )}
+
+          {report.reviewedBy && report.reviewedAt && (
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Révision</p>
+              </div>
+              <p className="font-medium text-gray-900">{report.reviewedBy}</p>
+              <p className="text-sm text-gray-600">{formatDateOnly(report.reviewedAt)}</p>
+              <p className="text-lg font-bold text-indigo-600">{formatTimeOnly(report.reviewedAt)}</p>
+            </div>
+          )}
+
+          {report.approvedBy && report.approvedAt && (
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Approbation</p>
+              </div>
+              <p className="font-medium text-gray-900">{report.approvedBy}</p>
+              <p className="text-sm text-gray-600">{formatDateOnly(report.approvedAt)}</p>
+              <p className="text-lg font-bold text-green-600">{formatTimeOnly(report.approvedAt)}</p>
+            </div>
+          )}
+
+          {report.lockedAt && (
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Verrouillage</p>
+              </div>
+              <p className="font-medium text-gray-900">Système</p>
+              <p className="text-sm text-gray-600">{formatDateOnly(report.lockedAt)}</p>
+              <p className="text-lg font-bold text-gray-600">{formatTimeOnly(report.lockedAt)}</p>
+            </div>
+          )}
+        </div>
+        <div className="mt-4 text-xs text-gray-500 text-center">
+          🔒 Horodatage certifié — Piste d'audit complète pour inspection externe
+        </div>
+      </div>
+
       {/* Actions en bas */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -772,21 +992,21 @@ const ReconciliationPage: React.FC = () => {
             <div className="text-right mr-4">
               <p className="text-xs text-gray-600">Écarts en attente</p>
               <p className="text-2xl font-bold text-orange-600">
-                {discrepancyCauses.filter(d => d.status === 'pending').length}
+                {pendingCount}
               </p>
             </div>
             <div className="h-12 w-px bg-gray-300"></div>
             <div className="text-right">
               <p className="text-xs text-gray-600">Écarts expliqués</p>
               <p className="text-2xl font-bold text-green-600">
-                {discrepancyCauses.filter(d => d.status !== 'pending').length}
+                {explainedCount}
               </p>
             </div>
           </div>
         </div>
 
         {/* Alerte si écarts non expliqués */}
-        {discrepancyCauses.some(d => d.status === 'pending') && (
+        {pendingCount > 0 && (
           <div className="mb-4 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg">
             <div className="flex items-start gap-3">
               <FaExclamationTriangle className="text-orange-600 text-lg mt-1" />
@@ -795,7 +1015,7 @@ const ReconciliationPage: React.FC = () => {
                   ⚠️ Action requise avant soumission
                 </p>
                 <p className="text-sm text-orange-800">
-                  {discrepancyCauses.filter(d => d.status === 'pending').length} écart(s) doivent être expliqués avant de soumettre pour validation. 
+                  {pendingCount} écart(s) doivent être expliqués avant de soumettre pour validation. 
                   <button 
                     onClick={() => setActiveTab('discrepancies')}
                     className="ml-2 text-orange-600 hover:text-orange-800 font-semibold underline"
@@ -819,9 +1039,9 @@ const ReconciliationPage: React.FC = () => {
               </button>
               <button
                 onClick={handleSubmitForValidation}
-                disabled={discrepancyCauses.some(d => d.status === 'pending')}
+                disabled={pendingCount > 0}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-semibold transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                title={discrepancyCauses.some(d => d.status === 'pending') ? 'Tous les écarts doivent être expliqués' : ''}
+                title={pendingCount > 0 ? 'Tous les écarts doivent être expliqués' : ''}
               >
                 ✅ Soumettre pour validation
               </button>
@@ -848,7 +1068,7 @@ const ReconciliationPage: React.FC = () => {
         </div>
 
         {/* Info sur le verrouillage */}
-        {discrepancyCauses.every(d => d.status !== 'pending') && report.status === 'submitted' && (
+        {allDiscrepanciesExplained && report.status === 'submitted' && (
           <div className="mt-4 bg-green-50 border-l-4 border-green-500 p-3 rounded-r-lg">
             <p className="text-sm text-green-800">
               ✅ <span className="font-semibold">Tous les écarts sont expliqués.</span> Cette réconciliation est prête à être soumise au directeur.

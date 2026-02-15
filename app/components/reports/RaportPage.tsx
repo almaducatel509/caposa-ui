@@ -32,7 +32,7 @@ const generateExtendedKpiData = (): KpiData => {
     liquiditeDisponible: 800000 + Math.random() * 700000, // 800k-1.5M G
     totalDepotsMembres: 4000000 + Math.random() * 3000000, // 4M-7M G
     capitalPropre: 600000 + Math.random() * 400000, // 600k-1M G
-    actifsponderes: 5000000 + Math.random() * 3000000, // 5M-8M G
+    actifsPonderes: 5000000 + Math.random() * 3000000, // 5M-8M G
     portefeuilleTotalPrets: 4500000 + Math.random() * 2500000, // 4.5M-7M G
     montantEnSouffrance: 150000 + Math.random() * 350000, // 150k-500k G
     repartitionSouffrance: {
@@ -40,6 +40,9 @@ const generateExtendedKpiData = (): KpiData => {
       jours60: 50000 + Math.random() * 100000,
       jours90Plus: 30000 + Math.random() * 70000,
     },
+    
+    // Performance Score 
+    performanceScore: 70 + Math.random() * 25, // 70-95
     
     // Meta
     periode: 'Janvier 2026',

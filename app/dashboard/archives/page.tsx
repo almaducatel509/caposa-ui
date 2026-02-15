@@ -1,9 +1,9 @@
-import ModalTest from "@/app/components/achives/test";
+import ArchivesPage from "@/app/components/achives/Archives";
 
 export default function Page() {
     return (
     <div>
-      <ModalTest />
+      <ArchivesPage />
     </div>
     );
   }

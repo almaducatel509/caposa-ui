@@ -12,7 +12,7 @@ interface Props {
 
 export default function RapportSolvabilite({ data }: Props) {
   // Calculs
-  const ratioSolvabilite = (data.capitalPropre / data.actifsponderes) * 100;
+  const ratioSolvabilite = (data.capitalPropre / data.actifsPonderes) * 100;
   const seuilReglementaire = 10; // 10%
   
   // Déterminer le statut
@@ -56,7 +56,7 @@ export default function RapportSolvabilite({ data }: Props) {
         
         <ReportRow 
           label="Actifs pondérés" 
-          value={formatCurrency(data.actifsponderes)}
+          value={formatCurrency(data.actifsPonderes)}
           description="Total du portefeuille de prêts et investissements"
         />
         

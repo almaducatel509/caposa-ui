@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import ModalTest from '../components/achives/test';
+import ModalTest from '../components/achives/Archives';
 
 export const metadata: Metadata = {
   title: 'dashboard',

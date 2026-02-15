@@ -158,9 +158,9 @@ const VaultDeclarationModal: React.FC<VaultDeclarationModalProps> = ({ isOpen, o
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#D4AF37] to-[#C9B27C] p-6 rounded-t-2xl">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header - Fixed (ne scrolle pas) */}
+        <div className="bg-gradient-to-r from-[#D4AF37] to-[#C9B27C] p-6 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -187,8 +187,8 @@ const VaultDeclarationModal: React.FC<VaultDeclarationModalProps> = ({ isOpen, o
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content - Scrollable */}
+        <div className="p-6 overflow-y-auto flex-1">
           {/* Étape 1: Formulaire */}
           {step === 'form' && (
             <div className="space-y-6">
