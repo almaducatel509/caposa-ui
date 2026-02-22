@@ -13,7 +13,7 @@ import {
 } from "react-icons/gr";
 import { TfiLayoutListPost } from "react-icons/tfi";
 import { LuCalendarClock, LuFolderTree } from "react-icons/lu";
-import { TbBrandUbuntu } from "react-icons/tb";
+import { TbBrandUbuntu, TbFileSettings } from "react-icons/tb";
 import { FaHandHoldingUsd, FaClipboardList, FaMoneyCheckAlt, FaExchangeAlt } from "react-icons/fa";
 import { GiTwoCoins, GiReceiveMoney, GiPayMoney, } from "react-icons/gi";
 import { RiDashboardLine, RiFileList3Line, RiBarChart2Line,  } from "react-icons/ri";
@@ -139,6 +139,16 @@ export const links: MainLink[] = [
   { name: 'Calendrier', href: '/dashboard/holidays', icon: AiOutlineSchedule  },
 
   { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
-  { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: FiSettings, }
+  {
+    name: 'Settings',
+    href: '/dashboard/settings',
+    icon: FiSettings,
+    hasSubmenu: true,
+    subLinks: [
+      { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: TbFileSettings  },
+      { name: 'Système de Gestion', href: '/dashboard/settings/cash-system', icon: BsShieldCheck },
+      { name: 'Sequence Diagram Interactif', href: '/dashboard/settings/sequence-diagram', icon: BsFileEarmarkBarGraph },
+    ],
+  },
 
 ];

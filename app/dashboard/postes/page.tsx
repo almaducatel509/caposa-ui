@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from "react";
 import PostGrid from "@/app/components/postes/PostGrid";
 import { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 

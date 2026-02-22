@@ -456,7 +456,7 @@ export default function DashboardCaissier() {
               </button>
               <button
                 onClick={() => setModal(null)}
-                className="flex-1 px-4 py-2.5 bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white rounded-xl text-sm font-semibold shadow hover:shadow-md transition-all"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white rounded-xl text-sm font-semibold shadow hover:shadow-md transition-all"
               >
                 Confirmer
               </button>

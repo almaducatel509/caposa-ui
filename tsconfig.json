@@ -36,7 +36,7 @@
     "app/placeholder-data.js",
     "tailwind.config.ts",
     ".next/dev/types/**/*.ts"
-  ],
+, "app/dashboard/settings/cash-system/page.tsx", "app/dashboard/settings/sequence-diagram/page.tsx"  ],
   "exclude": [
     "node_modules"
   ]

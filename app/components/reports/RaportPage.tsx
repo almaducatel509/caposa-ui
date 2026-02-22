@@ -65,7 +65,7 @@ export default function RapportsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
       <div className="bg-white border-b-2 border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6">

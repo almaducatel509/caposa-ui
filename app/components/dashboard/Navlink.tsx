@@ -39,7 +39,7 @@ export default function NavLinks() {
     {
       title: "GENERAL",
       items: links.filter(link => 
-        ['Horaires', 'Branches', 'Postes', 'Calendrier', 'Archives', 'Paramètres bancaires'].includes(link.name)
+        ['Horaires', 'Branches', 'Postes', 'Calendrier', 'Archives', 'Settings'].includes(link.name)
       )
     }
   ];
