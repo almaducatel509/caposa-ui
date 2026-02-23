@@ -6,7 +6,8 @@ import {
   HiOutlineUserGroup, HiOutlineDocumentDuplicate, HiOutlineChartBar
 } from "react-icons/hi2";
 import {
-  MdOutlineSupervisorAccount, MdOutlineHolidayVillage
+  MdOutlineSupervisorAccount, MdOutlineHolidayVillage,
+  MdOutlineDesignServices
 } from "react-icons/md";
 import {
   GrTransaction, 
@@ -147,7 +148,9 @@ export const links: MainLink[] = [
     subLinks: [
       { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: TbFileSettings  },
       { name: 'Système de Gestion', href: '/dashboard/settings/cash-system', icon: BsShieldCheck },
-      { name: 'Sequence Diagram Interactif', href: '/dashboard/settings/sequence-diagram', icon: BsFileEarmarkBarGraph },
+      { name: 'Sequence Diagram Interactif', href: '/dashboard/settings/sequence-diagram', icon: BsFileEarmarkBarGraph },  
+      { name: 'Design-guidelines', href: '/dashboard/settings/design-guidelines', icon: MdOutlineDesignServices  },
+
     ],
   },
 

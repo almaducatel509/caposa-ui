@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FaPlus, FaUpload, FaDownload, FaFilter, FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
-import { FiSearch } from 'react-icons/fi';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import {
+  Search, Plus, Upload, Download, Filter,
+  Calendar, CheckCircle, X, ChevronDown
+} from 'lucide-react';
 
 interface MemberFilterBarProps {
   filterValue: string;
@@ -20,37 +21,27 @@ interface MemberFilterBarProps {
   importLoading?: boolean;
 }
 
-// Custom Dropdown Component
+// ─── Custom Dropdown ───────────────────────────────────────────────────────────
 const CustomDropdown: React.FC<{
   trigger: React.ReactNode;
   children: React.ReactNode;
 }> = ({ trigger, children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
     };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (isOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [isOpen]);
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>
-        {trigger}
-      </div>
+    <div className="relative" ref={ref}>
+      <div onClick={() => setIsOpen(o => !o)}>{trigger}</div>
       {isOpen && (
-        <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[200px]">
+        <div className="absolute top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[200px]">
           {children}
         </div>
       )}
@@ -58,6 +49,7 @@ const CustomDropdown: React.FC<{
   );
 };
 
+// ─── Main Component ────────────────────────────────────────────────────────────
 const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   filterValue,
   selectedFilter,
@@ -73,210 +65,173 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   importLoading = false,
 }) => {
   const filterOptions = [
-    { key: 'all', label: 'Tous', icon: FaFilter },
-    { key: 'recent', label: 'Récents (30j)', icon: FaCalendarAlt },
-    { key: 'thisMonth', label: 'Ce mois', icon: FaCalendarAlt },
-    { key: 'thisYear', label: 'Cette année', icon: FaCalendarAlt },
+    { key: 'all',       label: 'Tous',          icon: Filter },
+    { key: 'recent',    label: 'Récents (30j)', icon: Calendar },
+    { key: 'thisMonth', label: 'Ce mois',       icon: Calendar },
+    { key: 'thisYear',  label: 'Cette année',   icon: Calendar },
   ];
 
   const statusOptions = [
-    { key: 'all', label: 'Tous les statuts', color: 'default' },
-    { key: 'active', label: 'Actifs', color: 'success' },
-    { key: 'inactive', label: 'Inactifs', color: 'warning' },
-    { key: 'suspended', label: 'Suspendus', color: 'danger' },
+    { key: 'all',       label: 'Tous les statuts' },
+    { key: 'active',    label: 'Actifs' },
+    { key: 'inactive',  label: 'Inactifs' },
+    { key: 'suspended', label: 'Suspendus' },
   ];
 
-  const getFilterLabel = () => filterOptions.find(opt => opt.key === selectedFilter)?.label || 'Période';
-  const getStatusLabel = () => statusOptions.find(opt => opt.key === selectedStatus)?.label || 'Tous les statuts';
+  const getFilterLabel = () => filterOptions.find(o => o.key === selectedFilter)?.label ?? 'Période';
+  const getStatusLabel = () => statusOptions.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
 
-  const activeFiltersCount = [
+  const activeCount = [
     selectedFilter !== 'all',
-    selectedStatus !== 'all'
+    selectedStatus !== 'all',
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
-      {/* Header avec recherche et actions principales */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        
-        <div className="relative w-full lg:max-w-xl">
-          {/* Search icon */}
-          <FiSearch
-            size={20}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
+    <div className="flex flex-col gap-4">
 
-          {/* Input */}
+      {/* ── Ligne 1 : Recherche + Actions ── */}
+      <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+
+        {/* Barre de recherche */}
+        <div className="relative w-full lg:max-w-xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
             value={filterValue}
             placeholder="Rechercher un membre par nom, email, téléphone..."
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="
-              w-full h-12 pl-12 pr-12
-              rounded-xl text-sm
-              bg-white shadow-sm
-              border-2 border-transparent
-              hover:border-blue-200
-              focus:border-blue-500 focus:outline-none
-              transition-colors
-            "
+            onChange={e => onSearchChange(e.target.value)}
+            className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent hover:border-[#2E7D32]/40 transition-all shadow-sm"
           />
-
-          {/* Clear button */}
           {filterValue && (
             <button
-              type="button"
-              onClick={() => {
-                onSearchChange("");
-                onClear();
-              }}
-              className="
-                absolute right-3 top-1/2 -translate-y-1/2
-                p-1 rounded-md
-                text-gray-400
-                hover:text-gray-600
-                hover:bg-gray-100
-                transition
-              "
-              aria-label="Clear search"
+              onClick={() => { onSearchChange(''); onClear(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
             >
-              ✕
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {/* Actions */}
+        {/* Boutons d'action */}
         <div className="flex gap-2 w-full lg:w-auto">
           <button
             onClick={onAdd}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-linear-to-r from-green-600 to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-md"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
-            <FaPlus size={16} />
+            <Plus className="w-4 h-4" />
             Ajouter
           </button>
           <button
             onClick={onImport}
             disabled={importLoading}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-slate-300 hover:border-slate-400 hover:bg-slate-50 font-medium h-12 px-6 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {importLoading ? (
               <>
-                <div className="animate-spin w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full"></div>
-                Import...
+                <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
+                Import…
               </>
             ) : (
               <>
-                <FaUpload size={16} />
+                <Upload className="w-4 h-4" />
                 Importer
               </>
             )}
           </button>
           <button
             onClick={onExport}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 border-2 border-green-600 text-green-600 hover:bg-green-50 font-medium h-12 px-6 rounded-md transition-all"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all"
           >
-            <FaDownload size={16} />
+            <Download className="w-4 h-4" />
             Exporter
           </button>
         </div>
       </div>
 
-      {/* Filtres avancés */}
-      <div className="bg-linear-to-r from-purple-50 via-white to-pink-50 rounded-xl p-4 shadow-sm border border-purple-100">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Badge nombre de résultats */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">Résultats:</span>
-            <span className="bg-purple-100 text-purple-700 font-bold text-base px-4 py-1 rounded-lg">
-              {totalCount}
-            </span>
-          </div>
+      {/* ── Ligne 2 : Filtres avancés ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 flex flex-wrap items-center gap-3">
 
-          <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-
-          {/* Filtres dropdown */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Filtre période */}
-            <CustomDropdown
-              trigger={
-                <button
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                    selectedFilter !== 'all' 
-                      ? 'bg-purple-100 border-2 border-gray-400 text-purple-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <FaCalendarAlt className="text-purple-600" />
-                  <span>{getFilterLabel()}</span>
-                  <MdKeyboardArrowDown />
-                </button>
-              }
-            >
-              {filterOptions.map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => onFilterChange(option.key)}
-                  className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
-                    selectedFilter === option.key ? 'bg-purple-50 text-purple-700 font-semibold' : ''
-                  }`}
-                >
-                  <option.icon className="text-purple-600" />
-                  <span>{option.label}</span>
-                </button>
-              ))}
-            </CustomDropdown>
-
-            {/* Filtre statut */}
-            <CustomDropdown
-              trigger={
-                <button
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                    selectedStatus !== 'all' 
-                      ? 'bg-green-100 border-2 border-gray-400 text-green-700 font-semibold' 
-                      : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <FaCheckCircle className="text-green-600" />
-                  <span>{getStatusLabel()}</span>
-                  <MdKeyboardArrowDown />
-                </button>
-              }
-            >
-              {statusOptions.map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => onStatusChange(option.key)}
-                  className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
-                    selectedStatus === option.key ? 'bg-green-50 text-green-700 font-semibold' : ''
-                  }`}
-                >
-                  <FaCheckCircle className="text-green-600" />
-                  <span>{option.label}</span>
-                </button>
-              ))}
-            </CustomDropdown>
-
-            {/* Badge filtres actifs */}
-            {activeFiltersCount > 0 && (
-              <>
-                <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-                <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-lg text-sm font-semibold">
-                  {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
-                </span>
-                <button
-                  onClick={() => {
-                    onFilterChange('all');
-                    onStatusChange('all');
-                  }}
-                  className="text-red-600 hover:text-red-700 font-medium px-3 py-1 hover:bg-red-50 rounded-lg transition-colors text-sm"
-                >
-                  Réinitialiser
-                </button>
-              </>
-            )}
-          </div>
+        {/* Badge résultats */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Résultats :</span>
+          <span className="bg-[#DDEAD5] text-[#1B5E20] font-bold text-sm px-3 py-0.5 rounded-lg">
+            {totalCount}
+          </span>
         </div>
+
+        <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+
+        {/* Filtre période */}
+        <CustomDropdown
+          trigger={
+            <button className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
+              selectedFilter !== 'all'
+                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-semibold'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+              <Calendar className="w-3.5 h-3.5" />
+              {getFilterLabel()}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          }
+        >
+          {filterOptions.map(o => (
+            <button
+              key={o.key}
+              onClick={() => onFilterChange(o.key)}
+              className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-[#DDEAD5]/40 transition-colors ${
+                selectedFilter === o.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-semibold' : 'text-gray-700'
+              }`}
+            >
+              <o.icon className="w-3.5 h-3.5 text-[#2E7D32]" />
+              {o.label}
+            </button>
+          ))}
+        </CustomDropdown>
+
+        {/* Filtre statut */}
+        <CustomDropdown
+          trigger={
+            <button className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
+              selectedStatus !== 'all'
+                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-semibold'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+              <CheckCircle className="w-3.5 h-3.5" />
+              {getStatusLabel()}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          }
+        >
+          {statusOptions.map(o => (
+            <button
+              key={o.key}
+              onClick={() => onStatusChange(o.key)}
+              className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-[#DDEAD5]/40 transition-colors ${
+                selectedStatus === o.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-semibold' : 'text-gray-700'
+              }`}
+            >
+              <CheckCircle className="w-3.5 h-3.5 text-[#2E7D32]" />
+              {o.label}
+            </button>
+          ))}
+        </CustomDropdown>
+
+        {/* Badge filtres actifs + reset */}
+        {activeCount > 0 && (
+          <>
+            <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+            <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-lg text-xs font-semibold">
+              {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
+            </span>
+            <button
+              onClick={() => { onFilterChange('all'); onStatusChange('all'); }}
+              className="flex items-center gap-1 text-xs text-red-600 font-medium px-3 py-1 hover:bg-red-50 rounded-xl transition-colors"
+            >
+              <X className="w-3 h-3" /> Réinitialiser
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,203 +1,192 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { FaUsers } from "react-icons/fa6";
-import { PiUsersFourThin } from 'react-icons/pi';
+import { Users } from 'lucide-react';
 
 // API
-import { fetchMembers } from '@/app/lib/api/members';
-import { fetchBranches } from '@/app/lib/api/branche';
+import { fetchMembers }  from '@/app/lib/api/members';
 
 // UI
-import PageHeader from '../header';
-import MemberFilterBar from '@/app/components/members/MemberFilterBar';
-import MemberCard from '@/app/components/members/MemberCard';
+import PageHeader        from '../header';
+import MemberFilterBar   from '@/app/components/members/MemberFilterBar';
+import MemberCard        from '@/app/components/members/MemberCard';
 
 // Modals
 import MemberDetailModal from '@/app/components/members/MemberDetailModal';
-import EditMemberModal from '@/app/components/members/EditMemberModal';
+import EditMemberModal   from '@/app/components/members/EditMemberModal';
 import DeleteMemberModal from '@/app/components/members/DeleteMemberModal';
 
 // Types
 import { MemberData } from '@/app/components/members/validations';
 
-/* ======================================================
-   MemberGrid
-====================================================== */
+// ─── Skeleton card ─────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-gradient-to-br from-[#F9F9F6] to-[#DDEAD5]/20 pt-6 pb-10 flex justify-center">
+        <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse" />
+      </div>
+      <div className="px-5 pb-5 -mt-6 flex flex-col gap-3">
+        <div className="flex flex-col items-center gap-2 mt-2">
+          <div className="h-4 w-32 bg-gray-200 animate-pulse rounded-lg" />
+          <div className="h-3 w-16 bg-gray-100 animate-pulse rounded-lg" />
+        </div>
+        <div className="flex flex-col gap-2 mt-1">
+          <div className="h-3 w-full  bg-gray-100 animate-pulse rounded-lg" />
+          <div className="h-3 w-3/4  bg-gray-100 animate-pulse rounded-lg" />
+          <div className="h-3 w-2/3  bg-gray-100 animate-pulse rounded-lg" />
+          <div className="h-3 w-1/2  bg-gray-100 animate-pulse rounded-lg" />
+        </div>
+        <div className="flex justify-center gap-2 pt-3 border-t border-gray-100">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-8 h-8 rounded-xl bg-gray-100 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state ────────────────────────────────────────────────────────────────
+function EmptyState({ hasFilter, onClear, onAdd }: {
+  hasFilter: boolean; onClear: () => void; onAdd: () => void;
+}) {
+  return (
+    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 bg-[#DDEAD5] rounded-full flex items-center justify-center mb-5">
+        <Users className="w-10 h-10 text-[#2E7D32]" />
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">
+        {hasFilter ? 'Aucun membre trouvé' : 'Aucun membre'}
+      </h3>
+      <p className="text-sm text-gray-500 mb-6 max-w-sm">
+        {hasFilter
+          ? 'Essayez de modifier vos critères de recherche'
+          : 'Commencez par ajouter votre premier membre'
+        }
+      </p>
+      <button
+        onClick={hasFilter ? onClear : onAdd}
+        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+          hasFilter
+            ? 'bg-white border-2 border-[#2E7D32] text-[#2E7D32] hover:bg-[#DDEAD5]'
+            : 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-lg hover:shadow-xl'
+        }`}
+      >
+        {hasFilter ? 'Effacer les filtres' : 'Ajouter un membre'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Main Grid ──────────────────────────────────────────────────────────────────
 const MemberGrid: React.FC = () => {
-  // DATA
-  const [members, setMembers] = useState<MemberData[]>([]);
 
-  // UI STATES
+  // ── Data ──
+  const [members,   setMembers]   = useState<MemberData[]>([]);
+
+  // ── UI ──
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error,     setError]     = useState<string | null>(null);
 
-  // FILTERS
-  const [filterValue, setFilterValue] = useState('');
+  // ── Filters ──
+  const [filterValue,    setFilterValue]    = useState('');
   const [debouncedValue, setDebouncedValue] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // MODALS
-  const [selectedMember, setSelectedMember] = useState<MemberData | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // ── Modals ──
+  const [selectedMember,       setSelectedMember]       = useState<MemberData | null>(null);
+  const [showDetailModal,      setShowDetailModal]      = useState(false);
+  const [showEditModal,        setShowEditModal]        = useState(false);
+  const [showDeleteModal,      setShowDeleteModal]      = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
 
-  /* ======================================================
-     Load data
-  ====================================================== */
+  // ── Load data ──────────────────────────────────────────────────────────────
   const loadMembers = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const membersData = await fetchMembers();
-      setMembers(membersData);
+      const data = await fetchMembers();
+      setMembers(data);
     } catch (err) {
       console.error(err);
-      setError("Impossible de charger les données des membres.");
+      setError('Impossible de charger les données des membres.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
+  useEffect(() => { loadMembers(); }, []);
 
-  /* ======================================================
-     Debounce search
-  ====================================================== */
+  // ── Debounce ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(filterValue), 300);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setDebouncedValue(filterValue), 300);
+    return () => clearTimeout(t);
   }, [filterValue]);
 
-  /* ======================================================
-     FILTER + SORT
-  ====================================================== */
+  // ── Filter + sort ──────────────────────────────────────────────────────────
   const filteredMembers = useMemo(() => {
-    let filtered = members;
+    let list = [...members];
 
     if (debouncedValue) {
       const v = debouncedValue.toLowerCase();
-      filtered = filtered.filter(m =>
-        m.first_name?.toLowerCase().includes(v) ||
-        m.last_name?.toLowerCase().includes(v) ||
-        m.email?.toLowerCase().includes(v) ||
-        m.phone_number?.toLowerCase().includes(v) ||
-        m.city?.toLowerCase().includes(v) ||
-        m.department?.toLowerCase().includes(v) ||
+      list = list.filter(m =>
+        m.first_name?.toLowerCase().includes(v)              ||
+        m.last_name?.toLowerCase().includes(v)               ||
+        m.email?.toLowerCase().includes(v)                   ||
+        m.phone_number?.toLowerCase().includes(v)            ||
+        m.city?.toLowerCase().includes(v)                    ||
+        m.department?.toLowerCase().includes(v)              ||
         m.accounts?.[0]?.account_number?.toLowerCase().includes(v)
       );
     }
 
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-
-    switch (selectedFilter) {
-      case 'recent':
-        filtered = filtered.filter(m => m.created_at && (today.getTime() - new Date(m.created_at).getTime()) / (1000 * 3600 * 24) <= 30);
-        break;
-      case 'thisMonth':
-        filtered = filtered.filter(m => m.created_at && new Date(m.created_at).getMonth() === currentMonth && new Date(m.created_at).getFullYear() === currentYear);
-        break;
-      case 'thisYear':
-        filtered = filtered.filter(m => m.created_at && new Date(m.created_at).getFullYear() === currentYear);
-        break;
+    if (selectedStatus !== 'all') {
+      // MemberData n'a pas de champ status explicite — à adapter selon ton API
+      // list = list.filter(m => m.status === selectedStatus);
     }
 
-    return filtered.sort((a, b) => (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
-  }, [members, debouncedValue, selectedFilter]);
+    const now = new Date();
+    if (selectedFilter === 'recent') {
+      list = list.filter(m => m.created_at &&
+        (now.getTime() - new Date(m.created_at).getTime()) / 86400000 <= 30);
+    }
+    if (selectedFilter === 'thisMonth') {
+      list = list.filter(m => {
+        if (!m.created_at) return false;
+        const d = new Date(m.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+    }
+    if (selectedFilter === 'thisYear') {
+      list = list.filter(m => m.created_at &&
+        new Date(m.created_at).getFullYear() === now.getFullYear());
+    }
 
-  /* ======================================================
-     Handlers
-  ====================================================== */
-  const handleAdd = () => { 
-    setSelectedMember(null); 
-    setShowEditModal(true); 
-  };
-
-  const handleView = (e: MemberData) => {
-    setSelectedMember(e);
-    setShowDetailModal(true);
-  };
-
-  const handleEdit = (e: MemberData) => {
-    setSelectedMember(e);
-    setShowEditModal(true);
-  };
-
-  const handleDelete = (e: MemberData) => {
-    setSelectedMember(e);
-    setShowDeleteModal(true);
-  };
-
-  const handleViewTransactions = (e: MemberData) => {
-    setSelectedMember(e);
-    setShowTransactionModal(true);
-  };
-
-  const onSearchChange = useCallback((v?: string) => setFilterValue(v || ''), []);
-  const onClear = useCallback(() => setFilterValue(''), []);
-
-  /* ======================================================
-     Loading State
-  ====================================================== */
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50/30 via-white to-yellow-50/30 min-h-screen">
-        <PageHeader
-          title="Gestion des Membres"
-          subtitle="Gérez tous les membres et leurs informations"
-          icon={<PiUsersFourThin className="text-5xl" />}
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-80 bg-white shadow-sm rounded-xl overflow-hidden">
-              <div className="p-6 space-y-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-24 h-24 rounded-full bg-gray-200 animate-pulse mb-4"></div>
-                  <div className="h-5 w-32 bg-gray-200 animate-pulse rounded mb-2"></div>
-                  <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
-                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
-                  <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    return list.sort((a, b) =>
+      new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
     );
-  }
+  }, [members, debouncedValue, selectedFilter, selectedStatus]);
 
-  /* ======================================================
-     RENDER
-  ====================================================== */
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleAdd              = () => { setSelectedMember(null); setShowEditModal(true); };
+  const handleView             = (m: MemberData) => { setSelectedMember(m); setShowDetailModal(true); };
+  const handleEdit             = (m: MemberData) => { setSelectedMember(m); setShowEditModal(true); };
+  const handleDelete           = (m: MemberData) => { setSelectedMember(m); setShowDeleteModal(true); };
+  const handleViewTransactions = (m: MemberData) => { setSelectedMember(m); setShowTransactionModal(true); };
+  const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
+  const onClear                = useCallback(() => setFilterValue(''), []);
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 p-6 bg-linear-to-br min-h-screen">
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20">
+
       <PageHeader
         title="Gestion des Membres"
         subtitle="Gérez tous les membres et leurs informations"
-        icon={<PiUsersFourThin className="text-5xl" />}
+        icon={<Users className="w-8 h-8 text-[#2E7D32]" />}
       />
-
-      {error && (
-        <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
-          <p className="text-red-700 font-medium">{error}</p>
-          <button 
-            onClick={loadMembers} 
-            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium shadow-md rounded-lg text-sm"
-          >
-            Réessayer
-          </button>
-        </div>
-      )}
 
       <MemberFilterBar
         filterValue={filterValue}
@@ -210,11 +199,29 @@ const MemberGrid: React.FC = () => {
         onAdd={handleAdd}
         onImport={() => console.log('Import')}
         onExport={() => console.log('Export')}
-        totalCount={filteredMembers.length} 
+        totalCount={filteredMembers.length}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredMembers.length > 0 ? (
+      {/* Erreur */}
+      {error && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">{error}</p>
+          </div>
+          <button
+            onClick={loadMembers}
+            className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {/* Grille */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {isLoading ? (
+          [...Array(8)].map((_, i) => <SkeletonCard key={i} />)
+        ) : filteredMembers.length > 0 ? (
           filteredMembers.map(m => (
             <MemberCard
               key={m.id}
@@ -226,53 +233,32 @@ const MemberGrid: React.FC = () => {
             />
           ))
         ) : (
-          <div className="col-span-full text-center py-20">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-purple-100 rounded-full mb-6">
-              <FaUsers className="text-5xl text-purple-700" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {filterValue ? "Aucun membre trouvé" : "Aucun membre"}
-            </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {filterValue ? "Essayez de modifier vos critères de recherche" : "Commencez par ajouter votre premier membre"}
-            </p>
-            <button 
-              onClick={filterValue ? onClear : handleAdd}
-              className={`px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
-                filterValue 
-                  ? "border-2 border-purple-700 bg-white text-purple-700 hover:bg-purple-50" 
-                  : "bg-purple-700 hover:bg-purple-800 text-white"
-              }`}
-            >
-              {filterValue ? "Effacer les filtres" : "Ajouter un membre"}
-            </button>
-          </div>
+          <EmptyState
+            hasFilter={!!filterValue}
+            onClear={onClear}
+            onAdd={handleAdd}
+          />
         )}
       </div>
 
-      {/* MODALS */}
+      {/* Modals */}
       <MemberDetailModal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         member={selectedMember}
-        onEdit={() => {
-          setShowDetailModal(false);
-          setShowEditModal(true);
-        }}
+        onEdit={() => { setShowDetailModal(false); setShowEditModal(true); }}
       />
-
       <EditMemberModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         member={selectedMember}
         onSuccess={loadMembers}
       />
-
       <DeleteMemberModal
-          isOpen={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          member={selectedMember}
-          onSuccess={loadMembers}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        member={selectedMember}
+        onSuccess={loadMembers}
       />
     </div>
   );

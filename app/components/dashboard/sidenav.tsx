@@ -42,7 +42,9 @@ export default function SideNav() {
         <div className="w-12 text-green-600">
           <GiReceiveMoney className="w-full h-full" />
         </div>
-        <span className="ml-3 text-green-600 text-xl font-bold hidden md:block">OripioFin</span>
+        <span className="ml-3 text-green-600 text-xl font-bold hidden md:block">
+          CAPOSA <span className="text-sm font-medium opacity-70">v1.0</span>
+        </span>
       </Link>
 
       {/* Scrollable Menu Area */}

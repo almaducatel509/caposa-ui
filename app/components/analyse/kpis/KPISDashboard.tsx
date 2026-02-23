@@ -1,4 +1,5 @@
-// app/analyse/kpis/page.tsx
+// app/analyse/kpis/page.tsx 
+// analyse/kpis → Directeur + Trésorier — indicateurs institutionnels, filtres période/région, graphique radar
 'use client';
 
 import React, { useState, useMemo } from 'react';
