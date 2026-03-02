@@ -585,7 +585,7 @@ const LoanDashboard = () => {
           )}
 
           {/* Corps de la table */}
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 bg">
             {Object.entries(groupedLoans).map(([date, loans]) => (
               <div key={date}>
                 {/* Séparateur de date */}

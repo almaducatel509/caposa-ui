@@ -359,7 +359,7 @@ const ActiveLoansTable = () => {
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Statut de retard */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-red- rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Statut des Paiements</h3>
           <div className="flex items-center justify-between">
             <ResponsiveContainer width="50%" height={250}>

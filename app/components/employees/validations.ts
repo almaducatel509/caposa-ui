@@ -52,7 +52,7 @@ export interface BranchDetails {
 }
 
 export interface Post {
-  id: string;
+  id: string | number;
   name: string;
   post_name?: string;
 }
@@ -189,7 +189,7 @@ export function employeeDataToFormData(employee: EmployeeData): EmployeeFormData
     gender: employee.gender || 'M',
     payment_ref: employee.payment_ref || '',
     branch: employee.branch || '',
-    posts: employee.posts_details?.map(p => p.id) || [], // ✅ IDs seulement
+    posts: employee.posts_details?.map(p => String(p.id)) || [],
     photo_profil: employee.photo_profil || null,
   };
 }

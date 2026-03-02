@@ -2,28 +2,23 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Users } from 'lucide-react';
-
 // API
 import { fetchMembers }  from '@/app/lib/api/members';
-
 // UI
 import PageHeader        from '../header';
 import MemberFilterBar   from '@/app/components/members/MemberFilterBar';
-import MemberCard        from '@/app/components/members/MemberCard';
-
 // Modals
 import MemberDetailModal from '@/app/components/members/MemberDetailModal';
 import EditMemberModal   from '@/app/components/members/EditMemberModal';
 import DeleteMemberModal from '@/app/components/members/DeleteMemberModal';
-
 // Types
 import { MemberData } from '@/app/components/members/validations';
-
+import MemberTable from './MemberTable';
 // ─── Skeleton card ─────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-br from-[#F9F9F6] to-[#DDEAD5]/20 pt-6 pb-10 flex justify-center">
+      <div className="bg-linear-to-br from-[#F9F9F6] to-[#DDEAD5]/20 pt-6 pb-10 flex justify-center">
         <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse" />
       </div>
       <div className="px-5 pb-5 -mt-6 flex flex-col gap-3">
@@ -70,7 +65,7 @@ function EmptyState({ hasFilter, onClear, onAdd }: {
         className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${
           hasFilter
             ? 'bg-white border-2 border-[#2E7D32] text-[#2E7D32] hover:bg-[#DDEAD5]'
-            : 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-lg hover:shadow-xl'
+            : 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-lg hover:shadow-xl'
         }`}
       >
         {hasFilter ? 'Effacer les filtres' : 'Ajouter un membre'}
@@ -180,7 +175,7 @@ const MemberGrid: React.FC = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20">
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20">
 
       <PageHeader
         title="Gestion des Membres"
@@ -210,34 +205,36 @@ const MemberGrid: React.FC = () => {
           </div>
           <button
             onClick={loadMembers}
-            className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
+            className="px-4 py-2 bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
           >
             Réessayer
           </button>
         </div>
       )}
 
-      {/* Grille */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      {/* Table */}
+      <div>
         {isLoading ? (
-          [...Array(8)].map((_, i) => <SkeletonCard key={i} />)
+          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-sm text-gray-500">
+            Chargement des membres...
+          </div>
         ) : filteredMembers.length > 0 ? (
-          filteredMembers.map(m => (
-            <MemberCard
-              key={m.id}
-              member={m}
-              onView={handleView}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onViewTransactions={handleViewTransactions}
-            />
-          ))
-        ) : (
-          <EmptyState
-            hasFilter={!!filterValue}
-            onClear={onClear}
-            onAdd={handleAdd}
+          <MemberTable
+            members={filteredMembers}
+            isLoading={isLoading}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewTransactions={handleViewTransactions}
           />
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100">
+            <EmptyState
+              hasFilter={!!filterValue}
+              onClear={onClear}
+              onAdd={handleAdd}
+            />
+          </div>
         )}
       </div>
 

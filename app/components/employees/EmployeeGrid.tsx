@@ -9,79 +9,20 @@ import { fetchBranches }  from '@/app/lib/api/branche';
 import { fetchPosts }     from '@/app/lib/api/post';
 
 // UI
-import PageHeader              from '@/app/components/header';
-import EmployeeFilterBar       from '@/app/components/employees/EmployeeFilterBar';
-import EmployeeCard            from '@/app/components/employees/EmployeeCard';
+import PageHeader        from '@/app/components/header';
+import EmployeeFilterBar from '@/app/components/employees/EmployeeFilterBar';
 
 // Modals
-import EmployeeDetailModal     from '@/app/components/employees/EmployeeDetailModal';
-import EditEmployeeModal       from '@/app/components/employees/EditEmployeeModal';
-import DeleteEmployeeModal     from '@/app/components/employees/DeleteEmployeeModal';
+import EmployeeDetailModal      from '@/app/components/employees/EmployeeDetailModal';
+import EditEmployeeModal        from '@/app/components/employees/EditEmployeeModal';
+import DeleteEmployeeModal      from '@/app/components/employees/DeleteEmployeeModal';
 import EmployeeTransactionModal from '@/app/components/employees/EmployeeTransactionModal';
 
 // Types
 import { EmployeeData, BranchData, Post } from '@/app/components/employees/validations';
+import EmployeeTable from './EmployeeTable';
 
-// ─── Skeleton card ─────────────────────────────────────────────────────────────
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-br from-[#F9F9F6] to-[#DDEAD5]/20 pt-6 pb-10 flex justify-center">
-        <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse" />
-      </div>
-      <div className="px-5 pb-5 -mt-6 flex flex-col gap-3">
-        <div className="flex flex-col items-center gap-2 mt-2">
-          <div className="h-4 w-32 bg-gray-200 animate-pulse rounded-lg" />
-          <div className="h-3 w-20 bg-gray-100 animate-pulse rounded-lg" />
-        </div>
-        <div className="flex flex-col gap-2 mt-2">
-          <div className="h-3 w-full bg-gray-100 animate-pulse rounded-lg" />
-          <div className="h-3 w-3/4 bg-gray-100 animate-pulse rounded-lg" />
-          <div className="h-3 w-2/3 bg-gray-100 animate-pulse rounded-lg" />
-        </div>
-        <div className="flex justify-center gap-2 pt-3 border-t border-gray-100">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-8 h-8 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Empty state ────────────────────────────────────────────────────────────────
-function EmptyState({ hasFilter, onClear, onAdd }: {
-  hasFilter: boolean; onClear: () => void; onAdd: () => void;
-}) {
-  return (
-    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-20 h-20 bg-[#DDEAD5] rounded-full flex items-center justify-center mb-5">
-        <Users className="w-10 h-10 text-[#2E7D32]" />
-      </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">
-        {hasFilter ? 'Aucun employé trouvé' : 'Aucun employé'}
-      </h3>
-      <p className="text-sm text-gray-500 mb-6 max-w-sm">
-        {hasFilter
-          ? 'Essayez de modifier vos critères de recherche'
-          : 'Commencez par ajouter votre premier employé'
-        }
-      </p>
-      <button
-        onClick={hasFilter ? onClear : onAdd}
-        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-          hasFilter
-            ? 'bg-white border-2 border-[#2E7D32] text-[#2E7D32] hover:bg-[#DDEAD5]'
-            : 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-lg hover:shadow-xl'
-        }`}
-      >
-        {hasFilter ? 'Effacer les filtres' : 'Ajouter un employé'}
-      </button>
-    </div>
-  );
-}
-
-// ─── Main Grid ──────────────────────────────────────────────────────────────────
+// ─── Main ──────────────────────────────────────────────────────────────────────
 const EmployeeGrid: React.FC = () => {
 
   // ── Data ──
@@ -101,13 +42,13 @@ const EmployeeGrid: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
 
   // ── Modals ──
-  const [selectedEmployee,      setSelectedEmployee]      = useState<EmployeeData | null>(null);
-  const [showDetailModal,       setShowDetailModal]       = useState(false);
-  const [showEditModal,         setShowEditModal]         = useState(false);
-  const [showDeleteModal,       setShowDeleteModal]       = useState(false);
-  const [showTransactionModal,  setShowTransactionModal]  = useState(false);
+  const [selectedEmployee,     setSelectedEmployee]     = useState<EmployeeData | null>(null);
+  const [showDetailModal,      setShowDetailModal]      = useState(false);
+  const [showEditModal,        setShowEditModal]        = useState(false);
+  const [showDeleteModal,      setShowDeleteModal]      = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
-  // ── Load data ──────────────────────────────────────────────────────────────
+  // ── Load ───────────────────────────────────────────────────────────────────
   const loadEmployees = async () => {
     try {
       setIsLoading(true);
@@ -167,10 +108,10 @@ const EmployeeGrid: React.FC = () => {
     if (debouncedValue) {
       const v = debouncedValue.toLowerCase();
       list = list.filter(e =>
-        e.first_name?.toLowerCase().includes(v) ||
-        e.last_name?.toLowerCase().includes(v)  ||
-        e.user?.email?.toLowerCase().includes(v) ||
-        e.phone_number?.toLowerCase().includes(v) ||
+        e.first_name?.toLowerCase().includes(v)    ||
+        e.last_name?.toLowerCase().includes(v)     ||
+        e.user?.email?.toLowerCase().includes(v)   ||
+        e.phone_number?.toLowerCase().includes(v)  ||
         e.payment_ref?.toLowerCase().includes(v)
       );
     }
@@ -202,7 +143,7 @@ const EmployeeGrid: React.FC = () => {
 
   const hydratedEmployees = useMemo(
     () => filteredEmployees.map(hydrateEmployee),
-    [filteredEmployees, hydrateEmployee]
+    [filteredEmployees, hydrateEmployee],
   );
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -214,7 +155,7 @@ const EmployeeGrid: React.FC = () => {
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
   const onClear                = useCallback(() => setFilterValue(''), []);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20">
 
@@ -244,9 +185,7 @@ const EmployeeGrid: React.FC = () => {
       {/* Erreur */}
       {error && (
         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-          </div>
+          <p className="flex-1 text-sm font-semibold text-red-700">{error}</p>
           <button
             onClick={loadEmployees}
             className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
@@ -256,31 +195,17 @@ const EmployeeGrid: React.FC = () => {
         </div>
       )}
 
-      {/* Grille */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {isLoading ? (
-          [...Array(8)].map((_, i) => <SkeletonCard key={i} />)
-        ) : hydratedEmployees.length > 0 ? (
-          hydratedEmployees.map(e => (
-            <EmployeeCard
-              key={e.id}
-              employee={e}
-              onView={handleView}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onViewTransactions={handleViewTransactions}
-            />
-          ))
-        ) : (
-          <EmptyState
-            hasFilter={!!filterValue}
-            onClear={onClear}
-            onAdd={handleAdd}
-          />
-        )}
-      </div>
+      {/* ── Table (remplace la grille de cartes) ── */}
+      <EmployeeTable
+        employees={hydratedEmployees}
+        isLoading={isLoading}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onViewTransactions={handleViewTransactions}
+      />
 
-      {/* Modals */}
+      {/* Modals — inchangés */}
       <EmployeeDetailModal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
@@ -305,11 +230,11 @@ const EmployeeGrid: React.FC = () => {
         isOpen={showTransactionModal}
         onClose={() => setShowTransactionModal(false)}
         employee={selectedEmployee ? {
-          id:          selectedEmployee.id,
-          first_name:  selectedEmployee.first_name,
-          last_name:   selectedEmployee.last_name,
-          photo_profil:selectedEmployee.photo_profil ?? null,
-          payment_ref: selectedEmployee.payment_ref,
+          id:           selectedEmployee.id,
+          first_name:   selectedEmployee.first_name,
+          last_name:    selectedEmployee.last_name,
+          photo_profil: selectedEmployee.photo_profil ?? null,
+          payment_ref:  selectedEmployee.payment_ref,
         } : null}
       />
     </div>
