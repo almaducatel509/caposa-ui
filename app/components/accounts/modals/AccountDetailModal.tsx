@@ -1,382 +1,207 @@
-// app/components/account/modals/AccountDetailModal.tsx
 'use client';
-import React, { useEffect } from "react";
-import type { AccountData } from "../validationsaccount";
 
-// ============= MODAL COMPONENT =============
-interface ModalProps {
-  isOpen: boolean;
+import React, { useEffect } from 'react';
+import { X, Wallet, User, BarChart2, Calendar } from 'lucide-react';
+import type { AccountData } from '../validationsaccount';
+
+// ─── Props ─────────────────────────────────────────────────────────────────────
+interface AccountDetailModalProps {
+  isOpen:  boolean;
   onClose: () => void;
-  children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+  account: AccountData | null;
+  // onEdit retiré — un compte ne se modifie pas
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = 'lg' }) => {
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+const STATUS_CFG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
+  actif:    { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Actif'    },
+  suspendu: { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Suspendu' },
+  ferme:    { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Fermé'    },
+};
+
+const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
+  epargne: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', label: 'Compte Épargne'  },
+  cheques: { bg: 'bg-blue-50',   text: 'text-[#355C7D]', label: 'Compte Chèques'  },
+  terme:   { bg: 'bg-yellow-50', text: 'text-yellow-700', label: 'Compte à Terme' },
+};
+
+function formatHTG(n?: number | null) {
+  if (n == null) return '—';
+  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+}
+
+function formatDate(d?: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ─── Section wrapper ───────────────────────────────────────────────────────────
+function Section({ icon: Icon, title, color, children }: {
+  icon: React.ElementType; title: string; color: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`rounded-xl border p-4 ${color}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className="w-4 h-4 text-gray-500 shrink-0" />
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500">{title}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3">{children}</div>
+    </div>
+  );
+}
+
+// ─── Field ─────────────────────────────────────────────────────────────────────
+function Field({ label, value, full = false }: {
+  label: string; value: React.ReactNode; full?: boolean;
+}) {
+  return (
+    <div className={full ? 'col-span-2' : ''}>
+      <p className="text-xs text-gray-400 font-medium mb-0.5">{label}</p>
+      <div className="text-sm font-semibold text-gray-800">{value ?? '—'}</div>
+    </div>
+  );
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+export default function AccountDetailModal({ isOpen, onClose, account }: AccountDetailModalProps) {
+
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
+    document.body.style.overflow = isOpen ? 'hidden' : 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !account) return null;
 
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-  };
+  const status  = account.statutCompte ?? 'actif';
+  const sCfg    = STATUS_CFG[status]  ?? STATUS_CFG['actif'];
+  const tCfg    = TYPE_CFG[account.typeCompte ?? ''] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: account.typeCompte ?? '—' };
+  const solde   = account.soldeActuel ?? parseFloat(account.balance ?? '0');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal Content */}
-      <div className={`relative bg-white rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col`}>
-        {children}
-      </div>
-    </div>
-  );
-};
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-// ============= CHIP COMPONENT =============
-interface ChipProps {
-  children: React.ReactNode;
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'default';
-  size?: 'sm' | 'md' | 'lg';
-}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-100">
 
-const Chip: React.FC<ChipProps> = ({ children, color = 'default', size = 'md' }) => {
-  const colorClasses = {
-    primary: 'bg-blue-100 text-blue-700',
-    secondary: 'bg-purple-100 text-purple-700',
-    success: 'bg-green-100 text-green-700',
-    warning: 'bg-yellow-100 text-yellow-700',
-    danger: 'bg-red-100 text-red-700',
-    default: 'bg-gray-100 text-gray-700'
-  };
-
-  const sizeClasses = {
-    sm: 'px-2.5 py-1 text-xs',
-    md: 'px-3 py-1.5 text-sm',
-    lg: 'px-4 py-2 text-base'
-  };
-
-  return (
-    <span className={`inline-flex items-center rounded-xl font-semibold ${colorClasses[color]} ${sizeClasses[size]}`}>
-      {children}
-    </span>
-  );
-};
-
-// ============= BUTTON COMPONENT =============
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: 'solid' | 'light';
-  color?: 'primary' | 'default';
-}
-
-const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  onClick, 
-  variant = 'solid',
-  color = 'default'
-}) => {
-  const getClasses = () => {
-    if (variant === 'light') {
-      return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-    }
-    if (color === 'primary') {
-      return 'bg-blue-500 text-white hover:bg-blue-600';
-    }
-    return 'bg-gray-500 text-white hover:bg-gray-600';
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${getClasses()}`}
-    >
-      {children}
-    </button>
-  );
-};
-
-// ============= MAIN COMPONENT =============
-interface AccountDetailModalProps {
-  isOpen: boolean;
-  onEdit: () => void;
-  onClose: () => void;
-  account: AccountData | null;
-}
-
-export default function AccountDetailModal({ 
-  onEdit,
-  isOpen, 
-  onClose, 
-  account 
-}: AccountDetailModalProps) {
-  
-  if (!account) return null;
-
-  // Helper functions
-  const getStatusColor = (status?: string): 'success' | 'warning' | 'danger' | 'default' => {
-    switch (status) {
-      case 'actif': return 'success';
-      case 'suspendu': return 'warning';
-      case 'ferme': return 'danger';
-      default: return 'default';
-    }
-  };
-
-  const getTypeColor = (type?: string): 'primary' | 'secondary' | 'warning' | 'default' => {
-    switch (type) {
-      case 'epargne': return 'primary';
-      case 'cheques': return 'secondary';
-      case 'terme': return 'warning';
-      default: return 'default';
-    }
-  };
-
-  const getAccountTypeName = (type?: string) => {
-    switch (type) {
-      case 'epargne': return 'Compte Épargne';
-      case 'cheques': return 'Compte Chèques';
-      case 'terme': return 'Compte à Terme';
-      default: return 'Type inconnu';
-    }
-  };
-
-  const getAccountStatusDisplay = (status?: string) => {
-    switch (status) {
-      case 'actif': return 'Actif';
-      case 'suspendu': return 'Suspendu';
-      case 'ferme': return 'Fermé';
-      default: return 'Inconnu';
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-      {/* Header */}
-      <div className="flex flex-col gap-2 px-6 pt-6 pb-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Détails du compte</h2>
-          <Chip 
-            color={getStatusColor(account.statutCompte)}
-            size="lg"
-          >
-            {getAccountStatusDisplay(account.statutCompte)}
-          </Chip>
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shadow-md">
+              <Wallet className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900 leading-tight font-mono">
+                {account.account_number}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {account.member_details?.full_name ?? account.id_membre ?? '—'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${sCfg.bg} ${sCfg.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${sCfg.dot}`} />
+              {sCfg.label}
+            </span>
+            <button onClick={onClose} className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      </div>
-      
-      {/* Body */}
-      <div className="px-6 py-6 overflow-y-auto flex-1">
-        <div className="space-y-5">
-          {/* Section Informations générales - Flat Design */}
-          <div className="bg-gray-50 p-5 rounded-xl border border-gray-200">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              📋 Informations générales
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailItem 
-                label="Numéro de compte" 
-                value={account.account_number}
-                highlight
-              />
-              <DetailItem 
-                label="Type de compte" 
-                value={
-                  <Chip color={getTypeColor(account.typeCompte)}>
-                    {getAccountTypeName(account.typeCompte)}
-                  </Chip>
-                }
-              />
-              <DetailItem 
-                label="Date d'ouverture" 
-                value={account.dateOuverture 
-                  ? new Date(account.dateOuverture).toLocaleDateString('fr-CA')
-                  : account.created_at
-                  ? new Date(account.created_at).toLocaleDateString('fr-CA')
-                  : 'N/A'
-                }
-              />
-              {account.dateFermeture && (
-                <DetailItem 
-                  label="Date de fermeture" 
-                  value={new Date(account.dateFermeture).toLocaleDateString('fr-CA')}
-                />
-              )}
-            </div>
-          </div>
 
-          {/* Section Informations financières - Flat Design */}
-          <div className="bg-blue-50 p-5 rounded-xl border border-blue-200">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              💰 Informations financières
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailItem 
-                label="Solde actuel" 
-                value={`${(account.soldeActuel || parseFloat(account.balance || '0')).toLocaleString('fr-CA')} HTG`}
-                highlight
-                className="text-xl font-bold text-green-600"
-              />
-              {account.tauxInteret !== null && account.tauxInteret !== undefined && (
-                <DetailItem 
-                  label="Taux d'intérêt" 
-                  value={`${account.tauxInteret}%`}
-                />
-              )}
-              {account.limiteTrait !== null && account.limiteTrait !== undefined && (
-                <DetailItem 
-                  label="Limite de retrait" 
-                  value={`${account.limiteTrait.toLocaleString('fr-CA')} HTG`}
-                />
-              )}
-              {account.fraisServiceMensuel !== null && account.fraisServiceMensuel !== undefined && (
-                <DetailItem 
-                  label="Frais mensuels" 
-                  value={`${account.fraisServiceMensuel.toLocaleString('fr-CA')} HTG`}
-                />
-              )}
-            </div>
-          </div>
+        {/* ── Body ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
 
-          {/* Section Membre - Flat Design */}
+          {/* Général */}
+          <Section icon={Wallet} title="Informations générales" color="bg-[#F9F9F6] border-gray-100">
+            <Field label="Numéro de compte" value={
+              <span className="font-mono text-gray-900">{account.account_number}</span>
+            } full />
+            <Field label="Type de compte" value={
+              <span className={`inline-flex px-2 py-0.5 rounded-lg text-xs font-semibold ${tCfg.bg} ${tCfg.text}`}>
+                {tCfg.label}
+              </span>
+            } />
+            <Field label="Date d'ouverture"  value={formatDate(account.dateOuverture ?? account.created_at)} />
+            {account.dateFermeture && (
+              <Field label="Date de fermeture" value={formatDate(account.dateFermeture)} />
+            )}
+          </Section>
+
+          {/* Financier */}
+          <Section icon={BarChart2} title="Informations financières" color="bg-[#F9F9F6] border-gray-100">
+            <Field label="Solde actuel" value={
+              <span className={`text-base font-bold ${solde > 0 ? 'text-[#2E7D32]' : solde < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                {formatHTG(solde)}
+              </span>
+            } full />
+            {account.tauxInteret != null && (
+              <Field label="Taux d'intérêt" value={`${account.tauxInteret} %`} />
+            )}
+            {account.limiteTrait != null && (
+              <Field label="Limite de retrait" value={formatHTG(account.limiteTrait)} />
+            )}
+            {account.fraisServiceMensuel != null && (
+              <Field label="Frais mensuels" value={formatHTG(account.fraisServiceMensuel)} />
+            )}
+          </Section>
+
+          {/* Membre */}
           {account.member_details && (
-            <div className="bg-green-50 p-5 rounded-xl border border-green-200">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">
-                👤 Informations du membre
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <DetailItem 
-                  label="Nom complet" 
-                  value={
-                    account.member_details.full_name || 
-                    `${account.member_details.first_name} ${account.member_details.last_name}`
-                  }
-                />
-                <DetailItem 
-                  label="Numéro d'identification" 
-                  value={account.member_details.id_number}
-                />
-                {account.member_details.phone_number && (
-                  <DetailItem 
-                    label="Téléphone" 
-                    value={account.member_details.phone_number}
-                  />
-                )}
-                {account.member_details.email && (
-                  <DetailItem 
-                    label="Email" 
-                    value={account.member_details.email}
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Section Statistiques - Flat Design */}
-          {(account.total_transactions || account.total_deposits || account.total_withdrawals) && (
-            <div className="bg-purple-50 p-5 rounded-xl border border-purple-200">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">
-                📊 Statistiques
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
-                {account.total_transactions !== undefined && (
-                  <DetailItem 
-                    label="Total transactions" 
-                    value={account.total_transactions}
-                  />
-                )}
-                {account.total_deposits !== undefined && (
-                  <DetailItem 
-                    label="Total dépôts" 
-                    value={`${account.total_deposits.toLocaleString('fr-CA')} HTG`}
-                    className="text-green-600"
-                  />
-                )}
-                {account.total_withdrawals !== undefined && (
-                  <DetailItem 
-                    label="Total retraits" 
-                    value={`${account.total_withdrawals.toLocaleString('fr-CA')} HTG`}
-                    className="text-red-600"
-                  />
-                )}
-              </div>
-              {account.last_transaction_date && (
-                <div className="mt-4">
-                  <DetailItem 
-                    label="Dernière transaction" 
-                    value={new Date(account.last_transaction_date).toLocaleDateString('fr-CA')}
-                  />
-                </div>
+            <Section icon={User} title="Membre titulaire" color="bg-[#F9F9F6] border-gray-100">
+              <Field label="Nom complet" value={
+                account.member_details.full_name ??
+                `${account.member_details.first_name} ${account.member_details.last_name}`
+              } full />
+              <Field label="N° identification" value={account.member_details.id_number} />
+              {account.member_details.phone_number && (
+                <Field label="Téléphone" value={account.member_details.phone_number} />
               )}
-            </div>
+              {account.member_details.email && (
+                <Field label="Email" value={account.member_details.email} />
+              )}
+              {account.member_details.city && (
+                <Field label="Ville" value={`${account.member_details.city}${account.member_details.department ? `, ${account.member_details.department}` : ''}`} />
+              )}
+            </Section>
           )}
 
-          {/* Section Métadonnées - Flat Design */}
-          <div className="text-xs text-gray-500 space-y-1 border-t border-gray-200 pt-4">
-            <p className="font-medium">ID: {account.id}</p>
-            {account.created_at && (
-              <p>Créé le: {new Date(account.created_at).toLocaleString('fr-CA')}</p>
-            )}
-            {account.updated_at && (
-              <p>Modifié le: {new Date(account.updated_at).toLocaleString('fr-CA')}</p>
-            )}
+          {/* Stats */}
+          {(account.total_transactions != null || account.total_deposits != null) && (
+            <Section icon={BarChart2} title="Statistiques" color="bg-[#F9F9F6] border-gray-100">
+              {account.total_transactions != null && (
+                <Field label="Total transactions" value={account.total_transactions} />
+              )}
+              {account.last_transaction_date && (
+                <Field label="Dernière transaction" value={formatDate(account.last_transaction_date)} />
+              )}
+              {account.total_deposits != null && (
+                <Field label="Total dépôts"  value={<span className="text-[#2E7D32]">{formatHTG(account.total_deposits)}</span>} />
+              )}
+              {account.total_withdrawals != null && (
+                <Field label="Total retraits" value={<span className="text-red-500">{formatHTG(account.total_withdrawals)}</span>} />
+              )}
+            </Section>
+          )}
+
+          {/* Métadonnées */}
+          <div className="text-xs text-gray-400 border-t border-gray-100 pt-3 flex flex-wrap gap-x-6 gap-y-1">
+            <span>ID : <span className="font-mono">{account.id}</span></span>
+            {account.created_at && <span>Créé : {new Date(account.created_at).toLocaleString('fr-FR')}</span>}
+            {account.updated_at && <span>Modifié : {new Date(account.updated_at).toLocaleString('fr-FR')}</span>}
           </div>
         </div>
-      </div>
-      
-      {/* Footer */}
-      <div className="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
-        <Button variant="light" onClick={onClose}>
-          Fermer
-        </Button>
-        <Button color="primary" onClick={() => {
-          onClose();
-          onEdit();
-        }}>
-          Voir le Membre
-        </Button>
-      </div>
-    </Modal>
-  );
-}
 
-// ============= DETAIL ITEM COMPONENT =============
-function DetailItem({ 
-  label, 
-  value, 
-  highlight = false,
-  className = ""
-}: { 
-  label: string; 
-  value: React.ReactNode; 
-  highlight?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={highlight ? "col-span-2" : ""}>
-      <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">{label}</p>
-      <p className={`font-semibold text-gray-900 ${className}`}>
-        {value}
-      </p>
+        {/* ── Footer ── */}
+        <div className="flex justify-end px-6 py-4 border-t border-gray-100 bg-[#F9F9F6] rounded-b-2xl shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

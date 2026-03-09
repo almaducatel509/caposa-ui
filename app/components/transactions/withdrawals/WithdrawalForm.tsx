@@ -1,608 +1,567 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Card,
-  CardBody,
-  CardHeader,
-  Button,
-  Input,
-  Select,
-  SelectItem,
-  Textarea,
-  Divider,
-  Chip,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure
-} from "@heroui/react";
-import { FaArrowLeft, FaWallet, FaCreditCard, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaCalculator } from "react-icons/fa";
+  TrendingDown, ArrowLeft, CreditCard, Banknote,
+  Landmark, User, Hash, FileText, ShieldCheck,
+  CheckCircle2, AlertTriangle, Loader2, Search,
+  X, ChevronDown, RefreshCw,
+} from 'lucide-react';
 
-// Types pour le formulaire de retrait
-interface WithdrawalFormData {
-  // Informations de base
-  memberId: string;
-  accountNumber: string;
-  amount: string;
-  
-  // Type et détails
-  withdrawalType: string;
-  method: string;
-  purpose: string;
-  description: string;
-  
-  // Sécurité et autorisation
-  pin: string;
-  authorizationRequired: boolean;
-  urgency: 'normal' | 'urgent' | 'emergency';
+// ─── Types ───────────────────────────────────────────────────────────────────
+type WithdrawalSubtype = 'counter' | 'check' | 'loan_disbursement' | 'other';
+
+interface MemberOption {
+  id:           string;
+  full_name:    string;
+  id_number:    string;
+  phone_number?: string;
 }
 
-interface AccountInfo {
-  accountNumber: string;
-  accountName: string;
-  availableBalance: number;
-  dailyLimit: number;
-  todayWithdrawn: number;
-  accountType: string;
+interface AccountOption {
+  id:             string;
+  account_number: string;
+  typeCompte:     'epargne' | 'cheques' | 'terme';
+  soldeActuel:    number;
+  statutCompte:   'actif' | 'suspendu' | 'ferme';
 }
 
-const WithdrawalForm: React.FC = () => {
-  const [formData, setFormData] = useState<WithdrawalFormData>({
-    memberId: '',
-    accountNumber: '',
-    amount: '',
-    withdrawalType: '',
-    method: '',
-    purpose: '',
-    description: '',
-    pin: '',
-    authorizationRequired: false,
-    urgency: 'normal'
-  });
+export interface WithdrawalFormProps {
+  members?:   MemberOption[];
+  onSubmit?:  (data: unknown) => Promise<void>;
+  onCancel?:  () => void;
+  isLoading?: boolean;
+}
 
-  const [selectedAccount, setSelectedAccount] = useState<AccountInfo | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+// ─── Config ──────────────────────────────────────────────────────────────────
+const SUBTYPE_CFG = {
+  counter:           { icon: Banknote,      label: 'Comptoir',          desc: 'Espèces remises au guichet',  delay: 'Immédiat'  },
+  check:             { icon: FileText,      label: 'Chèque',            desc: 'Émission d\'un chèque',       delay: '1–2 jours' },
+  loan_disbursement: { icon: Landmark,      label: 'Décaissement prêt', desc: 'Déblocage de fonds de prêt',  delay: 'Immédiat'  },
+  other:             { icon: TrendingDown,  label: 'Autre',             desc: 'Cas particulier',             delay: 'Variable'  },
+} as const;
 
-  // Comptes disponibles (simulation)
-  const availableAccounts: AccountInfo[] = [
-    {
-      accountNumber: "12345-001",
-      accountName: "Compte Épargne Principal",
-      availableBalance: 15420.50,
-      dailyLimit: 1000,
-      todayWithdrawn: 0,
-      accountType: "Épargne"
-    },
-    {
-      accountNumber: "12345-002", 
-      accountName: "Compte Chèques Exploitation",
-      availableBalance: 8750.25,
-      dailyLimit: 2500,
-      todayWithdrawn: 500,
-      accountType: "Chèques"
-    },
-    {
-      accountNumber: "12345-003",
-      accountName: "Fonds Saisonnier",
-      availableBalance: 25000.00,
-      dailyLimit: 5000,
-      todayWithdrawn: 0,
-      accountType: "Terme"
-    }
-  ];
-
-  // Types de retraits agricoles (comptoir seulement)
-  const withdrawalTypes = [
-    { key: 'cash_counter', label: 'Espèces au comptoir' },
-    { key: 'check_issue', label: 'Émission de chèque' },
-    { key: 'loan_disbursement', label: 'Déblocage de prêt' },
-    { key: 'emergency', label: 'Retrait d\'urgence' }
-  ];
-
-  // Méthodes de retrait
-  const withdrawalMethods = [
-    { key: 'immediate', label: 'Immédiat (si fonds disponibles)' },
-    { key: 'next_day', label: 'Lendemain (commande spéciale)' },
-    { key: 'scheduled', label: 'Planifié (date future)' }
-  ];
-
-  // Buts de retrait agricoles
-  const purposeOptions = [
-    { key: 'equipment', label: 'Achat d\'équipement agricole' },
-    { key: 'seeds_supplies', label: 'Semences et fournitures' },
-    { key: 'livestock', label: 'Achat de bétail' },
-    { key: 'feed', label: 'Nourriture animale' },
-    { key: 'fuel', label: 'Carburant et diesel' },
-    { key: 'repairs', label: 'Réparations d\'urgence' },
-    { key: 'labor', label: 'Main-d\'œuvre saisonnière' },
-    { key: 'insurance', label: 'Assurances agricoles' },
-    { key: 'taxes', label: 'Taxes et impôts' },
-    { key: 'personal', label: 'Usage personnel' },
-    { key: 'other', label: 'Autre (préciser)' }
-  ];
-
-  // Gestion des changements
-  const handleInputChange = (field: keyof WithdrawalFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Validation en temps réel pour le montant
-    if (field === 'amount' && selectedAccount) {
-      validateAmount(parseFloat(value));
-    }
-  };
-
-  // Sélection de compte
-  const handleAccountChange = (accountNumber: string) => {
-    const account = availableAccounts.find(acc => acc.accountNumber === accountNumber);
-    setSelectedAccount(account || null);
-    setFormData(prev => ({ ...prev, accountNumber }));
-  };
-
-  // Validation du montant
-  const validateAmount = (amount: number) => {
-    const errors: string[] = [];
-    
-    if (!selectedAccount) {
-      errors.push("Veuillez sélectionner un compte");
-      setValidationErrors(errors);
-      return false;
-    }
-
-    if (amount <= 0) {
-      errors.push("Le montant doit être supérieur à 0$");
-    }
-
-    if (amount > selectedAccount.availableBalance) {
-      errors.push(`Fonds insuffisants (disponible: ${formatCurrency(selectedAccount.availableBalance)})`);
-    }
-
-    const remainingLimit = selectedAccount.dailyLimit - selectedAccount.todayWithdrawn;
-    if (amount > remainingLimit) {
-      errors.push(`Limite quotidienne dépassée (restant: ${formatCurrency(remainingLimit)})`);
-    }
-
-    // Seuil d'autorisation (1000$ et plus)
-    if (amount >= 1000) {
-      setFormData(prev => ({ ...prev, authorizationRequired: true }));
-    }
-
-    setValidationErrors(errors);
-    return errors.length === 0;
-  };
-
-  // Calcul des frais
-  const calculateFees = (): number => {
-    const amount = parseFloat(formData.amount || '0');
-    let fees = 0;
-
-    // Frais selon le type de retrait
-    switch (formData.withdrawalType) {
-      case 'cash_counter':
-        fees = amount > 500 ? 2.50 : 0; // Frais pour gros montants
-        break;
-      case 'check_issue':
-        fees = 3.00;
-        break;
-      case 'loan_disbursement':
-        fees = 0; // Pas de frais pour déblocage de prêt
-        break;
-      case 'emergency':
-        fees = 15.00; // Frais d'urgence
-        break;
-      default:
-        fees = 0;
-    }
-
-    return fees;
-  };
-
-  // Soumission du formulaire
-  const handleSubmit = async () => {
-    const amount = parseFloat(formData.amount);
-    
-    if (!validateAmount(amount) || !selectedAccount) {
-      return;
-    }
-
-    setShowConfirmation(true);
-  };
-
-  // Confirmation finale
-  const confirmWithdrawal = async () => {
-    setIsSubmitting(true);
-    setShowConfirmation(false);
-
-    try {
-      // Simulation de traitement
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('💸 Retrait traité:', {
-        ...formData,
-        account: selectedAccount,
-        fees: calculateFees(),
-        timestamp: new Date().toISOString()
-      });
-      
-      onOpen(); // Ouvrir modal de succès
-    } catch (error) {
-      console.error('❌ Erreur retrait:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-CA', {
-      style: 'currency',
-      currency: 'CAD'
-    }).format(amount);
-  };
-
-  return (
-    <>
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-red-100 rounded-full">
-              <span className="text-2xl">💸</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Nouveau Retrait</h1>
-              <p className="text-gray-600">Retrait de fonds au comptoir</p>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardBody className="space-y-6">
-          {/* Sélection du compte */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">🏦</span>
-              <h2 className="text-xl font-semibold">Sélection du compte</h2>
-            </div>
-            
-            <Select
-              label="Compte source"
-              placeholder="Choisir le compte à débiter"
-              selectedKeys={formData.accountNumber ? [formData.accountNumber] : []}
-              onChange={(e) => handleAccountChange(e.target.value)}
-              isRequired
-            >
-              {availableAccounts.map((account) => (
-                <SelectItem 
-                  key={account.accountNumber} 
-                  value={account.accountNumber}
-                  description={`${formatCurrency(account.availableBalance)} disponible`}
-                >
-                  {account.accountName} ({account.accountNumber})
-                </SelectItem>
-              ))}
-            </Select>
-
-            {/* Infos du compte sélectionné */}
-            {selectedAccount && (
-              <Card className="bg-blue-50 border-blue-200">
-                <CardBody className="p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Solde disponible</p>
-                      <p className="font-bold text-green-600">
-                        {formatCurrency(selectedAccount.availableBalance)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Limite quotidienne</p>
-                      <p className="font-medium">
-                        {formatCurrency(selectedAccount.dailyLimit)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Déjà retiré aujourd'hui</p>
-                      <p className="font-medium text-orange-600">
-                        {formatCurrency(selectedAccount.todayWithdrawn)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Limite restante</p>
-                      <p className="font-bold text-blue-600">
-                        {formatCurrency(selectedAccount.dailyLimit - selectedAccount.todayWithdrawn)}
-                      </p>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            )}
-          </div>
-
-          {/* Détails du retrait */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">💰</span>
-              <h2 className="text-xl font-semibold">Détails du retrait</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Montant à retirer"
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
-                startContent={<span className="text-gray-500">$</span>}
-                isRequired
-                color={validationErrors.length > 0 ? "danger" : "default"}
-              />
-              
-              <Select
-                label="Type de retrait"
-                placeholder="Choisir le type"
-                selectedKeys={formData.withdrawalType ? [formData.withdrawalType] : []}
-                onChange={(e) => handleInputChange('withdrawalType', e.target.value)}
-                isRequired
-              >
-                {withdrawalTypes.map((type) => (
-                  <SelectItem key={type.key} value={type.key}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </Select>
-
-              <Select
-                label="Méthode de retrait"
-                placeholder="Quand effectuer le retrait"
-                selectedKeys={formData.method ? [formData.method] : []}
-                onChange={(e) => handleInputChange('method', e.target.value)}
-                isRequired
-              >
-                {withdrawalMethods.map((method) => (
-                  <SelectItem key={method.key} value={method.key}>
-                    {method.label}
-                  </SelectItem>
-                ))}
-              </Select>
-
-              <Select
-                label="But du retrait"
-                placeholder="À quoi servira cet argent"
-                selectedKeys={formData.purpose ? [formData.purpose] : []}
-                onChange={(e) => handleInputChange('purpose', e.target.value)}
-                isRequired
-              >
-                {purposeOptions.map((purpose) => (
-                  <SelectItem key={purpose.key} value={purpose.key}>
-                    {purpose.label}
-                  </SelectItem>
-                ))}
-              </Select>
-            </div>
-
-            <Textarea
-              label="Description détaillée (optionnel)"
-              placeholder="Ex: Achat de semences de maïs pour la saison 2025, fournisseur ABC..."
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              minRows={2}
-            />
-          </div>
-
-          {/* Erreurs de validation */}
-          {validationErrors.length > 0 && (
-            <Card className="bg-red-50 border-red-200">
-              <CardBody className="p-4">
-                <div className="flex items-start gap-3">
-                  <FaExclamationTriangle className="text-red-500 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-red-800 mb-2">Erreurs de validation</h4>
-                    <ul className="list-disc ml-4 space-y-1 text-red-700">
-                      {validationErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Résumé des frais */}
-          {formData.amount && formData.withdrawalType && selectedAccount && validationErrors.length === 0 && (
-            <Card className="bg-green-50 border-green-200">
-              <CardBody className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <FaCalculator className="text-green-600" />
-                  <h3 className="font-semibold text-green-800">Résumé de la transaction</h3>
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Montant demandé:</span>
-                    <span className="font-medium">{formatCurrency(parseFloat(formData.amount))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Frais de transaction:</span>
-                    <span className="font-medium">{formatCurrency(calculateFees())}</span>
-                  </div>
-                  <Divider />
-                  <div className="flex justify-between font-bold">
-                    <span>Total à débiter:</span>
-                    <span className="text-red-600">
-                      {formatCurrency(parseFloat(formData.amount) + calculateFees())}
-                    </span>
-                  </div>
-                  
-                  {formData.authorizationRequired && (
-                    <Chip color="warning" size="sm" className="mt-2">
-                      ⚠️ Autorisation superviseur requise (montant ≥ 1000$)
-                    </Chip>
-                  )}
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Sécurité */}
-          {validationErrors.length === 0 && formData.amount && selectedAccount && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🔐</span>
-                <h2 className="text-xl font-semibold">Sécurité</h2>
-              </div>
-              
-              <Input
-                label="Code PIN ou mot de passe"
-                type="password"
-                placeholder="••••"
-                value={formData.pin}
-                onChange={(e) => handleInputChange('pin', e.target.value)}
-                isRequired
-                description="Votre code PIN à 4 chiffres ou mot de passe"
-              />
-            </div>
-          )}
-
-          {/* Boutons d'action */}
-          <Divider />
-          
-          <div className="flex justify-between items-center">
-            <Button
-              variant="bordered"
-              startContent={<FaArrowLeft />}
-              href="/dashboard/transactions"
-              as="a"
-            >
-              Annuler
-            </Button>
-            
-            <Button
-              color="danger"
-              endContent={<FaWallet />}
-              onClick={handleSubmit}
-              isDisabled={
-                !formData.amount || 
-                !formData.accountNumber || 
-                !formData.withdrawalType || 
-                !formData.pin ||
-                validationErrors.length > 0
-              }
-              className="min-w-32"
-            >
-              Effectuer le Retrait
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Modal de confirmation */}
-      <Modal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} size="lg">
-        <ModalContent>
-          <ModalHeader className="flex items-center gap-2">
-            <span className="text-2xl">⚠️</span>
-            Confirmer le retrait
-          </ModalHeader>
-          <ModalBody>
-            <div className="space-y-4">
-              <p className="text-gray-700">
-                Vous êtes sur le point d'effectuer un retrait. Veuillez vérifier les informations suivantes :
-              </p>
-              
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Compte:</span>
-                  <span className="font-medium">{selectedAccount?.accountName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Montant:</span>
-                  <span className="font-bold text-red-600">{formatCurrency(parseFloat(formData.amount || '0'))}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Type:</span>
-                  <span>{withdrawalTypes.find(t => t.key === formData.withdrawalType)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>But:</span>
-                  <span>{purposeOptions.find(p => p.key === formData.purpose)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Frais:</span>
-                  <span>{formatCurrency(calculateFees())}</span>
-                </div>
-                <Divider />
-                <div className="flex justify-between font-bold">
-                  <span>Total à débiter:</span>
-                  <span className="text-red-600">{formatCurrency(parseFloat(formData.amount || '0') + calculateFees())}</span>
-                </div>
-              </div>
-              
-              <Card className="bg-orange-50 border-orange-200">
-                <CardBody className="p-3">
-                  <div className="flex items-center gap-2">
-                    <FaExclamationTriangle className="text-orange-500" />
-                    <span className="text-orange-800 font-medium">
-                      Cette action est irréversible. Le montant sera immédiatement débité de votre compte.
-                    </span>
-                  </div>
-                </CardBody>
-              </Card>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button 
-              variant="bordered" 
-              href="/dashboard/transactions"
-              as="a"
-            >
-              Annuler
-            </Button>
-            <Button 
-              color="danger" 
-              onPress={confirmWithdrawal}
-              isLoading={isSubmitting}
-            >
-              Confirmer le Retrait
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Modal de succès */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalContent>
-          <ModalHeader className="flex items-center gap-2">
-            <span className="text-2xl">✅</span>
-            Retrait effectué avec succès !
-          </ModalHeader>
-          <ModalBody>
-            <div className="text-center space-y-4">
-              <div className="text-6xl">💸</div>
-              <h3 className="text-xl font-semibold">Transaction #WD-2025-{Date.now().toString().slice(-4)}</h3>
-              <p className="text-gray-600">
-                Votre retrait de <strong>{formatCurrency(parseFloat(formData.amount || '0'))}</strong> a été traité avec succès.
-              </p>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-800 mb-2">Prochaines étapes :</h4>
-                <ul className="text-sm text-blue-600 space-y-1">
-                  <li>• Récupérez votre reçu au comptoir</li>
-                  <li>• Les fonds sont disponibles immédiatement</li>
-                  <li>• Transaction visible dans votre relevé</li>
-                  <li>• Conservez le reçu pour vos dossiers</li>
-                </ul>
-              </div>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="primary" onPress={onClose} fullWidth>
-              Retour aux transactions
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </>
-  );
+const TYPE_LABEL: Record<string, { label: string; bg: string; text: string }> = {
+  epargne: { label: 'Épargne',  bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]'  },
+  cheques: { label: 'Chèques', bg: 'bg-blue-50',    text: 'text-[#355C7D]'  },
+  terme:   { label: 'Terme',   bg: 'bg-yellow-50',  text: 'text-yellow-700' },
 };
 
-export default WithdrawalForm;
+const MOTIFS = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 'Urgence médicale', 'Autre'];
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+const MOCK_MEMBERS: MemberOption[] = [
+  { id: 'dcb21971', full_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
+  { id: 'a1b2c3d4', full_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
+  { id: 'b3c4d5e6', full_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
+  { id: 'c4d5e6f7', full_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
+  { id: 'd5e6f7a8', full_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
+  { id: 'e6f7a8b9', full_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
+];
+
+const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
+  'dcb21971': [
+    { id: 'acc1', account_number: '636-922-093-4469', typeCompte: 'epargne', soldeActuel: 15000, statutCompte: 'actif'    },
+    { id: 'acc2', account_number: '789-123-456-7890', typeCompte: 'cheques', soldeActuel: 5500,  statutCompte: 'actif'    },
+    { id: 'acc3', account_number: '111-222-333-4444', typeCompte: 'terme',   soldeActuel: 25000, statutCompte: 'actif'    },
+    { id: 'acc4', account_number: '222-333-444-5555', typeCompte: 'epargne', soldeActuel: 1200,  statutCompte: 'suspendu' },
+  ],
+  'a1b2c3d4': [{ id: 'acc5', account_number: '321-654-987-0123', typeCompte: 'terme',   soldeActuel: 50000, statutCompte: 'actif' }],
+  'b3c4d5e6': [{ id: 'acc6', account_number: '456-789-012-3456', typeCompte: 'epargne', soldeActuel: 8750,  statutCompte: 'actif' }],
+  'c4d5e6f7': [{ id: 'acc7', account_number: '567-890-123-4567', typeCompte: 'cheques', soldeActuel: 2300,  statutCompte: 'actif' }],
+  'd5e6f7a8': [{ id: 'acc8', account_number: '678-901-234-5678', typeCompte: 'epargne', soldeActuel: 32000, statutCompte: 'actif' }],
+  'e6f7a8b9': [{ id: 'acc9', account_number: '890-123-456-7891', typeCompte: 'terme',   soldeActuel: 100000,statutCompte: 'actif' }],
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function formatHTG(n: number) {
+  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+function Field({ label, required, error, hint, className = '', children }: {
+  label: string; required?: boolean; error?: string; hint?: string; className?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      {children}
+      {hint  && !error && <p className="text-xs text-gray-400">{hint}</p>}
+      {error && (
+        <p className="text-xs text-red-500 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3 shrink-0" /> {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StyledInput({ hasError, className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement> & { hasError?: boolean }) {
+  return (
+    <input {...props}
+      className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none transition-all
+        focus:ring-2 focus:ring-[#DDEAD5] focus:border-[#2E7D32]
+        disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed
+        ${hasError
+          ? 'border-red-300 bg-red-50/30 focus:ring-red-100 focus:border-red-400'
+          : 'border-gray-200 bg-white hover:border-gray-300'
+        } ${className}`}
+    />
+  );
+}
+
+function SectionHeader({ step, title, icon: Icon }: { step: number; title: string; icon: React.ElementType }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="w-6 h-6 rounded-lg bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+        <span className="text-white text-xs font-bold">{step}</span>
+      </div>
+      <Icon className="w-4 h-4 text-gray-400" />
+      <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+export default function WithdrawalForm({
+  members   = MOCK_MEMBERS,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: WithdrawalFormProps) {
+
+  // Membre / Compte — même pattern que DepositForm
+  const [memberSearch,    setMemberSearch]    = useState('');
+  const [memberOpen,      setMemberOpen]      = useState(false);
+  const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
+  const [memberAccounts,  setMemberAccounts]  = useState<AccountOption[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
+
+  const [step,       setStep]       = useState<'form' | 'confirm' | 'success'>('form');
+  const [submitting, setSubmitting] = useState(false);
+  const [errors,     setErrors]     = useState<Record<string, string>>({});
+
+  const [form, setForm] = useState({
+    withdrawalSubtype: 'counter' as WithdrawalSubtype,
+    montantTransaction: '',
+    motif:              '',
+    description:        '',
+    codeAutorisation:   '',
+  });
+
+  const set = (key: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm(f => ({ ...f, [key]: e.target.value }));
+
+  const amount       = parseFloat(form.montantTransaction) || 0;
+  const subCfg       = SUBTYPE_CFG[form.withdrawalSubtype];
+  const isBlocked    = selectedAccount !== null && selectedAccount.statutCompte !== 'actif';
+  const insufficient = selectedAccount ? amount > selectedAccount.soldeActuel : false;
+  const needsVerif   = amount > 50000 || form.withdrawalSubtype === 'check';
+
+  // Filtrage membres
+  const filteredMembers = useMemo(() =>
+    members.filter(m =>
+      m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      m.id_number.includes(memberSearch)
+    ), [members, memberSearch]);
+
+  const handleMemberSelect = (m: MemberOption) => {
+    setSelectedMember(m);
+    setMemberOpen(false);
+    setMemberSearch('');
+    setSelectedAccount(null);
+    setMemberAccounts(MOCK_ACCOUNTS[m.id] ?? []);
+    setErrors(e => ({ ...e, member: '', account: '' }));
+  };
+
+  const handleClearMember = () => {
+    setSelectedMember(null);
+    setSelectedAccount(null);
+    setMemberAccounts([]);
+  };
+
+  const handleAccountSelect = (acc: AccountOption) => {
+    if (acc.statutCompte !== 'actif') return;
+    setSelectedAccount(acc);
+    setErrors(e => ({ ...e, account: '' }));
+  };
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!selectedMember)               e.member  = 'Sélectionnez un membre';
+    if (!selectedAccount)              e.account = 'Sélectionnez un compte';
+    if (isBlocked)                     e.account = 'Ce compte est suspendu';
+    if (amount <= 0)                   e.amount  = 'Montant invalide';
+    if (insufficient)                  e.amount  = 'Solde insuffisant';
+    if (!form.motif.trim())            e.motif   = 'Motif requis';
+    if (!form.codeAutorisation.trim()) e.code    = 'Code d\'autorisation requis';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validate()) setStep('confirm');
+  };
+
+  const handleConfirm = async () => {
+    setSubmitting(true);
+    const payload = {
+      idCompte:           selectedAccount!.account_number,
+      typeTransaction:    'WITHDRAWAL' as const,
+      codeAutorisation:   form.codeAutorisation,
+      montantTransaction: amount,
+      withdrawalSubtype:  form.withdrawalSubtype,
+      motif:              form.motif,
+      description:        form.description || null,
+      requiresVerification: needsVerif,
+      member_id:          selectedMember!.id,
+    };
+    try {
+      if (onSubmit) await onSubmit(payload);
+      setStep('success');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setStep('form');
+    setForm({ withdrawalSubtype: 'counter', montantTransaction: '', motif: '', description: '', codeAutorisation: '' });
+    setSelectedMember(null);
+    setSelectedAccount(null);
+    setMemberAccounts([]);
+    setErrors({});
+  };
+
+  // ── Succès ─────────────────────────────────────────────────────────────────
+  if (step === 'success') {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
+        </div>
+        <p className="text-lg font-bold text-gray-900">Retrait enregistré</p>
+        <p className="text-sm text-gray-500 text-center max-w-xs">
+          La transaction a été créée. Délai : <span className="font-semibold">{subCfg.delay}</span>.
+        </p>
+        <div className="flex gap-2 mt-2">
+          <button onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
+            <RefreshCw className="w-4 h-4" /> Nouveau retrait
+          </button>
+          {onCancel && (
+            <button onClick={onCancel}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+              Fermer
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Confirmation ────────────────────────────────────────────────────────────
+  if (step === 'confirm') {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-[#2E7D32]" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">Confirmer le retrait</p>
+              <p className="text-xs text-gray-400">Vérifiez les informations avant de valider</p>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {[
+              ['Membre',  selectedMember?.full_name ?? '—'],
+              ['Compte',  selectedAccount?.account_number ?? '—'],
+              ['Type',    subCfg.label],
+              ['Montant', formatHTG(amount)],
+              ['Motif',   form.motif],
+              ['Délai',   subCfg.delay],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between py-2.5">
+                <span className="text-xs text-gray-500">{label}</span>
+                <span className={`text-sm font-semibold ${label === 'Montant' ? 'text-red-600' : 'text-gray-800'}`}>{value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-start gap-2 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
+            <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-yellow-700 font-medium">Cette transaction sera traitée et ne pourra pas être annulée.</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => setStep('form')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+            <ArrowLeft className="w-4 h-4" /> Modifier
+          </button>
+          <button type="button" onClick={handleConfirm} disabled={submitting || isLoading}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            {submitting || isLoading
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Traitement…</>
+              : <><CheckCircle2 className="w-4 h-4" /> Valider le retrait</>
+            }
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Formulaire ──────────────────────────────────────────────────────────────
+  return (
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+
+      {/* ── 1. Membre + Compte ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={1} title="Membre et compte à débiter" icon={User} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Dropdown membre */}
+          <Field label="Membre" required error={errors.member}>
+            <div className="relative">
+              <button type="button" onClick={() => setMemberOpen(o => !o)}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm text-left transition-all
+                  ${selectedMember ? 'border-[#2E7D32] bg-[#DDEAD5]/30' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className={`flex-1 truncate ${selectedMember ? 'font-medium text-gray-800' : 'text-gray-400'}`}>
+                  {selectedMember?.full_name ?? 'Rechercher un membre…'}
+                </span>
+                {selectedMember
+                  ? <button type="button" onClick={e => { e.stopPropagation(); handleClearMember(); }}
+                      className="p-0.5 rounded-md hover:bg-[#c8e0bc] text-gray-500">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  : <ChevronDown className="w-4 h-4 text-gray-400" />
+                }
+              </button>
+
+              {memberOpen && (
+                <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+                  <div className="p-2 border-b border-gray-100">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input autoFocus type="text" value={memberSearch}
+                        onChange={e => setMemberSearch(e.target.value)}
+                        placeholder="Nom ou N° identification…"
+                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#DDEAD5]" />
+                    </div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                    {filteredMembers.length === 0
+                      ? <p className="text-xs text-gray-400 text-center py-4">Aucun membre trouvé</p>
+                      : filteredMembers.map(m => (
+                          <button key={m.id} type="button" onClick={() => handleMemberSelect(m)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#DDEAD5]/30 transition-colors text-left">
+                            <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-[#2E7D32]">{m.full_name[0]}</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{m.full_name}</p>
+                              <p className="text-xs text-gray-400">N° {m.id_number}</p>
+                            </div>
+                          </button>
+                        ))
+                    }
+                  </div>
+                </div>
+              )}
+            </div>
+            {selectedMember && (
+              <div className="flex items-center gap-3 px-3 py-2 bg-[#F9F9F6] rounded-xl border border-gray-100 text-xs text-gray-500">
+                <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <span>ID : <span className="font-mono font-semibold text-gray-700">{selectedMember.id_number}</span></span>
+                {selectedMember.phone_number && <span className="ml-auto">{selectedMember.phone_number}</span>}
+              </div>
+            )}
+          </Field>
+
+          {/* Compte à débiter */}
+          <Field label="Compte à débiter" required error={errors.account}
+            hint={!selectedMember ? "Sélectionnez un membre d'abord" : undefined}>
+            <StyledInput
+              placeholder="Ex: 636-922-093-4469"
+              hasError={!!errors.account}
+              disabled={!selectedMember}
+              value={selectedAccount?.account_number ?? ''}
+              onChange={e => {
+                const match = memberAccounts.find(a => a.account_number === e.target.value);
+                if (match) handleAccountSelect(match);
+              }}
+            />
+            {memberAccounts.length > 0 && (
+              <div className="flex flex-col gap-1.5 mt-1">
+                {memberAccounts.map(acc => {
+                  const tCfg  = TYPE_LABEL[acc.typeCompte];
+                  const isAct = acc.statutCompte === 'actif';
+                  const isSel = selectedAccount?.id === acc.id;
+                  return (
+                    <button key={acc.id} type="button" disabled={!isAct}
+                      onClick={() => handleAccountSelect(acc)}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-left transition-all
+                        ${isSel  ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
+                                 : isAct ? 'border-gray-100 bg-white hover:border-[#2E7D32]/30 hover:bg-[#DDEAD5]/10'
+                                         : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'}`}>
+                      <CreditCard className={`w-4 h-4 shrink-0 ${isSel ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-mono font-semibold text-gray-800">{acc.account_number}</p>
+                        <p className="text-xs text-gray-400">{formatHTG(acc.soldeActuel)}</p>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${tCfg.bg} ${tCfg.text}`}>{tCfg.label}</span>
+                      {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">Suspendu</span>}
+                      {isSel  && <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Field>
+        </div>
+      </div>
+
+      {/* ── 2. Type de retrait ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={2} title="Type de retrait" icon={TrendingDown} />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {(Object.keys(SUBTYPE_CFG) as WithdrawalSubtype[]).map(sub => {
+            const cfg    = SUBTYPE_CFG[sub];
+            const Icon   = cfg.icon;
+            const active = form.withdrawalSubtype === sub;
+            return (
+              <button key={sub} type="button"
+                onClick={() => setForm(f => ({ ...f, withdrawalSubtype: sub }))}
+                className={`flex flex-col items-start gap-2 px-3 py-3 rounded-xl border-2 text-left transition-all
+                  ${active ? 'border-[#2E7D32] bg-[#DDEAD5]/40' : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'}`}>
+                <Icon className={`w-5 h-5 ${active ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+                <div>
+                  <p className={`text-xs font-semibold ${active ? 'text-[#1B5E20]' : 'text-gray-700'}`}>{cfg.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-tight hidden sm:block">{cfg.desc}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── 3. Montant + Motif ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={3} title="Montant et motif" icon={Banknote} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Montant (HTG)" required error={errors.amount}>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">HTG</span>
+              <StyledInput type="number" min={1} placeholder="0" hasError={!!errors.amount}
+                className="pl-12 text-right font-mono text-base font-bold"
+                value={form.montantTransaction}
+                onChange={e => { setForm(f => ({ ...f, montantTransaction: e.target.value })); setErrors(er => ({ ...er, amount: '' })); }} />
+            </div>
+            {amount > 0 && (
+              <p className={`text-xs font-semibold text-right ${insufficient ? 'text-red-500' : 'text-red-600'}`}>
+                − {formatHTG(amount)}
+                {insufficient && ' · Solde insuffisant'}
+              </p>
+            )}
+          </Field>
+
+          <Field label="Motif" required error={errors.motif}>
+            <select value={form.motif} onChange={set('motif')}
+              className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none transition-all appearance-none bg-white
+                focus:ring-2 focus:ring-[#DDEAD5] focus:border-[#2E7D32]
+                ${errors.motif ? 'border-red-300' : 'border-gray-200 hover:border-gray-300'}`}>
+              <option value="">Sélectionner un motif…</option>
+              {MOTIFS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Description" hint="Optionnel" className="md:col-span-2">
+            <div className="relative">
+              <FileText className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <StyledInput placeholder="Notes complémentaires…" className="pl-9"
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+            </div>
+          </Field>
+        </div>
+
+        {/* Récapitulatif solde */}
+        {selectedAccount && amount > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="bg-[#F9F9F6] rounded-xl px-4 py-3 border border-gray-100">
+              <p className="text-xs text-gray-400 mb-1">Solde actuel</p>
+              <p className="text-sm font-bold text-[#2E7D32]">{formatHTG(selectedAccount.soldeActuel)}</p>
+            </div>
+            <div className={`rounded-xl px-4 py-3 border ${insufficient ? 'bg-red-50 border-red-100' : 'bg-[#F9F9F6] border-gray-100'}`}>
+              <p className="text-xs text-gray-400 mb-1">Solde après retrait</p>
+              <p className={`text-sm font-bold ${insufficient ? 'text-red-600' : 'text-gray-700'}`}>
+                {formatHTG(Math.max(0, selectedAccount.soldeActuel - amount))}
+              </p>
+            </div>
+            <div className={`rounded-xl px-4 py-3 border ${needsVerif ? 'bg-[#EBF2F8] border-[#355C7D]/20' : 'bg-[#F9F9F6] border-gray-100'}`}>
+              <div className="flex items-center gap-1 mb-1">
+                <ShieldCheck className={`w-3 h-3 ${needsVerif ? 'text-[#355C7D]' : 'text-gray-400'}`} />
+                <p className="text-xs text-gray-400">Vérification</p>
+              </div>
+              <p className={`text-xs font-semibold ${needsVerif ? 'text-[#355C7D]' : 'text-gray-500'}`}>
+                {needsVerif ? 'Requise' : 'Non requise'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {amount > 50000 && (
+          <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
+            <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-yellow-700 font-medium">Montant &gt; 50 000 HTG — validation superviseur requise.</p>
+          </div>
+        )}
+        {isBlocked && (
+          <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-red-600 font-medium">Ce compte est suspendu — les retraits ne sont pas autorisés.</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── 4. Autorisation superviseur ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={4} title="Autorisation superviseur" icon={ShieldCheck} />
+        <div className="flex items-start gap-3 mb-4 px-3 py-2.5 bg-[#EBF2F8] border border-[#355C7D]/20 rounded-xl">
+          <ShieldCheck className="w-4 h-4 text-[#355C7D] shrink-0 mt-0.5" />
+          <p className="text-xs text-[#355C7D] font-medium">
+            Le code d'autorisation est fourni par le superviseur ou le chef de caisse. Le caissier ne peut pas autoriser sa propre transaction.
+          </p>
+        </div>
+        <Field label="Code d'autorisation" required error={errors.code}
+          hint="Saisie manuelle obligatoire — remis par un responsable autorisé.">
+          <div className="relative">
+            <Hash className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <StyledInput placeholder="Code remis par le superviseur" hasError={!!errors.code}
+              className="pl-9 font-mono"
+              value={form.codeAutorisation}
+              onChange={e => { setForm(f => ({ ...f, codeAutorisation: e.target.value })); setErrors(er => ({ ...er, code: '' })); }} />
+          </div>
+        </Field>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <button type="button" onClick={onCancel}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+          <ArrowLeft className="w-4 h-4" /> Annuler
+        </button>
+        <button type="submit" disabled={isBlocked || isLoading}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          <TrendingDown className="w-4 h-4" /> Vérifier le retrait
+        </button>
+      </div>
+    </form>
+  );
+}

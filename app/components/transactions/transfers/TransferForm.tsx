@@ -1,978 +1,544 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Card,
-  CardBody,
-  CardHeader,
-  Button,
-  Input,
-  Select,
-  SelectItem,
-  Textarea,
-  Divider,
-  Chip,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
-  Switch,
-  Autocomplete,
-  AutocompleteItem
-} from "@heroui/react";
-import { FaArrowLeft, FaExchangeAlt, FaUserCheck, FaExclamationTriangle, FaCheckCircle, FaCalculator, FaClock } from "react-icons/fa";
+  ArrowLeftRight, ArrowLeft, CreditCard, Banknote,
+  Building2, Landmark, User, Mail, Phone, Hash,
+  FileText, Calendar, Clock, ShieldCheck, CheckCircle2,
+  AlertTriangle, Loader2, ChevronDown, X,
+} from 'lucide-react';
 
-// Types pour le formulaire de virement
-interface TransferFormData {
-  // Comptes
-  sourceAccountNumber: string;
-  destinationAccountNumber?: string; // Pour transferts internes
-  
-  // Montant et base
-  amount: string;
-  transferType: string;
-  description: string;
-  
-  // Destinataire externe (Interac/Fournisseur)
-  recipientName?: string;
-  recipientEmail?: string;
-  recipientPhone?: string;
-  
-  // Fournisseur agricole
-  supplierName?: string;
-  supplierAccountNumber?: string;
-  invoiceReference?: string;
-  
-  // Paiement de prêt
-  loanAccountNumber?: string;
-  paymentType?: 'regular' | 'extra' | 'full';
-  
-  // Planification
-  executeImmediately: boolean;
-  scheduledDate?: string;
-  
-  // Sécurité
-  securityQuestion?: string;
-  pin: string;
-}
+// ─── Types ─────────────────────────────────────────────────────────────────────
+type TransferType = 'internal' | 'supplier' | 'loan_payment';
+type PaymentType  = 'regular' | 'extra' | 'full';
 
 interface AccountInfo {
   accountNumber: string;
-  accountName: string;
-  availableBalance: number;
-  accountType: string;
-  dailyTransferLimit: number;
+  accountName:   string;
+  balance:       number;
+  accountType:   'epargne' | 'cheques' | 'terme';
 }
 
 interface LoanInfo {
-  loanNumber: string;
-  loanPurpose: string;
-  monthlyPayment: number;
+  loanNumber:       string;
+  loanPurpose:      string;
+  monthlyPayment:   number;
   remainingBalance: number;
-  nextPaymentDate: string;
+  nextPaymentDate:  string;
 }
 
-const TransferForm: React.FC = () => {
-  const [formData, setFormData] = useState<TransferFormData>({
-    sourceAccountNumber: '',
-    amount: '',
-    transferType: '',
-    description: '',
-    executeImmediately: true,
-    pin: ''
+// ─── Config CAPOSA ─────────────────────────────────────────────────────────────
+const C = {
+  green:     '#2E7D32',
+  greenDark: '#1B5E20',
+  greenPale: '#DDEAD5',
+  blue:      '#355C7D',
+  gold:      '#D4AF37',
+  bg:        '#F9F9F6',
+};
+
+const ACCOUNT_TYPE_CFG = {
+  epargne: { label: 'Épargne',  bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]'  },
+  cheques: { label: 'Chèques', bg: 'bg-blue-50',    text: 'text-[#355C7D]'  },
+  terme:   { label: 'Terme',   bg: 'bg-yellow-50',  text: 'text-yellow-700' },
+};
+
+const TRANSFER_TYPES: { key: TransferType; label: string; desc: string; icon: React.ElementType; fees: number; delay: string }[] = [
+  { key: 'internal',     label: 'Entre mes comptes', desc: 'Transfert instantané, sans frais',     icon: ArrowLeftRight, fees: 0,    delay: 'Immédiat'            },
+  { key: 'supplier',     label: 'Fournisseur',       desc: 'Paiement fournisseur ou tiers',        icon: Building2,      fees: 0,    delay: '1–2 jours ouvrables' },
+  { key: 'loan_payment', label: 'Remboursement prêt',desc: 'Paiement partiel ou complet d\'un prêt', icon: Landmark,     fees: 0,    delay: 'Immédiat'            },
+];
+
+// ─── Mock data ──────────────────────────────────────────────────────────────────
+const MEMBER_ACCOUNTS: AccountInfo[] = [
+  { accountNumber: '636-922-093-4469', accountName: 'Épargne principal',    balance: 15420, accountType: 'epargne' },
+  { accountNumber: '789-123-456-7890', accountName: 'Chèques exploitation', balance: 8750,  accountType: 'cheques' },
+  { accountNumber: '111-222-333-4444', accountName: 'Fonds saisonnier',     balance: 25000, accountType: 'terme'   },
+];
+
+const ACTIVE_LOANS: LoanInfo[] = [
+  { loanNumber: 'PRET-2024-015', loanPurpose: 'Tracteur occasion',  monthlyPayment: 1750,  remainingBalance: 18277, nextPaymentDate: '2025-07-20' },
+  { loanNumber: 'PRET-2025-001', loanPurpose: 'Équipement serre',   monthlyPayment: 2184,  remainingBalance: 50000, nextPaymentDate: '2025-08-17' },
+];
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+function formatHTG(n: number) {
+  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+}
+
+// ─── Sub-components ─────────────────────────────────────────────────────────────
+function Field({ label, required, error, hint, children }: {
+  label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      {children}
+      {hint  && !error && <p className="text-xs text-gray-400">{hint}</p>}
+      {error && (
+        <p className="text-xs text-red-500 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3 shrink-0" /> {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Input({ hasError, className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement> & { hasError?: boolean }) {
+  return (
+    <input {...props}
+      className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none transition-all
+        focus:ring-2 focus:ring-[#DDEAD5] focus:border-[#2E7D32]
+        disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed
+        ${hasError
+          ? 'border-red-300 bg-red-50/30 focus:ring-red-100 focus:border-red-400'
+          : 'border-gray-200 bg-white hover:border-gray-300'
+        } ${className}`}
+    />
+  );
+}
+
+function SectionHeader({ step, title, icon: Icon }: { step: number; title: string; icon: React.ElementType }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="w-6 h-6 rounded-lg bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+        <span className="text-white text-xs font-bold">{step}</span>
+      </div>
+      <Icon className="w-4 h-4 text-gray-400" />
+      <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+function AccountCard({ account, selected, onClick, disabled }: {
+  account: AccountInfo; selected: boolean; onClick: () => void; disabled?: boolean;
+}) {
+  const tCfg = ACCOUNT_TYPE_CFG[account.accountType];
+  return (
+    <button type="button" disabled={disabled} onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all w-full
+        ${selected  ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
+        : disabled  ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
+                    : 'border-gray-100 bg-white hover:border-[#2E7D32]/30 hover:bg-[#DDEAD5]/10'}`}>
+      <CreditCard className={`w-4 h-4 shrink-0 ${selected ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-gray-800 truncate">{account.accountName}</p>
+        <p className="text-xs font-mono text-gray-400">{account.accountNumber}</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-xs font-bold text-[#2E7D32]">{formatHTG(account.balance)}</p>
+        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${tCfg.bg} ${tCfg.text}`}>{tCfg.label}</span>
+      </div>
+      {selected && <CheckCircle2 className="w-4 h-4 text-[#2E7D32] shrink-0" />}
+    </button>
+  );
+}
+
+// ─── Main ───────────────────────────────────────────────────────────────────────
+export default function TransferForm({ onCancel }: { onCancel?: () => void }) {
+
+  const [step,           setStep]           = useState<'form' | 'confirm' | 'success'>('form');
+  const [transferType,   setTransferType]   = useState<TransferType | null>(null);
+  const [sourceAccount,  setSourceAccount]  = useState<AccountInfo | null>(null);
+  const [destAccount,    setDestAccount]    = useState<AccountInfo | null>(null);
+  const [selectedLoan,   setSelectedLoan]   = useState<LoanInfo | null>(null);
+  const [paymentType,    setPaymentType]    = useState<PaymentType>('regular');
+  const [loanOpen,       setLoanOpen]       = useState(false);
+  const [submitting,     setSubmitting]     = useState(false);
+  const [errors,         setErrors]         = useState<Record<string, string>>({});
+
+  const [form, setForm] = useState({
+    amount:           '',
+    codeAutorisation: '',
+    supplierName:     '',
+    supplierAccount:  '',
+    invoiceRef:       '',
+    description:      '',
   });
 
-  const [sourceAccount, setSourceAccount] = useState<AccountInfo | null>(null);
-  const [destinationAccount, setDestinationAccount] = useState<AccountInfo | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const set = (key: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm(f => ({ ...f, [key]: e.target.value }));
 
-  // Comptes disponibles du membre
-  const memberAccounts: AccountInfo[] = [
-    {
-      accountNumber: "12345-001",
-      accountName: "Compte Épargne Principal",
-      availableBalance: 15420.50,
-      accountType: "Épargne",
-      dailyTransferLimit: 5000
-    },
-    {
-      accountNumber: "12345-002", 
-      accountName: "Compte Chèques Exploitation",
-      availableBalance: 8750.25,
-      accountType: "Chèques",
-      dailyTransferLimit: 10000
-    },
-    {
-      accountNumber: "12345-003",
-      accountName: "Fonds Saisonnier",
-      availableBalance: 25000.00,
-      accountType: "Terme",
-      dailyTransferLimit: 15000
-    }
-  ];
+  const amount      = parseFloat(form.amount) || 0;
+  const typeCfg     = transferType ? TRANSFER_TYPES.find(t => t.key === transferType)! : null;
+  const insufficient = sourceAccount ? amount > sourceAccount.balance : false;
 
-  // Prêts actifs du membre
-  const activeLoans: LoanInfo[] = [
-    {
-      loanNumber: "LOAN-2024-015",
-      loanPurpose: "Tracteur occasion",
-      monthlyPayment: 175.33,
-      remainingBalance: 1827.69,
-      nextPaymentDate: "2025-07-20"
-    },
-    {
-      loanNumber: "LOAN-2025-001", 
-      loanPurpose: "Équipement serre",
-      monthlyPayment: 218.42,
-      remainingBalance: 5000.00,
-      nextPaymentDate: "2025-08-17"
-    }
-  ];
+  // Montant suggéré selon prêt et type de paiement
+  const suggestedAmount = useMemo(() => {
+    if (!selectedLoan) return null;
+    if (paymentType === 'regular') return selectedLoan.monthlyPayment;
+    if (paymentType === 'full')    return selectedLoan.remainingBalance;
+    return null;
+  }, [selectedLoan, paymentType]);
 
-  // Types de virements simplifiés
-  const transferTypes = [
-    { key: 'internal', label: '🔄 Transfert entre mes comptes' },
-    { key: 'supplier', label: '💸 Paiement fournisseur agricole' },
-    { key: 'interac', label: '🏦 Virement Interac (email/téléphone)' },
-    { key: 'loan_payment', label: '⚡ Paiement de prêt' }
-  ];
+  // Validation
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!sourceAccount)  e.source   = 'Sélectionnez un compte source';
+    if (!transferType)   e.type     = 'Sélectionnez un type de virement';
+    if (amount <= 0)     e.amount   = 'Montant invalide';
+    if (insufficient)    e.amount   = 'Solde insuffisant';
+    if (!form.codeAutorisation.trim()) e.code = 'Code d\'autorisation requis';
 
-  // Fournisseurs agricoles fréquents (simulation)
-  const commonSuppliers = [
-    { key: 'semences_abc', label: 'Semences ABC Inc.' },
-    { key: 'equipement_rural', label: 'Équipement Rural Ltée' },
-    { key: 'coop_agricole', label: 'Coopérative Agricole du Québec' },
-    { key: 'fourrage_plus', label: 'Fourrage Plus' },
-    { key: 'machinerie_jean', label: 'Machinerie Jean & Fils' }
-  ];
+    if (transferType === 'internal' && !destAccount)
+      e.dest = 'Sélectionnez un compte destination';
+    if (transferType === 'supplier' && !form.supplierName.trim())
+      e.supplier = 'Nom du fournisseur requis';
+    if (transferType === 'loan_payment' && !selectedLoan)
+      e.loan = 'Sélectionnez un prêt';
 
-  // Gestion des changements
-  const handleInputChange = (field: keyof TransferFormData, value: string | boolean) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      
-      // Reset des champs conditionnels quand le type change
-      if (field === 'transferType') {
-        return {
-          ...newData,
-          destinationAccountNumber: '',
-          recipientName: '',
-          recipientEmail: '',
-          recipientPhone: '',
-          supplierName: '',
-          supplierAccountNumber: '',
-          invoiceReference: '',
-          loanAccountNumber: '',
-          paymentType: 'regular'
-        };
-      }
-      
-      return newData;
-    });
-    
-    // Reset du compte destination si le type change
-    if (field === 'transferType') {
-      setDestinationAccount(null);
-    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  // Sélection compte source
-  const handleSourceAccountChange = (accountNumber: string) => {
-    const account = memberAccounts.find(acc => acc.accountNumber === accountNumber);
-    setSourceAccount(account || null);
-    setFormData(prev => ({ ...prev, sourceAccountNumber: accountNumber }));
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validate()) setStep('confirm');
   };
 
-  // Sélection compte destination (transferts internes)
-  const handleDestinationAccountChange = (accountNumber: string) => {
-    const account = memberAccounts.find(acc => acc.accountNumber === accountNumber);
-    setDestinationAccount(account || null);
-    setFormData(prev => ({ ...prev, destinationAccountNumber: accountNumber }));
+  const handleConfirm = async () => {
+    setSubmitting(true);
+    await new Promise(r => setTimeout(r, 1200));
+    setSubmitting(false);
+    setStep('success');
   };
 
-  // Validation du montant
-  const validateAmount = (amount: number) => {
-    const errors: string[] = [];
-    
-    if (!sourceAccount) {
-      errors.push("Veuillez sélectionner un compte source");
-      setValidationErrors(errors);
-      return false;
-    }
+  // ── Écran succès ────────────────────────────────────────────────────────────
+  if (step === 'success') {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
+        </div>
+        <p className="text-lg font-bold text-gray-900">Virement enregistré</p>
+        <p className="text-sm text-gray-500 text-center max-w-xs">
+          {typeCfg?.delay === 'Immédiat'
+            ? 'La transaction a été traitée immédiatement.'
+            : `Délai de traitement : ${typeCfg?.delay}`}
+        </p>
+        <div className="flex gap-2 mt-2">
+          <button onClick={() => { setStep('form'); setForm({ amount: '', codeAutorisation: '', supplierName: '', supplierAccount: '', invoiceRef: '', description: '' }); setSourceAccount(null); setDestAccount(null); setTransferType(null); setSelectedLoan(null); }}
+            className="px-4 py-2 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
+            Nouveau virement
+          </button>
+          {onCancel && (
+            <button onClick={onCancel}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+              Fermer
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-    if (amount <= 0) {
-      errors.push("Le montant doit être supérieur à 0$");
-    }
-
-    if (amount > sourceAccount.availableBalance) {
-      errors.push(`Fonds insuffisants (disponible: ${formatCurrency(sourceAccount.availableBalance)})`);
-    }
-
-    if (amount > sourceAccount.dailyTransferLimit) {
-      errors.push(`Limite quotidienne dépassée (max: ${formatCurrency(sourceAccount.dailyTransferLimit)})`);
-    }
-
-    // Validations spécifiques par type
-    if (formData.transferType === 'interac' && amount > 3000) {
-      errors.push("Limite Interac: 3,000$ par transaction");
-    }
-
-    setValidationErrors(errors);
-    return errors.length === 0;
-  };
-
-  // Calcul des frais de virement
-  const calculateFees = (): number => {
-    const amount = parseFloat(formData.amount || '0');
-    let fees = 0;
-
-    switch (formData.transferType) {
-      case 'internal':
-        fees = 0; // Transferts internes gratuits
-        break;
-      case 'supplier':
-        fees = 5.00; // Frais virements fournisseurs
-        break;
-      case 'interac':
-        fees = 1.50; // Frais Interac standard
-        break;
-      case 'loan_payment':
-        fees = 0; // Paiements de prêts gratuits
-        break;
-      default:
-        fees = 0;
-    }
-
-    return fees;
-  };
-
-  // Estimation du délai de traitement
-  const getProcessingTime = (): string => {
-    if (!formData.executeImmediately) {
-      return `Exécuté le ${formData.scheduledDate}`;
-    }
-
-    switch (formData.transferType) {
-      case 'internal':
-        return 'Immédiat';
-      case 'supplier':
-        return '1-2 jours ouvrables';
-      case 'interac':
-        return '30 minutes (si accepté)';
-      case 'loan_payment':
-        return 'Immédiat';
-      default:
-        return 'Variable';
-    }
-  };
-
-  // Validation complète du formulaire
-  const validateForm = (): boolean => {
-    if (!formData.amount || !formData.transferType || !formData.pin || !sourceAccount) {
-      return false;
-    }
-
-    const amount = parseFloat(formData.amount || '0');
-    if (amount <= 0 || amount > sourceAccount.availableBalance) {
-      return false;
-    }
-
-    // Validations spécifiques par type
-    switch (formData.transferType) {
-      case 'internal':
-        return !!(formData.destinationAccountNumber && 
-                 formData.sourceAccountNumber !== formData.destinationAccountNumber);
-      case 'supplier':
-        return !!formData.supplierName;
-      case 'interac':
-        return !!(formData.recipientName && 
-                 (formData.recipientEmail || formData.recipientPhone));
-      case 'loan_payment':
-        return !!formData.loanAccountNumber;
-      default:
-        return false;
-    }
-  };
-
-  // Soumission du formulaire
-  const handleSubmit = async () => {
-    // Validation finale avec messages d'erreur
-    const amount = parseFloat(formData.amount || '0');
-    const errors: string[] = [];
-
-    if (!validateAmount(amount)) return;
-
-    // Validations spécifiques par type
-    switch (formData.transferType) {
-      case 'internal':
-        if (!formData.destinationAccountNumber) {
-          errors.push("Veuillez sélectionner un compte de destination");
-        }
-        if (formData.sourceAccountNumber === formData.destinationAccountNumber) {
-          errors.push("Les comptes source et destination doivent être différents");
-        }
-        break;
-      case 'supplier':
-        if (!formData.supplierName) {
-          errors.push("Veuillez spécifier le nom du fournisseur");
-        }
-        break;
-      case 'interac':
-        if (!formData.recipientName) {
-          errors.push("Veuillez spécifier le nom du destinataire");
-        }
-        if (!formData.recipientEmail && !formData.recipientPhone) {
-          errors.push("Email OU téléphone requis pour Interac");
-        }
-        break;
-      case 'loan_payment':
-        if (!formData.loanAccountNumber) {
-          errors.push("Veuillez sélectionner un prêt");
-        }
-        break;
-    }
-
-    if (!formData.pin) {
-      errors.push("Code PIN requis pour autoriser le virement");
-    }
-
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-
-    setShowConfirmation(true);
-  };
-
-  // Confirmation finale
-  const confirmTransfer = async () => {
-    setIsSubmitting(true);
-    setShowConfirmation(false);
-
-    try {
-      // Simulation de traitement
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('🔄 Virement traité:', {
-        ...formData,
-        sourceAccount,
-        destinationAccount,
-        fees: calculateFees(),
-        processingTime: getProcessingTime(),
-        timestamp: new Date().toISOString()
-      });
-      
-      onOpen(); // Ouvrir modal de succès
-    } catch (error) {
-      console.error('❌ Erreur virement:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-CA', {
-      style: 'currency',
-      currency: 'CAD'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-CA', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  return (
-    <>
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <span className="text-2xl">🔄</span>
+  // ── Écran confirmation ───────────────────────────────────────────────────────
+  if (step === 'confirm') {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-[#2E7D32]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Nouveau Virement</h1>
-              <p className="text-gray-600">Transferts et paiements automatisés</p>
+              <p className="text-sm font-bold text-gray-900">Confirmer le virement</p>
+              <p className="text-xs text-gray-400">Vérifiez les informations avant de valider</p>
             </div>
           </div>
-        </CardHeader>
 
-        <CardBody className="space-y-6">
-          {/* Sélection du compte source */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">🏦</span>
-              <h2 className="text-xl font-semibold">Compte source</h2>
-            </div>
-            
-            <Select
-              label="Débiter de ce compte"
-              placeholder="Choisir le compte à débiter"
-              selectedKeys={formData.sourceAccountNumber ? [formData.sourceAccountNumber] : []}
-              onChange={(e) => handleSourceAccountChange(e.target.value)}
-              isRequired
-            >
-              {memberAccounts.map((account) => (
-                <SelectItem 
-                  key={account.accountNumber} 
-                  value={account.accountNumber}
-                  description={`${formatCurrency(account.availableBalance)} disponible | Limite: ${formatCurrency(account.dailyTransferLimit)}`}
-                >
-                  {account.accountName} ({account.accountNumber})
-                </SelectItem>
-              ))}
-            </Select>
-
-            {/* Infos du compte source */}
-            {sourceAccount && (
-              <Card className="bg-blue-50 border-blue-200">
-                <CardBody className="p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Solde disponible</p>
-                      <p className="font-bold text-blue-600">
-                        {formatCurrency(sourceAccount.availableBalance)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Type de compte</p>
-                      <p className="font-medium">{sourceAccount.accountType}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Limite de virement</p>
-                      <p className="font-medium text-orange-600">
-                        {formatCurrency(sourceAccount.dailyTransferLimit)}
-                      </p>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            )}
-          </div>
-
-          {/* Type de virement */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">⚡</span>
-              <h2 className="text-xl font-semibold">Type de virement</h2>
-            </div>
-            
-            <Select
-              label="Que voulez-vous faire ?"
-              placeholder="Choisir le type de virement"
-              selectedKeys={formData.transferType ? [formData.transferType] : []}
-              onChange={(e) => handleInputChange('transferType', e.target.value)}
-              isRequired
-            >
-              {transferTypes.map((type) => (
-                <SelectItem key={type.key} value={type.key}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </Select>
-          </div>
-
-          {/* Montant */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">💰</span>
-              <h2 className="text-xl font-semibold">Montant</h2>
-            </div>
-            
-            <Input
-              label="Montant à virer"
-              placeholder="0.00"
-              value={formData.amount}
-              onChange={(e) => handleInputChange('amount', e.target.value)}
-              startContent={<span className="text-gray-500">$</span>}
-              isRequired
-              color={validationErrors.length > 0 ? "danger" : "default"}
-            />
-          </div>
-
-          {/* Champs conditionnels selon le type */}
-          {formData.transferType === 'internal' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🎯</span>
-                <h2 className="text-xl font-semibold">Destination</h2>
+          <div className="divide-y divide-gray-50">
+            {[
+              ['Compte source',   sourceAccount?.accountName ?? '—'],
+              ['Type',            typeCfg?.label ?? '—'],
+              ['Montant',         formatHTG(amount)],
+              ['Délai',           typeCfg?.delay ?? '—'],
+              ['Vers',
+                transferType === 'internal'     ? (destAccount?.accountName ?? '—')
+              : transferType === 'supplier'     ? form.supplierName
+              : transferType === 'loan_payment' ? (selectedLoan?.loanPurpose ?? '—')
+              : '—'],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between py-2.5">
+                <span className="text-xs text-gray-500">{label}</span>
+                <span className={`text-sm font-semibold text-gray-800 ${label === 'Montant' ? 'text-[#2E7D32]' : ''}`}>{value}</span>
               </div>
-              
-              <Select
-                label="Vers ce compte"
-                placeholder="Choisir le compte de destination"
-                selectedKeys={formData.destinationAccountNumber ? [formData.destinationAccountNumber] : []}
-                onChange={(e) => handleDestinationAccountChange(e.target.value)}
-                isRequired
-              >
-                {memberAccounts
-                  .filter(acc => acc.accountNumber !== formData.sourceAccountNumber)
-                  .map((account) => (
-                    <SelectItem 
-                      key={account.accountNumber} 
-                      value={account.accountNumber}
-                      description={`${formatCurrency(account.availableBalance)} | ${account.accountType}`}
-                    >
-                      {account.accountName} ({account.accountNumber})
-                    </SelectItem>
-                  ))
-                }
-              </Select>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-start gap-2 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
+            <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-yellow-700 font-medium">
+              Cette transaction sera traitée et ne pourra pas être annulée.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => setStep('form')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+            <ArrowLeft className="w-4 h-4" /> Modifier
+          </button>
+          <button type="button" onClick={handleConfirm} disabled={submitting}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            {submitting
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Traitement…</>
+              : <><CheckCircle2 className="w-4 h-4" /> Valider le virement</>
+            }
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Formulaire principal ─────────────────────────────────────────────────────
+  return (
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+
+      {/* ── 1. Compte source ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={1} title="Compte à débiter" icon={CreditCard} />
+        <div className="flex flex-col gap-2">
+          {MEMBER_ACCOUNTS.map(acc => (
+            <AccountCard key={acc.accountNumber} account={acc}
+              selected={sourceAccount?.accountNumber === acc.accountNumber}
+              onClick={() => {
+                setSourceAccount(acc);
+                if (destAccount?.accountNumber === acc.accountNumber) setDestAccount(null);
+                setErrors(e => ({ ...e, source: '' }));
+              }} />
+          ))}
+          {errors.source && (
+            <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+              <AlertTriangle className="w-3 h-3" /> {errors.source}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── 2. Type de virement ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={2} title="Type de virement" icon={ArrowLeftRight} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {TRANSFER_TYPES.map(t => {
+            const Icon   = t.icon;
+            const active = transferType === t.key;
+            return (
+              <button key={t.key} type="button"
+                onClick={() => { setTransferType(t.key); setDestAccount(null); setSelectedLoan(null); setErrors(e => ({ ...e, type: '' })); }}
+                className={`flex flex-col items-start gap-2 px-4 py-3 rounded-xl border-2 text-left transition-all
+                  ${active ? 'border-[#2E7D32] bg-[#DDEAD5]/40' : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'}`}>
+                <Icon className={`w-5 h-5 ${active ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+                <div>
+                  <p className={`text-xs font-semibold ${active ? 'text-[#1B5E20]' : 'text-gray-700'}`}>{t.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-tight">{t.desc}</p>
+                </div>
+                <div className="flex items-center gap-1 mt-auto">
+                  <Clock className="w-3 h-3 text-gray-300" />
+                  <span className="text-xs text-gray-400">{t.delay}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {errors.type && (
+          <p className="text-xs text-red-500 flex items-center gap-1 mt-2">
+            <AlertTriangle className="w-3 h-3" /> {errors.type}
+          </p>
+        )}
+      </div>
+
+      {/* ── 3. Détails selon le type ── */}
+      {transferType && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <SectionHeader step={3} title="Détails" icon={FileText} />
+
+          {/* Interne */}
+          {transferType === 'internal' && (
+            <Field label="Compte destination" required error={errors.dest}>
+              <div className="flex flex-col gap-2">
+                {MEMBER_ACCOUNTS.filter(a => a.accountNumber !== sourceAccount?.accountNumber).map(acc => (
+                  <AccountCard key={acc.accountNumber} account={acc}
+                    selected={destAccount?.accountNumber === acc.accountNumber}
+                    onClick={() => { setDestAccount(acc); setErrors(e => ({ ...e, dest: '' })); }} />
+                ))}
+              </div>
+            </Field>
+          )}
+
+          {/* Fournisseur */}
+          {transferType === 'supplier' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Nom du fournisseur" required error={errors.supplier}>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Input placeholder="Ex: Semences ABC Inc." className="pl-9"
+                    hasError={!!errors.supplier} value={form.supplierName} onChange={set('supplierName')} />
+                </div>
+              </Field>
+              <Field label="N° compte fournisseur" hint="Optionnel">
+                <div className="relative">
+                  <Hash className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Input placeholder="ACC-XXXXXX" className="pl-9 font-mono"
+                    value={form.supplierAccount} onChange={set('supplierAccount')} />
+                </div>
+              </Field>
+              <Field label="Référence facture" hint="Optionnel">
+                <div className="relative">
+                  <FileText className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Input placeholder="INV-2025-001" className="pl-9 font-mono"
+                    value={form.invoiceRef} onChange={set('invoiceRef')} />
+                </div>
+              </Field>
             </div>
           )}
 
-          {formData.transferType === 'supplier' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🚜</span>
-                <h2 className="text-xl font-semibold">Fournisseur agricole</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Autocomplete
-                  label="Nom du fournisseur"
-                  placeholder="Choisir ou taper le nom"
-                  inputValue={formData.supplierName || ''}
-                  onInputChange={(value) => handleInputChange('supplierName', value)}
-                  isRequired
-                >
-                  {commonSuppliers.map((supplier) => (
-                    <AutocompleteItem key={supplier.key} value={supplier.key}>
-                      {supplier.label}
-                    </AutocompleteItem>
-                  ))}
-                </Autocomplete>
-                
-                <Input
-                  label="Numéro de facture (optionnel)"
-                  placeholder="INV-2025-001"
-                  value={formData.invoiceReference || ''}
-                  onChange={(e) => handleInputChange('invoiceReference', e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {formData.transferType === 'interac' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">📧</span>
-                <h2 className="text-xl font-semibold">Destinataire Interac</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Nom complet du destinataire"
-                  placeholder="Jean Tremblay"
-                  value={formData.recipientName || ''}
-                  onChange={(e) => handleInputChange('recipientName', e.target.value)}
-                  isRequired
-                />
-                
-                <Input
-                  label="Email du destinataire"
-                  type="email"
-                  placeholder="jean@exemple.com"
-                  value={formData.recipientEmail || ''}
-                  onChange={(e) => handleInputChange('recipientEmail', e.target.value)}
-                  description="Email OU téléphone requis"
-                />
-                
-                <Input
-                  label="Téléphone du destinataire"
-                  placeholder="(514) 123-4567"
-                  value={formData.recipientPhone || ''}
-                  onChange={(e) => handleInputChange('recipientPhone', e.target.value)}
-                  description="Email OU téléphone requis"
-                />
-                
-                <Input
-                  label="Question de sécurité (optionnel)"
-                  placeholder="Nom de votre ville natale ?"
-                  value={formData.securityQuestion || ''}
-                  onChange={(e) => handleInputChange('securityQuestion', e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {formData.transferType === 'loan_payment' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🏦</span>
-                <h2 className="text-xl font-semibold">Paiement de prêt</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Select
-                  label="Prêt à payer"
-                  placeholder="Choisir le prêt"
-                  selectedKeys={formData.loanAccountNumber ? [formData.loanAccountNumber] : []}
-                  onChange={(e) => handleInputChange('loanAccountNumber', e.target.value)}
-                  isRequired
-                >
-                  {activeLoans.map((loan) => (
-                    <SelectItem 
-                      key={loan.loanNumber} 
-                      value={loan.loanNumber}
-                      description={`Solde: ${formatCurrency(loan.remainingBalance)} | Paiement: ${formatCurrency(loan.monthlyPayment)}`}
-                    >
-                      {loan.loanPurpose} ({loan.loanNumber})
-                    </SelectItem>
-                  ))}
-                </Select>
-                
-                <Select
-                  label="Type de paiement"
-                  placeholder="Paiement régulier"
-                  selectedKeys={formData.paymentType ? [formData.paymentType] : ['regular']}
-                  onChange={(e) => handleInputChange('paymentType', e.target.value)}
-                >
-                  <SelectItem key="regular" value="regular">
-                    Paiement régulier
-                  </SelectItem>
-                  <SelectItem key="extra" value="extra">
-                    Paiement supplémentaire
-                  </SelectItem>
-                  <SelectItem key="full" value="full">
-                    Remboursement complet
-                  </SelectItem>
-                </Select>
-              </div>
-
-              {/* Suggestion automatique du montant selon le prêt */}
-              {formData.loanAccountNumber && (
-                <Card className="bg-green-50 border-green-200">
-                  <CardBody className="p-3">
-                    {(() => {
-                      const selectedLoan = activeLoans.find(l => l.loanNumber === formData.loanAccountNumber);
-                      if (!selectedLoan) return null;
-                      
-                      return (
-                        <div className="text-sm space-y-2">
-                          <p className="font-medium text-green-800">
-                            💡 Suggestions de montant :
-                          </p>
-                          <div className="flex gap-2 flex-wrap">
-                            <Button 
-                              size="sm" 
-                              variant="bordered" 
-                              color="success"
-                              onClick={() => handleInputChange('amount', selectedLoan.monthlyPayment.toString())}
-                            >
-                              Paiement mensuel: {formatCurrency(selectedLoan.monthlyPayment)}
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="bordered" 
-                              color="warning"
-                              onClick={() => handleInputChange('amount', selectedLoan.remainingBalance.toString())}
-                            >
-                              Solde complet: {formatCurrency(selectedLoan.remainingBalance)}
-                            </Button>
-                          </div>
+          {/* Prêt */}
+          {transferType === 'loan_payment' && (
+            <div className="flex flex-col gap-4">
+              <Field label="Prêt à rembourser" required error={errors.loan}>
+                <div className="flex flex-col gap-2">
+                  {ACTIVE_LOANS.map(loan => {
+                    const isSel = selectedLoan?.loanNumber === loan.loanNumber;
+                    return (
+                      <button key={loan.loanNumber} type="button"
+                        onClick={() => { setSelectedLoan(loan); setErrors(e => ({ ...e, loan: '' })); }}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all
+                          ${isSel ? 'border-[#2E7D32] bg-[#DDEAD5]/40' : 'border-gray-100 bg-white hover:border-[#2E7D32]/30 hover:bg-[#DDEAD5]/10'}`}>
+                        <Landmark className={`w-4 h-4 shrink-0 ${isSel ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-800">{loan.loanPurpose}</p>
+                          <p className="text-xs text-gray-400 font-mono">{loan.loanNumber}</p>
                         </div>
-                      );
-                    })()}
-                  </CardBody>
-                </Card>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-gray-500">Solde restant</p>
+                          <p className="text-xs font-bold text-[#355C7D]">{formatHTG(loan.remainingBalance)}</p>
+                        </div>
+                        {isSel && <CheckCircle2 className="w-4 h-4 text-[#2E7D32] shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              {selectedLoan && (
+                <Field label="Type de paiement" required>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { key: 'regular', label: 'Mensualité',   sub: formatHTG(selectedLoan.monthlyPayment)   },
+                      { key: 'extra',   label: 'Supplément',   sub: 'Montant libre'                         },
+                      { key: 'full',    label: 'Solde complet', sub: formatHTG(selectedLoan.remainingBalance) },
+                    ] as { key: PaymentType; label: string; sub: string }[]).map(pt => (
+                      <button key={pt.key} type="button" onClick={() => setPaymentType(pt.key)}
+                        className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border-2 text-center transition-all
+                          ${paymentType === pt.key ? 'border-[#2E7D32] bg-[#DDEAD5]/40' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
+                        <span className={`text-xs font-semibold ${paymentType === pt.key ? 'text-[#1B5E20]' : 'text-gray-700'}`}>{pt.label}</span>
+                        <span className="text-xs text-gray-400">{pt.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Field>
               )}
             </div>
           )}
+        </div>
+      )}
 
-          {/* Description */}
-          <div className="space-y-4">
-            <Textarea
-              label="Description (optionnel)"
-              placeholder="Ex: Paiement semences printemps 2025, transfert pour équipement..."
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              minRows={2}
-            />
-          </div>
-
-          {/* Planification */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">⏰</span>
-              <h2 className="text-xl font-semibold">Planification</h2>
+      {/* ── 4. Montant ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={4} title="Montant et description" icon={Banknote} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Montant (HTG)" required error={errors.amount}>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">HTG</span>
+              <Input type="number" min={1} placeholder="0" hasError={!!errors.amount}
+                className="pl-12 text-right font-mono text-base font-bold"
+                value={form.amount}
+                onChange={e => {
+                  setForm(f => ({ ...f, amount: e.target.value }));
+                  setErrors(er => ({ ...er, amount: '' }));
+                }} />
             </div>
-            
-            <div className="flex items-center gap-3">
-              <Switch
-                isSelected={formData.executeImmediately}
-                onValueChange={(checked) => handleInputChange('executeImmediately', checked)}
-              >
-                Exécuter immédiatement
-              </Switch>
-            </div>
-
-            {!formData.executeImmediately && (
-              <Input
-                label="Date d'exécution"
-                type="date"
-                value={formData.scheduledDate || ''}
-                onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
-                description="Le virement sera exécuté à cette date"
-              />
+            {amount > 0 && !insufficient && (
+              <p className="text-xs text-[#2E7D32] font-semibold text-right">{formatHTG(amount)}</p>
             )}
-          </div>
+            {suggestedAmount && form.amount === '' && (
+              <button type="button"
+                onClick={() => setForm(f => ({ ...f, amount: String(suggestedAmount) }))}
+                className="text-xs text-[#355C7D] hover:underline text-left">
+                Utiliser {formatHTG(suggestedAmount)}
+              </button>
+            )}
+          </Field>
 
-          {/* Erreurs de validation */}
-          {validationErrors.length > 0 && (
-            <Card className="bg-red-50 border-red-200">
-              <CardBody className="p-4">
-                <div className="flex items-start gap-3">
-                  <FaExclamationTriangle className="text-red-500 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-red-800 mb-2">Erreurs de validation</h4>
-                    <ul className="space-y-1 text-red-700">
-                      {validationErrors.map((error, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <span className="text-red-500 mt-1">•</span>
-                          <span>{error}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Résumé de la transaction */}
-          {formData.amount && formData.transferType && sourceAccount && validationErrors.length === 0 && (
-            <Card className="bg-purple-50 border-purple-200">
-              <CardBody className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <FaCalculator className="text-purple-600" />
-                  <h3 className="font-semibold text-purple-800">Résumé du virement</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Montant:</span>
-                      <span className="font-bold text-purple-600">
-                        {formatCurrency(parseFloat(formData.amount))}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Frais:</span>
-                      <span className="font-medium">
-                        {formatCurrency(calculateFees())}
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-bold">
-                      <span>Total débité:</span>
-                      <span className="text-red-600">
-                        {formatCurrency(parseFloat(formData.amount) + calculateFees())}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Délai de traitement:</span>
-                      <span className="font-medium text-blue-600">
-                        {getProcessingTime()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Type:</span>
-                      <span className="font-medium">
-                        {transferTypes.find(t => t.key === formData.transferType)?.label.replace(/^.{2}\s/, '')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Sécurité */}
-          {validationErrors.length === 0 && formData.amount && sourceAccount && formData.transferType && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🔐</span>
-                <h2 className="text-xl font-semibold">Autorisation</h2>
-              </div>
-              
-              <Input
-                label="Code PIN"
-                type="password"
-                placeholder="••••"
-                value={formData.pin}
-                onChange={(e) => handleInputChange('pin', e.target.value)}
-                isRequired
-                description="Votre code PIN pour autoriser ce virement"
-              />
+          <Field label="Description" hint="Optionnel">
+            <div className="relative">
+              <FileText className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input placeholder="Ex: Paiement semences printemps…" className="pl-9"
+                value={form.description} onChange={set('description')} />
             </div>
-          )}
+          </Field>
+        </div>
 
-          {/* Boutons d'action */}
-          <Divider />
-          
-          <div className="flex justify-between items-center">
-            <Button
-              variant="bordered"
-              startContent={<FaArrowLeft />}
-              href="/dashboard/transactions"
-              as="a"
-            >
-              Annuler
-            </Button>
-            
-            <Button
-              color="primary"
-              endContent={<FaExchangeAlt />}
-              onClick={handleSubmit}
-              isDisabled={
-                !formData.amount || 
-                !formData.sourceAccountNumber || 
-                !formData.transferType || 
-                !formData.pin ||
-                validationErrors.length > 0
-              }
-              className="min-w-32"
-            >
-              Effectuer le Virement
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
-      {/* Modal de confirmation */}
-      <Modal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} size="lg">
-        <ModalContent>
-          <ModalHeader className="flex items-center gap-2">
-            <span className="text-2xl">🔄</span>
-            Confirmer le virement
-          </ModalHeader>
-          <ModalBody>
-            <div className="space-y-4">
-              <p className="text-gray-700">
-                Vous êtes sur le point d'effectuer un virement. Veuillez vérifier les informations suivantes :
+        {sourceAccount && amount > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="bg-[#F9F9F6] rounded-xl px-4 py-3 border border-gray-100">
+              <p className="text-xs text-gray-400 mb-1">Solde disponible</p>
+              <p className="text-sm font-bold text-[#2E7D32]">{formatHTG(sourceAccount.balance)}</p>
+            </div>
+            <div className={`rounded-xl px-4 py-3 border ${insufficient ? 'bg-red-50 border-red-100' : 'bg-[#F9F9F6] border-gray-100'}`}>
+              <p className="text-xs text-gray-400 mb-1">Après virement</p>
+              <p className={`text-sm font-bold ${insufficient ? 'text-red-600' : 'text-gray-700'}`}>
+                {formatHTG(Math.max(0, sourceAccount.balance - amount))}
               </p>
-              
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>De:</span>
-                  <span className="font-medium">{sourceAccount?.accountName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Vers:</span>
-                  <span className="font-medium">
-                    {formData.transferType === 'internal' && destinationAccount?.accountName}
-                    {formData.transferType === 'supplier' && formData.supplierName}
-                    {formData.transferType === 'interac' && formData.recipientName}
-                    {formData.transferType === 'loan_payment' && `Prêt ${formData.loanAccountNumber}`}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Montant:</span>
-                  <span className="font-bold text-purple-600">
-                    {formatCurrency(parseFloat(formData.amount || '0'))}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Frais:</span>
-                  <span>{formatCurrency(calculateFees())}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Délai:</span>
-                  <span className="font-medium text-blue-600">{getProcessingTime()}</span>
-                </div>
-                <Divider />
-                <div className="flex justify-between font-bold">
-                  <span>Total débité:</span>
-                  <span className="text-red-600">
-                    {formatCurrency(parseFloat(formData.amount || '0') + calculateFees())}
-                  </span>
-                </div>
-              </div>
-              
-              <Card className="bg-orange-50 border-orange-200">
-                <CardBody className="p-3">
-                  <div className="flex items-center gap-2">
-                    <FaExclamationTriangle className="text-orange-500" />
-                    <span className="text-orange-800 font-medium">
-                      Cette transaction sera traitée selon les délais indiqués et ne pourra pas être annulée.
-                    </span>
-                  </div>
-                </CardBody>
-              </Card>
             </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button 
-              variant="bordered" 
-              href="/dashboard/transactions"
-              as="a"
-            >
-              Annuler
-            </Button>
-            <Button 
-              color="primary" 
-              onPress={confirmTransfer}
-              isLoading={isSubmitting}
-            >
-              Confirmer le Virement
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      {/* Modal de succès */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalContent>
-          <ModalHeader className="flex items-center gap-2">
-            <span className="text-2xl">✅</span>
-            Virement effectué avec succès !
-          </ModalHeader>
-          <ModalBody>
-            <div className="text-center space-y-4">
-              <div className="text-6xl">🔄</div>
-              <h3 className="text-xl font-semibold">
-                Transaction #TR-2025-{Date.now().toString().slice(-4)}
-              </h3>
-              <p className="text-gray-600">
-                Votre virement de <strong>{formatCurrency(parseFloat(formData.amount || '0'))}</strong> a été traité avec succès.
-              </p>
-              
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-800 mb-2">Délai de traitement :</h4>
-                <div className="text-sm text-blue-700 space-y-1">
-                  <div className="flex items-center justify-center gap-2">
-                    <FaClock className="text-blue-500" />
-                    <span><strong>{getProcessingTime()}</strong></span>
-                  </div>
-                  <p className="text-center mt-2">
-                    {formData.transferType === 'interac' && "Le destinataire recevra un email/SMS avec les instructions"}
-                    {formData.transferType === 'supplier' && "Le paiement sera traité pendant les heures d'affaires"}
-                    {formData.transferType === 'internal' && "Le montant est maintenant disponible dans le compte de destination"}
-                    {formData.transferType === 'loan_payment' && "Votre paiement de prêt a été appliqué immédiatement"}
-                  </p>
-                </div>
+            <div className="bg-[#F9F9F6] rounded-xl px-4 py-3 border border-gray-100">
+              <div className="flex items-center gap-1 mb-1">
+                <Clock className="w-3 h-3 text-gray-400" />
+                <p className="text-xs text-gray-400">Délai</p>
               </div>
+              <p className="text-sm font-bold text-gray-700">{typeCfg?.delay ?? '—'}</p>
             </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="primary" onPress={onClose} fullWidth>
-              Retour aux transactions
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </>
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. Autorisation ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={5} title="Autorisation superviseur" icon={ShieldCheck} />
+        <div className="flex items-start gap-3 mb-4 px-3 py-2.5 bg-[#EBF2F8] border border-[#355C7D]/20 rounded-xl">
+          <ShieldCheck className="w-4 h-4 text-[#355C7D] shrink-0 mt-0.5" />
+          <p className="text-xs text-[#355C7D] font-medium">
+            Le code d'autorisation est fourni par le superviseur ou le chef de caisse. Le caissier ne peut pas autoriser sa propre transaction.
+          </p>
+        </div>
+        <Field label="Code d'autorisation" required error={errors.code}
+          hint="Saisie manuelle obligatoire — remis par un responsable autorisé.">
+          <div className="relative">
+            <Hash className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Input placeholder="Code remis par le superviseur" hasError={!!errors.code}
+              className="pl-9 font-mono"
+              value={form.codeAutorisation}
+              onChange={e => { setForm(f => ({ ...f, codeAutorisation: e.target.value })); setErrors(er => ({ ...er, code: '' })); }} />
+          </div>
+        </Field>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <button type="button" onClick={onCancel}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+          <ArrowLeft className="w-4 h-4" /> Annuler
+        </button>
+        <button type="submit"
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          <ArrowLeftRight className="w-4 h-4" /> Vérifier le virement
+        </button>
+      </div>
+    </form>
   );
-};
-
-export default TransferForm;
+}

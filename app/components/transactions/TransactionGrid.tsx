@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { TransactionData } from './types';
-import TransactionCard from './TransactionCard';
+import TransactionTable from './TransactionTable';
 
 interface TransactionGridProps {
   transactions: TransactionData[];
@@ -172,38 +172,15 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
 
       {/* Grille des cartes de transaction */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredTransactions.map((transaction) => (
-          <TransactionCard
-            key={transaction.id}
-            transaction={transaction}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onProcess={handleProcess}
+          // ✅ APRÈS
+          <TransactionTable
+            transactions={transactions}
+            onView={(t) => console.log('Voir', t)}
+            onProcess={(t) => console.log('Traiter', t)}
           />
-        ))}
       </div>
     </div>
   );
 };
 
 export default TransactionGrid;
-//
-// Section	Couleur recommandée	Rôle visuel
-// Total Transactions	#355C7D (bleu pétrole)	Statistique neutre, sérieuse
-// Montant Total	#2E7D32 (vert profond)	Couleur principale CAPOSA
-// Paiement Moyen	#C9B27C (or doux)	Accent subtil, à traiter
-// Aujourd’hui	#DDEAD5 (vert sauge pâle)	Doux, calme, complétées
-// Fond général	#F9F9F6 (ivoire)	Fond clair, élégant
-// Texte secondaire	#6E6E6E (gris chaud)	Sous-titres, légendes
-// Graphiques	Barres en #2E7D32, #C9B27C, #355C7D, #DDEAD5	Pour cohérence visuelle
-// Application concrète
-// Remplace les couleurs flashy (orange, violet saturé) par des tons plus doux.
-
-// Utilise le vert CAPOSA (#2E7D32) pour les chiffres clés, les boutons principaux, les icônes d’action.
-
-// Réserve le bleu pétrole (#355C7D) pour les stats neutres ou les éléments sérieux.
-
-// Or doux (#C9B27C) pour les éléments à surveiller ou en attente.
-
-// Vert sauge (#DDEAD5) pour les statuts complétés ou les fonds alternés.
