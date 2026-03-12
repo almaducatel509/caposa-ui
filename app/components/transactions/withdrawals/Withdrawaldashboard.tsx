@@ -12,6 +12,7 @@ import {
   Users, CalendarDays, ShieldCheck, AlertCircle,
 } from 'lucide-react';
 import WithdrawalForm from './WithdrawalForm';
+import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface WithdrawalData {
@@ -26,6 +27,12 @@ interface WithdrawalData {
   status:             'completed' | 'pending' | 'processing' | 'failed';
   created_at:         string;
   member_name:        string;
+  // Traçabilité
+  processed_by:    string;
+  validated_by:    string;
+  caisse_numero:   string;
+  caisse_id:       string;
+  session_id:      string;
 }
 
 // ─── Config CAPOSA ──────────────────────────────────────────────────────────────
@@ -79,8 +86,11 @@ function formatDate(iso: string) {
 function generateMockWithdrawals(daysBack: number): WithdrawalData[] {
   const subtypes: WithdrawalData['withdrawalSubtype'][] = ['counter', 'counter', 'counter', 'check', 'loan_disbursement', 'other'];
   const statuses: WithdrawalData['status'][]            = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
-  const members = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
-  const motifs  = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 'Urgence médicale', 'Autre'];
+  const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
+  const motifs   = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 'Urgence médicale', 'Autre'];
+  const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
+  const supers   = ['Marie-Ange Celestin', 'Réginald Toussaint'];
+  const caisses  = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }, { id: 'CAI003', numero: '03' }];
 
   const data: WithdrawalData[] = [];
   let attempts = 0, i = 0;
@@ -93,6 +103,7 @@ function generateMockWithdrawals(daysBack: number): WithdrawalData[] {
 
     const subtype = subtypes[Math.floor(Math.random() * subtypes.length)];
     const amount  = Math.floor(Math.random() * 50000) + 500;
+    const caisse  = caisses[Math.floor(Math.random() * caisses.length)];
     data.push({
       id:                   i + 1,
       idCompte:             `ACC${1000 + i}`,
@@ -104,6 +115,11 @@ function generateMockWithdrawals(daysBack: number): WithdrawalData[] {
       status:               statuses[Math.floor(Math.random() * statuses.length)],
       created_at:           date.toISOString(),
       member_name:          members[Math.floor(Math.random() * members.length)],
+      processed_by:         employes[Math.floor(Math.random() * employes.length)],
+      validated_by:         supers[Math.floor(Math.random() * supers.length)],
+      caisse_numero:        caisse.numero,
+      caisse_id:            caisse.id,
+      session_id:           `SES-${1000 + i}`,
     });
     i++; attempts++;
   }
@@ -138,6 +154,29 @@ export default function WithdrawalDashboard() {
   const [subtypeF,  setSubtypeF]  = useState('all');
   const [selected,  setSelected]  = useState<Set<number>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
+
+  const handleView = (w: WithdrawalData) => {
+    setDetailTx({
+      id:                   w.id,
+      kind:                 'withdrawal',
+      status:               w.status,
+      montant:              w.montantTransaction,
+      created_at:           w.created_at,
+      codeAutorisation:     w.codeAutorisation,
+      description:          w.description,
+      member_name:          w.member_name,
+      account_number:       w.idCompte,
+      withdrawalSubtype:    w.withdrawalSubtype,
+      motif:                w.motif,
+      requiresVerification: w.requiresVerification,
+      processed_by:         w.processed_by,
+      validated_by:         w.validated_by,
+      caisse_numero:        w.caisse_numero,
+      caisse_id:            w.caisse_id,
+      session_id:           w.session_id,
+    });
+  };
 
   const daysBack    = period === 'day' ? 1 : period === 'week' ? 7 : 30;
   const withdrawals = useMemo(() => generateMockWithdrawals(daysBack), [period]);
@@ -430,7 +469,7 @@ export default function WithdrawalDashboard() {
                   {stCfg.label}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button title="Voir" className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
+                  <button title="Voir" onClick={() => handleView(w)} className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -479,6 +518,11 @@ export default function WithdrawalDashboard() {
           </div>
         </div>
       )}
+
+      <TransactionDetailModal
+        transaction={detailTx}
+        onClose={() => setDetailTx(null)}
+      />
 
     </div>
   );

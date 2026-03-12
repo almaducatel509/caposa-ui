@@ -7,7 +7,7 @@ import TransactionTable from './TransactionTable';
 import PageHeader from '../header';
 import { TransactionData } from './types';
 import { fetchTransactions } from '@/app/lib/api/transactions';
-import TransactionDetailModal, { TransactionDetail } from './TransactionDetailModal';
+import TransactionDetailModal, { TransactionDetail } from './DetailModal';
 
 const TransactionDashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);

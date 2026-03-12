@@ -12,6 +12,7 @@ import {
   Users, CalendarDays, ShieldCheck,
 } from 'lucide-react';
 import DepositForm from './DepositForm';
+import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 
 interface DepositData {
   id: number;
@@ -25,6 +26,12 @@ interface DepositData {
   status: 'completed' | 'pending' | 'processing' | 'failed';
   created_at: string;
   member_name: string;
+  // Traçabilité
+  processed_by:    string;
+  validated_by:    string;
+  caisse_numero:   string;
+  caisse_id:       string;
+  session_id:      string;
 }
 
 const C = {
@@ -77,8 +84,11 @@ function formatDate(iso: string) {
 function generateMockDeposits(daysBack: number): DepositData[] {
   const subtypes: DepositData['depositSubtype'][] = ['cash', 'check', 'transfer', 'other'];
   const statuses: DepositData['status'][]         = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
-  const members = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
-  const sources = ['Salaire', 'Remboursement', 'Épargne', 'Vente', 'Envoi diaspora', 'Dividendes'];
+  const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
+  const sources  = ['Salaire', 'Remboursement', 'Épargne', 'Vente', 'Envoi diaspora', 'Dividendes'];
+  const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
+  const supers   = ['Marie-Ange Celestin', 'Réginald Toussaint'];
+  const caisses  = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }, { id: 'CAI003', numero: '03' }];
 
   const data: DepositData[] = [];
   let attempts = 0, i = 0;
@@ -91,6 +101,7 @@ function generateMockDeposits(daysBack: number): DepositData[] {
     const subtype    = subtypes[Math.floor(Math.random() * subtypes.length)];
     const amount     = Math.floor(Math.random() * 80000) + 1000;
     const holdPeriod = subtype === 'check' ? Math.floor(Math.random() * 5) + 1 : 0;
+    const caisse = caisses[Math.floor(Math.random() * caisses.length)];
     data.push({
       id: i + 1, idCompte: `ACC${1000 + i}`, codeAutorisation: `AUTH${100000 + i}`,
       montantTransaction: amount, depositSubtype: subtype,
@@ -99,6 +110,11 @@ function generateMockDeposits(daysBack: number): DepositData[] {
       holdPeriod, status: statuses[Math.floor(Math.random() * statuses.length)],
       created_at: date.toISOString(),
       member_name: members[Math.floor(Math.random() * members.length)],
+      processed_by:  employes[Math.floor(Math.random() * employes.length)],
+      validated_by:  supers[Math.floor(Math.random() * supers.length)],
+      caisse_numero: caisse.numero,
+      caisse_id:     caisse.id,
+      session_id:    `SES-${1000 + i}`,
     });
     i++; attempts++;
   }
@@ -134,6 +150,30 @@ export default function DepositDashboard() {
   const [subtypeF,  setSubtypeF]  = useState('all');
   const [selected,  setSelected]  = useState<Set<number>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
+
+  const handleView = (dep: DepositData) => {
+    setDetailTx({
+      id:                   dep.id,
+      kind:                 'deposit',
+      status:               dep.status,
+      montant:              dep.montantTransaction,
+      created_at:           dep.created_at,
+      codeAutorisation:     dep.codeAutorisation,
+      description:          dep.description,
+      member_name:          dep.member_name,
+      account_number:       dep.idCompte,
+      depositSubtype:       dep.depositSubtype,
+      source:               dep.source,
+      holdPeriod:           dep.holdPeriod,
+      requiresVerification: dep.holdPeriod > 0 || dep.montantTransaction > 50000,
+      processed_by:         dep.processed_by,
+      validated_by:         dep.validated_by,
+      caisse_numero:        dep.caisse_numero,
+      caisse_id:            dep.caisse_id,
+      session_id:           dep.session_id,
+    });
+  };
 
   const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
   const deposits  = useMemo(() => generateMockDeposits(daysBack), [period]);
@@ -431,7 +471,7 @@ export default function DepositDashboard() {
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stCfg.dot }} />{stCfg.label}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button title="Voir" className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
+                  <button title="Voir" onClick={() => handleView(dep)} className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -489,6 +529,11 @@ export default function DepositDashboard() {
           </div>
         </div>
       )}
+
+      <TransactionDetailModal
+        transaction={detailTx}
+        onClose={() => setDetailTx(null)}
+      />
 
     </div>
   );

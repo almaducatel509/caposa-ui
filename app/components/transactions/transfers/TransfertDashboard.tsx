@@ -12,6 +12,7 @@ import {
   Users, CalendarDays, ShieldCheck, AlertCircle,
 } from 'lucide-react';
 import TransferForm from './TransferForm';
+import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface TransferData {
@@ -25,6 +26,12 @@ interface TransferData {
   memberName:       string;
   status:           'completed' | 'pending' | 'processing' | 'failed';
   created_at:       string;
+  // Traçabilité
+  processed_by:    string;
+  validated_by:    string;
+  caisse_numero:   string;
+  caisse_id:       string;
+  session_id:      string;
 }
 
 // ─── Config CAPOSA ──────────────────────────────────────────────────────────────
@@ -79,6 +86,9 @@ function generateMockTransfers(daysBack: number): TransferData[] {
   const types:    TransferData['type'][]   = ['internal', 'internal', 'internal', 'supplier', 'loan_payment'];
   const statuses: TransferData['status'][] = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
   const members   = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
+  const employes  = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
+  const supers    = ['Marie-Ange Celestin', 'Réginald Toussaint'];
+  const caisses   = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }, { id: 'CAI003', numero: '03' }];
 
   const data: TransferData[] = [];
   let attempts = 0, i = 0;
@@ -90,6 +100,7 @@ function generateMockTransfers(daysBack: number): TransferData[] {
     date.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
 
     const type = types[Math.floor(Math.random() * types.length)];
+    const caisse = caisses[Math.floor(Math.random() * caisses.length)];
     data.push({
       id:                i + 1,
       compteSource:      `ACC${1000 + i}`,
@@ -100,6 +111,11 @@ function generateMockTransfers(daysBack: number): TransferData[] {
       memberName:        members[Math.floor(Math.random() * members.length)],
       status:            statuses[Math.floor(Math.random() * statuses.length)],
       created_at:        date.toISOString(),
+      processed_by:      employes[Math.floor(Math.random() * employes.length)],
+      validated_by:      supers[Math.floor(Math.random() * supers.length)],
+      caisse_numero:     caisse.numero,
+      caisse_id:         caisse.id,
+      session_id:        `SES-${1000 + i}`,
     });
     i++; attempts++;
   }
@@ -134,6 +150,28 @@ export default function TransferDashboard() {
   const [typeF,     setTypeF]     = useState('all');
   const [selected,  setSelected]  = useState<Set<number>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
+
+  const handleView = (t: TransferData) => {
+    setDetailTx({
+      id:                t.id,
+      kind:              'transfer',
+      status:            t.status,
+      montant:           t.montant,
+      created_at:        t.created_at,
+      reference:         t.reference,
+      description:       t.description,
+      member_name:       t.memberName,
+      compteSource:      t.compteSource,
+      compteDestination: t.compteDestination,
+      transferType:      t.type,
+      processed_by:      t.processed_by,
+      validated_by:      t.validated_by,
+      caisse_numero:     t.caisse_numero,
+      caisse_id:         t.caisse_id,
+      session_id:        t.session_id,
+    });
+  };
 
   const daysBack   = period === 'day' ? 1 : period === 'week' ? 7 : 30;
   const transfers  = useMemo(() => generateMockTransfers(daysBack), [period]);
@@ -449,7 +487,7 @@ export default function TransferDashboard() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
-                  <button title="Voir" className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
+                  <button title="Voir" onClick={() => handleView(t)} className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -499,6 +537,11 @@ export default function TransferDashboard() {
           </div>
         </div>
       )}
+
+      <TransactionDetailModal
+        transaction={detailTx}
+        onClose={() => setDetailTx(null)}
+      />
 
     </div>
   );
