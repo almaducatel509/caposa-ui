@@ -8,6 +8,7 @@ import {
   Search, X, CheckCheck,
 } from 'lucide-react';
 import { TransactionData } from './types';
+import TransactionDetailModal, { TransactionDetail } from './Transactiondetailmodal';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type TabId = 'all' | 'pending' | 'failed';
@@ -40,7 +41,10 @@ const TAB_CFG: Record<TabId, { label: string; statuses: string[] | null }> = {
   failed:  { label: 'Échouées',    statuses: ['failed']                    },
 };
 
+const [detailTx, setDetailTx] = useState<TransactionDetail | null>(null);
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
+
 function formatHTG(n?: number) {
   if (n == null) return '—';
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
