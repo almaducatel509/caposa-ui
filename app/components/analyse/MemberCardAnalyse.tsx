@@ -1,133 +1,125 @@
-// Composant Card Membre
 'use client';
-import { ChevronRight } from 'lucide-react';
-import { computeMemberStatus, FinancialHistoryEntry, MemberFinancialData } from '@/types/analyses';
 
-interface Props {
-  member: MemberFinancialData;
-  onClick: () => void;
+import { CheckCircle2, AlertTriangle, Clock, Eye } from 'lucide-react';
+import { computeMemberStatus, MemberFinancialData } from '@/types/analyses';
+
+// ─── Palette CAPOSA ───────────────────────────────────────────────────────────
+const C = {
+  green:     '#2E7D32',
+  greenDark: '#1B5E20',
+  greenPale: '#DDEAD5',
+  blue:      '#355C7D',
+  gold:      '#D4AF37',
+};
+
+function formatHTG(n: number) {
+  return Math.round(n).toLocaleString('fr-HT') + ' HTG';
 }
 
-export default function MemberCard({ member, onClick }: Props) {
-  const getScoreColor = (score: number) => {
-    if (score >= 75) return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100' };
-    if (score >= 50) return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-100' };
-    return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100' };
-  };
-  const getTypeConfig = (status: string) => {
-    switch (status) {
-      case 'rembourse':
-        return { 
-          gradient: 'from-emerald-500 to-teal-500',
-          textColor: 'text-emerald-600'
-        };
-      case 'en_cours':
-        return { 
-          gradient: 'from-blue-500 to-blue-700',
-          textColor: 'text-violet-600'
-        };
-      case 'en_retard':
-        return { 
-          gradient: 'from-rose-500 to-pink-500',
-          textColor: 'text-rose-600'
-        };
-      default:
-        return { 
-          gradient: 'from-gray-400 to-slate-500',
-          textColor: 'text-gray-600'
-        };
-    }
-  };
+function scoreConfig(score: number) {
+  if (score >= 75) return { color: C.green,   bar: C.green,   label: 'Élevé'  };
+  if (score >= 50) return { color: C.gold,    bar: C.gold,    label: 'Moyen'  };
+  return              { color: '#EF4444', bar: '#EF4444', label: 'Faible' };
+}
 
-  const statut = computeMemberStatus(member);
-  const typeConfig = getTypeConfig(statut);
+function statutConfig(statut: string) {
+  switch (statut) {
+    case 'rembourse': return { bg: C.greenPale, text: C.greenDark, dot: C.green,   label: 'Remboursé', icon: CheckCircle2  };
+    case 'en_cours':  return { bg: '#EBF2F8',   text: C.blue,      dot: C.blue,    label: 'En cours',  icon: Clock         };
+    case 'en_retard': return { bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444', label: 'En retard', icon: AlertTriangle };
+    default:          return { bg: '#F3F4F6',   text: '#4B5563',   dot: '#9CA3AF', label: 'Inconnu',   icon: Clock         };
+  }
+}
 
-  
-  const colors = getScoreColor(member.scoreStabilite);
-  const formatCurrency = (value: number) => `${Math.round(value).toLocaleString('fr-FR')} HTG`;
-  
+interface Props {
+  member:  MemberFinancialData;
+  onClick: () => void;
+  idx:     number;
+  isSelected:   boolean;
+  onSelect:     () => void;
+}
+
+export default function MemberCard({ member, onClick, idx, isSelected, onSelect }: Props) {
+  if (!member || member.scoreStabilite == null || !member.nom || !member.prenom) return null;
+
+  const statut    = computeMemberStatus(member);
+  const sCfg      = statutConfig(statut);
+  const sc        = scoreConfig(member.scoreStabilite);
+  const initiales = `${member.prenom[0]}${member.nom[0]}`;
+
   return (
-  <div 
-    onClick={onClick}
-    className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl hover:border-gray-300 transition-all duration-300 cursor-pointer"
-  >
-    {/* Gradient Bar */}
-    <div className={`h-1.5 bg-linear-to-r ${typeConfig.gradient}`} />
-    
-    <div className="p-5">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-11 h-11 rounded-md bg-linear-to-br ${typeConfig.gradient} flex items-center justify-center text-white shadow-lg`}>
-            <span className="font-bold text-lg">{member.prenom[0]}{member.nom[0]}</span>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Membre</p>
-            <p className="text-xs text-gray-400 mt-0.5">#{member.id}</p>
-          </div>
+    <div className={`grid grid-cols-12 gap-3 items-center px-5 py-4 transition-all group border-b border-gray-50 last:border-0 ${
+      isSelected
+        ? 'bg-[#DDEAD5]/30 border-l-4 border-[#2E7D32]'
+        : idx % 2 === 0 ? 'bg-white hover:bg-[#F9F9F6]' : 'bg-[#F9F9F6]/40 hover:bg-[#F9F9F6]'
+    }`}>
+
+      {/* Checkbox */}
+      <div className="col-span-1">
+        <input type="checkbox" checked={isSelected}
+          onChange={onSelect}
+          onClick={e => e.stopPropagation()}
+          className="w-4 h-4 rounded border-gray-300 text-[#2E7D32] focus:ring-[#2E7D32]/30 cursor-pointer" />
+      </div>
+
+      {/* Membre */}
+      <div className="col-span-3 flex items-center gap-2 min-w-0">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold group-hover:scale-105 transition-transform"
+          style={{ backgroundColor: sCfg.dot }}>
+          {initiales}
         </div>
-        
-        {/* Status Icon */}
-        <div className="flex items-center gap-2">
-          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-800 truncate">{member.prenom} {member.nom}</p>
+          <p className="text-xs text-gray-400 font-mono">#{member.id}</p>
         </div>
       </div>
 
-      {/* Name */}
-      <div className="mb-4">
-        <p className={`text-3xl font-bold ${colors.text} tracking-tight`}>
-          {member.prenom} {member.nom}
-        </p>
-      </div>
-
-      {/* Score de stabilité */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stabilité Financière</span>
-          <span className={`text-sm font-bold ${colors.text}`}>{Math.round(member.scoreStabilite)}/100</span>
+      {/* Stabilité */}
+      <div className="col-span-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-bold" style={{ color: sc.color }}>{sc.label}</span>
+          <span className="text-xs text-gray-400">{Math.round(member.scoreStabilite)}/100</span>
         </div>
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div 
-            className={`h-full ${member.scoreStabilite >= 75 ? 'bg-green-500' : member.scoreStabilite >= 50 ? 'bg-yellow-500' : 'bg-red-500'} transition-all`}
-            style={{ width: `${member.scoreStabilite}%` }}
-          />
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all"
+            style={{ width: `${member.scoreStabilite}%`, backgroundColor: sc.bar }} />
         </div>
       </div>
 
-      {/* Métriques clés */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-500 mb-1 font-medium">Revenu moyen</p>
-          <p className="font-bold text-gray-900 text-sm">{formatCurrency(member.revenuMensuelMoyen)}</p>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-500 mb-1 font-medium">Capacité</p>
-          <p className="font-bold text-gray-900 text-sm">{formatCurrency(member.capaciteRemboursement)}</p>
-        </div>
-      </div>
-
-      {/* Meta Info / Badges */}
-      <div className="flex flex-wrap gap-2 py-3 border-t border-gray-100">
+      {/* Revenu moyen */}
+      <div className="col-span-2">
+        <p className="text-sm font-bold text-[#355C7D]">{formatHTG(member.revenuMensuelMoyen)}</p>
         {member.estSaisonnier && (
-          <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-md">
-            📅 Saisonnier
-          </span>
+          <p className="text-xs font-medium" style={{ color: C.gold }}>Saisonnier</p>
         )}
-        {member.dernierPret && (
-          <span className={`px-2 py-1 text-xs font-semibold rounded-md ${
-            member.dernierPret.statut === 'rembourse' ? 'bg-green-50 text-green-700' :
-            member.dernierPret.statut === 'en_cours' ? 'bg-purple-50 text-blue-700' :
-            'bg-red-50 text-red-700'
-          }`}>
-            {member.dernierPret.statut === 'rembourse' ? '✓ Remboursé' :
-             member.dernierPret.statut === 'en_cours' ? '⏳ En cours' : '⚠️ Retard'}
+      </div>
+
+      {/* Statut prêt */}
+      <div className="col-span-2">
+        {member.dernierPret ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold"
+            style={{ backgroundColor: sCfg.bg, color: sCfg.text }}>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: sCfg.dot }} />
+            {sCfg.label}
           </span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
         )}
-        <span className="px-2 py-1 bg-gray-50 text-gray-700 text-xs font-semibold rounded-md">
-          {member.nombrePrets} prêt{member.nombrePrets > 1 ? 's' : ''}
-        </span>
+      </div>
+
+      {/* Nb prêts */}
+      <div className="col-span-1">
+        <p className="text-sm font-semibold text-gray-700">{member.nombrePrets}</p>
+        <p className="text-xs text-gray-400">prêt{member.nombrePrets > 1 ? 's' : ''}</p>
+      </div>
+
+      {/* Action */}
+      <div className="col-span-1 flex justify-center">
+        <button title="Voir" onClick={onClick}
+          className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
+          <Eye className="w-4 h-4" />
+        </button>
       </div>
     </div>
-  </div>
-);
-};
+  );
+}

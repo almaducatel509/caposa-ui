@@ -21,7 +21,7 @@ export interface MemberFinancialData {
   scoreStabilite: number;
 
   estSaisonnier: boolean;
-  dernierPret?: {  // ⬅️ AJOUTER ? ICI pour rendre optionnel
+  dernierPret?: {
     montant: number;
     statut: 'rembourse' | 'en_cours' | 'en_retard';
     mensualite: number;
@@ -32,15 +32,15 @@ export interface MemberFinancialData {
   tauxRemboursement: number;
 }
 
-export function computeMemberStatus(member: MemberFinancialData) {
-  const pret = member.dernierPret;
+export function computeMemberStatus(member: MemberFinancialData | undefined | null): 'rembourse' | 'en_cours' | 'en_retard' {
+  if (!member) return 'rembourse';
 
+  const pret = member.dernierPret;
   if (!pret) return 'rembourse';
 
   if (pret.statut === 'en_retard') return 'en_retard';
-  if (pret.statut === 'en_cours') return 'en_cours';
+  if (pret.statut === 'en_cours')  return 'en_cours';
 
-  // Si remboursé mais risque élevé
   if (pret.statut === 'rembourse' && member.ratioEndettement > 0.45) {
     return 'en_cours';
   }

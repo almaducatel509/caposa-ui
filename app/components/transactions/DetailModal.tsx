@@ -17,7 +17,7 @@ export interface TransactionDetail {
   // Commun
   id:               string | number;
   kind:             TransactionKind;
-  status:           'completed' | 'pending' | 'processing' | 'failed';
+  status:           'decaisse' | 'rembourse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
   montant:          number;
   created_at:       string;
   codeAutorisation?: string;
@@ -74,10 +74,12 @@ const KIND_CFG: Record<TransactionKind, { label: string; icon: React.ElementType
 };
 
 const STATUS_CFG: Record<string, { label: string; bg: string; text: string; dot: string; icon: React.ElementType }> = {
-  completed:  { label: 'Complétée',  bg: '#DDEAD5', text: '#1B5E20', dot: '#2E7D32', icon: CheckCircle2 },
-  pending:    { label: 'En attente', bg: '#FEF9EC', text: '#B45309', dot: '#F59E0B', icon: Clock        },
-  processing: { label: 'En cours',   bg: '#EBF2F8', text: '#355C7D', dot: '#355C7D', icon: Loader2      },
-  failed:     { label: 'Échouée',    bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444', icon: XCircle      },
+  decaisse:   { label: 'Décaissé',    bg: '#DDEAD5', text: '#1B5E20', dot: '#2E7D32', icon: CheckCircle2 },
+  rembourse:  { label: 'Remboursé',   bg: '#F0FDF4', text: '#166534', dot: '#22C55E', icon: CheckCircle2 },
+  en_attente: { label: 'En attente',  bg: '#FEF9EC', text: '#B45309', dot: '#F59E0B', icon: Clock        },
+  en_cours:   { label: 'En cours',    bg: '#EBF2F8', text: '#355C7D', dot: '#355C7D', icon: Loader2      },
+  echoue:     { label: 'Échoué',      bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444', icon: XCircle      },
+  annule:     { label: 'Annulé',      bg: '#F3F4F6', text: '#4B5563', dot: '#9CA3AF', icon: XCircle      },
 };
 
 const DEPOSIT_SUBTYPE: Record<string, string> = {
@@ -176,7 +178,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
   if (!transaction) return null;
 
   const kindCfg   = KIND_CFG[transaction.kind];
-  const statusCfg = STATUS_CFG[transaction.status] ?? STATUS_CFG['pending'];
+  const statusCfg = STATUS_CFG[transaction.status] ?? STATUS_CFG['en_attente'];
   const KindIcon  = kindCfg.icon;
 
   const account = transaction.account_number ?? transaction.idCompte ?? transaction.compteSource;
@@ -237,7 +239,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
             style={{ backgroundColor: statusCfg.bg, color: statusCfg.text }}>
             <span
               className={`w-2 h-2 rounded-full shrink-0 ${
-                transaction.status === 'processing' || transaction.status === 'pending' ? 'animate-pulse' : ''
+                transaction.status === 'en_cours' || transaction.status === 'en_attente' ? 'animate-pulse' : ''
               }`}
               style={{ backgroundColor: statusCfg.dot }}
             />
@@ -440,7 +442,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               </p>
             </div>
           )}
-          {transaction.status === 'failed' && (
+          {transaction.status === 'echoue' && (
             <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
               <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <p className="text-xs text-red-600 font-medium">

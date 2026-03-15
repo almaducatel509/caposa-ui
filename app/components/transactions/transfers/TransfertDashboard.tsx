@@ -24,7 +24,7 @@ interface TransferData {
   type:             'internal' | 'supplier' | 'loan_payment';
   description?:     string;
   memberName:       string;
-  status:           'completed' | 'pending' | 'processing' | 'failed';
+  status:           'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
   created_at:       string;
   // Traçabilité
   processed_by:    string;
@@ -84,7 +84,7 @@ function formatDate(iso: string) {
 // ─── Mock data ──────────────────────────────────────────────────────────────────
 function generateMockTransfers(daysBack: number): TransferData[] {
   const types:    TransferData['type'][]   = ['internal', 'internal', 'internal', 'supplier', 'loan_payment'];
-  const statuses: TransferData['status'][] = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
+  const statuses: TransferData['status'][] = ['decaisse', 'decaisse', 'decaisse', 'en_attente', 'en_cours', 'echoue'];
   const members   = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
   const employes  = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
   const supers    = ['Marie-Ange Celestin', 'Réginald Toussaint'];
@@ -184,11 +184,11 @@ export default function TransferDashboard() {
   }), [transfers, search, statusF, typeF]);
 
   // KPIs
-  const completed      = transfers.filter(t => t.status === 'completed');
+  const completed      = transfers.filter(t => t.status === 'decaisse');
   const totalAmount    = completed.reduce((s, t) => s + t.montant, 0);
   const avgAmount      = completed.length ? totalAmount / completed.length : 0;
   const uniqueMembers  = new Set(completed.map(t => t.memberName)).size;
-  const pendingCount   = transfers.filter(t => t.status === 'pending').length;
+  const pendingCount   = transfers.filter(t => t.status === 'en_attente').length;
   const completionRate = transfers.length ? completed.length / transfers.length * 100 : 0;
 
   // Volume data
@@ -375,10 +375,11 @@ export default function TransferDashboard() {
             <select value={statusF} onChange={e => setStatusF(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600">
               <option value="all">Tous statuts</option>
-              <option value="completed">Complété</option>
-              <option value="pending">En attente</option>
-              <option value="processing">En cours</option>
-              <option value="failed">Échoué</option>
+              <option value="decaisse">Complété</option>
+              <option value="en_attente">En attente</option>
+              <option value="en_cours">En cours</option>
+              <option value="echoue">Échoué</option>
+              <option value="annule">Annulé</option>
             </select>
             <select value={typeF} onChange={e => setTypeF(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600">
@@ -434,7 +435,7 @@ export default function TransferDashboard() {
           )}
 
           {!loading && filtered.map(t => {
-            const stCfg  = STATUS_CFG[t.status]  ?? STATUS_CFG['pending'];
+            const stCfg  = STATUS_CFG[t.status]  ?? STATUS_CFG['en_attente'];
             const tpCfg  = TYPE_CFG[t.type]      ?? TYPE_CFG['internal'];
             const TpIcon = tpCfg.icon;
             const isSel  = selected.has(t.id);

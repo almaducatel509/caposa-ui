@@ -23,7 +23,7 @@ interface DepositData {
   source: string;
   description?: string;
   holdPeriod: number;
-  status: 'completed' | 'pending' | 'processing' | 'failed';
+  status: 'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
   created_at: string;
   member_name: string;
   // Traçabilité
@@ -50,10 +50,11 @@ const SUBTYPE_CFG: Record<string, { icon: React.ElementType; label: string; colo
 };
 
 const STATUS_CFG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  completed:  { label: 'Complété',   bg: C.greenPale, text: C.greenDark, dot: C.green   },
-  pending:    { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B' },
-  processing: { label: 'En cours',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue    },
-  failed:     { label: 'Échoué',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444' },
+  decaisse:   { label: 'Complété',   bg: C.greenPale, text: C.greenDark, dot: C.green   },
+  en_attente: { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B' },
+  en_cours:   { label: 'En cours',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue    },
+  echoue:     { label: 'Échoué',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444' },
+  annule:     { label: 'Annulé',     bg: '#F3F4F6',   text: '#4B5563',   dot: '#9CA3AF' },
 };
 
 const tooltipStyle = {
@@ -83,7 +84,7 @@ function formatDate(iso: string) {
 
 function generateMockDeposits(daysBack: number): DepositData[] {
   const subtypes: DepositData['depositSubtype'][] = ['cash', 'check', 'transfer', 'other'];
-  const statuses: DepositData['status'][]         = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
+  const statuses: DepositData['status'][]         = ['decaisse', 'decaisse', 'decaisse', 'en_attente', 'en_cours', 'echoue'];
   const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
   const sources  = ['Salaire', 'Remboursement', 'Épargne', 'Vente', 'Envoi diaspora', 'Dividendes'];
   const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
@@ -189,11 +190,11 @@ export default function DepositDashboard() {
       (subtypeF === 'all' || d.depositSubtype  === subtypeF);
   }), [deposits, search, statusF, subtypeF]);
 
-  const completed      = deposits.filter(d => d.status === 'completed');
+  const completed      = deposits.filter(d => d.status === 'decaisse');
   const totalAmount    = completed.reduce((s, d) => s + d.montantTransaction, 0);
   const avgAmount      = completed.length ? totalAmount / completed.length : 0;
   const uniqueMembers  = new Set(completed.map(d => d.member_name)).size;
-  const pendingCount   = deposits.filter(d => d.status === 'pending').length;
+  const pendingCount   = deposits.filter(d => d.status === 'en_attente').length;
   const completionRate = deposits.length ? (completed.length / deposits.length * 100) : 0;
 
   const volumeData = useMemo(() => {
@@ -381,10 +382,11 @@ export default function DepositDashboard() {
             <select value={statusF} onChange={e => setStatusF(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600">
               <option value="all">Tous statuts</option>
-              <option value="completed">Complété</option>
-              <option value="pending">En attente</option>
-              <option value="processing">En cours</option>
-              <option value="failed">Échoué</option>
+              <option value="decaisse">Complété</option>
+              <option value="en_attente">En attente</option>
+              <option value="en_cours">En cours</option>
+              <option value="echoue">Échoué</option>
+              <option value="annule">Annulé</option>
             </select>
             <select value={subtypeF} onChange={e => setSubtypeF(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600">
@@ -438,7 +440,7 @@ export default function DepositDashboard() {
           )}
 
           {!loading && filtered.map(dep => {
-            const stCfg   = STATUS_CFG[dep.status]         ?? STATUS_CFG['pending'];
+            const stCfg   = STATUS_CFG[dep.status]         ?? STATUS_CFG['en_attente'];
             const subCfg  = SUBTYPE_CFG[dep.depositSubtype] ?? SUBTYPE_CFG['other'];
             const SubIcon = subCfg.icon;
             const isSel   = selected.has(dep.id);

@@ -24,7 +24,7 @@ interface WithdrawalData {
   motif:              string;
   description?:       string;
   requiresVerification: boolean;
-  status:             'completed' | 'pending' | 'processing' | 'failed';
+  status:             'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
   created_at:         string;
   member_name:        string;
   // Traçabilité
@@ -85,7 +85,7 @@ function formatDate(iso: string) {
 // ─── Mock data ──────────────────────────────────────────────────────────────────
 function generateMockWithdrawals(daysBack: number): WithdrawalData[] {
   const subtypes: WithdrawalData['withdrawalSubtype'][] = ['counter', 'counter', 'counter', 'check', 'loan_disbursement', 'other'];
-  const statuses: WithdrawalData['status'][]            = ['completed', 'completed', 'completed', 'pending', 'processing', 'failed'];
+  const statuses: WithdrawalData['status'][]            = ['decaisse', 'decaisse', 'decaisse', 'en_attente', 'en_cours', 'echoue'];
   const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
   const motifs   = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 'Urgence médicale', 'Autre'];
   const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
@@ -189,11 +189,11 @@ export default function WithdrawalDashboard() {
   }), [withdrawals, search, statusF, subtypeF]);
 
   // KPIs
-  const completed      = withdrawals.filter(w => w.status === 'completed');
+  const completed      = withdrawals.filter(w => w.status === 'decaisse');
   const totalAmount    = completed.reduce((s, w) => s + w.montantTransaction, 0);
   const avgAmount      = completed.length ? totalAmount / completed.length : 0;
   const uniqueMembers  = new Set(completed.map(w => w.member_name)).size;
-  const pendingCount   = withdrawals.filter(w => w.status === 'pending').length;
+  const pendingCount   = withdrawals.filter(w => w.status === 'en_attente').length;
   const completionRate = withdrawals.length ? completed.length / withdrawals.length * 100 : 0;
 
   // Volume data
@@ -378,10 +378,11 @@ export default function WithdrawalDashboard() {
             <select value={statusF} onChange={e => setStatusF(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600">
               <option value="all">Tous statuts</option>
-              <option value="completed">Complété</option>
-              <option value="pending">En attente</option>
-              <option value="processing">En cours</option>
-              <option value="failed">Échoué</option>
+              <option value="decaisse">Complété</option>
+              <option value="en_attente">En attente</option>
+              <option value="en_cours">En cours</option>
+              <option value="echoue">Échoué</option>
+              <option value="annule">Annulé</option>
             </select>
             <select value={subtypeF} onChange={e => setSubtypeF(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600">
@@ -435,7 +436,7 @@ export default function WithdrawalDashboard() {
           )}
 
           {!loading && filtered.map(w => {
-            const stCfg  = STATUS_CFG[w.status]            ?? STATUS_CFG['pending'];
+            const stCfg  = STATUS_CFG[w.status]            ?? STATUS_CFG['en_attente'];
             const subCfg = SUBTYPE_CFG[w.withdrawalSubtype] ?? SUBTYPE_CFG['other'];
             const SubIcon = subCfg.icon;
             const isSel   = selected.has(w.id);

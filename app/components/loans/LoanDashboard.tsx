@@ -1,769 +1,638 @@
-'use client'
-import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, Cell, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, LineChart, Line } from 'recharts';
-import { Search, Calendar, DollarSign, Users, TrendingUp, CheckCircle, Clock, AlertCircle, XCircle, FileText } from 'lucide-react';
+'use client';
 
-// Types
+import React, { useState, useMemo } from 'react';
+import {
+  BarChart, Bar, Cell, ResponsiveContainer, CartesianGrid,
+  XAxis, YAxis, Tooltip, PieChart, Pie,
+} from 'recharts';
+import {
+  Landmark, Plus, X, ArrowRight, Users, TrendingUp,
+  CheckCircle2, Clock, AlertTriangle, XCircle, Banknote,
+  Eye, MoreHorizontal,
+} from 'lucide-react';
+import LoanForm from './LoanFormFields';
+import TransactionDetailModal, { TransactionDetail } from '../transactions/DetailModal';
+import PageHeader from '../header';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type LoanStatus = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
+type LoanType   = 'commerce' | 'logement' | 'agriculture' | 'elevage' | 'equipement' | 'scolaire' | 'personnel';
+
 interface LoanData {
-  id: number;
-  amount: number;
-  status: 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
-  member_name: string;
-  created_at: string;
-  approved_at?: string;
-  disbursed_at?: string;
-  
-  loan_details: {
-    duration_months: number;
-    interest_rate: number;
-    monthly_payment: number;
-    total_amount: number;
-    purpose: 'plantation' | 'construction' | 'scolarite' | 'commerce' | 'elevage' | 'equipement' | 'autre';
-    loan_type: 'agriculture' | 'commerce' | 'logement' | 'education' | 'sante' | 'autre';
-    collateral_type: 'epargne_bloquee' | 'caution' | 'betail' | 'terrain' | 'vehicule' | 'autre';
-    repayment_frequency: 'mensuel' | 'hebdomadaire' | 'saisonnier';
-    
-    payments_made: number;
-    remaining_balance: number;
-    next_payment_date?: string;
-    last_payment_date?: string;
-    late_days: number;
-  };
+  id:               number;
+  member_name:      string;
+  member_id:        string;
+  account_number:   string;
+  amount:           number;
+  status:           LoanStatus;
+  loan_type:        LoanType;
+  purpose:          string;
+  duration_months:  number;
+  interest_rate:    number;
+  monthly_payment:  number;
+  remaining_balance:number;
+  payments_made:    number;
+  late_days:        number;
+  is_late:          boolean;
+  next_payment_date:string;
+  created_at:       string;
+  disbursed_at?:    string;
+  processed_by:     string;
+  validated_by:     string;
+  caisse_numero:    string;
+  caisse_id:        string;
+  session_id:       string;
 }
 
-// KPI Card Component
-const KPICard = ({ icon: Icon, label, value, subValue, trend, color }: any) => (
-  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-    <div className="flex items-start justify-between mb-4">
-      <div className={`p-3 rounded-xl ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
+// ─── Palette CAPOSA ───────────────────────────────────────────────────────────
+const C = {
+  green:     '#2E7D32',
+  greenDark: '#1B5E20',
+  greenPale: '#DDEAD5',
+  blue:      '#355C7D',
+  gold:      '#D4AF37',
+};
+
+const tooltipStyle = {
+  backgroundColor: 'white',
+  border: `1px solid ${C.greenPale}`,
+  borderRadius: '12px',
+  fontSize: '12px',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+};
+
+// ─── Config statuts ───────────────────────────────────────────────────────────
+const STATUS_CFG: Record<LoanStatus, { label: string; bg: string; text: string; dot: string; icon: React.ElementType }> = {
+  en_attente: { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B', icon: Clock        },
+  approuve:   { label: 'Approuvé',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue,    icon: CheckCircle2 },
+  decaisse:   { label: 'Décaissé',   bg: C.greenPale, text: C.greenDark, dot: C.green,   icon: Banknote     },
+  rembourse:  { label: 'Remboursé',  bg: '#F0FDF4',   text: '#166534',   dot: '#22C55E', icon: CheckCircle2 },
+  rejete:     { label: 'Rejeté',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444', icon: XCircle      },
+  annule:     { label: 'Annulé',     bg: '#F3F4F6',   text: '#4B5563',   dot: '#9CA3AF', icon: XCircle      },
+};
+
+const TYPE_LABELS: Record<LoanType, string> = {
+  commerce:    'Commerce',    logement:   'Logement',
+  agriculture: 'Agriculture', elevage:    'Élevage',
+  equipement:  'Équipement',  scolaire:   'Scolaire',
+  personnel:   'Personnel',
+};
+
+// ─── Groupes retard ───────────────────────────────────────────────────────────
+const RETARD_GROUPS = [
+  { key: 'critical', label: 'Retard critique (30+ jours)', test: (l: LoanData) => l.late_days >= 30,            accent: '#EF4444', bg: 'bg-red-50',    border: 'border-red-100'    },
+  { key: 'late',     label: 'En retard (1–29 jours)',      test: (l: LoanData) => l.is_late && l.late_days < 30, accent: '#F59E0B', bg: 'bg-yellow-50', border: 'border-yellow-100' },
+  { key: 'ok',       label: 'À jour',                      test: (l: LoanData) => !l.is_late,                    accent: C.green,   bg: 'bg-[#F9F9F6]', border: 'border-gray-100'   },
+] as const;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatHTG(n: number) {
+  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' HTG';
+}
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function daysUntil(iso: string) {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+}
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+function generateLoans(): LoanData[] {
+  const statuses: LoanStatus[] = ['decaisse', 'decaisse', 'decaisse', 'rembourse', 'approuve', 'en_attente', 'rejete', 'annule'];
+  const types:    LoanType[]   = ['commerce', 'logement', 'agriculture', 'elevage', 'equipement', 'scolaire', 'personnel'];
+  const purposes  = ['Achat marchandises', 'Construction', 'Plantation', 'Bétail', 'Matériel', 'Scolarité', 'Urgence'];
+  const members   = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
+  const employes  = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
+  const supers    = ['Marie-Ange Celestin', 'Réginald Toussaint'];
+  const caisses   = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }, { id: 'CAI003', numero: '03' }];
+  const data: LoanData[] = [];
+
+  for (let i = 0; i < 80; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - Math.floor(Math.random() * 90));
+    if (date.getDay() === 0 || date.getDay() === 6) { i--; continue; }
+    date.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
+
+    const status  = statuses[Math.floor(Math.random() * statuses.length)];
+    const amount  = Math.floor(Math.random() * 70000) + 5000;
+    const dur     = [6, 12, 18, 24, 36, 48][Math.floor(Math.random() * 6)];
+    const rate    = 2.5 + Math.random() * 5;
+    const monthly = (amount * (1 + rate / 100)) / dur;
+    const paid    = status === 'decaisse' ? Math.floor(Math.random() * dur) : status === 'rembourse' ? dur : 0;
+    const isLate  = status === 'decaisse' && Math.random() > 0.7;
+    const lateDays = isLate ? Math.floor(Math.random() * 45) + 1 : 0;
+    const caisse  = caisses[Math.floor(Math.random() * caisses.length)];
+    const nextPmt = new Date();
+    nextPmt.setDate(nextPmt.getDate() + (isLate ? -lateDays : Math.floor(Math.random() * 28) + 1));
+
+    data.push({
+      id: i + 1, member_name: members[i % members.length], member_id: `MEM${1000 + i}`,
+      account_number: `ACC${1000 + i}`, amount, status,
+      loan_type: types[Math.floor(Math.random() * types.length)],
+      purpose:   purposes[Math.floor(Math.random() * purposes.length)],
+      duration_months: dur, interest_rate: parseFloat(rate.toFixed(2)), monthly_payment: monthly,
+      remaining_balance: status === 'rembourse' ? 0 : Math.max(0, amount - monthly * paid),
+      payments_made: paid, late_days: lateDays, is_late: isLate,
+      next_payment_date: nextPmt.toISOString(), created_at: date.toISOString(),
+      disbursed_at: ['decaisse', 'rembourse'].includes(status) ? new Date(date.getTime() + 5 * 86400000).toISOString() : undefined,
+      processed_by:  employes[Math.floor(Math.random() * employes.length)],
+      validated_by:  supers[Math.floor(Math.random() * supers.length)],
+      caisse_numero: caisse.numero, caisse_id: caisse.id, session_id: `SES-${1000 + i}`,
+    });
+  }
+  return data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+function KPICard({ icon: Icon, label, value, sub, accent }: {
+  icon: React.ElementType; label: string; value: string | number; sub?: string; accent: string;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col gap-3">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: accent + '22' }}>
+        <Icon className="w-5 h-5" style={{ color: accent }} />
       </div>
-      {trend && (
-        <span className={`text-sm font-semibold ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {trend > 0 ? '+' : ''}{trend}%
-        </span>
-      )}
+      <div>
+        <p className="text-xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mt-0.5">{label}</p>
+        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      </div>
     </div>
-    <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
-    <p className="text-sm text-gray-600">{label}</p>
-    {subValue && <p className="text-xs text-gray-500 mt-1">{subValue}</p>}
-  </div>
-);
+  );
+}
 
-const LoanDashboard = () => {
-  // États
-  const [periodFilter, setPeriodFilter] = useState<'day' | 'week' | 'month'>('week');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [minAmount, setMinAmount] = useState<string>('');
-  const [maxAmount, setMaxAmount] = useState<string>('');
-  const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export default function LoanDashboard() {
+  const [tab,       setTab]       = useState<'tous' | 'actifs'>('tous');
+  const [period,    setPeriod]    = useState<'day' | 'week' | 'month'>('week');
+  const [periodF,   setPeriodF]   = useState<'all' | 'week' | 'month'>('all');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
+  const [selected,  setSelected]  = useState<Set<number>>(new Set());
+  const [search,    setSearch]    = useState('');
+  const [statusF,   setStatusF]   = useState('all');
+  const [retardF,   setRetardF]   = useState('all');
+  const [sortField, setSortField] = useState<'date' | 'amount' | 'balance' | 'late'>('date');
 
-  // Génération de données échantillon (Lun-Ven, 9h-17h)
-  const generateSampleLoans = (): LoanData[] => {
-    const statuses: Array<'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule'> = 
-      ['decaisse', 'decaisse', 'decaisse', 'rembourse', 'approuve', 'en_attente', 'rejete', 'annule'];
-    const members = ['Alice Tremblay', 'Bob Martin', 'Charlie Dubois', 'Diana Roy', 'Ethan Gagnon', 'Fiona Côté', 'Gabriel Lavoie', 'Hannah Bergeron'];
-    const purposes: Array<'plantation' | 'construction' | 'scolarite' | 'commerce' | 'elevage' | 'equipement' | 'autre'> = 
-      ['plantation', 'construction', 'scolarite', 'commerce', 'elevage', 'equipement', 'autre'];
-    const loanTypes: Array<'agriculture' | 'commerce' | 'logement' | 'education' | 'sante' | 'autre'> = 
-      ['agriculture', 'commerce', 'logement', 'education', 'sante', 'autre'];
-    const collaterals: Array<'epargne_bloquee' | 'caution' | 'betail' | 'terrain' | 'vehicule' | 'autre'> = 
-      ['epargne_bloquee', 'caution', 'betail', 'terrain', 'vehicule', 'autre'];
-    const frequencies: Array<'mensuel' | 'hebdomadaire' | 'saisonnier'> = 
-      ['mensuel', 'mensuel', 'mensuel', 'hebdomadaire', 'saisonnier'];
-    
-    const data: LoanData[] = [];
-    const daysBack = periodFilter === 'day' ? 1 : periodFilter === 'week' ? 7 : 30;
-    let attempts = 0;
-    
-    for (let i = 0; i < 80 && attempts < 200; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
-      
-      if (date.getDay() === 0 || date.getDay() === 6) {
-        i--;
-        attempts++;
-        continue;
-      }
-      
-      date.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
-      
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const amount = Math.floor(Math.random() * 50000) + 5000;
-      const duration = [6, 12, 18, 24, 36, 48][Math.floor(Math.random() * 6)];
-      const interestRate = 2.5 + Math.random() * 5;
-      const monthlyPayment = (amount * (1 + interestRate/100)) / duration;
-      const paymentsMade = status === 'decaisse' ? Math.floor(Math.random() * duration) : 
-                          status === 'rembourse' ? duration : 0;
-      const lateDays = status === 'decaisse' && Math.random() > 0.7 ? Math.floor(Math.random() * 30) : 0;
-      
-      data.push({
-        id: i + 1,
-        amount: amount,
-        status: status,
-        member_name: members[Math.floor(Math.random() * members.length)],
-        created_at: date.toISOString(),
-        approved_at: status !== 'en_attente' && status !== 'rejete' ? 
-          new Date(date.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString() : undefined,
-        disbursed_at: status === 'decaisse' || status === 'rembourse' ? 
-          new Date(date.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString() : undefined,
-        loan_details: {
-          duration_months: duration,
-          interest_rate: parseFloat(interestRate.toFixed(2)),
-          monthly_payment: monthlyPayment,
-          total_amount: amount * (1 + interestRate/100),
-          purpose: purposes[Math.floor(Math.random() * purposes.length)],
-          loan_type: loanTypes[Math.floor(Math.random() * loanTypes.length)],
-          collateral_type: collaterals[Math.floor(Math.random() * collaterals.length)],
-          repayment_frequency: frequencies[Math.floor(Math.random() * frequencies.length)],
-          payments_made: paymentsMade,
-          remaining_balance: status === 'rembourse' ? 0 : amount - (monthlyPayment * paymentsMade),
-          next_payment_date: status === 'decaisse' ? new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
-          last_payment_date: paymentsMade > 0 ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() : undefined,
-          late_days: lateDays
-        }
-      });
-      attempts++;
-    }
-    
-    return data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const allLoans   = useMemo(() => generateLoans(), []);
+  const activeOnly = useMemo(() => allLoans.filter(l => l.status === 'decaisse'), [allLoans]);
+
+  const periodLoans = useMemo(() => {
+    if (period === 'day')  return allLoans.filter(l => new Date(l.created_at) >= new Date(Date.now() - 86400000));
+    if (period === 'week') return allLoans.filter(l => new Date(l.created_at) >= new Date(Date.now() - 7 * 86400000));
+    return allLoans;
+  }, [allLoans, period]);
+
+  // 5 derniers prêts pour l'aperçu
+  const recentLoans = useMemo(() => periodLoans.slice(0, 5), [periodLoans]);
+  const recentActifs = useMemo(() => activeOnly.slice(0, 5), [activeOnly]);
+
+  const LOAN_STATUS_MAP: Record<LoanStatus, TransactionDetail['status']> = {
+    en_attente: 'en_attente', approuve: 'en_cours',  decaisse: 'decaisse',
+    rembourse:  'rembourse',  rejete:   'echoue',     annule:   'annule',
   };
 
-  const loans = useMemo(() => generateSampleLoans(), [periodFilter]);
+  const handleView = (l: LoanData) => setDetailTx({
+    id: l.id, kind: 'loan', status: LOAN_STATUS_MAP[l.status],
+    montant: l.amount, created_at: l.disbursed_at ?? l.created_at,
+    member_name: l.member_name, member_id: l.member_id, account_number: l.account_number,
+    description: `${TYPE_LABELS[l.loan_type]} — ${l.purpose}`,
+    processed_by: l.processed_by, validated_by: l.validated_by,
+    caisse_numero: l.caisse_numero, caisse_id: l.caisse_id, session_id: l.session_id,
+  });
 
-  // Filtrage des prêts
-  const filteredLoans = useMemo(() => {
-    return loans.filter(l => {
-      const matchesSearch = l.member_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           l.id.toString().includes(searchTerm);
-      const matchesStatus = statusFilter === 'all' || l.status === statusFilter;
-      const matchesType = typeFilter === 'all' || l.loan_details.loan_type === typeFilter;
-      const matchesMinAmount = !minAmount || l.amount >= parseFloat(minAmount);
-      const matchesMaxAmount = !maxAmount || l.amount <= parseFloat(maxAmount);
-      
-      return matchesSearch && matchesStatus && matchesType && matchesMinAmount && matchesMaxAmount;
-    });
-  }, [loans, searchTerm, statusFilter, typeFilter, minAmount, maxAmount]);
+  const recentDisplay = tab === 'tous' ? recentLoans : recentActifs;
 
-  // Fonctions de sélection
-  const handleRowSelect = (id: number) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
+  // ── KPIs ──
+  const late     = activeOnly.filter(l => l.is_late);
+  const critical = activeOnly.filter(l => l.late_days >= 30);
+  const totalDisbursed    = allLoans.filter(l => ['decaisse','rembourse'].includes(l.status)).reduce((s, l) => s + l.amount, 0);
+  const totalOutstanding  = activeOnly.reduce((s, l) => s + l.remaining_balance, 0);
+  const totalPrincipal    = activeOnly.reduce((s, l) => s + l.amount, 0);
+  const totalRepaid       = totalPrincipal - totalOutstanding;
+  const onTimeRate        = activeOnly.length > 0 ? ((activeOnly.length - late.length) / activeOnly.length * 100) : 0;
+  const approvalRate      = allLoans.length > 0 ? (allLoans.filter(l => ['approuve','decaisse','rembourse'].includes(l.status)).length / allLoans.length * 100) : 0;
+  const monthlyExpected   = activeOnly.reduce((s, l) => s + l.monthly_payment, 0);
+
+  // ── Graphiques ──
+  const volumeData = useMemo(() => {
+    const days: { label: string; date: string; count: number; amount: number }[] = [];
+    let dBack = 0, found = 0;
+    while (found < 7) {
+      dBack++;
+      const d = new Date(); d.setDate(d.getDate() - dBack);
+      if (d.getDay() === 0 || d.getDay() === 6) continue;
+      days.unshift({ label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }), date: d.toISOString().split('T')[0], count: 0, amount: 0 });
+      found++;
     }
-    setSelectedRows(newSelected);
-  };
+    allLoans.forEach(l => { const idx = days.findIndex(d => d.date === l.created_at.split('T')[0]); if (idx >= 0) { days[idx].count++; days[idx].amount += l.amount; } });
+    return days;
+  }, [allLoans]);
 
-  const handleSelectAll = () => {
-    if (selectedRows.size === filteredLoans.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(filteredLoans.map(l => l.id)));
-    }
-  };
+  const typeDistrib = useMemo(() => {
+    const map: Record<string, { count: number; color: string }> = {
+      commerce: { count: 0, color: C.green }, logement: { count: 0, color: C.blue },
+      agriculture: { count: 0, color: '#81C784' }, elevage: { count: 0, color: C.gold },
+      equipement: { count: 0, color: '#A5C8A5' }, scolaire: { count: 0, color: '#7BAFD4' }, personnel: { count: 0, color: '#C8A97B' },
+    };
+    (tab === 'actifs' ? activeOnly : allLoans).forEach(l => { if (map[l.loan_type]) map[l.loan_type].count++; });
+    return Object.entries(map).map(([k, v]) => ({ name: TYPE_LABELS[k as LoanType], value: v.count, color: v.color }));
+  }, [allLoans, activeOnly, tab]);
 
-  // Groupement par date
-  const groupedLoans = useMemo(() => {
-    const sorted = [...filteredLoans].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  const statusDistrib = useMemo(() =>
+    Object.entries(STATUS_CFG).map(([k, v]) => ({ label: v.label, count: allLoans.filter(l => l.status === k).length, color: v.dot })),
+    [allLoans]
+  );
+
+  const progressDistrib = useMemo(() => {
+    const d = [{ range: '0–25%', count: 0, color: '#EF4444' }, { range: '26–50%', count: 0, color: C.gold }, { range: '51–75%', count: 0, color: C.blue }, { range: '76–100%', count: 0, color: C.green }];
+    activeOnly.forEach(l => { const p = (l.payments_made / l.duration_months) * 100; if (p <= 25) d[0].count++; else if (p <= 50) d[1].count++; else if (p <= 75) d[2].count++; else d[3].count++; });
+    return d;
+  }, [activeOnly]);
+
+  // ── Ligne partagée ────────────────────────────────────────────────────────
+  const LoanRow = ({ loan, idx }: { loan: LoanData; idx: number }) => {
+    const sc = STATUS_CFG[loan.status];
+    const isSelected = selected.has(loan.id);
+    const progress   = Math.round((loan.payments_made / loan.duration_months) * 100);
+    const isLate     = loan.is_late;
+    const isCritical = loan.late_days >= 30;
+    const daysLeft   = daysUntil(loan.next_payment_date);
+
+    return (
+      <div className={`grid grid-cols-12 gap-3 items-center px-5 py-4 transition-all group border-b border-gray-50 last:border-0 ${
+        isSelected   ? 'bg-[#DDEAD5]/30 border-l-4 border-[#2E7D32]'
+        : isCritical ? 'bg-red-50/40 hover:bg-red-50/60'
+        : isLate     ? 'bg-yellow-50/40 hover:bg-yellow-50/60'
+        : idx % 2 === 0 ? 'bg-white hover:bg-[#F9F9F6]' : 'bg-[#F9F9F6]/40 hover:bg-[#F9F9F6]'
+      }`}>
+
+        <div className="col-span-1">
+          <input type="checkbox" checked={isSelected}
+            onChange={() => setSelected(s => { const n = new Set(s); n.has(loan.id) ? n.delete(loan.id) : n.add(loan.id); return n; })}
+            onClick={e => e.stopPropagation()}
+            className="w-4 h-4 rounded border-gray-300 text-[#2E7D32] focus:ring-[#2E7D32]/30 cursor-pointer" />
+        </div>
+
+        <div className="col-span-2 flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <Users className="w-4 h-4 text-[#2E7D32]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800 truncate">{loan.member_name}</p>
+            <p className="text-xs text-gray-400 font-mono">{loan.member_id}</p>
+          </div>
+        </div>
+
+        <div className="col-span-1">
+          <p className="text-xs font-medium text-gray-700">{TYPE_LABELS[loan.loan_type]}</p>
+          <p className="text-xs text-gray-400">{loan.duration_months} mois</p>
+        </div>
+
+        <div className="col-span-2">
+          <p className="text-sm font-bold text-gray-800">{formatHTG(loan.amount)}</p>
+          <p className="text-xs text-gray-400">{loan.interest_rate}% / an</p>
+        </div>
+
+        <div className="col-span-2">
+          <p className={`text-sm font-bold ${
+            loan.remaining_balance === 0 ? 'text-[#2E7D32]' : isCritical ? 'text-red-600' : isLate ? 'text-yellow-600' : 'text-[#355C7D]'
+          }`}>{formatHTG(Math.max(0, loan.remaining_balance))}</p>
+          {isLate && <p className="text-xs text-red-500 font-medium">{loan.late_days}j de retard</p>}
+        </div>
+
+        <div className="col-span-2">
+          <div className="flex justify-between mb-1">
+            <span className="text-xs text-gray-500">{loan.payments_made}/{loan.duration_months}</span>
+            <span className="text-xs font-semibold text-gray-700">{progress}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: progress >= 75 ? C.green : progress >= 50 ? C.blue : progress >= 25 ? C.gold : '#EF4444' }} />
+          </div>
+          <div className="mt-1.5">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium" style={{ backgroundColor: sc.bg, color: sc.text }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />{sc.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Colonne contextuelle : prochain paiement (actifs) ou date création (tous) */}
+        <div className="col-span-1">
+          {tab === 'actifs' ? (
+            <>
+              {isLate ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700"><XCircle className="w-3 h-3 shrink-0" />-{loan.late_days}j</span>
+              ) : daysLeft <= 7 ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-yellow-50 text-yellow-700"><AlertTriangle className="w-3 h-3 shrink-0" />{daysLeft}j</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20]"><CheckCircle2 className="w-3 h-3 shrink-0" />{daysLeft}j</span>
+              )}
+              <p className="text-xs text-gray-400 mt-1">{formatDate(loan.next_payment_date)}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-gray-700">{formatDate(loan.created_at)}</p>
+              <p className="text-xs text-gray-400">{new Date(loan.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+            </>
+          )}
+        </div>
+
+        <div className="col-span-1 flex items-center justify-center gap-1.5">
+          <button title="Voir" onClick={() => handleView(loan)} className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
+            <Eye className="w-4 h-4" />
+          </button>
+          <button title="Plus" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     );
-
-    return sorted.reduce((acc, loan) => {
-      const date = new Date(loan.created_at);
-      const key = date.toLocaleDateString('fr-FR', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-      
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(loan);
-      return acc;
-    }, {} as Record<string, LoanData[]>);
-  }, [filteredLoans]);
-
-  // Calculs des KPIs
-  const disbursedLoans = loans.filter(l => l.status === 'decaisse' || l.status === 'rembourse');
-  const totalLoaned = disbursedLoans.reduce((sum, l) => sum + l.amount, 0);
-  const totalRepaid = disbursedLoans.reduce((sum, l) => sum + (l.amount - l.loan_details.remaining_balance), 0);
-  const totalOutstanding = disbursedLoans.reduce((sum, l) => sum + l.loan_details.remaining_balance, 0);
-  const totalLate = loans.filter(l => (l.loan_details.late_days || 0) > 0)
-    .reduce((sum, l) => sum + l.loan_details.remaining_balance, 0);
-  const approvalRate = loans.length > 0 ? 
-    (loans.filter(l => l.status === 'approuve' || l.status === 'decaisse' || l.status === 'rembourse').length / loans.length) * 100 : 0;
-  const activeLoans = loans.filter(l => l.status === 'decaisse');
-  const averageMonthly = activeLoans.length > 0 ?
-    activeLoans.reduce((sum, l) => sum + l.loan_details.monthly_payment, 0) / activeLoans.length : 0;
-
-  // Graphique: Volume par jour (Lun-Ven uniquement)
-  const volumeByDay = useMemo(() => {
-    const days = periodFilter === 'day' ? 9 : periodFilter === 'week' ? 5 : 22;
-    const data = Array.from({ length: days }, (_, i) => {
-      const date = new Date();
-      
-      if (periodFilter === 'day') {
-        const hour = 9 + i;
-        date.setHours(hour, 0, 0, 0);
-        return { label: `${hour}h`, date: date.toISOString(), count: 0, amount: 0 };
-      } else {
-        let daysBack = 0;
-        let workDaysCount = 0;
-        while (workDaysCount < days - i) {
-          daysBack++;
-          const tempDate = new Date();
-          tempDate.setDate(tempDate.getDate() - daysBack);
-          if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6) {
-            workDaysCount++;
-          }
-        }
-        date.setDate(date.getDate() - daysBack);
-        return {
-          label: date.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric' }),
-          date: date.toISOString().split('T')[0],
-          count: 0,
-          amount: 0
-        };
-      }
-    });
-
-    loans.forEach(l => {
-      const loanDate = new Date(l.created_at);
-      const index = data.findIndex(item => {
-        if (periodFilter === 'day') {
-          return new Date(item.date).getHours() === loanDate.getHours();
-        } else {
-          return item.date === l.created_at.split('T')[0];
-        }
-      });
-      if (index >= 0) {
-        data[index].count++;
-        data[index].amount += l.amount;
-      }
-    });
-
-    return data;
-  }, [loans, periodFilter]);
-
-  // Répartition par type de prêt
-  const loanTypeDistribution = useMemo(() => {
-    const types = {
-      agriculture: { count: 0, amount: 0, label: 'Agriculture', color: '#10b981' },
-      commerce: { count: 0, amount: 0, label: 'Commerce', color: '#3b82f6' },
-      logement: { count: 0, amount: 0, label: 'Logement', color: '#8b5cf6' },
-      education: { count: 0, amount: 0, label: 'Éducation', color: '#f59e0b' },
-      sante: { count: 0, amount: 0, label: 'Santé', color: '#ef4444' },
-      autre: { count: 0, amount: 0, label: 'Autre', color: '#6b7280' }
-    };
-
-    loans.forEach(l => {
-      types[l.loan_details.loan_type].count++;
-      types[l.loan_details.loan_type].amount += l.amount;
-    });
-
-    return Object.values(types).map(t => ({
-      name: t.label,
-      value: t.count,
-      amount: t.amount,
-      color: t.color
-    }));
-  }, [loans]);
-
-  // Répartition par statut
-  const statusDistribution = useMemo(() => {
-    const statuses = {
-      en_attente: { count: 0, label: 'En attente', color: '#f59e0b' },
-      approuve: { count: 0, label: 'Approuvé', color: '#3b82f6' },
-      decaisse: { count: 0, label: 'Décaissé', color: '#8b5cf6' },
-      rembourse: { count: 0, label: 'Remboursé', color: '#10b981' },
-      rejete: { count: 0, label: 'Rejeté', color: '#ef4444' },
-      annule: { count: 0, label: 'Annulé', color: '#6b7280' }
-    };
-
-    loans.forEach(l => {
-      statuses[l.status].count++;
-    });
-
-    return Object.values(statuses);
-  }, [loans]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('fr-HT', {
-      style: 'currency',
-      currency: 'HTG',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels = {
-      en_attente: 'En attente',
-      approuve: 'Approuvé',
-      decaisse: 'Décaissé',
-      rembourse: 'Remboursé',
-      rejete: 'Rejeté',
-      annule: 'Annulé'
-    };
-    return labels[status as keyof typeof labels];
-  };
-
-  const getLoanTypeLabel = (type: string) => {
-    const labels = {
-      agriculture: 'Agriculture',
-      commerce: 'Commerce',
-      logement: 'Logement',
-      education: 'Éducation',
-      sante: 'Santé',
-      autre: 'Autre'
-    };
-    return labels[type as keyof typeof labels];
   };
 
   return (
-    <div className="w-full min-h-screen bg-linear-to-br from-slate-50 via-indigo-50 to-purple-50 md:p-8">
-      {/* Filtre de période */}
-      <div className="mb-6 flex gap-3">
-        {(['day', 'week', 'month'] as const).map(period => (
-          <button
-            key={period}
-            onClick={() => setPeriodFilter(period)}
-            className={`px-4 py-2 rounded-4xl text-sm font-medium transition-all ${
-              periodFilter === period
-                ? 'bg-indigo-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
-          >
-            {period === 'day' ? 'Aujourd\'hui' : period === 'week' ? '7 jours' : '30 jours'}
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <PageHeader title="Prêts" subtitle="Gestion et suivi du portefeuille" icon={<Landmark className="w-8 h-8 text-[#2E7D32]" />} />
+        <div className="flex items-center gap-2 shrink-0">
+          {tab === 'tous' ? (
+            <div className="flex bg-white border border-gray-200 rounded-xl p-1 gap-1">
+              {(['day', 'week', 'month'] as const).map(p => (
+                <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${period === p ? 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {p === 'day' ? 'Auj.' : p === 'week' ? '7 j' : '30 j'}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex bg-white border border-gray-200 rounded-xl p-1 gap-1">
+              {(['all', 'week', 'month'] as const).map(p => (
+                <button key={p} onClick={() => setPeriodF(p)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${periodF === p ? 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {p === 'all' ? 'Tous' : p === 'week' ? 'Cette sem.' : 'Ce mois'}
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+            <Plus className="w-4 h-4" /> Nouveau prêt
+          </button>
+        </div>
+      </div>
+
+      {/* Onglets */}
+      <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm w-fit">
+        {([{ key: 'tous', label: 'Tous les prêts', count: allLoans.length }, { key: 'actifs', label: 'Actifs (en cours)', count: activeOnly.length }] as const).map(t => (
+          <button key={t.key}
+            onClick={() => { setTab(t.key); setSearch(''); setStatusF('all'); setRetardF('all'); setSortField('date'); setSelected(new Set()); }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === t.key ? 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
+            {t.label}
+            <span className={`px-1.5 py-0.5 rounded-md text-xs font-bold ${tab === t.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{t.count}</span>
           </button>
         ))}
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <KPICard
-          icon={DollarSign}
-          label="Montant total prêté"
-          value={formatCurrency(totalLoaned)}
-          color="bg-gradient-to-br from-indigo-500 to-indigo-600"
-        />
-        <KPICard
-          icon={FileText}
-          label="Nombre de prêts"
-          value={loans.length}
-          subValue={`${activeLoans.length} actifs`}
-          color="bg-gradient-to-br from-blue-500 to-blue-600"
-        />
-        <KPICard
-          icon={TrendingUp}
-          label="Montant remboursé"
-          value={formatCurrency(totalRepaid)}
-          color="bg-gradient-to-br from-green-500 to-green-600"
-        />
-        <KPICard
-          icon={AlertCircle}
-          label="Solde restant"
-          value={formatCurrency(totalOutstanding)}
-          color="bg-gradient-to-br from-orange-500 to-orange-600"
-        />
-        <KPICard
-          icon={CheckCircle}
-          label="Taux d'approbation"
-          value={`${approvalRate.toFixed(1)}%`}
-          color="bg-gradient-to-br from-teal-500 to-teal-600"
-        />
-        <KPICard
-          icon={XCircle}
-          label="Montant en retard"
-          value={formatCurrency(totalLate)}
-          subValue={`${loans.filter(l => (l.loan_details.late_days || 0) > 0).length} prêts`}
-          color="bg-gradient-to-br from-red-500 to-red-600"
-        />
+      {/* KPIs adaptatifs */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {tab === 'tous' ? (<>
+          <KPICard icon={Landmark}      label="Total prêts"      value={allLoans.length}               sub={`${activeOnly.length} actifs`}                           accent={C.green}   />
+          <KPICard icon={Banknote}      label="Total décaissé"   value={formatHTG(totalDisbursed)}                                                                    accent={C.blue}    />
+          <KPICard icon={TrendingUp}    label="Solde restant"    value={formatHTG(totalOutstanding)}                                                                  accent={C.green}   />
+          <KPICard icon={CheckCircle2}  label="Taux approbation" value={`${approvalRate.toFixed(1)}%`} sub={`${allLoans.filter(l=>l.status==='rembourse').length} remboursés`} accent={C.green} />
+          <KPICard icon={Clock}         label="En attente"       value={allLoans.filter(l=>l.status==='en_attente').length} sub="à valider"                           accent={C.gold}    />
+          <KPICard icon={AlertTriangle} label="En retard"        value={late.length}                   sub={`${critical.length} critiques`}                          accent="#EF4444"   />
+        </>) : (<>
+          <KPICard icon={Landmark}      label="Prêts actifs"     value={activeOnly.length}             sub={`${late.length} en retard`}                              accent={C.green}   />
+          <KPICard icon={Banknote}      label="Solde total"      value={formatHTG(totalOutstanding)}                                                                  accent={C.blue}    />
+          <KPICard icon={CheckCircle2}  label="Remboursé"        value={formatHTG(totalRepaid)}        sub={`${((totalRepaid/(totalPrincipal||1))*100).toFixed(1)}% du total`} accent={C.green} />
+          <KPICard icon={Clock}         label="Attendu / mois"   value={formatHTG(monthlyExpected)}    sub="Paiements mensuels"                                      accent={C.gold}    />
+          <KPICard icon={TrendingUp}    label="Ponctualité"      value={`${onTimeRate.toFixed(1)}%`}   sub={`${activeOnly.length - late.length} à jour`}             accent={C.green}   />
+          <KPICard icon={AlertTriangle} label="Critiques"        value={critical.length}               sub="30+ jours de retard"                                     accent="#EF4444"   />
+        </>)}
       </div>
 
-      {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Volume */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Volume des Prêts</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={volumeByDay}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="label" stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} />
-              <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-              <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} name="Nombre" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Graphiques adaptatifs */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* Montants */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Montants Prêtés</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={volumeByDay}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="label" stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip 
-                formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''}
-                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} 
-              />
-              <Bar dataKey="amount" fill="#6366f1" radius={[8, 8, 0, 0]} name="Montant" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* G1 : volume (tous) | statut paiements (actifs) */}
+        {tab === 'tous' ? (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Volume — 7 derniers jours ouvrés</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={volumeData} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
+                <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} />
+                <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Prêts']} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Prêts">
+                  {volumeData.map((_, i) => <Cell key={i} fill={i === volumeData.length - 1 ? C.green : C.greenPale} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Statut des paiements</p>
+            <div className="flex items-center gap-4">
+              <ResponsiveContainer width="50%" height={200}>
+                <PieChart>
+                  <Pie data={[
+                    { name: 'À jour',            value: activeOnly.length - late.length,   color: C.green   },
+                    { name: 'En retard (1–29j)', value: late.length - critical.length,     color: C.gold    },
+                    { name: 'Critique (30+j)',   value: critical.length,                   color: '#EF4444' },
+                  ]} cx="50%" cy="50%" innerRadius={52} outerRadius={80} paddingAngle={3} dataKey="value">
+                    {[C.green, C.gold, '#EF4444'].map((c, i) => <Cell key={i} fill={c} />)}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 flex flex-col gap-3">
+                {[{ name: 'À jour', value: activeOnly.length - late.length, color: C.green }, { name: 'En retard (1–29j)', value: late.length - critical.length, color: C.gold }, { name: 'Critique (30+j)', value: critical.length, color: '#EF4444' }].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-gray-600">{item.name}</span>
+                    </div>
+                    <span className="text-xs font-bold text-gray-800">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Répartition par type */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Répartition par Type</h3>
-          <div className="flex items-center justify-between">
-            <ResponsiveContainer width="50%" height={250}>
+        {/* G2 : montants (tous) | progression (actifs) */}
+        {tab === 'tous' ? (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Montants décaissés</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={volumeData} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
+                <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} />
+                <YAxis stroke="#9CA3AF" fontSize={11} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Montant']} />
+                <Bar dataKey="amount" radius={[6, 6, 0, 0]} name="Montant">
+                  {volumeData.map((_, i) => <Cell key={i} fill={i === volumeData.length - 1 ? C.blue : '#D4E3EF'} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Progression des remboursements</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={progressDistrib} barSize={36}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
+                <XAxis dataKey="range" stroke="#9CA3AF" fontSize={11} />
+                <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Prêts']} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Prêts">
+                  {progressDistrib.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* G3 : répartition par type (partagé) */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Répartition par type</p>
+          <div className="flex items-center gap-4">
+            <ResponsiveContainer width="45%" height={200}>
               <PieChart>
-                <Pie data={loanTypeDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value">
-                  {loanTypeDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
+                <Pie data={typeDistrib} cx="50%" cy="50%" innerRadius={52} outerRadius={80} paddingAngle={3} dataKey="value">
+                  {typeDistrib.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Pie>
-                <Tooltip 
-                  formatter={(value: number | undefined, name: string | undefined, props: any) => {
-                    if (value === undefined) return ['', ''];
-                    return [`${value} (${formatCurrency(props.payload.amount)})`, name || ''];
-                  }}
-                />
+                <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex-1 space-y-3">
-              {loanTypeDistribution.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
+            <div className="flex-1 flex flex-col gap-2">
+              {typeDistrib.map((item, i) => (
+                <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-sm text-gray-600">{item.name}</span>
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs text-gray-600">{item.name}</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">{item.value}</span>
+                  <span className="text-xs font-bold text-gray-800">{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Statuts */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Statut des Prêts</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={statusDistribution} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" stroke="#6b7280" fontSize={12} />
-              <YAxis type="category" dataKey="label" stroke="#6b7280" fontSize={12} width={100} />
-              <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-              <Bar dataKey="count" radius={[0, 8, 8, 0]} name="Prêts">
-                {statusDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        {/* G4 : statuts (tous) | top soldes (actifs) */}
+        {tab === 'tous' ? (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Statut des prêts</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={statusDistrib} layout="vertical" barSize={18}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" horizontal={false} />
+                <XAxis type="number" stroke="#9CA3AF" fontSize={11} allowDecimals={false} />
+                <YAxis type="category" dataKey="label" stroke="#9CA3AF" fontSize={11} width={80} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Prêts']} />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]} name="Prêts">
+                  {statusDistrib.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Top 5 — Plus gros soldes restants</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={[...activeOnly].sort((a, b) => b.remaining_balance - a.remaining_balance).slice(0, 5).map(l => ({ name: l.member_name.split(' ')[0], amount: l.remaining_balance }))} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
+                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} />
+                <YAxis stroke="#9CA3AF" fontSize={11} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Solde']} />
+                <Bar dataKey="amount" radius={[6, 6, 0, 0]} fill={C.blue} name="Solde restant" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* Aperçu — 5 derniers prêts */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-gray-800">
+              {tab === 'tous' ? 'Dernières demandes' : 'Prêts actifs — aperçu'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {tab === 'tous' ? `${allLoans.length} prêts au total` : `${activeOnly.length} prêts actifs`}
+            </p>
+          </div>
+          <a href="/dashboard/loans/loanList"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#2E7D32] text-xs font-semibold text-[#2E7D32] hover:bg-[#DDEAD5]/40 transition-all">
+            Voir tous les prêts <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        {/* Header colonnes */}
+        <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-100 px-5 py-3">
+          <div className="grid grid-cols-12 gap-3 items-center text-xs font-bold uppercase tracking-widest text-gray-500">
+            <div className="col-span-2">Membre</div>
+            <div className="col-span-1">Type</div>
+            <div className="col-span-2">Montant</div>
+            <div className="col-span-2">Solde restant</div>
+            <div className="col-span-3">Progression</div>
+            <div className="col-span-1">{tab === 'actifs' ? 'Prochain pmt' : 'Date'}</div>
+            <div className="col-span-1 text-center">Actions</div>
+          </div>
+        </div>
+
+        {/* 5 lignes */}
+        <div className="divide-y divide-gray-50">
+          {recentDisplay.map((loan, idx) => <LoanRow key={loan.id} loan={loan} idx={idx} />)}
+        </div>
+
+        {recentDisplay.length === 0 && (
+          <div className="py-12 flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+              <Landmark className="w-6 h-6 text-[#2E7D32]" />
+            </div>
+            <p className="text-sm font-semibold text-gray-600">Aucun prêt à afficher</p>
+          </div>
+        )}
+
+        {/* Footer — lien vers page complète */}
+        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Affichage des <span className="font-semibold text-gray-600">{recentDisplay.length}</span> plus récents
+          </p>
+          <a href="/dashboard/loans/loanList"
+            className="flex items-center gap-1 text-xs font-semibold text-[#2E7D32] hover:text-[#1B5E20] transition-colors">
+            Voir les {tab === 'tous' ? allLoans.length : activeOnly.length} prêts <ArrowRight className="w-3.5 h-3.5" />
+          </a>
         </div>
       </div>
 
-      {/* Tableau filtrable */}
-      <div className="rounded-2xl shadow-lg border border-slate-200">
-        <div className="flex items-center justify-between px-6 py-5 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Liste des Prêts</h3>
-          <span className="text-sm text-gray-500">{filteredLoans.length} résultats</span>
-        </div>
-
-        {/* Filtres */}
-        <div className="px-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
-            />
-          </div>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="en_attente">En attente</option>
-            <option value="approuve">Approuvé</option>
-            <option value="decaisse">Décaissé</option>
-            <option value="rembourse">Remboursé</option>
-            <option value="rejete">Rejeté</option>
-            <option value="annule">Annulé</option>
-          </select>
-
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
-          >
-            <option value="all">Tous les types</option>
-            <option value="agriculture">Agriculture</option>
-            <option value="commerce">Commerce</option>
-            <option value="logement">Logement</option>
-            <option value="education">Éducation</option>
-            <option value="sante">Santé</option>
-            <option value="autre">Autre</option>
-          </select>
-
-          <input
-            type="number"
-            placeholder="Montant min"
-            value={minAmount}
-            onChange={(e) => setMinAmount(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
-          />
-
-          <input
-            type="number"
-            placeholder="Montant max"
-            value={maxAmount}
-            onChange={(e) => setMaxAmount(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
-          />
-        </div>
-
-        {/* Table */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
-          {/* Header de la table */}
-          <div className="bg-linear-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-6 py-4">
-            <div className="grid grid-cols-12 gap-4 items-center text-xs font-semibold text-slate-600 uppercase tracking-wide">
-              <div className="col-span-1 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.size === filteredLoans.length && filteredLoans.length > 0}
-                  onChange={handleSelectAll}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                />
-              </div>
-              <div className="col-span-1">Date</div>
-              <div className="col-span-2">Membre</div>
-              <div className="col-span-1">Type</div>
-              <div className="col-span-2">Montant</div>
-              <div className="col-span-1">Durée</div>
-              <div className="col-span-1">Statut</div>
-              <div className="col-span-2">Paiements</div>
-              <div className="col-span-1 text-center">Actions</div>
-            </div>
-          </div>
-
-
-          {/* Badge de sélection */}
-          {selectedRows.size > 0 && (
-            <div className="bg-indigo-50 border-b border-indigo-200 px-6 py-3 flex items-center justify-between">
+      {/* Modal nouveau prêt */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10">
+          <div className="w-full max-w-2xl bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-indigo-700">
-                  {selectedRows.size} prêt{selectedRows.size > 1 ? 's' : ''} sélectionné{selectedRows.size > 1 ? 's' : ''}
-                </span>
-                <button
-                  onClick={() => setSelectedRows(new Set())}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium underline"
-                >
-                  Désélectionner tout
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-2 bg-white border-2 border-indigo-600 text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors">
-                  Exporter la sélection
-                </button>
-                <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
-                  Actions groupées
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Corps de la table */}
-          <div className="divide-y divide-slate-100 bg">
-            {Object.entries(groupedLoans).map(([date, loans]) => (
-              <div key={date}>
-                {/* Séparateur de date */}
-                <div className="bg-slate-50 px-6 py-2 border-t border-slate-200">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{date}</p>
+                <div className="w-8 h-8 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center">
+                  <Landmark className="w-4 h-4 text-white" />
                 </div>
-
-                {/* Lignes de prêts */}
-                {loans.map((loan, index) => {
-                  const statusConf = {
-                    en_attente: { icon: Clock, label: 'Att', color: 'text-amber-700', bg: 'bg-amber-100' },
-                    approuve: { icon: CheckCircle, label: 'Appr', color: 'text-blue-700', bg: 'bg-blue-100' },
-                    decaisse: { icon: TrendingUp, label: 'Déc', color: 'text-purple-700', bg: 'bg-purple-100' },
-                    rembourse: { icon: CheckCircle, label: 'Remb', color: 'text-emerald-700', bg: 'bg-emerald-100' },
-                    rejete: { icon: XCircle, label: 'Rej', color: 'text-rose-700', bg: 'bg-rose-100' },
-                    annule: { icon: XCircle, label: 'Ann', color: 'text-slate-700', bg: 'bg-slate-100' }
-                  }[loan.status];
-                  const StatusIcon = statusConf.icon;
-                  const isSelected = selectedRows.has(loan.id);
-
-                  return (
-                    <div
-                      key={loan.id}
-                      className={`
-                        grid grid-cols-12 gap-4 items-center px-6 py-4
-                        hover:bg-indigo-50/50 transition-all duration-200
-                        group cursor-pointer
-                        ${isSelected ? 'bg-indigo-50 border-l-4 border-indigo-500' : index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}
-                      `}
-                    >
-                      {/* Checkbox */}
-                      <div className="col-span-1">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleRowSelect(loan.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Date */}
-                      <div className="col-span-1">
-                        <p className="text-sm font-medium text-slate-700">
-                          {new Date(loan.created_at).toLocaleDateString('fr-FR', { 
-                            day: '2-digit',
-                            month: 'short'
-                          })}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {new Date(loan.created_at).toLocaleTimeString('fr-FR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
-                      </div>
-
-                      {/* Membre */}
-                      <div className="col-span-2 flex items-center gap-3">
-                        <div className="shrink-0 w-10 h-10 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Users className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-800 text-sm truncate group-hover:text-indigo-600 transition-colors">
-                            {loan.member_name}
-                          </p>
-                          {loan.loan_details.late_days > 0 && (
-                            <p className="text-xs text-red-600 font-medium">
-                              {loan.loan_details.late_days}j de retard
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Type */}
-                      <div className="col-span-1">
-                        <p className="text-xs text-slate-600">{getLoanTypeLabel(loan.loan_details.loan_type)}</p>
-                        <p className="text-xs text-slate-500">{loan.loan_details.purpose}</p>
-                      </div>
-
-                      {/* Montant */}
-                      <div className="col-span-2">
-                        <p className="text-lg font-bold text-indigo-600">
-                          {formatCurrency(loan.amount)}
-                        </p>
-                        <p className="text-xs text-slate-500">Taux: {loan.loan_details.interest_rate}%</p>
-                      </div>
-
-                      {/* Durée */}
-                      <div className="col-span-1">
-                        <p className="text-sm font-medium text-slate-700">{loan.loan_details.duration_months} mois</p>
-                        <p className="text-xs text-slate-500">{loan.loan_details.repayment_frequency}</p>
-                      </div>
-
-                      {/* Statut */}
-                      <div className="col-span-1">
-                        <span className={`
-                          inline-flex items-center gap-3 px-2 py-1 rounded-lg text-xs font-semibold
-                          ${statusConf.bg} ${statusConf.color}
-                          border-2 ${statusConf.bg.replace('bg-', 'border-')}
-                        `}>
-                          <StatusIcon className="w-3 h-3" />
-                          {statusConf.label}
-                        </span>
-                      </div>
-
-                      {/* Paiements */}
-                      <div className="col-span-2">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-slate-600">
-                                {loan.loan_details.payments_made}/{loan.loan_details.duration_months}
-                              </span>
-                              <span className="text-xs font-semibold text-slate-700">
-                                {Math.round((loan.loan_details.payments_made / loan.loan_details.duration_months) * 100)}%
-                              </span>
-                            </div>
-                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-indigo-600 rounded-full transition-all"
-                                style={{ width: `${(loan.loan_details.payments_made / loan.loan_details.duration_months) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Reste: {formatCurrency(loan.loan_details.remaining_balance)}
-                        </p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="col-span-1 flex items-center justify-center gap-2">
-                        <button 
-                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all group/btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('Voir détails', loan.id);
-                          }}
-                        >
-                          <svg className="w-4 h-4 text-slate-600 group-hover/btn:text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                        <button 
-                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all group/btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('Menu', loan.id);
-                          }}
-                        >
-                          <svg className="w-4 h-4 text-slate-600 group-hover/btn:text-slate-800" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div>
+                  <p className="text-sm font-bold text-gray-800">Nouvelle demande de prêt</p>
+                  <p className="text-xs text-gray-400">Remplissez les informations du prêt</p>
+                </div>
               </div>
-            ))}
-          </div>
-
-          {/* État vide */}
-          {filteredLoans.length === 0 && (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-8 h-8 text-slate-400" />
-              </div>
-              <p className="text-slate-700 text-lg font-semibold mb-2">Aucun prêt trouvé</p>
-              <p className="text-slate-500 text-sm">Essayez de modifier vos filtres pour voir plus de résultats</p>
+              <button onClick={() => setModalOpen(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          )}
+            <div className="p-5 overflow-y-auto max-h-[80vh]">
+              <LoanForm onCancel={() => setModalOpen(false)} />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      <TransactionDetailModal transaction={detailTx} onClose={() => setDetailTx(null)} />
     </div>
   );
-};
-
-export default LoanDashboard;
+}
