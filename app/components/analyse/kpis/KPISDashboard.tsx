@@ -1,135 +1,127 @@
-// app/analyse/kpis/page.tsx 
-// analyse/kpis → Directeur + Trésorier — indicateurs institutionnels, filtres période/région, graphique radar
+// app/analyse/kpis/page.tsx
+// Directeur + Trésorier — indicateurs institutionnels
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Calendar, Filter, TrendingUp, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Filter, TrendingUp, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import KpiAlertsSection from './KpiAlertsSection';
 import KpiFinancialSection from './KpiFinancialSection';
 import KpiLiquiditySection from './KpiLiquiditySection';
 import KpiMembersSection from './KpiMembersSection';
 import KpiRadarChart from './KpiRadarChart';
-import PerformanceSummaryCard from '../performance/PerformanceSummaryCard';
 import { KpiData } from '@/types/kpis';
+import PerformanceSummaryCard from '../performance/PerformanceSummaryCard';
 
-// Types
-export type PeriodFilter = 'jour' | 'semaine' | 'mois' | 'trimestre' | 'annee';
-export type RegionFilter = 'all' | 'nord' | 'sud' | 'est' | 'ouest' | 'centre';
+export type PeriodFilter     = 'jour' | 'semaine' | 'mois' | 'trimestre' | 'annee';
+export type RegionFilter     = 'all' | 'nord' | 'sud' | 'est' | 'ouest' | 'centre';
 export type MemberTypeFilter = 'all' | 'particulier' | 'agriculteur' | 'commercant' | 'artisan';
 
-
-// Génération de données mock
-const generateKpiData = (): KpiData => {
-  return {
-    // ============================
-    // META
-    // ============================
-    periode: 'Décembre 2024',
-    lastUpdate: new Date(),
-
-    // ============================
-    // KPIs FINANCIERS
-    // ============================
-    ratioEndettement: 28 + Math.random() * 15, // 28-43%
-    tauxRecouvrement: 92 + Math.random() * 7, // 92-99%
-    capaciteRemboursementMoyenne: 12000 + Math.random() * 8000,
-    ratioCreancesDouteuses: 2 + Math.random() * 6, // 2-8%
-
-    // ============================
-    // KPIs LIQUIDITÉ
-    // ============================
-    ratioLiquidite: 1.2 + Math.random() * 0.8, // 1.2-2.0
-    reservesObligatoires: 8 + Math.random() * 4, // 8-12%
-    couvertureRisques: 85 + Math.random() * 12, // 85-97%
-
-    // ============================
-    // KPIs MEMBRES
-    // ============================
-    scoreStabiliteMoyen: 65 + Math.random() * 25, // 65-90
-    tauxActiviteMembres: 75 + Math.random() * 20, // 75-95%
-    ratioNouveauxMembres: 5 + Math.random() * 10, // 5-15%
-
-    // ============================
-    // PERFORMANCE
-    // ============================
-    performanceScore: 50 + Math.random() * 40, // 50-90
-
-    // ============================
-    // RAPPORTS — LIQUIDITÉ
-    // ============================
-    liquiditeDisponible: 500000 + Math.random() * 300000, // HTG
-    totalDepotsMembres: 2000000 + Math.random() * 1000000, // HTG
-
-    // ============================
-    // RAPPORTS — SOLVABILITÉ
-    // ============================
-    capitalPropre: 800000 + Math.random() * 400000,
-    actifsPonderes: 3000000 + Math.random() * 1500000,
-
-    // ============================
-    // RAPPORTS — PRÊTS EN SOUFFRANCE
-    // ============================
-    portefeuilleTotalPrets: 2500000 + Math.random() * 1500000,
-    montantEnSouffrance: 100000 + Math.random() * 200000,
-    repartitionSouffrance: {
-      jours30: 20000 + Math.random() * 20000,
-      jours60: 15000 + Math.random() * 15000,
-      jours90Plus: 30000 + Math.random() * 30000,
-    }
-  };
+// ─── Palette CAPOSA ───────────────────────────────────────────────────────────
+const C = {
+  green:     '#2E7D32',
+  greenDark: '#1B5E20',
+  greenPale: '#DDEAD5',
+  blue:      '#355C7D',
+  gold:      '#D4AF37',
+  page:      '#F9F9F6',
 };
 
+// ─── Mock data ────────────────────────────────────────────────────────────────
+function generateKpiData(): KpiData {
+  return {
+    periode:   'Décembre 2024',
+    lastUpdate: new Date(),
+    // Financiers
+    ratioEndettement:              28  + Math.random() * 15,
+    tauxRecouvrement:              92  + Math.random() * 7,
+    capaciteRemboursementMoyenne:  12000 + Math.random() * 8000,
+    ratioCreancesDouteuses:        2   + Math.random() * 6,
+    // Liquidité
+    ratioLiquidite:      1.2 + Math.random() * 0.8,
+    reservesObligatoires: 8  + Math.random() * 4,
+    couvertureRisques:   85  + Math.random() * 12,
+    // Membres
+    scoreStabiliteMoyen:  65 + Math.random() * 25,
+    tauxActiviteMembres:  75 + Math.random() * 20,
+    ratioNouveauxMembres:  5 + Math.random() * 10,
+    // Performance
+    performanceScore: 50 + Math.random() * 40,
+    // Rapports liquidité
+    liquiditeDisponible:  500000  + Math.random() * 300000,
+    totalDepotsMembres:   2000000 + Math.random() * 1000000,
+    // Rapports solvabilité
+    capitalPropre:   800000  + Math.random() * 400000,
+    actifsPonderes:  3000000 + Math.random() * 1500000,
+    // Prêts en souffrance
+    portefeuilleTotalPrets: 2500000 + Math.random() * 1500000,
+    montantEnSouffrance:     100000 + Math.random() * 200000,
+    repartitionSouffrance: {
+      jours30:    20000 + Math.random() * 20000,
+      jours60:    15000 + Math.random() * 15000,
+      jours90Plus:30000 + Math.random() * 30000,
+    },
+  };
+}
 
+// ─── Seuils explicitement nommés ──────────────────────────────────────────────
+// Un KPI est "bon" s'il respecte son objectif, "alerte" sinon.
+// Les critères qualifiés de critiques sont ceux dont la dégradation
+// met en danger la solvabilité ou la conformité réglementaire.
+function evaluerKpis(d: KpiData) {
+  const criteres = [
+    { id: 'endettement',  ok: d.ratioEndettement < 35,        critique: true  },
+    { id: 'recouvrement', ok: d.tauxRecouvrement >= 95,        critique: false },
+    { id: 'creances',     ok: d.ratioCreancesDouteuses < 5,    critique: true  },
+    { id: 'liquidite',    ok: d.ratioLiquidite >= 1.5,         critique: false },
+    { id: 'reserves',     ok: d.reservesObligatoires >= 10,    critique: true  },
+    { id: 'couverture',   ok: d.couvertureRisques >= 90,       critique: true  },
+    { id: 'stabilite',    ok: d.scoreStabiliteMoyen >= 75,     critique: false },
+    { id: 'activite',     ok: d.tauxActiviteMembres >= 85,     critique: false },
+  ];
+  const bon     = criteres.filter(c => c.ok).length;
+  const critique = criteres.filter(c => !c.ok && c.critique).length;
+  const alerte   = criteres.filter(c => !c.ok && !c.critique).length;
+  return { bon, alerte, critique, total: criteres.length };
+}
+
+function formatHTG(n: number) {
+  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' HTG';
+}
+
+// ─── Composant ────────────────────────────────────────────────────────────────
 export default function KpisPage() {
-  const [kpiData] = useState<KpiData>(generateKpiData());
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('mois');
-  const [regionFilter, setRegionFilter] = useState<RegionFilter>('all');
+  const [kpiData]          = useState<KpiData>(generateKpiData);
+  const [periodFilter,     setPeriodFilter]     = useState<PeriodFilter>('mois');
+  const [regionFilter,     setRegionFilter]     = useState<RegionFilter>('all');
   const [memberTypeFilter, setMemberTypeFilter] = useState<MemberTypeFilter>('all');
 
-  // Calcul des statuts (Bon/Alerte/Critique)
-  const statusCounts = useMemo(() => {
-    const checks = [
-      kpiData.ratioEndettement < 35, // Bon si < 35%
-      kpiData.tauxRecouvrement >= 95, // Bon si >= 95%
-      kpiData.ratioCreancesDouteuses < 5, // Bon si < 5%
-      kpiData.ratioLiquidite >= 1.5, // Bon si >= 1.5
-      kpiData.reservesObligatoires >= 10, // Bon si >= 10%
-      kpiData.couvertureRisques >= 90, // Bon si >= 90%
-      kpiData.scoreStabiliteMoyen >= 75, // Bon si >= 75
-      kpiData.tauxActiviteMembres >= 85, // Bon si >= 85%
-    ];
+  const statusCounts = useMemo(() => evaluerKpis(kpiData), [kpiData]);
 
-    const bon = checks.filter(c => c).length;
-    const total = checks.length;
-    const critique = checks.filter((c, i) => !c && [0, 2, 5].includes(i)).length; // Critères critiques
-    const alerte = total - bon - critique;
-
-    return { bon, alerte, critique, total };
-  }, [kpiData]);
+  const selectCls = "px-4 py-2 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]";
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6 ">
-          {/* Titre et description */}
-          <div className="flex items-center justify-between mb-6 ">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2 ">
-                📊 Indicateurs Clés de Performance
-              </h1>
-              <p className="text-gray-600">
-                Vue instantanée de la santé financière de la caisse
-              </p>
+    <div className="min-h-screen bg-[#F9F9F6]">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+
+          {/* Titre */}
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Indicateurs Clés de Performance</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Vue instantanée de la santé financière de la caisse</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Dernière mise à jour</p>
-              <p className="text-lg font-semibold text-indigo-600">
-                {kpiData.lastUpdate.toLocaleDateString('fr-FR', { 
-                  day: 'numeric', 
-                  month: 'long',
-                  hour: '2-digit',
-                  minute: '2-digit'
+            <div className="text-right shrink-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Dernière mise à jour</p>
+              <p className="text-sm font-bold text-[#2E7D32] mt-0.5">
+                {kpiData.lastUpdate.toLocaleDateString('fr-FR', {
+                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
                 })}
               </p>
             </div>
@@ -139,22 +131,18 @@ export default function KpisPage() {
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             {/* Période */}
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Période
-              </label>
-              <div className="flex gap-2">
-                {(['jour', 'semaine', 'mois', 'trimestre', 'annee'] as PeriodFilter[]).map((period) => (
-                  <button
-                    key={period}
-                    onClick={() => setPeriodFilter(period)}
-                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                      periodFilter === period
-                        ? 'bg-indigo-600 text-white shadow-lg'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:border-indigo-400'
-                    }`}
-                  >
-                    {period.charAt(0).toUpperCase() + period.slice(1)}
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" /> Période
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {(['jour', 'semaine', 'mois', 'trimestre', 'annee'] as PeriodFilter[]).map(p => (
+                  <button key={p} onClick={() => setPeriodFilter(p)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                      periodFilter === p
+                        ? 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-[#81C784] hover:bg-[#DDEAD5]/20'
+                    }`}>
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
                   </button>
                 ))}
               </div>
@@ -162,15 +150,10 @@ export default function KpisPage() {
 
             {/* Région */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <Filter className="w-4 h-4 inline mr-1" />
-                Région
-              </label>
-              <select
-                value={regionFilter}
-                onChange={(e) => setRegionFilter(e.target.value as RegionFilter)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" /> Région
+              </p>
+              <select value={regionFilter} onChange={e => setRegionFilter(e.target.value as RegionFilter)} className={selectCls}>
                 <option value="all">Toutes les régions</option>
                 <option value="nord">Nord</option>
                 <option value="sud">Sud</option>
@@ -180,16 +163,10 @@ export default function KpisPage() {
               </select>
             </div>
 
-            {/* Type de membre */}
+            {/* Type membre */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Type de membre
-              </label>
-              <select
-                value={memberTypeFilter}
-                onChange={(e) => setMemberTypeFilter(e.target.value as MemberTypeFilter)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Type de membre</p>
+              <select value={memberTypeFilter} onChange={e => setMemberTypeFilter(e.target.value as MemberTypeFilter)} className={selectCls}>
                 <option value="all">Tous les types</option>
                 <option value="particulier">Particulier</option>
                 <option value="agriculteur">Agriculteur</option>
@@ -199,96 +176,39 @@ export default function KpisPage() {
             </div>
           </div>
 
-          {/* Status Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-linear-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-linear-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-white" />
+          {/* Aperçu statuts */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'KPIs total',          value: statusCounts.total,    accent: C.blue,  icon: TrendingUp,   bg: '#EBF2F8', text: C.blue      },
+              { label: 'Seuils respectés',    value: statusCounts.bon,      accent: C.green, icon: CheckCircle2, bg: C.greenPale, text: C.greenDark },
+              { label: 'En alerte',           value: statusCounts.alerte,   accent: C.gold,  icon: AlertTriangle,bg: '#FEF9EC', text: '#B45309'   },
+              { label: 'Critiques',           value: statusCounts.critique, accent: '#EF4444',icon: XCircle,     bg: '#FEF2F2', text: '#B91C1C'   },
+            ].map(({ label, value, accent, icon: Icon, bg, text }) => (
+              <div key={label} className="rounded-2xl border p-4 flex items-center gap-3"
+                style={{ backgroundColor: bg, borderColor: accent + '40' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: accent + '22' }}>
+                  <Icon className="w-5 h-5" style={{ color: accent }} />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total KPIs</p>
-                  <p className="text-2xl font-bold text-gray-900">{statusCounts.total}</p>
+                  <p className="text-2xl font-bold" style={{ color: text }}>{value}</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest mt-0.5" style={{ color: text + 'cc' }}>{label}</p>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-linear-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-linear-to-br from-green-400 to-green-600 flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-green-700">Seuils Respectés</p>
-                  <p className="text-2xl font-bold text-green-900">{statusCounts.bon}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-linear-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-yellow-700">En Alerte</p>
-                  <p className="text-2xl font-bold text-yellow-900">{statusCounts.alerte}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-linear-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-linear-to-br from-red-400 to-red-600 flex items-center justify-center">
-                  <XCircle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-red-700">Critiques</p>
-                  <p className="text-2xl font-bold text-red-900">{statusCounts.critique}</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Contenu principal */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Performance globale */}
-        <PerformanceSummaryCard data={kpiData} />
-
-        {/* KPIs Financiers */}
-        <KpiFinancialSection data={kpiData} />
-
-        {/* KPIs Liquidité */}
-        <KpiLiquiditySection data={kpiData} />
-
-        {/* KPIs Membres */}
-        <KpiMembersSection data={kpiData} />
-
-        {/* Alertes & Seuils */}
-        <KpiAlertsSection data={kpiData} statusCounts={statusCounts} />
-
-        {/* Graphique Radar comparatif */}
-        <KpiRadarChart data={kpiData} />
+      {/* ── Contenu ────────────────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
+        <PerformanceSummaryCard  data={kpiData} />
+        <KpiFinancialSection  data={kpiData} />
+        <KpiLiquiditySection  data={kpiData} />
+        <KpiMembersSection    data={kpiData} />
+        <KpiAlertsSection     data={kpiData} statusCounts={statusCounts} />
+        <KpiRadarChart        data={kpiData} />
       </div>
-
     </div>
   );
 }
-// {/* <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-//         {/* KPIs Financiers */}
-//         <KpiFinancialSection data={kpiData} />
-
-//         {/* KPIs Liquidité */}
-//         <KpiLiquiditySection data={kpiData} />
-
-//         {/* KPIs Membres */}
-//         <KpiMembersSection data={kpiData} />
-
-//         {/* Alertes & Seuils */}
-//         <KpiAlertsSection data={kpiData} statusCounts={statusCounts} />
-
-//         {/* Graphique Radar comparatif */}
-//         <KpiRadarChart data={kpiData} />
-//       </div> */}

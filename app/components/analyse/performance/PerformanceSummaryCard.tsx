@@ -1,296 +1,205 @@
-// app/analyse/kpis/PerformanceSummaryCard.tsx
+// app/components/analyse/kpis/PerformanceSummaryCard.tsx
+// Carte de synthèse "santé de la caisse" — langage simplifié pour directeurs non-techniciens
 'use client';
 
 import React, { useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { KpiData } from '@/types/kpis';
 
-interface PerformanceData {
-  score: number; // 0-100
-  niveau: 'Faible' | 'Moyen' | 'Bon';
-  tendance: 'amélioration' | 'stable' | 'détérioration';
-  alertes: string[];
-  justification: {
-    remboursement: { score: number; texte: string };
-    liquidite: { score: number; texte: string };
-    croissance: { score: number; texte: string };
-  };
-}
+interface Props { data: KpiData; }
 
-interface PerformanceSummaryCardProps {
-  data: KpiData;
-}
+const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
 
-export default function PerformanceSummaryCard({ data }: PerformanceSummaryCardProps) {
-  const performance = useMemo((): PerformanceData => {
-    // 1. CALCUL DU SCORE (0-100)
-    // Remboursement 40%
-    const scoreRemboursement = (data.tauxRecouvrement / 100) * 40;
-    const remboursementPct = Math.round((data.tauxRecouvrement / 100) * 100);
-    
-    // Liquidité 30%
-    const scoreLiquidite = Math.min((data.ratioLiquidite / 2.0) * 30, 30); // Max à ratio 2.0
-    const liquiditePct = Math.round((Math.min(data.ratioLiquidite / 2.0, 1)) * 100);
-    
-    // Croissance 30% (moyenne de la stabilité et activité membres)
-    const scoreCroissance = ((data.scoreStabiliteMoyen / 100) * 15) + 
-                           ((data.tauxActiviteMembres / 100) * 15);
-    const croissancePct = Math.round(((data.scoreStabiliteMoyen + data.tauxActiviteMembres) / 2));
-    
-    const scoreTotal = Math.round(scoreRemboursement + scoreLiquidite + scoreCroissance);
-    
-    // 2. NIVEAU (Faible/Moyen/Bon)
-    let niveau: 'Faible' | 'Moyen' | 'Bon';
-    if (scoreTotal < 50) niveau = 'Faible';
-    else if (scoreTotal < 75) niveau = 'Moyen';
-    else niveau = 'Bon';
-    
-    // 3. JUSTIFICATION DU SCORE (vocabulaire ultra-simple)
-    const justification = {
-      remboursement: {
-        score: remboursementPct,
-        texte: data.tauxRecouvrement >= 95 
-          ? `${data.tauxRecouvrement.toFixed(1)}% des prêts sont remboursés à temps. Excellent !`
-          : data.tauxRecouvrement >= 90
-          ? `${data.tauxRecouvrement.toFixed(1)}% des prêts sont remboursés. C'est bien, mais on peut faire mieux.`
-          : `Seulement ${data.tauxRecouvrement.toFixed(1)}% des prêts sont remboursés. Attention : risque élevé.`
-      },
-      liquidite: {
-        score: liquiditePct,
-        texte: data.ratioLiquidite >= 1.5
-          ? `La caisse a assez d'argent pour honorer tous les retraits. Très rassurant.`
-          : data.ratioLiquidite >= 1.2
-          ? `La caisse a de l'argent disponible, mais il faut rester vigilant.`
-          : `Attention : la caisse manque d'argent liquide pour les retraits urgents.`
-      },
-      croissance: {
-        score: croissancePct,
-        texte: croissancePct >= 80
-          ? `${croissancePct}% des membres sont actifs et stables. La caisse grandit bien.`
-          : croissancePct >= 70
-          ? `${croissancePct}% des membres sont actifs. La croissance est modérée.`
-          : `${croissancePct}% des membres sont actifs. Beaucoup de membres sont inactifs.`
-      }
-    };
-    
-    // 4. TENDANCE (mock pour demo - en prod, comparer avec mois précédent)
-    // Simuler une tendance basée sur les KPI actuels
-    const mockTendance = scoreTotal >= 70 ? 'amélioration' : 
-                         scoreTotal >= 60 ? 'stable' : 
-                         'détérioration';
-    
-    // 5. ALERTES (2-3 max, vocabulaire simple comme si on parlait à un agriculteur)
-    const alertes: string[] = [];
-    
-    if (data.tauxRecouvrement < 95) {
-      alertes.push('⚠️ Certains membres ne remboursent pas à temps leurs prêts');
-    }
-    
-    if (data.ratioLiquidite < 1.5) {
-      alertes.push('💰 La caisse a peu d\'argent disponible pour les retraits urgents');
-    }
-    
-    if (data.ratioCreancesDouteuses > 5) {
-      alertes.push('🚨 Trop de prêts risquent de ne jamais être remboursés');
-    }
-    
-    if (data.tauxActiviteMembres < 85) {
-      alertes.push('👥 Beaucoup de membres n\'utilisent plus la caisse');
-    }
-    
-    // Limiter à 3 alertes max
-    const alertesFinales = alertes.slice(0, 3);
-    
-    // Ajouter un message positif si aucune alerte
-    if (alertesFinales.length === 0) {
-      alertesFinales.push('✅ Tout va bien ! Tous les indicateurs sont bons');
-    }
-    
-    return {
-      score: scoreTotal,
-      niveau,
-      tendance: mockTendance,
-      alertes: alertesFinales,
-      justification
-    };
-  }, [data]);
+// ─── Calcul du score de performance ──────────────────────────────────────────
+// Score composite sur 100 pondéré par importance métier :
+//   - Remboursement (40 pts) : indicateur principal de risque crédit
+//   - Liquidité      (30 pts) : capacité à honorer les retraits
+//   - Membres actifs (30 pts) : vitalité et croissance de la caisse
+function calculerPerformance(d: KpiData) {
+  const scoreRemboursement = (d.tauxRecouvrement / 100) * 40;
+  const scoreLiquidite     = Math.min((d.ratioLiquidite / 2.0) * 30, 30); // plafond ratio 2.0
+  const scoreCroissance    = ((d.scoreStabiliteMoyen / 100) * 15) + ((d.tauxActiviteMembres / 100) * 15);
+  const total              = Math.round(scoreRemboursement + scoreLiquidite + scoreCroissance);
 
-  // Couleurs selon niveau
-  const niveauColors = {
-    Faible: {
-      bg: 'from-red-50 to-red-100',
-      border: 'border-red-200',
-      text: 'text-red-900',
-      badge: 'bg-red-500',
-      icon: 'text-red-600'
+  const niveau: 'Faible' | 'Moyen' | 'Bon' = total >= 75 ? 'Bon' : total >= 50 ? 'Moyen' : 'Faible';
+  const tendance = total >= 70 ? 'amélioration' : total >= 60 ? 'stable' : 'détérioration';
+
+  const croissancePct = Math.round((d.scoreStabiliteMoyen + d.tauxActiviteMembres) / 2);
+
+  const justification = {
+    remboursement: {
+      poids: 40,
+      texte: d.tauxRecouvrement >= 95
+        ? `${d.tauxRecouvrement.toFixed(1)}% des prêts sont remboursés à temps. Excellent.`
+        : d.tauxRecouvrement >= 90
+        ? `${d.tauxRecouvrement.toFixed(1)}% des prêts sont remboursés. Bien, mais on peut mieux faire.`
+        : `Seulement ${d.tauxRecouvrement.toFixed(1)}% des prêts sont remboursés à temps. Risque élevé.`,
     },
-    Moyen: {
-      bg: 'from-yellow-50 to-yellow-100',
-      border: 'border-yellow-200',
-      text: 'text-yellow-900',
-      badge: 'bg-yellow-500',
-      icon: 'text-yellow-600'
+    liquidite: {
+      poids: 30,
+      texte: d.ratioLiquidite >= 1.5
+        ? 'La caisse a suffisamment d\'argent pour honorer tous les retraits. Très rassurant.'
+        : d.ratioLiquidite >= 1.2
+        ? 'La caisse a de l\'argent disponible, mais il faut rester vigilant.'
+        : 'Attention : la caisse manque de liquidités pour les retraits urgents.',
     },
-    Bon: {
-      bg: 'from-green-50 to-green-100',
-      border: 'border-green-200',
-      text: 'text-green-900',
-      badge: 'bg-green-500',
-      icon: 'text-green-600'
-    }
+    croissance: {
+      poids: 30,
+      texte: croissancePct >= 80
+        ? `${croissancePct}% des membres sont actifs et stables. La caisse grandit bien.`
+        : croissancePct >= 70
+        ? `${croissancePct}% des membres sont actifs. Croissance modérée.`
+        : `${croissancePct}% des membres sont actifs. Beaucoup de membres sont inactifs.`,
+    },
   };
 
-  const colors = niveauColors[performance.niveau];
+  const alertes: string[] = [];
+  if (d.tauxRecouvrement    < 95) alertes.push('Certains membres ne remboursent pas leurs prêts à temps.');
+  if (d.ratioLiquidite      < 1.5) alertes.push('La caisse a peu d\'argent disponible pour les retraits urgents.');
+  if (d.ratioCreancesDouteuses > 5) alertes.push('Trop de prêts risquent de ne jamais être remboursés.');
+  if (d.tauxActiviteMembres < 85) alertes.push('Beaucoup de membres n\'utilisent plus la caisse.');
 
-  // Icône de tendance
-  const TendanceIcon = performance.tendance === 'amélioration' ? TrendingUp :
-                       performance.tendance === 'détérioration' ? TrendingDown :
-                       Minus;
+  return { total, niveau, tendance, justification, alertes: alertes.slice(0, 3) };
+}
 
-  const tendanceColor = performance.tendance === 'amélioration' ? 'text-green-600' :
-                        performance.tendance === 'détérioration' ? 'text-red-600' :
-                        'text-gray-600';
+// ─── Composant ────────────────────────────────────────────────────────────────
+export default function PerformanceSummaryCard({ data }: Props) {
+  const perf = useMemo(() => calculerPerformance(data), [data]);
 
-  const tendanceText = performance.tendance === 'amélioration' ? 'Amélioration depuis 2 mois' :
-                       performance.tendance === 'détérioration' ? 'Détérioration depuis 2 mois' :
-                       'Performance stable';
+  const niveauPalette = {
+    Bon:    { bg: C.greenPale,  border: '#DDEAD5', text: C.greenDark, bar: C.green,  dot: C.green  },
+    Moyen:  { bg: '#FEF9EC',    border: '#FDE68A', text: '#92400E',   bar: C.gold,   dot: C.gold   },
+    Faible: { bg: '#FEF2F2',    border: '#FCA5A5', text: '#B91C1C',   bar: '#EF4444',dot: '#EF4444'},
+  }[perf.niveau];
+
+  const TendanceIcon = perf.tendance === 'amélioration' ? TrendingUp
+    : perf.tendance === 'détérioration' ? TrendingDown : Minus;
+  const tendanceColor = perf.tendance === 'amélioration' ? C.green
+    : perf.tendance === 'détérioration' ? '#EF4444' : '#6B7280';
+  const tendanceLabel = perf.tendance === 'amélioration' ? 'En amélioration'
+    : perf.tendance === 'détérioration' ? 'En dégradation' : 'Stable';
+  const tendanceSub   = perf.tendance === 'amélioration' ? 'Continuez comme ça.'
+    : perf.tendance === 'détérioration' ? 'Il faut agir rapidement.' : 'Maintenez les efforts.';
 
   return (
-    <div className={`bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-2xl p-6 shadow-lg`}>
+    <div className="rounded-2xl border-2 p-6 shadow-sm"
+      style={{ backgroundColor: niveauPalette.bg, borderColor: niveauPalette.border }}>
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">
-            📊 Santé de la Caisse
-          </h2>
-          <p className="text-sm text-gray-600">
-            Note globale : comment va notre caisse ?
-          </p>
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: niveauPalette.bar + '22' }}>
+            <TrendingUp className="w-5 h-5" style={{ color: niveauPalette.bar }} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-800">Santé de la caisse</p>
+            <p className="text-xs text-gray-500">Note globale — comment va notre caisse ?</p>
+          </div>
         </div>
-        
-        {/* Badge niveau */}
-        <div className={`px-4 py-2 rounded-full ${colors.badge} text-white font-bold text-sm shadow-md`}>
-          {performance.niveau}
-        </div>
+        <span className="px-3 py-1.5 rounded-xl text-sm font-bold text-white shrink-0"
+          style={{ backgroundColor: niveauPalette.bar }}>
+          {perf.niveau}
+        </span>
       </div>
 
-      {/* Score & Tendance */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      {/* Score + Tendance */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+
         {/* Score */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-white/40">
-          <p className="text-sm font-semibold text-gray-600 mb-2">Note Globale</p>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-5xl font-bold ${colors.text}`}>
-              {performance.score}
-            </span>
-            <span className="text-2xl text-gray-500 font-medium">/100</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Note globale</p>
+          <div className="flex items-baseline gap-1 mb-3">
+            <span className="text-5xl font-bold" style={{ color: niveauPalette.text }}>{perf.total}</span>
+            <span className="text-xl font-semibold text-gray-400">/100</span>
           </div>
-          
-          {/* Barre de progression */}
-          <div className="mt-4 h-3 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${colors.badge} transition-all duration-700 ease-out rounded-full`}
-              style={{ width: `${performance.score}%` }}
-            />
+          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${perf.total}%`, backgroundColor: niveauPalette.bar }} />
           </div>
-          
-          <p className="text-xs text-gray-600 mt-3">
-            {performance.score >= 75 ? '👍 La caisse est en bonne santé' :
-             performance.score >= 50 ? '⚠️ La caisse va moyennement bien' :
-             '🚨 La caisse a des problèmes à résoudre'}
+          <p className="text-xs text-gray-600">
+            {perf.total >= 75 ? 'La caisse est en bonne santé.'
+              : perf.total >= 50 ? 'La caisse va moyennement bien.'
+              : 'La caisse a des problèmes à résoudre.'}
           </p>
         </div>
 
         {/* Tendance */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-white/40">
-          <p className="text-sm font-semibold text-gray-600 mb-2">Évolution</p>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Évolution</p>
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center ${tendanceColor}`}>
-              <TendanceIcon className="w-6 h-6" strokeWidth={2.5} />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: tendanceColor + '18' }}>
+              <TendanceIcon className="w-6 h-6" style={{ color: tendanceColor }} strokeWidth={2.5} />
             </div>
             <div>
-              <p className={`text-lg font-bold ${tendanceColor}`}>
-                {performance.tendance === 'amélioration' ? '↑ Ça s\'améliore' :
-                 performance.tendance === 'détérioration' ? '↓ Ça se dégrade' :
-                 '→ Ça reste stable'}
-              </p>
-              <p className="text-sm text-gray-600">
-                {performance.tendance === 'amélioration' ? 'Continuez comme ça !' :
-                 performance.tendance === 'détérioration' ? 'Il faut agir vite' :
-                 'Maintenez les efforts'}
-              </p>
+              <p className="text-base font-bold" style={{ color: tendanceColor }}>{tendanceLabel}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{tendanceSub}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* JUSTIFICATION DU SCORE - Le "pourquoi" du bulletin */}
-      <div className="bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-white/40 mb-6">
+      {/* Justification du score */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
-          <Info className="w-5 h-5 text-indigo-600" />
-          <p className="text-sm font-semibold text-gray-700">Pourquoi cette note de {performance.score}/100 ?</p>
+          <Info className="w-4 h-4 text-[#355C7D] shrink-0" />
+          <p className="text-xs font-bold text-gray-700">Pourquoi cette note de {perf.total}/100 ?</p>
         </div>
-        
-        <div className="space-y-4">
-          {/* Remboursement - 40% */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                <span className="text-sm font-semibold text-gray-700">1. Remboursement des prêts</span>
+        <div className="flex flex-col gap-4">
+          {([
+            { key: 'remboursement', label: 'Remboursement des prêts', dot: C.green },
+            { key: 'liquidite',     label: 'Argent disponible',       dot: C.blue  },
+            { key: 'croissance',    label: 'Membres actifs',          dot: C.gold  },
+          ] as const).map(({ key, label, dot }) => (
+            <div key={key}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: dot }} />
+                  <p className="text-xs font-bold text-gray-700">{label}</p>
+                </div>
+                <span className="text-xs font-bold" style={{ color: dot }}>
+                  {perf.justification[key].poids} pts
+                </span>
               </div>
-              <span className="text-sm font-bold text-indigo-600">40% du score</span>
-            </div>
-            <p className="text-sm text-gray-600 pl-4">{performance.justification.remboursement.texte}</p>
-          </div>
-          
-          {/* Liquidité - 30% */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-sm font-semibold text-gray-700">2. Argent disponible</span>
-              </div>
-              <span className="text-sm font-bold text-blue-600">30% du score</span>
-            </div>
-            <p className="text-sm text-gray-600 pl-4">{performance.justification.liquidite.texte}</p>
-          </div>
-          
-          {/* Croissance - 30% */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500" />
-                <span className="text-sm font-semibold text-gray-700">3. Membres actifs</span>
-              </div>
-              <span className="text-sm font-bold text-green-600">30% du score</span>
-            </div>
-            <p className="text-sm text-gray-600 pl-4">{performance.justification.croissance.texte}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Alertes */}
-      <div className="bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-white/40">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertCircle className="w-5 h-5 text-gray-700" />
-          <p className="text-sm font-semibold text-gray-700">Ce qu'il faut surveiller</p>
-        </div>
-        
-        <div className="space-y-2">
-          {performance.alertes.map((alerte, index) => (
-            <div key={index} className="flex items-start gap-3 bg-white/40 rounded-lg p-3">
-              <p className="text-sm text-gray-700 leading-relaxed">{alerte}</p>
+              <p className="text-xs text-gray-500 pl-4">{perf.justification[key].texte}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Footer explicatif simplifié */}
-      <div className="mt-5 pt-5 border-t border-white/40">
-        <p className="text-xs text-gray-600 leading-relaxed">
-          💡 <span className="font-semibold">Comment on calcule :</span> On additionne 3 choses importantes → 
-          Remboursements (40 points) + Argent disponible (30 points) + Membres actifs (30 points) = Total sur 100
+      {/* Alertes */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          {perf.alertes.length === 0
+            ? <CheckCircle2 className="w-4 h-4 text-[#2E7D32] shrink-0" />
+            : <AlertTriangle className="w-4 h-4 text-[#B45309] shrink-0" />
+          }
+          <p className="text-xs font-bold text-gray-700">Ce qu'il faut surveiller</p>
+        </div>
+
+        {perf.alertes.length === 0 ? (
+          <p className="text-xs text-[#1B5E20] font-semibold pl-6">
+            Tout va bien — tous les indicateurs sont dans les normes.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {perf.alertes.map((alerte, i) => (
+              <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl"
+                style={{ backgroundColor: niveauPalette.bar + '0D', borderLeft: `3px solid ${niveauPalette.bar}` }}>
+                <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: niveauPalette.bar }} />
+                <p className="text-xs text-gray-700 leading-relaxed">{alerte}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Explication de la méthode */}
+      <div className="mt-4 pt-4 border-t border-gray-200/60">
+        <p className="text-xs text-gray-500 leading-relaxed">
+          <span className="font-semibold">Comment on calcule : </span>
+          Remboursements (40 pts) + Argent disponible (30 pts) + Membres actifs (30 pts) = Total sur 100
         </p>
       </div>
     </div>

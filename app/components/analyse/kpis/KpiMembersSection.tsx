@@ -1,255 +1,161 @@
-// app/components/analyse/kpis/KpiMembersSection.tsx
+// app/components/analyse/kpis/KpiLiquiditySection.tsx
 'use client';
 
 import React from 'react';
-import { Users, UserPlus, Activity, TrendingUp, Award } from 'lucide-react';
+import { Droplet, Shield, Wallet, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { KpiData } from '@/types/kpis';
 
+interface Props { data: KpiData; }
 
-interface Props {
-  data: KpiData;
-}
+const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
 
-// Composant Carte KPI Membre
-const MemberKpiCard = ({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  description,
-  trend,
-  color,
-  threshold
-}: {
-  icon: any;
-  label: string;
-  value: number;
-  unit: string;
-  description: string;
-  trend: number;
-  color: string;
-  threshold: { min: number; target: number };
-}) => {
-  const isGood = value >= threshold.target;
-  const isWarning = value >= threshold.min && value < threshold.target;
-  const isCritical = value < threshold.min;
+// ─── Barre de progression avec seuils ────────────────────────────────────────
+function ProgressBar({ value, max, label, description, threshold, unit = '%' }: {
+  value: number; max: number; label: string; description: string;
+  threshold: { critique: number; alerte: number; bon: number }; unit?: string;
+}) {
+  const pct = Math.min((value / max) * 100, 100);
 
-  const statusColor = isGood 
-    ? 'border-green-200 bg-green-50' 
-    : isWarning 
-    ? 'border-yellow-200 bg-yellow-50' 
-    : 'border-red-200 bg-red-50';
+  // Statut
+  let status: 'critique' | 'alerte' | 'bon' | 'excellent' = 'excellent';
+  if      (value < threshold.critique) status = 'critique';
+  else if (value < threshold.alerte)   status = 'alerte';
+  else if (value < threshold.bon)      status = 'bon';
 
-  const valueColor = isGood 
-    ? 'text-green-700' 
-    : isWarning 
-    ? 'text-yellow-700' 
-    : 'text-red-700';
+  const palette = {
+    critique: { bg: '#FEF2F2', border: '#FCA5A5', bar: '#EF4444', text: '#B91C1C', label: 'Critique'  },
+    alerte:   { bg: '#FEF9EC', border: '#FDE68A', bar: C.gold,    text: '#B45309', label: 'Alerte'    },
+    bon:      { bg: '#EBF2F8', border: '#BFDBFE', bar: C.blue,    text: C.blue,    label: 'Bien'      },
+    excellent:{ bg: C.greenPale, border: '#DDEAD5', bar: C.green,  text: C.greenDark,label: 'Excellent' },
+  }[status];
 
   return (
-    <div className={`border-2 ${statusColor} rounded-2xl p-6 transition-all hover:shadow-xl`}>
-      {/* Icon et Label */}
-      <div className="flex items-start justify-between mb-4">
-        <div className={`w-14 h-14 rounded-xl flex items-center justify-center`} style={{ background: color }}>
-          <Icon className="w-8 h-8 text-white" />
+    <div className="rounded-2xl border-2 p-5 transition-all hover:shadow-md"
+      style={{ backgroundColor: palette.bg, borderColor: palette.border }}>
+
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-sm font-bold text-gray-800">{label}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
         </div>
-        <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-          trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
-          {trend >= 0 ? '↗' : '↘'} {Math.abs(trend).toFixed(1)}%
-        </div>
+        {status === 'excellent' || status === 'bon'
+          ? <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: palette.bar }} />
+          : <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: palette.bar }} />
+        }
       </div>
 
-      {/* Label */}
-      <h3 className="text-lg font-bold text-gray-900 mb-2">{label}</h3>
-      <p className="text-sm text-gray-600 mb-4">{description}</p>
+      {/* Valeur */}
+      <p className="text-3xl font-bold mb-3" style={{ color: palette.text }}>
+        {value.toFixed(2)}<span className="text-base font-semibold ml-1 text-gray-500">{unit}</span>
+      </p>
 
-      {/* Valeur principale */}
-      <div className="mb-4">
-        <span className={`text-5xl font-bold ${valueColor}`}>
-          {value.toFixed(1)}
-        </span>
-        <span className="text-xl font-semibold text-gray-600 ml-2">{unit}</span>
+      {/* Barre */}
+      <div className="relative h-3 bg-gray-200 rounded-full overflow-visible mb-3">
+        <div className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: palette.bar }} />
+        {/* Marqueurs seuils */}
+        {[threshold.critique, threshold.alerte, threshold.bon].map((t, i) => (
+          <div key={i} className="absolute top-0 h-full w-0.5 opacity-60"
+            style={{ left: `${(t / max) * 100}%`, backgroundColor: ['#EF4444', C.gold, C.blue][i] }} />
+        ))}
       </div>
 
-      {/* Barre de progression */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-xs text-gray-600">
-          <span>Progression</span>
-          <span className="font-semibold">{value.toFixed(0)}/{threshold.target}</span>
-        </div>
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-1000 ${
-              isGood ? 'bg-gradient-to-r from-green-400 to-green-600' :
-              isWarning ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-              'bg-gradient-to-r from-red-400 to-red-600'
-            }`}
-            style={{ width: `${Math.min((value / threshold.target) * 100, 100)}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-500">Min: {threshold.min}</span>
-          <span className="text-gray-500">Cible: {threshold.target}</span>
-        </div>
+      {/* Légende seuils */}
+      <div className="grid grid-cols-4 gap-1 text-center">
+        {[
+          { dot: '#EF4444', label: 'Critique',  val: `< ${threshold.critique}` },
+          { dot: C.gold,    label: 'Alerte',    val: `${threshold.critique}–${threshold.alerte}` },
+          { dot: C.blue,    label: 'Bien',      val: `${threshold.alerte}–${threshold.bon}` },
+          { dot: C.green,   label: 'Excellent', val: `> ${threshold.bon}` },
+        ].map((s, i) => (
+          <div key={i}>
+            <div className="w-2.5 h-2.5 rounded-full mx-auto mb-0.5" style={{ backgroundColor: s.dot }} />
+            <p className="text-xs text-gray-400">{s.label}</p>
+            <p className="text-xs font-semibold text-gray-600">{s.val}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Badge de statut */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${
-          isGood ? 'text-green-700' :
-          isWarning ? 'text-yellow-700' :
-          'text-red-700'
-        }`}>
-          {isGood ? '✅ Objectif atteint' :
-           isWarning ? '⚠️ À améliorer' :
-           '🔴 Action requise'}
+      {/* Badge */}
+      <div className="mt-3 flex justify-end">
+        <span className="px-2.5 py-1 rounded-lg text-xs font-bold"
+          style={{ backgroundColor: palette.bar + '22', color: palette.text }}>
+          {palette.label}
         </span>
       </div>
     </div>
   );
-};
+}
 
-export default function KpiMembersSection({ data }: Props) {
+// ─── Section ─────────────────────────────────────────────────────────────────
+export default function KpiLiquiditySection({ data }: Props) {
   return (
-    <section className="bg-white rounded-3xl shadow-lg p-8 border border-gray-200">
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: `linear-gradient(135deg, ${C.blue}, #1E3A5F)` }}>
+          <Droplet className="w-5 h-5 text-white" />
+        </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            KPIs Membres
-          </h2>
-          <p className="text-gray-600 mt-1">Indicateurs d'engagement et qualité du portefeuille membres</p>
+          <p className="text-sm font-bold text-gray-800">KPIs de Liquidité</p>
+          <p className="text-xs text-gray-500">Solvabilité et réserves de la caisse</p>
         </div>
       </div>
 
-      {/* Grille des KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Score de stabilité moyen */}
-        <MemberKpiCard
-          icon={Award}
-          label="Score de Stabilité Moyen"
-          value={data.scoreStabiliteMoyen}
-          unit="/100"
-          description="Fiabilité financière moyenne des membres"
-          trend={2.3}
-          color="linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
-          threshold={{ min: 60, target: 75 }}
-        />
-
-        {/* Taux d'activité */}
-        <MemberKpiCard
-          icon={Activity}
-          label="Taux d'Activité"
-          value={data.tauxActiviteMembres}
-          unit="%"
-          description="Membres actifs / Total membres"
-          trend={1.8}
-          color="linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
-          threshold={{ min: 70, target: 85 }}
-        />
-
-        {/* Ratio nouveaux membres */}
-        <MemberKpiCard
-          icon={UserPlus}
-          label="Nouveaux Membres"
-          value={data.ratioNouveauxMembres}
-          unit="%"
-          description="Nouveaux / Total (croissance)"
-          trend={0.5}
-          color="linear-gradient(135deg, #10b981 0%, #059669 100%)"
-          threshold={{ min: 5, target: 10 }}
-        />
+      {/* Barres */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <ProgressBar
+          value={data.ratioLiquidite} max={3}
+          label="Ratio de liquidité" description="Actifs liquides / Passifs court terme"
+          threshold={{ critique: 1, alerte: 1.2, bon: 1.5 }} unit="" />
+        <ProgressBar
+          value={data.reservesObligatoires} max={20}
+          label="Réserves obligatoires" description="% du capital réglementaire"
+          threshold={{ critique: 5, alerte: 8, bon: 10 }} unit="%" />
+        <ProgressBar
+          value={data.couvertureRisques} max={100}
+          label="Couverture des risques" description="Provisions / Risques identifiés"
+          threshold={{ critique: 70, alerte: 80, bon: 90 }} unit="%" />
       </div>
 
-      {/* Statistiques supplémentaires */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Membres premium */}
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-amber-600 flex items-center justify-center">
-              <Award className="w-5 h-5 text-white" />
+      {/* Cartes info complémentaires */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        {[
+          { icon: Wallet,    label: 'Liquidité immédiate', value: `${(data.ratioLiquidite * 100).toFixed(0)}%`,  sub: 'Capacité à honorer les retraits',        accent: C.blue  },
+          { icon: Shield,    label: 'Fonds propres',       value: `${data.reservesObligatoires.toFixed(1)}%`,   sub: 'Solidité et absorption des pertes',       accent: C.blue  },
+          { icon: TrendingUp,label: 'Tendance globale',    value: '+3.2%',                                       sub: 'Évolution sur les 3 derniers mois',       accent: C.green },
+        ].map(({ icon: Icon, label, value, sub, accent }) => (
+          <div key={label} className="rounded-xl border p-4 flex items-start gap-3"
+            style={{ backgroundColor: accent + '0D', borderColor: accent + '33' }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: accent + '22' }}>
+              <Icon className="w-4 h-4" style={{ color: accent }} />
             </div>
             <div>
-              <p className="text-sm text-amber-700 font-semibold">Score &gt; 85</p>
-              <p className="text-2xl font-bold text-amber-900">34%</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">{label}</p>
+              <p className="text-lg font-bold mt-0.5" style={{ color: accent }}>{value}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
             </div>
           </div>
-          <p className="text-xs text-amber-700">Membres à score premium</p>
-        </div>
-
-        {/* Membres actifs ce mois */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-700 font-semibold">Actifs ce mois</p>
-              <p className="text-2xl font-bold text-blue-900">892</p>
-            </div>
-          </div>
-          <p className="text-xs text-blue-700">Sur 1,050 membres totaux</p>
-        </div>
-
-        {/* Nouveaux inscrits */}
-        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center">
-              <UserPlus className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-green-700 font-semibold">Ce mois</p>
-              <p className="text-2xl font-bold text-green-900">47</p>
-            </div>
-          </div>
-          <p className="text-xs text-green-700">Nouveaux membres inscrits</p>
-        </div>
-
-        {/* Tendance globale */}
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-purple-700 font-semibold">Tendance</p>
-              <p className="text-2xl font-bold text-purple-900">+1.5%</p>
-            </div>
-          </div>
-          <p className="text-xs text-purple-700">Évolution sur 3 mois</p>
-        </div>
+        ))}
       </div>
 
-      {/* Insights */}
-      <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+      {/* Recommandations */}
+      <div className="p-4 rounded-xl border bg-[#EBF2F8] border-[#BFDBFE]">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
-            <Activity className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-purple-900 mb-2">📈 Analyse du portefeuille membres</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-purple-700">
-              <div className="flex items-start gap-2">
-                <span className="text-purple-600">•</span>
-                <p>Le score de stabilité moyen de <strong>{data.scoreStabiliteMoyen.toFixed(1)}/100</strong> indique un portefeuille {data.scoreStabiliteMoyen >= 75 ? 'solide' : 'à consolider'}.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-purple-600">•</span>
-                <p>Taux d'activité à <strong>{data.tauxActiviteMembres.toFixed(1)}%</strong> {data.tauxActiviteMembres >= 85 ? '- Excellent engagement !' : '- Relancer les membres inactifs.'}</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-purple-600">•</span>
-                <p>Croissance de <strong>{data.ratioNouveauxMembres.toFixed(1)}%</strong> {data.ratioNouveauxMembres >= 10 ? '- Objectif de croissance atteint !' : '- Intensifier le recrutement.'}</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-purple-600">•</span>
-                <p>34% des membres ont un score premium (&gt;85), ce qui représente une base solide pour les prêts importants.</p>
-              </div>
-            </div>
+          <AlertTriangle className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-bold text-[#1E3A5F] mb-2">Recommandations</p>
+            <ul className="flex flex-col gap-1 text-xs text-[#355C7D]">
+              {data.ratioLiquidite    < 1.5 && <li>• Augmentez les réserves de liquidité pour atteindre le ratio optimal de 1.5.</li>}
+              {data.reservesObligatoires < 10  && <li>• Renforcez les réserves obligatoires pour respecter la réglementation.</li>}
+              {data.couvertureRisques < 90   && <li>• Provisionnez davantage pour améliorer la couverture des risques.</li>}
+              {data.ratioLiquidite >= 1.5 && data.reservesObligatoires >= 10 && data.couvertureRisques >= 90 && (
+                <li>Tous les indicateurs de liquidité sont dans les normes. Maintenez cette performance.</li>
+              )}
+            </ul>
           </div>
         </div>
       </div>

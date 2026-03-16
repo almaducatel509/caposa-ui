@@ -2,280 +2,158 @@
 'use client';
 
 import React from 'react';
-import { Droplet, Shield, Wallet, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Droplet, Shield, Wallet, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { KpiData } from '@/types/kpis';
 
+interface Props { data: KpiData; }
 
-interface Props {
-  data: KpiData;
-}
+const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
 
-// Composant Barre de progression avec seuils
-const ProgressBar = ({
-  value,
-  max,
-  label,
-  description,
-  threshold,
-  unit = '%',
-  showValue = true
-}: {
-  value: number;
-  max: number;
-  label: string;
-  description: string;
-  threshold: { critical: number; warning: number; good: number };
-  unit?: string;
-  showValue?: boolean;
-}) => {
-  const percentage = (value / max) * 100;
-  
-  // Déterminer le statut
-  let status: 'critical' | 'warning' | 'good' | 'excellent' = 'excellent';
-  let color = '#10b981';
-  let bgColor = 'bg-green-50';
-  let borderColor = 'border-green-200';
-  let barColor = 'bg-gradient-to-r from-green-400 to-green-600';
-  
-  if (value < threshold.critical) {
-    status = 'critical';
-    color = '#ef4444';
-    bgColor = 'bg-red-50';
-    borderColor = 'border-red-200';
-    barColor = 'bg-gradient-to-r from-red-400 to-red-600';
-  } else if (value < threshold.warning) {
-    status = 'warning';
-    color = '#f59e0b';
-    bgColor = 'bg-yellow-50';
-    borderColor = 'border-yellow-200';
-    barColor = 'bg-gradient-to-r from-yellow-400 to-yellow-600';
-  } else if (value < threshold.good) {
-    status = 'good';
-    color = '#3b82f6';
-    bgColor = 'bg-blue-50';
-    borderColor = 'border-blue-200';
-    barColor = 'bg-gradient-to-r from-blue-400 to-blue-600';
-  }
+// ─── Barre de progression avec seuils ────────────────────────────────────────
+function ProgressBar({ value, max, label, description, threshold, unit = '%' }: {
+  value: number; max: number; label: string; description: string;
+  threshold: { critique: number; alerte: number; bon: number }; unit?: string;
+}) {
+  const pct = Math.min((value / max) * 100, 100);
+
+  // Statut
+  let status: 'critique' | 'alerte' | 'bon' | 'excellent' = 'excellent';
+  if      (value < threshold.critique) status = 'critique';
+  else if (value < threshold.alerte)   status = 'alerte';
+  else if (value < threshold.bon)      status = 'bon';
+
+  const palette = {
+    critique: { bg: '#FEF2F2', border: '#FCA5A5', bar: '#EF4444', text: '#B91C1C', label: 'Critique'  },
+    alerte:   { bg: '#FEF9EC', border: '#FDE68A', bar: C.gold,    text: '#B45309', label: 'Alerte'    },
+    bon:      { bg: '#EBF2F8', border: '#BFDBFE', bar: C.blue,    text: C.blue,    label: 'Bien'      },
+    excellent:{ bg: C.greenPale, border: '#DDEAD5', bar: C.green,  text: C.greenDark,label: 'Excellent' },
+  }[status];
 
   return (
-    <div className={`${bgColor} border-2 ${borderColor} rounded-2xl p-6 transition-all hover:shadow-lg`}>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-bold text-gray-900 mb-1">{label}</h3>
-          <p className="text-sm text-gray-600">{description}</p>
+    <div className="rounded-2xl border-2 p-5 transition-all hover:shadow-md"
+      style={{ backgroundColor: palette.bg, borderColor: palette.border }}>
+
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-sm font-bold text-gray-800">{label}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
         </div>
-        {status === 'excellent' || status === 'good' ? (
-          <CheckCircle className="w-6 h-6 text-green-600" />
-        ) : (
-          <AlertCircle className="w-6 h-6 text-red-600" />
-        )}
+        {status === 'excellent' || status === 'bon'
+          ? <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: palette.bar }} />
+          : <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: palette.bar }} />
+        }
       </div>
 
-      {/* Valeur principale */}
-      {showValue && (
-        <div className="mb-4">
-          <span className="text-4xl font-bold" style={{ color }}>
-            {value.toFixed(2)}
-          </span>
-          <span className="text-xl font-semibold text-gray-600 ml-1">{unit}</span>
-        </div>
-      )}
+      {/* Valeur */}
+      <p className="text-3xl font-bold mb-3" style={{ color: palette.text }}>
+        {value.toFixed(2)}<span className="text-base font-semibold ml-1 text-gray-500">{unit}</span>
+      </p>
 
-      {/* Barre de progression */}
-      <div className="relative">
-        {/* Barre de fond avec marqueurs */}
-        <div className="h-4 bg-gray-200 rounded-full overflow-hidden relative">
-          {/* Barre de progression */}
-          <div 
-            className={`h-full ${barColor} transition-all duration-1000 ease-out rounded-full`}
-            style={{ width: `${Math.min(percentage, 100)}%` }}
-          />
-          
-          {/* Marqueurs de seuils */}
-          <div 
-            className="absolute top-0 h-full w-0.5 bg-red-800"
-            style={{ left: `${(threshold.critical / max) * 100}%` }}
-          />
-          <div 
-            className="absolute top-0 h-full w-0.5 bg-yellow-800"
-            style={{ left: `${(threshold.warning / max) * 100}%` }}
-          />
-          <div 
-            className="absolute top-0 h-full w-0.5 bg-blue-800"
-            style={{ left: `${(threshold.good / max) * 100}%` }}
-          />
-        </div>
-
-        {/* Légende des seuils */}
-        <div className="flex justify-between mt-3 text-xs">
-          <div className="text-center">
-            <div className="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1"></div>
-            <span className="text-gray-600">Critique</span>
-            <p className="font-semibold text-gray-900">&lt; {threshold.critical}</p>
-          </div>
-          <div className="text-center">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full mx-auto mb-1"></div>
-            <span className="text-gray-600">Alerte</span>
-            <p className="font-semibold text-gray-900">{threshold.critical}-{threshold.warning}</p>
-          </div>
-          <div className="text-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mx-auto mb-1"></div>
-            <span className="text-gray-600">Bien</span>
-            <p className="font-semibold text-gray-900">{threshold.warning}-{threshold.good}</p>
-          </div>
-          <div className="text-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-1"></div>
-            <span className="text-gray-600">Excellent</span>
-            <p className="font-semibold text-gray-900">&gt; {threshold.good}</p>
-          </div>
-        </div>
+      {/* Barre */}
+      <div className="relative h-3 bg-gray-200 rounded-full overflow-visible mb-3">
+        <div className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: palette.bar }} />
+        {/* Marqueurs seuils */}
+        {[threshold.critique, threshold.alerte, threshold.bon].map((t, i) => (
+          <div key={i} className="absolute top-0 h-full w-0.5 opacity-60"
+            style={{ left: `${(t / max) * 100}%`, backgroundColor: ['#EF4444', C.gold, C.blue][i] }} />
+        ))}
       </div>
 
-      {/* Badge de statut */}
-      <div className="mt-4 flex justify-end">
-        <span className={`
-          px-3 py-1 rounded-full text-xs font-semibold
-          ${status === 'critical' ? 'bg-red-100 text-red-700' :
-            status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-            status === 'good' ? 'bg-blue-100 text-blue-700' :
-            'bg-green-100 text-green-700'}
-        `}>
-          {status === 'critical' ? '🔴 Critique' :
-           status === 'warning' ? '🟡 Alerte' :
-           status === 'good' ? '🔵 Bien' :
-           '🟢 Excellent'}
+      {/* Légende seuils */}
+      <div className="grid grid-cols-4 gap-1 text-center">
+        {[
+          { dot: '#EF4444', label: 'Critique',  val: `< ${threshold.critique}` },
+          { dot: C.gold,    label: 'Alerte',    val: `${threshold.critique}–${threshold.alerte}` },
+          { dot: C.blue,    label: 'Bien',      val: `${threshold.alerte}–${threshold.bon}` },
+          { dot: C.green,   label: 'Excellent', val: `> ${threshold.bon}` },
+        ].map((s, i) => (
+          <div key={i}>
+            <div className="w-2.5 h-2.5 rounded-full mx-auto mb-0.5" style={{ backgroundColor: s.dot }} />
+            <p className="text-xs text-gray-400">{s.label}</p>
+            <p className="text-xs font-semibold text-gray-600">{s.val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Badge */}
+      <div className="mt-3 flex justify-end">
+        <span className="px-2.5 py-1 rounded-lg text-xs font-bold"
+          style={{ backgroundColor: palette.bar + '22', color: palette.text }}>
+          {palette.label}
         </span>
       </div>
     </div>
   );
-};
+}
 
+// ─── Section ─────────────────────────────────────────────────────────────────
 export default function KpiLiquiditySection({ data }: Props) {
   return (
-    <section className="bg-white rounded-3xl shadow-lg p-8 border border-gray-200">
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: `linear-gradient(135deg, ${C.blue}, #1E3A5F)` }}>
+          <Droplet className="w-5 h-5 text-white" />
+        </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-              <Droplet className="w-6 h-6 text-white" />
-            </div>
-            KPIs de Liquidité
-          </h2>
-          <p className="text-gray-600 mt-1">Indicateurs de solvabilité et réserves de la caisse</p>
+          <p className="text-sm font-bold text-gray-800">KPIs de Liquidité</p>
+          <p className="text-xs text-gray-500">Solvabilité et réserves de la caisse</p>
         </div>
       </div>
 
-      {/* Grille des KPIs */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Ratio de liquidité */}
+      {/* Barres */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <ProgressBar
-          value={data.ratioLiquidite}
-          max={3}
-          label="Ratio de Liquidité"
-          description="Actifs liquides / Passifs court terme"
-          threshold={{ critical: 1, warning: 1.2, good: 1.5 }}
-          unit=""
-          showValue={true}
-        />
-
-        {/* Réserves obligatoires */}
+          value={data.ratioLiquidite} max={3}
+          label="Ratio de liquidité" description="Actifs liquides / Passifs court terme"
+          threshold={{ critique: 1, alerte: 1.2, bon: 1.5 }} unit="" />
         <ProgressBar
-          value={data.reservesObligatoires}
-          max={20}
-          label="Réserves Obligatoires"
-          description="% du capital réglementaire"
-          threshold={{ critical: 5, warning: 8, good: 10 }}
-          unit="%"
-          showValue={true}
-        />
-
-        {/* Couverture des risques */}
+          value={data.reservesObligatoires} max={20}
+          label="Réserves obligatoires" description="% du capital réglementaire"
+          threshold={{ critique: 5, alerte: 8, bon: 10 }} unit="%" />
         <ProgressBar
-          value={data.couvertureRisques}
-          max={100}
-          label="Couverture des Risques"
-          description="Provisions / Risques identifiés"
-          threshold={{ critical: 70, warning: 80, good: 90 }}
-          unit="%"
-          showValue={true}
-        />
+          value={data.couvertureRisques} max={100}
+          label="Couverture des risques" description="Provisions / Risques identifiés"
+          threshold={{ critique: 70, alerte: 80, bon: 90 }} unit="%" />
       </div>
 
-      {/* Cartes d'information supplémentaires */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Liquidité immédiate */}
-        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 border border-cyan-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-cyan-600 flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-white" />
+      {/* Cartes info complémentaires */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        {[
+          { icon: Wallet,    label: 'Liquidité immédiate', value: `${(data.ratioLiquidite * 100).toFixed(0)}%`,  sub: 'Capacité à honorer les retraits',        accent: C.blue  },
+          { icon: Shield,    label: 'Fonds propres',       value: `${data.reservesObligatoires.toFixed(1)}%`,   sub: 'Solidité et absorption des pertes',       accent: C.blue  },
+          { icon: TrendingUp,label: 'Tendance globale',    value: '+3.2%',                                       sub: 'Évolution sur les 3 derniers mois',       accent: C.green },
+        ].map(({ icon: Icon, label, value, sub, accent }) => (
+          <div key={label} className="rounded-xl border p-4 flex items-start gap-3"
+            style={{ backgroundColor: accent + '0D', borderColor: accent + '33' }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: accent + '22' }}>
+              <Icon className="w-4 h-4" style={{ color: accent }} />
             </div>
             <div>
-              <p className="text-sm text-cyan-700 font-semibold">Liquidité Immédiate</p>
-              <p className="text-2xl font-bold text-cyan-900">
-                {(data.ratioLiquidite * 100).toFixed(0)}%
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">{label}</p>
+              <p className="text-lg font-bold mt-0.5" style={{ color: accent }}>{value}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
             </div>
           </div>
-          <p className="text-xs text-cyan-700">
-            Capacité à honorer les demandes de retrait immédiates
-          </p>
-        </div>
-
-        {/* Fonds propres */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-700 font-semibold">Fonds Propres</p>
-              <p className="text-2xl font-bold text-blue-900">
-                {data.reservesObligatoires.toFixed(1)}%
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-blue-700">
-            Solidité financière et capacité d'absorption des pertes
-          </p>
-        </div>
-
-        {/* Tendance */}
-        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-green-700 font-semibold">Tendance Globale</p>
-              <p className="text-2xl font-bold text-green-900">+3.2%</p>
-            </div>
-          </div>
-          <p className="text-xs text-green-700">
-            Évolution de la liquidité sur les 3 derniers mois
-          </p>
-        </div>
+        ))}
       </div>
 
       {/* Recommandations */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+      <div className="p-4 rounded-xl border bg-[#EBF2F8] border-[#BFDBFE]">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-semibold text-blue-900 mb-2">💡 Recommandations</p>
-            <ul className="space-y-1 text-sm text-blue-700">
-              {data.ratioLiquidite < 1.5 && (
-                <li>• Augmentez les réserves de liquidité pour atteindre le ratio optimal de 1.5</li>
-              )}
-              {data.reservesObligatoires < 10 && (
-                <li>• Renforcez les réserves obligatoires pour respecter la réglementation</li>
-              )}
-              {data.couvertureRisques < 90 && (
-                <li>• Provisionnez davantage pour améliorer la couverture des risques</li>
-              )}
+          <AlertTriangle className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-bold text-[#1E3A5F] mb-2">Recommandations</p>
+            <ul className="flex flex-col gap-1 text-xs text-[#355C7D]">
+              {data.ratioLiquidite    < 1.5 && <li>• Augmentez les réserves de liquidité pour atteindre le ratio optimal de 1.5.</li>}
+              {data.reservesObligatoires < 10  && <li>• Renforcez les réserves obligatoires pour respecter la réglementation.</li>}
+              {data.couvertureRisques < 90   && <li>• Provisionnez davantage pour améliorer la couverture des risques.</li>}
               {data.ratioLiquidite >= 1.5 && data.reservesObligatoires >= 10 && data.couvertureRisques >= 90 && (
-                <li>✅ Tous les indicateurs de liquidité sont dans les normes. Maintenez cette performance !</li>
+                <li>Tous les indicateurs de liquidité sont dans les normes. Maintenez cette performance.</li>
               )}
             </ul>
           </div>

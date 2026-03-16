@@ -2,260 +2,156 @@
 'use client';
 
 import React from 'react';
-import { TrendingDown, TrendingUp, DollarSign, AlertTriangle } from 'lucide-react';
+import { TrendingDown, TrendingUp, Banknote, AlertTriangle } from 'lucide-react';
 import { KpiData } from '@/types/kpis';
 
-interface Props {
-  data: KpiData;
+interface Props { data: KpiData; }
+
+// ─── Palette CAPOSA ───────────────────────────────────────────────────────────
+const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
+
+function formatHTG(n: number) {
+  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' HTG';
 }
 
-// Composant Jauge Circulaire
-const CircularGauge = ({ 
-  value, 
-  max = 100, 
-  label, 
-  subtitle,
-  threshold,
-  reverse = false,
-  unit = '%'
-}: { 
-  value: number; 
-  max?: number; 
-  label: string;
-  subtitle: string;
-  threshold: { good: number; warning: number };
-  reverse?: boolean;
-  unit?: string;
-}) => {
-  const percentage = (value / max) * 100;
-  const strokeDasharray = 2 * Math.PI * 45; // rayon = 45
-  const strokeDashoffset = strokeDasharray - (strokeDasharray * percentage) / 100;
+// ─── Jauge circulaire ─────────────────────────────────────────────────────────
+function CircularGauge({ value, max = 100, label, subtitle, threshold, reverse = false, unit = '%' }: {
+  value: number; max?: number; label: string; subtitle: string;
+  threshold: { bon: number; alerte: number }; reverse?: boolean; unit?: string;
+}) {
+  const pct = Math.min((value / max) * 100, 100);
+  const r   = 45;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (circ * pct) / 100;
 
-  // Déterminer la couleur selon le seuil
-  let color = '#10b981'; // Vert par défaut
-  let bgColor = 'bg-green-50';
-  let borderColor = 'border-green-200';
-  let textColor = 'text-green-700';
-
+  // Couleur selon statut
+  let color = C.green, bg = C.greenPale, border = '#DDEAD5', textCol = C.greenDark;
   if (reverse) {
-    // Pour les indicateurs où plus bas = meilleur (ex: endettement, créances douteuses)
-    if (value >= threshold.warning) {
-      color = '#ef4444';
-      bgColor = 'bg-red-50';
-      borderColor = 'border-red-200';
-      textColor = 'text-red-700';
-    } else if (value >= threshold.good) {
-      color = '#f59e0b';
-      bgColor = 'bg-yellow-50';
-      borderColor = 'border-yellow-200';
-      textColor = 'text-yellow-700';
-    }
+    if (value >= threshold.alerte)      { color = '#EF4444'; bg = '#FEF2F2'; border = '#FCA5A5'; textCol = '#B91C1C'; }
+    else if (value >= threshold.bon)    { color = C.gold;    bg = '#FEF9EC'; border = '#FDE68A'; textCol = '#92400E'; }
   } else {
-    // Pour les indicateurs où plus haut = meilleur (ex: recouvrement)
-    if (value < threshold.warning) {
-      color = '#ef4444';
-      bgColor = 'bg-red-50';
-      borderColor = 'border-red-200';
-      textColor = 'text-red-700';
-    } else if (value < threshold.good) {
-      color = '#f59e0b';
-      bgColor = 'bg-yellow-50';
-      borderColor = 'border-yellow-200';
-      textColor = 'text-yellow-700';
-    }
+    if (value < threshold.alerte)       { color = '#EF4444'; bg = '#FEF2F2'; border = '#FCA5A5'; textCol = '#B91C1C'; }
+    else if (value < threshold.bon)     { color = C.gold;    bg = '#FEF9EC'; border = '#FDE68A'; textCol = '#92400E'; }
   }
 
   return (
-    <div className={`${bgColor} border-2 ${borderColor} rounded-2xl p-6 transition-all hover:shadow-lg`}>
-      <div className="flex flex-col items-center">
-        {/* SVG Jauge */}
-        <div className="relative w-40 h-40 mb-4">
-          <svg className="w-full h-full transform -rotate-90">
-            {/* Cercle de fond */}
-            <circle
-              cx="80"
-              cy="80"
-              r="45"
-              stroke="#e5e7eb"
-              strokeWidth="10"
-              fill="none"
-            />
-            {/* Cercle de progression */}
-            <circle
-              cx="80"
-              cy="80"
-              r="45"
-              stroke={color}
-              strokeWidth="10"
-              fill="none"
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              className="transition-all duration-1000 ease-out"
-            />
-          </svg>
-          {/* Valeur au centre */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-4xl font-bold ${textColor}`}>
-              {value.toFixed(1)}
-            </span>
-            <span className={`text-sm font-semibold ${textColor}`}>{unit}</span>
-          </div>
+    <div className="rounded-2xl border-2 p-5 transition-all hover:shadow-md flex flex-col items-center"
+      style={{ backgroundColor: bg, borderColor: border }}>
+      <div className="relative w-36 h-36 mb-3">
+        <svg className="w-full h-full -rotate-90">
+          <circle cx="72" cy="72" r={r} stroke="#E5E7EB" strokeWidth="10" fill="none" />
+          <circle cx="72" cy="72" r={r} stroke={color} strokeWidth="10" fill="none"
+            strokeDasharray={circ} strokeDashoffset={offset}
+            strokeLinecap="round" className="transition-all duration-700" />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold" style={{ color }}>{value.toFixed(1)}</span>
+          <span className="text-xs font-semibold" style={{ color }}>{unit}</span>
         </div>
-
-        {/* Label et description */}
-        <h3 className="text-lg font-bold text-gray-900 text-center mb-1">
-          {label}
-        </h3>
-        <p className="text-sm text-gray-600 text-center mb-3">
-          {subtitle}
-        </p>
-
-        {/* Seuils */}
-        <div className="w-full space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500">Objectif:</span>
-            <span className="font-semibold text-green-600">
-              {reverse ? `< ${threshold.good}${unit}` : `> ${threshold.good}${unit}`}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500">Alerte:</span>
-            <span className="font-semibold text-yellow-600">
-              {reverse ? `${threshold.good}-${threshold.warning}${unit}` : `${threshold.warning}-${threshold.good}${unit}`}
-            </span>
-          </div>
-        </div>
+      </div>
+      <p className="text-sm font-bold text-gray-800 text-center">{label}</p>
+      <p className="text-xs text-gray-500 text-center mt-0.5">{subtitle}</p>
+      <div className="mt-3 flex items-center justify-between w-full text-xs text-gray-500">
+        <span>Objectif : <b style={{ color: C.green }}>{reverse ? `< ${threshold.bon}${unit}` : `> ${threshold.bon}${unit}`}</b></span>
+        <span>Alerte : <b style={{ color: C.gold }}>{reverse ? `${threshold.bon}–${threshold.alerte}${unit}` : `${threshold.alerte}–${threshold.bon}${unit}`}</b></span>
       </div>
     </div>
   );
-};
+}
 
+// ─── Section ─────────────────────────────────────────────────────────────────
 export default function KpiFinancialSection({ data }: Props) {
-  const formatCurrency = (value: number) => 
-    `${Math.round(value).toLocaleString('fr-FR')} HTG`;
-
   return (
-    <section className="bg-white rounded-3xl shadow-lg p-8 border border-gray-200">
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-white" />
-            </div>
-            KPIs Financiers
-          </h2>
-          <p className="text-gray-600 mt-1">Indicateurs de santé financière de la caisse</p>
-        </div>
-        <div className="text-right">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-blue-700">Mise à jour en temps réel</span>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+            <Banknote className="w-5 h-5 text-white" />
           </div>
+          <div>
+            <p className="text-sm font-bold text-gray-800">KPIs Financiers</p>
+            <p className="text-xs text-gray-500">Indicateurs de santé financière de la caisse</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#DDEAD5] rounded-xl">
+          <span className="w-2 h-2 rounded-full bg-[#2E7D32] animate-pulse" />
+          <span className="text-xs font-semibold text-[#1B5E20]">Temps réel</span>
         </div>
       </div>
 
-      {/* Grille des KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Ratio d'endettement */}
+      {/* Jauges */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <CircularGauge
-          value={data.ratioEndettement}
-          max={50}
-          label="Ratio d'Endettement"
-          subtitle="Mensualités / Revenus"
-          threshold={{ good: 35, warning: 40 }}
-          reverse={true}
-          unit="%"
-        />
+          value={data.ratioEndettement} max={50}
+          label="Ratio d'endettement" subtitle="Mensualités / Revenus"
+          threshold={{ bon: 35, alerte: 40 }} reverse unit="%" />
 
-        {/* Taux de recouvrement */}
         <CircularGauge
-          value={data.tauxRecouvrement}
-          max={100}
-          label="Taux de Recouvrement"
-          subtitle="Remboursements à temps"
-          threshold={{ good: 95, warning: 90 }}
-          reverse={false}
-          unit="%"
-        />
+          value={data.tauxRecouvrement} max={100}
+          label="Taux de recouvrement" subtitle="Remboursements à temps"
+          threshold={{ bon: 95, alerte: 90 }} unit="%" />
 
-        {/* Capacité de remboursement */}
-        <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-6 transition-all hover:shadow-lg">
-          <div className="flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center mb-4">
-              <TrendingUp className="w-10 h-10 text-white" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 text-center mb-1">
-              Capacité Moyenne
-            </h3>
-            <p className="text-sm text-gray-600 text-center mb-3">
-              Disponibilité mensuelle
-            </p>
-            <p className="text-3xl font-bold text-green-700 mb-2">
-              {formatCurrency(data.capaciteRemboursementMoyenne)}
-            </p>
-            <div className="w-full mt-4 pt-4 border-t border-green-300">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600">Tendance:</span>
-                <span className="font-semibold text-green-600 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +5.2%
-                </span>
-              </div>
-            </div>
+        {/* Capacité de remboursement — valeur monétaire, pas de jauge */}
+        <div className="rounded-2xl border-2 p-5 flex flex-col items-center bg-[#DDEAD5]/30 border-[#DDEAD5]">
+          <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center mb-3">
+            <TrendingUp className="w-7 h-7 text-white" />
+          </div>
+          <p className="text-lg font-bold text-[#1B5E20] text-center">{formatHTG(data.capaciteRemboursementMoyenne)}</p>
+          <p className="text-xs font-bold text-gray-700 text-center mt-1">Capacité moyenne</p>
+          <p className="text-xs text-gray-500 text-center mt-0.5">Disponibilité mensuelle</p>
+          <div className="mt-3 flex items-center gap-1 px-2 py-1 bg-[#DDEAD5] rounded-lg">
+            <TrendingUp className="w-3 h-3 text-[#2E7D32]" />
+            <span className="text-xs font-semibold text-[#1B5E20]">+5.2% ce mois</span>
           </div>
         </div>
 
-        {/* Ratio créances douteuses */}
         <CircularGauge
-          value={data.ratioCreancesDouteuses}
-          max={20}
-          label="Créances Douteuses"
-          subtitle="Prêts à risque / Total"
-          threshold={{ good: 5, warning: 8 }}
-          reverse={true}
-          unit="%"
-        />
+          value={data.ratioCreancesDouteuses} max={20}
+          label="Créances douteuses" subtitle="Prêts à risque / Total"
+          threshold={{ bon: 5, alerte: 8 }} reverse unit="%" />
       </div>
 
       {/* Alertes contextuelles */}
-      <div className="mt-6 space-y-3">
+      <div className="flex flex-col gap-3">
         {data.ratioEndettement > 35 && (
-          <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold text-yellow-900">Ratio d'endettement élevé</p>
-              <p className="text-sm text-yellow-700 mt-1">
-                Le ratio d'endettement de {data.ratioEndettement.toFixed(1)}% dépasse le seuil recommandé de 35%. 
-                Envisagez une révision des politiques de crédit.
+          <div className="flex items-start gap-3 p-4 rounded-xl border bg-[#FEF9EC] border-[#FDE68A]">
+            <AlertTriangle className="w-4 h-4 text-[#B45309] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-[#92400E]">Ratio d'endettement élevé</p>
+              <p className="text-xs text-[#B45309] mt-0.5">
+                Le ratio de {data.ratioEndettement.toFixed(1)}% dépasse le seuil de 35%. Envisagez une révision des politiques de crédit.
               </p>
             </div>
           </div>
         )}
-
         {data.tauxRecouvrement < 95 && (
-          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold text-red-900">Taux de recouvrement sous l'objectif</p>
-              <p className="text-sm text-red-700 mt-1">
-                Le taux de recouvrement de {data.tauxRecouvrement.toFixed(1)}% est en dessous de l'objectif de 95%. 
-                Renforcez le suivi des remboursements.
+          <div className="flex items-start gap-3 p-4 rounded-xl border bg-[#FEF2F2] border-[#FCA5A5]">
+            <AlertTriangle className="w-4 h-4 text-[#B91C1C] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-[#B91C1C]">Taux de recouvrement sous l'objectif</p>
+              <p className="text-xs text-[#DC2626] mt-0.5">
+                {data.tauxRecouvrement.toFixed(1)}% — objectif 95%. Renforcez le suivi des remboursements.
               </p>
             </div>
           </div>
         )}
-
         {data.ratioCreancesDouteuses > 5 && (
-          <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-            <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold text-orange-900">Créances douteuses en hausse</p>
-              <p className="text-sm text-orange-700 mt-1">
-                Le ratio de créances douteuses de {data.ratioCreancesDouteuses.toFixed(1)}% nécessite une attention particulière.
+          <div className="flex items-start gap-3 p-4 rounded-xl border bg-[#FEF2F2] border-[#FCA5A5]">
+            <TrendingDown className="w-4 h-4 text-[#B91C1C] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-[#B91C1C]">Créances douteuses en hausse</p>
+              <p className="text-xs text-[#DC2626] mt-0.5">
+                {data.ratioCreancesDouteuses.toFixed(1)}% — seuil 5%. Analysez les prêts à risque et mettez en place des plans de recouvrement.
               </p>
             </div>
+          </div>
+        )}
+        {data.ratioEndettement <= 35 && data.tauxRecouvrement >= 95 && data.ratioCreancesDouteuses <= 5 && (
+          <div className="flex items-center gap-3 p-4 rounded-xl border bg-[#DDEAD5]/40 border-[#DDEAD5]">
+            <span className="w-2 h-2 rounded-full bg-[#2E7D32] shrink-0" />
+            <p className="text-xs font-semibold text-[#1B5E20]">Tous les indicateurs financiers sont dans les normes.</p>
           </div>
         )}
       </div>

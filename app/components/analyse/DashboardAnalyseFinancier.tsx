@@ -4,11 +4,18 @@ import React, { useState, useMemo } from 'react';
 import {
   Search, CheckCircle2, AlertTriangle, XCircle,
   BarChart3, Sun, AlertCircle, ChevronDown, ChevronUp,
+  Plus,
+  Landmark,
+  X,
 } from 'lucide-react';
 import { MemberFinancialData } from '@/types/analyses';
 import MemberCard from './MemberCardAnalyse';
 import MemberDetailModal from './MemberDetailModal';
 import { generateMemberData } from './MemberDataMock';
+import { FaSync } from 'react-icons/fa';
+import { GiReceiveMoney } from 'react-icons/gi';
+import PageHeader from '../header';
+import LoanForm from '../loans/LoanFormFields';
 
 // ─── Palette CAPOSA ───────────────────────────────────────────────────────────
 const C = {
@@ -39,6 +46,7 @@ function KPICard({ icon: Icon, label, value, accent }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function FinancialAnalysisDashboard() {
+  const [modalOpen, setModalOpen] = useState(false);
   const [members] = useState<MemberFinancialData[]>(
     generateMemberData().filter(
       (m): m is MemberFinancialData =>
@@ -98,7 +106,17 @@ export default function FinancialAnalysisDashboard() {
 
   return (
     <div className="w-full min-h-screen bg-[#F9F9F6] p-6 md:p-8 flex flex-col gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <PageHeader
+          title="Analyse Financière des Membres"
+          subtitle="Évaluation de la capacité de remboursement et stabilité financière"
+          icon={<GiReceiveMoney className="font-light text-4xl" />}
+        />
 
+        <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+          <Plus className="w-4 h-4" /> Nouveau prêt
+        </button>
+      </div>
       {/* Filtres score */}
       <div className="flex flex-wrap gap-2">
         {([
@@ -233,6 +251,30 @@ export default function FinancialAnalysisDashboard() {
           </div>
         )}
       </div>
+{/* Modal nouveau prêt */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10">
+          <div className="w-full max-w-2xl bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center">
+                  <Landmark className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">Nouvelle demande de prêt</p>
+                  <p className="text-xs text-gray-400">Remplissez les informations du prêt</p>
+                </div>
+              </div>
+              <button onClick={() => setModalOpen(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto max-h-[80vh]">
+              <LoanForm onCancel={() => setModalOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal détail */}
       {selectedMember && (
