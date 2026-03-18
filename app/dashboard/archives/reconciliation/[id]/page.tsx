@@ -1,4 +1,4 @@
-import ArchiveDetailReconciliation from "@/app/components/achives/rapport/ArchiveDetailReconciliation";
+import ArchiveDetailReconciliation from "@/app/components/achives/reconciliation/ArchiveDetailReconciliation";
 
 interface PageProps {
   params: {

@@ -1,583 +1,553 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation'; // AJOUT: Import du router
-import { FaArchive, FaSearch, FaFilePdf, FaFileCsv, FaFilter, FaEye, FaTrash, FaUndo } from 'react-icons/fa';
-import { 
-  Archive, 
-  ArchiveCategory, 
-  ArchiveFilters,
-  getCategoryLabel,
-  getTypeLabel,
-  getCategoryIcon
+import { useRouter } from 'next/navigation';
+import {
+  Archive, Search, Filter, Eye, Trash2, RotateCcw,
+  FileText, Download, AlertTriangle, CheckCircle2,
+  Lock, X, Loader2,
+} from 'lucide-react';
+import {
+  Archive as ArchiveType, ArchiveCategory,
+  getCategoryLabel, getTypeLabel, getCategoryAccent,
+  estDesactivable, getRaisonVerrouillage,
 } from '@/types/archives';
 
-// Données mockées - à remplacer par API calls
-const generateMockArchives = (): Archive[] => {
+// ─── Palette CAPOSA ───────────────────────────────────────────────────────────
+const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+function generateMockArchives(): ArchiveType[] {
   return [
     {
-      id: 'ARC_20260215_00001',
-      category: 'operational',
-      type: 'reconciliation_caisse',
-      date: new Date('2026-02-15'),
-      employeeId: 'emp_001',
-      employeeName: 'Jean Dupont',
-      employeeRole: 'Caissier',
-      summary: 'Réconciliation journalière - Écart de -30.00 G expliqué',
-      metadata: {
-        reportId: 'rpt_20260213',
-        openingCash: 2000,
-        theoreticalCash: 7130,
-        actualCash: 7100,
-        discrepancy: -30,
-        status: 'balanced'
-      },
-      detailsUrl: '/reconciliation/rpt_20260213',
-      isDeleted: false,
-      createdAt: new Date('2026-02-15T17:45:00'),
-      updatedAt: new Date('2026-02-15T17:45:00')
+      id: 'ARC_20260215_00001', category: 'operational', type: 'reconciliation_caisse',
+      date: new Date('2026-02-15'), employeeId: 'emp_001', employeeName: 'Jean Dupont', employeeRole: 'Caissier',
+      summary: 'Réconciliation journalière — Écart de -30.00 HTG expliqué',
+      metadata: { reportId: 'rpt_20260213', openingCash: 2000, theoreticalCash: 7130, actualCash: 7100, discrepancy: -30, status: 'equilibre' },
+      detailsUrl: '/dashboard/archives/reconciliation/ARC_20260215_00001',
+      isDeleted: false, createdAt: new Date('2026-02-15T17:45:00'), updatedAt: new Date('2026-02-15T17:45:00'),
     },
     {
-      id: 'ARC_20260201_00002',
-      category: 'regulatory',
-      type: 'rapport_liquidite',
-      date: new Date('2026-02-01'),
-      periode: 'Janvier 2026',
-      employeeId: 'system',
-      employeeName: 'Système',
-      employeeRole: 'Automatique',
-      summary: 'Rapport de liquidité - Janvier 2026 - Statut: Conforme',
-      metadata: {
-        reportType: 'liquidite',
-        periode: 'Janvier 2026',
-        status: 'Conforme',
-        keyMetrics: {
-          ratioLiquidite: 18.5,
-          liquiditeDisponible: 1200000
-        }
-      },
+      id: 'ARC_20260201_00002', category: 'regulatory', type: 'rapport_liquidite',
+      date: new Date('2026-02-01'), periode: 'Janvier 2026',
+      employeeId: 'system', employeeName: 'Système', employeeRole: 'Automatique',
+      summary: 'Rapport de liquidité — Janvier 2026 — Statut : Conforme',
+      metadata: { reportType: 'liquidite', periode: 'Janvier 2026', status: 'conforme', keyMetrics: { ratioLiquidite: 18.5, liquiditeDisponible: 1200000 } },
       documentUrl: '/rapports/liquidite/janvier-2026.pdf',
-      isDeleted: false,
-      createdAt: new Date('2026-02-01T09:00:00'),
-      updatedAt: new Date('2026-02-01T09:00:00')
+      isDeleted: false, createdAt: new Date('2026-02-01T09:00:00'), updatedAt: new Date('2026-02-01T09:00:00'),
     },
     {
-      id: 'ARC_20260201_00003',
-      category: 'regulatory',
-      type: 'rapport_solvabilite',
-      date: new Date('2026-02-01'),
-      periode: 'Janvier 2026',
-      employeeId: 'system',
-      employeeName: 'Système',
-      employeeRole: 'Automatique',
-      summary: 'Rapport de solvabilité - Janvier 2026 - Statut: Conforme',
-      metadata: {
-        reportType: 'solvabilite',
-        periode: 'Janvier 2026',
-        status: 'Conforme',
-        keyMetrics: {
-          ratioSolvabilite: 12.3,
-          capitalPropre: 800000
-        }
-      },
+      id: 'ARC_20260201_00003', category: 'regulatory', type: 'rapport_solvabilite',
+      date: new Date('2026-02-01'), periode: 'Janvier 2026',
+      employeeId: 'system', employeeName: 'Système', employeeRole: 'Automatique',
+      summary: 'Rapport de solvabilité — Janvier 2026 — Statut : Conforme',
+      metadata: { reportType: 'solvabilite', periode: 'Janvier 2026', status: 'conforme', keyMetrics: { ratioSolvabilite: 12.3, capitalPropre: 800000 } },
       documentUrl: '/rapports/solvabilite/janvier-2026.pdf',
-      isDeleted: false,
-      createdAt: new Date('2026-02-01T09:15:00'),
-      updatedAt: new Date('2026-02-01T09:15:00')
+      isDeleted: false, createdAt: new Date('2026-02-01T09:15:00'), updatedAt: new Date('2026-02-01T09:15:00'),
     },
     {
-      id: 'ARC_20260214_00004',
-      category: 'operational',
-      type: 'pret_approuve',
-      date: new Date('2026-02-14'),
-      employeeId: 'emp_003',
-      employeeName: 'Marie Tremblay',
-      employeeRole: 'Gestionnaire de prêts',
-      summary: 'Prêt approuvé - Jean Baptiste - 50,000 G',
-      metadata: {
-        loanId: 'loan_2026_0234',
-        memberId: 'mbr_1234',
-        memberName: 'Jean Baptiste',
-        amount: 50000,
-        decision: 'approved',
-        approvedBy: 'Marie Tremblay'
-      },
-      detailsUrl: '/loans/loan_2026_0234',
-      isDeleted: false,
-      createdAt: new Date('2026-02-14T14:30:00'),
-      updatedAt: new Date('2026-02-14T14:30:00')
+      id: 'ARC_20260214_00004', category: 'operational', type: 'pret_approuve',
+      date: new Date('2026-02-14'), employeeId: 'emp_003', employeeName: 'Marie Tremblay', employeeRole: 'Gestionnaire de prêts',
+      summary: 'Prêt approuvé — Jean Baptiste — 50 000 HTG',
+      metadata: { loanId: 'loan_2026_0234', memberId: 'mbr_1234', memberName: 'Jean Baptiste', amount: 50000, decision: 'approuve', approvedBy: 'Marie Tremblay' },
+      detailsUrl: '/dashboard/archives/loan/ARC_20260214_00004',
+      isDeleted: false, createdAt: new Date('2026-02-14T14:30:00'), updatedAt: new Date('2026-02-14T14:30:00'),
     },
     {
-      id: 'ARC_20260210_00005',
-      category: 'administrative',
-      type: 'horaire',
-      date: new Date('2026-02-10'),
-      employeeId: 'emp_002',
-      employeeName: 'Paul Martin',
-      employeeRole: 'RH',
-      summary: 'Modification horaire - Équipe caisse - Mars 2026',
-      metadata: {
-        scheduleId: 'sch_2026_03',
-        period: 'Mars 2026',
-        affectedEmployees: 5
-      },
-      isDeleted: false,
-      createdAt: new Date('2026-02-10T10:00:00'),
-      updatedAt: new Date('2026-02-10T10:00:00')
+      id: 'ARC_20260210_00005', category: 'administrative', type: 'horaire',
+      date: new Date('2026-02-10'), employeeId: 'emp_002', employeeName: 'Paul Martin', employeeRole: 'RH',
+      summary: 'Modification horaire — Équipe caisse — Mars 2026',
+      metadata: { scheduleId: 'sch_2026_03', period: 'Mars 2026', affectedEmployees: 5 },
+      isDeleted: false, createdAt: new Date('2026-02-10T10:00:00'), updatedAt: new Date('2026-02-10T10:00:00'),
     },
     {
-      id: 'ARC_20260215_00006',
-      category: 'operational',
-      type: 'transaction_journaliere',
-      date: new Date('2026-02-15'),
-      employeeId: 'emp_001',
-      employeeName: 'Jean Dupont',
-      employeeRole: 'Caissier',
-      summary: 'Dépôt - Sophie Lavoie - 15,000 G',
-      metadata: {
-        transactionId: 'tx_20260215_0123',
-        memberId: 'mbr_5678',
-        memberName: 'Sophie Lavoie',
-        amount: 15000,
-        type: 'deposit',
-        status: 'completed'
-      },
-      detailsUrl: '/transactions/tx_20260215_0123',
-      isDeleted: false,
-      createdAt: new Date('2026-02-15T11:20:00'),
-      updatedAt: new Date('2026-02-15T11:20:00')
+      id: 'ARC_20260215_00006', category: 'operational', type: 'transaction_journaliere',
+      date: new Date('2026-02-15'), employeeId: 'emp_001', employeeName: 'Jean Dupont', employeeRole: 'Caissier',
+      summary: 'Dépôt — Sophie Lavoie — 15 000 HTG',
+      metadata: { transactionId: 'tx_20260215_0123', memberId: 'mbr_5678', memberName: 'Sophie Lavoie', amount: 15000, type: 'depot', status: 'decaisse' },
+      detailsUrl: '/dashboard/archives/transaction/ARC_20260215_00006',
+      isDeleted: false, createdAt: new Date('2026-02-15T11:20:00'), updatedAt: new Date('2026-02-15T11:20:00'),
     },
-    // Exemple d'archive soft-deleted
     {
-      id: 'ARC_20260101_00007',
-      category: 'administrative',
-      type: 'document_interne',
-      date: new Date('2026-01-01'),
-      employeeId: 'emp_002',
-      employeeName: 'Paul Martin',
-      employeeRole: 'RH',
-      summary: 'Document interne - Test (supprimé)',
+      id: 'ARC_20260101_00007', category: 'administrative', type: 'document_interne',
+      date: new Date('2026-01-01'), employeeId: 'emp_002', employeeName: 'Paul Martin', employeeRole: 'RH',
+      summary: 'Document interne — Test (désactivé)',
       metadata: {},
-      isDeleted: true,
-      deletedBy: 'direction',
-      deletedAt: new Date('2026-01-15T16:00:00'),
-      deletionReason: 'Document de test - nettoyage administratif',
-      createdAt: new Date('2026-01-01T08:00:00'),
-      updatedAt: new Date('2026-01-15T16:00:00')
-    }
+      isDeleted: true, deletedBy: 'direction', deletedAt: new Date('2026-01-15T16:00:00'),
+      deletionReason: 'Document de test — nettoyage administratif',
+      createdAt: new Date('2026-01-01T08:00:00'), updatedAt: new Date('2026-01-15T16:00:00'),
+    },
   ];
-};
+}
 
-export default function ArchivesPage() {
-  const router = useRouter(); // AJOUT: Initialiser le router
-  const [archives] = useState<Archive[]>(generateMockArchives());
-  const [selectedCategory, setSelectedCategory] = useState<ArchiveCategory | 'all'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDeleted, setShowDeleted] = useState(false);
+function formatDate(d: Date) {
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function formatTime(d: Date) {
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
 
-  // Filtrer les archives
-  const filteredArchives = useMemo(() => {
-    return archives.filter(archive => {
-      // Filtre catégorie
-      if (selectedCategory !== 'all' && archive.category !== selectedCategory) {
-        return false;
-      }
+// ─── Modal soft delete ────────────────────────────────────────────────────────
+function SoftDeleteModal({ archive, onConfirm, onClose }: {
+  archive: ArchiveType;
+  onConfirm: (motif: string) => void;
+  onClose: () => void;
+}) {
+  const [motif,      setMotif]      = useState('');
+  const [confirming, setConfirming] = useState(false);
 
-      // Filtre supprimés
-      if (!showDeleted && archive.isDeleted) {
-        return false;
-      }
-
-      // Filtre recherche
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        return (
-          archive.id.toLowerCase().includes(search) ||
-          archive.summary.toLowerCase().includes(search) ||
-          archive.employeeName.toLowerCase().includes(search) ||
-          getTypeLabel(archive.type).toLowerCase().includes(search)
-        );
-      }
-
-      return true;
-    });
-  }, [archives, selectedCategory, searchTerm, showDeleted]);
-
-  // Statistiques
-  const stats = useMemo(() => {
-    const operational = archives.filter(a => a.category === 'operational' && !a.isDeleted).length;
-    const regulatory = archives.filter(a => a.category === 'regulatory' && !a.isDeleted).length;
-    const administrative = archives.filter(a => a.category === 'administrative' && !a.isDeleted).length;
-    const deleted = archives.filter(a => a.isDeleted).length;
-
-    return { operational, regulatory, administrative, deleted, total: archives.length };
-  }, [archives]);
-
-  const handleExportPDF = () => {
-    console.log('Export PDF avec filtres:', { selectedCategory, searchTerm, showDeleted });
-    alert('📄 Export PDF en cours de développement...\n\nCette fonctionnalité permettra d\'exporter:\n• Liste des archives filtrées\n• Avec horodatage complet\n• Pour audits externes');
-  };
-
-  const handleExportCSV = () => {
-    console.log('Export CSV avec filtres:', { selectedCategory, searchTerm, showDeleted });
-    
-    // Créer le CSV simple
-    const headers = ['ID', 'Catégorie', 'Type', 'Date', 'Employé', 'Résumé', 'Statut'];
-    const rows = filteredArchives.map(archive => [
-      archive.id,
-      getCategoryLabel(archive.category),
-      getTypeLabel(archive.type),
-      archive.date.toLocaleDateString('fr-CA'),
-      archive.employeeName,
-      archive.summary,
-      archive.isDeleted ? 'Supprimé' : 'Actif'
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    // Télécharger
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `archives_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
-  // NOUVELLE FONCTION: Navigation vers les pages de détails
-  const handleViewDetails = (archive: Archive) => {
-    // Construire l'URL de détail selon le type d'archive
-    let detailUrl = '';
-    
-    // ============== OPÉRATIONNEL ==============
-    if (archive.category === 'operational' && archive.type === 'reconciliation_caisse') {
-      detailUrl = `/dashboard/archives/reconciliation/${archive.id}`;
-    } 
-    else if (archive.category === 'operational' && (archive.type === 'pret_approuve' || archive.type === 'pret_refuse')) {
-      detailUrl = `/dashboard/archives/loan/${archive.id}`;
-    } 
-    else if (archive.category === 'operational' && archive.type === 'transaction_journaliere') {
-      detailUrl = `/dashboard/archives/transaction/${archive.id}`;
-    }
-    else if (archive.category === 'operational' && archive.type === 'mouvement_tresorerie') {
-      detailUrl = `/dashboard/archives/treasury/${archive.id}`;
-    }
-    
-    // ============== RÉGLEMENTAIRE ==============
-    else if (archive.category === 'regulatory') {
-      // Tous les rapports réglementaires utilisent la même page de détails
-      detailUrl = `/dashboard/archives/rapport/${archive.id}`;
-    }
-    
-    // ============== ADMINISTRATIF ==============
-    else if (archive.category === 'administrative') {
-      detailUrl = `/dashboard/archives/administrative/${archive.id}`;
-    }
-    
-    // Naviguer vers la page de détails
-    if (detailUrl) {
-      router.push(detailUrl);
-    } else {
-      alert('⚠️ Type d\'archive non supporté\n\nCe type d\'archive n\'a pas encore de page de détails configurée.');
-    }
-  };
-
-  const handleSoftDelete = (archiveId: string) => {
-    console.log('Soft delete archive:', archiveId);
-    alert('🔒 ATTENTION\n\nSeule la direction peut désactiver une archive.\n\nCette action nécessite:\n• Authentification direction\n• Raison de suppression\n• Confirmation');
-  };
-
-  const handleRestore = (archiveId: string) => {
-    console.log('Restaurer archive:', archiveId);
-    alert('✅ Restauration d\'archive\n\nCette fonctionnalité permet à la direction de réactiver une archive soft-deleted.');
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-CA', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('fr-CA', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleConfirm = async () => {
+    if (!motif.trim()) return;
+    setConfirming(true);
+    await new Promise(r => setTimeout(r, 600));
+    onConfirm(motif.trim());
+    setConfirming(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-md bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#FEF2F2] flex items-center justify-center shrink-0">
+              <Lock className="w-5 h-5 text-[#EF4444]" />
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <FaArchive className="text-blue-600" />
-                📂 Archives
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Traçabilité complète des opérations - Audit et conformité
-              </p>
-            </div>
-
-            {/* Boutons Export */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-md"
-              >
-                <FaFileCsv />
-                Export CSV
-              </button>
-              <button
-                onClick={handleExportPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors shadow-md"
-              >
-                <FaFilePdf />
-                Export PDF
-              </button>
+              <p className="text-sm font-bold text-gray-800">Désactiver l'archive</p>
+              <p className="text-xs text-gray-500">Direction uniquement</p>
             </div>
           </div>
-
-          {/* Stats rapides */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl p-4 border-2 border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total archives</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total - stats.deleted}</p>
-                </div>
-                <div className="text-3xl">📦</div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border-2 border-blue-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-700">Opérationnel</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.operational}</p>
-                </div>
-                <div className="text-3xl">⚙️</div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border-2 border-green-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700">Réglementaire</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.regulatory}</p>
-                </div>
-                <div className="text-3xl">📋</div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border-2 border-purple-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-700">Administratif</p>
-                  <p className="text-2xl font-bold text-purple-900">{stats.administrative}</p>
-                </div>
-                <div className="text-3xl">📁</div>
-              </div>
-            </div>
-          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-
-        {/* Filtres et Recherche */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center gap-4">
-            {/* Sélecteur de catégorie */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FaFilter className="inline mr-2" />
-                Catégorie
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value as ArchiveCategory | 'all')}
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors"
-              >
-                <option value="all">📦 Toutes les catégories</option>
-                <option value="operational">⚙️ Opérationnel</option>
-                <option value="regulatory">📋 Réglementaire</option>
-                <option value="administrative">📁 Administratif</option>
-              </select>
-            </div>
-
-            {/* Recherche */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FaSearch className="inline mr-2" />
-                Recherche
-              </label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ID, employé, résumé, type..."
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors"
-              />
-            </div>
-
-            {/* Toggle archives supprimées */}
-            <div className="flex items-end pb-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showDeleted}
-                  onChange={(e) => setShowDeleted(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-200"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Afficher archives désactivées ({stats.deleted})
-                </span>
-              </label>
+        <div className="p-5 flex flex-col gap-4">
+          <div className="p-3 rounded-xl border border-[#FDE68A] bg-[#FEF9EC]">
+            <p className="text-xs text-[#B45309]">
+              Cette archive ne sera pas supprimée définitivement. Elle restera visible avec le filtre "Archives désactivées" et pourra être restaurée.
+            </p>
+          </div>
+          <div className="p-3 rounded-xl border border-gray-100 bg-white">
+            <p className="text-xs font-semibold text-gray-500 mb-1">Archive concernée</p>
+            <p className="text-xs font-mono text-gray-700">{archive.id}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{archive.summary}</p>
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 block">
+              Motif de désactivation <span className="text-[#EF4444]">*</span>
+            </label>
+            <textarea value={motif} onChange={e => setMotif(e.target.value)} rows={3} maxLength={300}
+              placeholder="Expliquez la raison de cette désactivation…"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]" />
+            <div className="flex justify-between mt-1">
+              {!motif.trim() && <p className="text-xs text-[#EF4444]">Obligatoire</p>}
+              <p className="text-xs text-gray-400 ml-auto">{motif.length}/300</p>
             </div>
           </div>
-        </div>
-
-        {/* Tableau des archives */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-                  <th className="text-left py-4 px-4 font-semibold">ID</th>
-                  <th className="text-left py-4 px-4 font-semibold">Catégorie</th>
-                  <th className="text-left py-4 px-4 font-semibold">Type</th>
-                  <th className="text-left py-4 px-4 font-semibold">Date</th>
-                  <th className="text-left py-4 px-4 font-semibold">Employé</th>
-                  <th className="text-left py-4 px-4 font-semibold">Résumé</th>
-                  <th className="text-center py-4 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredArchives.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-12">
-                      <div className="text-gray-400">
-                        <FaArchive className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p className="text-lg font-medium">Aucune archive trouvée</p>
-                        <p className="text-sm mt-2">Essayez de modifier vos filtres</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredArchives.map((archive, index) => (
-                    <tr 
-                      key={archive.id} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                        archive.isDeleted ? 'bg-red-50 opacity-60' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                      }`}
-                    >
-                      <td className="py-4 px-4">
-                        <span className="font-mono text-sm text-gray-700">{archive.id}</span>
-                        {archive.isDeleted && (
-                          <span className="block text-xs text-red-600 font-semibold mt-1">DÉSACTIVÉ</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-sm font-medium">
-                          {getCategoryIcon(archive.category)}
-                          {getCategoryLabel(archive.category)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-gray-700">{getTypeLabel(archive.type)}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <div className="font-semibold text-gray-900">{formatDate(archive.date)}</div>
-                          <div className="text-gray-500">{formatTime(archive.createdAt)}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-900">{archive.employeeName}</div>
-                          <div className="text-gray-500">{archive.employeeRole}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <p className="text-sm text-gray-700">{archive.summary}</p>
-                        {archive.periode && (
-                          <p className="text-xs text-gray-500 mt-1">Période: {archive.periode}</p>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleViewDetails(archive)}
-                            className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-                            title="Voir détails"
-                          >
-                            <FaEye />
-                          </button>
-                          {!archive.isDeleted ? (
-                            <button
-                              onClick={() => handleSoftDelete(archive.id)}
-                              className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                              title="Désactiver (Direction uniquement)"
-                            >
-                              <FaTrash />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleRestore(archive.id)}
-                              className="p-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-                              title="Restaurer"
-                            >
-                              <FaUndo />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+              Annuler
+            </button>
+            <button onClick={handleConfirm} disabled={!motif.trim() || confirming}
+              className="flex-1 py-2.5 rounded-xl bg-[#EF4444] text-white text-sm font-semibold hover:bg-[#DC2626] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {confirming
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Désactivation…</>
+                : <><Lock className="w-4 h-4" /> Confirmer</>
+              }
+            </button>
           </div>
-
-          {/* Footer avec compteur */}
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>
-                Affichage de <strong>{filteredArchives.length}</strong> archive(s)
-                {searchTerm && <> · Recherche: <strong>"{searchTerm}"</strong></>}
-              </span>
-              <span className="text-xs">
-                🔒 Archives immuables - Soft delete uniquement (Direction)
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Info importante */}
-        <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
-          <h3 className="text-lg font-bold text-blue-900 mb-2">ℹ️ À propos des archives</h3>
-          <ul className="text-sm text-blue-800 space-y-2">
-            <li className="flex items-start gap-2">
-              <span className="font-bold mt-0.5">•</span>
-              <span><strong>Immuabilité :</strong> Les archives ne peuvent jamais être modifiées ou supprimées définitivement</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold mt-0.5">•</span>
-              <span><strong>Génération automatique :</strong> Chaque opération sensible crée automatiquement une archive</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold mt-0.5">•</span>
-              <span><strong>Soft delete :</strong> Seule la direction peut "désactiver" une archive (elle reste visible avec le filtre)</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold mt-0.5">•</span>
-              <span><strong>Export :</strong> PDF et CSV disponibles pour audits externes et inspections</span>
-            </li>
-          </ul>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Modal restauration ───────────────────────────────────────────────────────
+function RestoreModal({ archive, onConfirm, onClose }: {
+  archive: ArchiveType;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    await new Promise(r => setTimeout(r, 500));
+    onConfirm();
+    setConfirming(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-md bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
+              <RotateCcw className="w-5 h-5 text-[#2E7D32]" />
+            </div>
+            <p className="text-sm font-bold text-gray-800">Restaurer l'archive</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-5 flex flex-col gap-4">
+          <div className="p-3 rounded-xl border border-gray-100 bg-white">
+            <p className="text-xs font-semibold text-gray-500 mb-1">Archive à restaurer</p>
+            <p className="text-xs font-mono text-gray-700">{archive.id}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{archive.summary}</p>
+          </div>
+          {archive.deletionReason && (
+            <div className="p-3 rounded-xl border border-[#FDE68A] bg-[#FEF9EC]">
+              <p className="text-xs font-semibold text-[#B45309] mb-1">Motif de désactivation initial</p>
+              <p className="text-xs text-[#B45309]">{archive.deletionReason}</p>
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+              Annuler
+            </button>
+            <button onClick={handleConfirm} disabled={confirming}
+              className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {confirming
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Restauration…</>
+                : <><RotateCcw className="w-4 h-4" /> Restaurer</>
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page principale ──────────────────────────────────────────────────────────
+export default function ArchivesPage() {
+  const router = useRouter();
+  const [archives,         setArchives]         = useState<ArchiveType[]>(generateMockArchives);
+  const [selectedCategory, setSelectedCategory] = useState<ArchiveCategory | 'all'>('all');
+  const [searchTerm,       setSearchTerm]       = useState('');
+  const [showDeleted,      setShowDeleted]       = useState(false);
+  const [deleteTarget,     setDeleteTarget]      = useState<ArchiveType | null>(null);
+  const [restoreTarget,    setRestoreTarget]     = useState<ArchiveType | null>(null);
+
+  const filtered = useMemo(() => archives.filter(a => {
+    if (selectedCategory !== 'all' && a.category !== selectedCategory) return false;
+    if (!showDeleted && a.isDeleted) return false;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      return a.id.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q) ||
+        a.employeeName.toLowerCase().includes(q) || getTypeLabel(a.type).toLowerCase().includes(q);
+    }
+    return true;
+  }), [archives, selectedCategory, searchTerm, showDeleted]);
+
+  const stats = useMemo(() => ({
+    total:          archives.filter(a => !a.isDeleted).length,
+    operational:    archives.filter(a => a.category === 'operational'    && !a.isDeleted).length,
+    regulatory:     archives.filter(a => a.category === 'regulatory'     && !a.isDeleted).length,
+    administrative: archives.filter(a => a.category === 'administrative' && !a.isDeleted).length,
+    deleted:        archives.filter(a => a.isDeleted).length,
+  }), [archives]);
+
+  // ─── Routing vers la page de détail selon le type ─────────────────────────
+  const handleViewDetails = (archive: ArchiveType) => {
+    if      (archive.type === 'reconciliation_caisse')                           router.push(`/dashboard/archives/reconciliation/${archive.id}`);
+    else if (archive.type === 'pret_approuve' || archive.type === 'pret_refuse') router.push(`/dashboard/archives/loan/${archive.id}`);
+    else if (archive.type === 'transaction_journaliere')                         router.push(`/dashboard/archives/transaction/${archive.id}`);
+    else if (archive.type === 'mouvement_tresorerie')                            router.push(`/dashboard/archives/treasury/${archive.id}`);
+    else if (archive.category === 'regulatory')                                  router.push(`/dashboard/archives/rapport/${archive.id}`);
+    else                                                                          router.push(`/dashboard/archives/detail/${archive.id}`);
+  };
+
+  const handleSoftDelete = (motif: string) => {
+    if (!deleteTarget) return;
+    setArchives(prev => prev.map(a =>
+      a.id !== deleteTarget.id ? a : {
+        ...a, isDeleted: true, deletedBy: 'direction',
+        deletedAt: new Date(), deletionReason: motif, updatedAt: new Date(),
+      }
+    ));
+    setDeleteTarget(null);
+  };
+
+  const handleRestore = () => {
+    if (!restoreTarget) return;
+    setArchives(prev => prev.map(a =>
+      a.id !== restoreTarget.id ? a : {
+        ...a, isDeleted: false, deletedBy: undefined,
+        deletedAt: undefined, deletionReason: undefined, updatedAt: new Date(),
+      }
+    ));
+    setRestoreTarget(null);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Catégorie', 'Type', 'Date', 'Employé', 'Résumé', 'Statut'];
+    const rows = filtered.map(a => [
+      a.id, getCategoryLabel(a.category), getTypeLabel(a.type),
+      formatDate(a.date), a.employeeName, a.summary,
+      a.isDeleted ? 'Désactivé' : 'Actif',
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = `archives_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const selectCls = "px-4 py-2 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]";
+
+  return (
+    <div className="min-h-screen bg-[#F9F9F6] p-6 md:p-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+              <Archive className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Archives</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Traçabilité complète des opérations — Audit et conformité</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={handleExportCSV}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:bg-[#F9F9F6] transition-colors shadow-sm">
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+              <FileText className="w-4 h-4" /> Export PDF
+            </button>
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Total archives',  value: stats.total,          accent: C.green, sub: `${stats.deleted} désactivée${stats.deleted > 1 ? 's' : ''}` },
+            { label: 'Opérationnel',    value: stats.operational,    accent: C.blue  },
+            { label: 'Réglementaire',   value: stats.regulatory,     accent: C.green },
+            { label: 'Administratif',   value: stats.administrative, accent: C.gold  },
+          ].map(({ label, value, accent, sub }) => (
+            <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col gap-2">
+              <p className="text-xl font-bold text-gray-900">{value}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">{label}</p>
+              {sub && <p className="text-xs text-gray-400">{sub}</p>}
+              <div className="h-1 rounded-full mt-1" style={{ backgroundColor: accent + '33' }}>
+                <div className="h-full rounded-full w-full" style={{ backgroundColor: accent }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filtres */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" /> Catégorie
+              </p>
+              <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value as ArchiveCategory | 'all')} className={selectCls}>
+                <option value="all">Toutes les catégories</option>
+                <option value="operational">Opérationnel</option>
+                <option value="regulatory">Réglementaire</option>
+                <option value="administrative">Administratif</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-1">
+                <Search className="w-3.5 h-3.5" /> Recherche
+              </p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="ID, employé, résumé, type…"
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]" />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer pb-0.5">
+              <input type="checkbox" checked={showDeleted} onChange={e => setShowDeleted(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[#2E7D32] focus:ring-[#2E7D32]/30" />
+              <span className="text-sm font-semibold text-gray-600">
+                Désactivées ({stats.deleted})
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+          {/* Header colonnes */}
+          <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-100 px-5 py-3">
+            <div className="grid grid-cols-12 gap-3 items-center text-xs font-bold uppercase tracking-widest text-gray-500">
+              <div className="col-span-3">Identifiant</div>
+              <div className="col-span-2">Catégorie / Type</div>
+              <div className="col-span-2">Date</div>
+              <div className="col-span-2">Employé</div>
+              <div className="col-span-2">Résumé</div>
+              <div className="col-span-1 text-center">Actions</div>
+            </div>
+          </div>
+
+          {/* Lignes */}
+          <div className="divide-y divide-gray-50">
+            {filtered.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+                  <Archive className="w-7 h-7 text-[#2E7D32]" />
+                </div>
+                <p className="text-sm font-semibold text-gray-600">Aucune archive trouvée</p>
+                <p className="text-xs text-gray-400">Modifiez les filtres pour voir plus de résultats</p>
+              </div>
+            ) : (
+              filtered.map((archive, idx) => {
+                const accent = getCategoryAccent(archive.category);
+                return (
+                  <div key={archive.id}
+                    className={`grid grid-cols-12 gap-3 items-center px-5 py-4 transition-all group ${
+                      archive.isDeleted
+                        ? 'bg-[#FEF2F2]/40 opacity-70'
+                        : idx % 2 === 0 ? 'bg-white hover:bg-[#F9F9F6]' : 'bg-[#F9F9F6]/40 hover:bg-[#F9F9F6]'
+                    }`}>
+
+                    {/* ID */}
+                    <div className="col-span-3">
+                      <p className="text-xs font-mono font-semibold text-gray-700">{archive.id}</p>
+                      {archive.isDeleted && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-xs font-bold bg-[#FEF2F2] text-[#B91C1C]">
+                          <Lock className="w-3 h-3" /> Désactivée
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Catégorie / Type */}
+                    <div className="col-span-2">
+                      <span className="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold mb-1"
+                        style={{ backgroundColor: accent.bg, color: accent.text }}>
+                        {getCategoryLabel(archive.category)}
+                      </span>
+                      <p className="text-xs text-gray-500 mt-0.5">{getTypeLabel(archive.type)}</p>
+                    </div>
+
+                    {/* Date */}
+                    <div className="col-span-2">
+                      <p className="text-xs font-semibold text-gray-700">{formatDate(archive.date)}</p>
+                      <p className="text-xs text-gray-400">{formatTime(archive.createdAt)}</p>
+                    </div>
+
+                    {/* Employé */}
+                    <div className="col-span-2">
+                      <p className="text-xs font-semibold text-gray-800 truncate">{archive.employeeName}</p>
+                      <p className="text-xs text-gray-500">{archive.employeeRole}</p>
+                    </div>
+
+                    {/* Résumé */}
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed">{archive.summary}</p>
+                      {archive.periode && <p className="text-xs text-gray-400 mt-0.5">Période : {archive.periode}</p>}
+                    </div>
+
+                    {/* Actions — un seul Eye par ligne */}
+                    <div className="col-span-1 flex items-center justify-center gap-1.5">
+                      {archive.isDeleted ? (
+                        // Désactivée : Eye → page désactivation + RotateCcw
+                        <>
+                          <button title="Voir la désactivation"
+                            onClick={() => router.push(`/dashboard/archives/${archive.id}/desactivation`)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-[#FEF9EC] hover:text-[#B45309] transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button title="Restaurer" onClick={() => setRestoreTarget(archive)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32] transition-colors">
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : !estDesactivable(archive) ? (
+                        // Verrouillée : Eye → détail + cadenas non-cliquable avec tooltip
+                        <>
+                          <button title="Voir les détails" onClick={() => handleViewDetails(archive)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-[#EBF2F8] hover:text-[#355C7D] transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <div className="relative group/lock">
+                            <button disabled className="p-1.5 rounded-lg text-gray-300 cursor-not-allowed">
+                              <Lock className="w-4 h-4" />
+                            </button>
+                            <div className="absolute right-0 bottom-full mb-2 w-56 px-3 py-2 bg-gray-800 text-white text-xs rounded-xl opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed">
+                              {getRaisonVerrouillage(archive.type)}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        // Active désactivable : Eye → détail + Trash
+                        <>
+                          <button title="Voir les détails" onClick={() => handleViewDetails(archive)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-[#EBF2F8] hover:text-[#355C7D] transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button title="Désactiver (Direction)" onClick={() => setDeleteTarget(archive)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-[#EF4444] transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              <span className="font-semibold text-gray-600">{filtered.length}</span> archive{filtered.length !== 1 ? 's' : ''}
+              {searchTerm && <> · Recherche : <b>"{searchTerm}"</b></>}
+            </p>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Lock className="w-3.5 h-3.5" />
+              Archives immuables — Soft delete direction uniquement
+            </div>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-xl bg-[#EBF2F8] flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 text-[#355C7D]" />
+            </div>
+            <p className="text-sm font-bold text-gray-700">À propos des archives</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              ['Immuabilité', 'Les archives ne peuvent jamais être modifiées ou supprimées définitivement.'],
+              ['Génération automatique', 'Chaque opération sensible crée automatiquement une archive.'],
+              ['Soft delete', 'Seule la direction peut désactiver une archive avec justification obligatoire.'],
+              ['Export', 'PDF et CSV disponibles pour audits externes et inspections réglementaires.'],
+            ].map(([titre, desc]) => (
+              <div key={titre} className="flex items-start gap-2 text-xs text-gray-600">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] mt-0.5 shrink-0" />
+                <span><b>{titre} :</b> {desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Modales */}
+      {deleteTarget  && <SoftDeleteModal archive={deleteTarget}  onConfirm={handleSoftDelete} onClose={() => setDeleteTarget(null)}  />}
+      {restoreTarget && <RestoreModal    archive={restoreTarget} onConfirm={handleRestore}    onClose={() => setRestoreTarget(null)} />}
     </div>
   );
 }

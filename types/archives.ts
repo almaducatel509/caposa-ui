@@ -1,9 +1,9 @@
 // types/archives.ts
-// Types pour le module d'archives - conforme aux pratiques bancaires
+// Types pour le module d'archives — pratiques bancaires caisse populaire
 
 export type ArchiveCategory = 'operational' | 'regulatory' | 'administrative';
 
-export type ArchiveType = 
+export type ArchiveType =
   // Opérationnel
   | 'transaction_journaliere'
   | 'reconciliation_caisse'
@@ -12,7 +12,6 @@ export type ArchiveType =
   | 'pret_refuse'
   | 'depot'
   | 'retrait'
-  
   // Réglementaire
   | 'rapport_mensuel'
   | 'rapport_liquidite'
@@ -20,7 +19,6 @@ export type ArchiveType =
   | 'rapport_portefeuille'
   | 'rapport_conformite'
   | 'etat_financier'
-  
   // Administratif
   | 'horaire'
   | 'poste'
@@ -29,142 +27,148 @@ export type ArchiveType =
   | 'document_interne';
 
 export interface Archive {
-  id: string; // Format: ARC_YYYYMMDD_XXXXX
-  
-  // Classification
-  category: ArchiveCategory;
-  type: ArchiveType;
-  
-  // Informations de base
-  date: Date;
-  periode?: string; // Ex: "Janvier 2026" pour rapports mensuels
-  
-  // Traçabilité employé
-  employeeId: string;
+  id:           string; // Format : ARC_YYYYMMDD_XXXXX
+  category:     ArchiveCategory;
+  type:         ArchiveType;
+  date:         Date;
+  periode?:     string;
+  employeeId:   string;
   employeeName: string;
   employeeRole: string;
-  
-  // Contenu
-  summary: string; // Résumé court (1 ligne)
-  description?: string; // Description détaillée (optionnel)
-  
-  // Données structurées (spécifiques à chaque type)
-  metadata: Record<string, any>;
-  
-  // Liens vers détails
-  detailsUrl?: string; // URL vers la page de détails
-  documentUrl?: string; // URL vers PDF/document généré
-  
-  // Soft delete (seule la direction peut soft delete)
-  isDeleted: boolean;
-  deletedBy?: string;
-  deletedAt?: Date;
+  summary:      string;
+  description?: string;
+  metadata:     Record<string, unknown>;
+  detailsUrl?:  string;
+  documentUrl?: string;
+  // Soft delete — direction uniquement
+  isDeleted:       boolean;
+  deletedBy?:      string;
+  deletedAt?:      Date;
   deletionReason?: string;
-  
   // Horodatage
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Metadata types pour chaque catégorie
-
+// ─── Metadata typés par catégorie ─────────────────────────────────────────────
 export interface TransactionMetadata {
   transactionId: string;
-  memberId: string;
-  memberName: string;
-  amount: number;
-  type: 'deposit' | 'withdrawal' | 'loan_disbursement' | 'loan_repayment';
-  status: 'completed' | 'pending' | 'failed';
+  memberId:      string;
+  memberName:    string;
+  amount:        number;
+  type:          'depot' | 'retrait' | 'decaissement_pret' | 'remboursement_pret';
+  status:        'decaisse' | 'en_attente' | 'echoue';
 }
 
 export interface ReconciliationMetadata {
-  reportId: string;
-  openingCash: number;
+  reportId:        string;
+  openingCash:     number;
   theoreticalCash: number;
-  actualCash: number;
-  discrepancy: number;
-  status: 'balanced' | 'discrepancy' | 'pending';
-  reviewedBy?: string;
-  approvedBy?: string;
+  actualCash:      number;
+  discrepancy:     number;
+  status:          'equilibre' | 'ecart' | 'en_attente';
+  reviewedBy?:     string;
+  approvedBy?:     string;
 }
 
 export interface RapportMetadata {
   reportType: 'liquidite' | 'solvabilite' | 'conformite' | 'portefeuille';
-  periode: string;
-  status: 'Conforme' | 'Non conforme' | 'Critique' | 'À surveiller';
+  periode:    string;
+  status:     'conforme' | 'non_conforme' | 'critique' | 'a_surveiller';
   keyMetrics: Record<string, number>;
-  pdfUrl?: string;
+  pdfUrl?:    string;
 }
 
 export interface LoanMetadata {
-  loanId: string;
-  memberId: string;
-  memberName: string;
-  amount: number;
-  decision: 'approved' | 'rejected';
-  approvedBy?: string;
+  loanId:           string;
+  memberId:         string;
+  memberName:       string;
+  amount:           number;
+  decision:         'approuve' | 'rejete';
+  approvedBy?:      string;
   rejectionReason?: string;
 }
 
-// Filtres pour la recherche
 export interface ArchiveFilters {
-  category?: ArchiveCategory;
-  type?: ArchiveType;
-  employeeId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  searchTerm?: string;
+  category?:       ArchiveCategory;
+  type?:           ArchiveType;
+  employeeId?:     string;
+  dateFrom?:       Date;
+  dateTo?:         Date;
+  searchTerm?:     string;
   includeDeleted?: boolean;
 }
 
-// Export stats
-export interface ArchiveExportData {
-  archives: Archive[];
-  exportDate: Date;
-  exportedBy: string;
-  filters: ArchiveFilters;
-  totalCount: number;
+// ─── Règle métier : archives non désactivables ────────────────────────────────
+// Ces types ont valeur légale ou réglementaire.
+// Toute tentative de désactivation doit être bloquée côté UI ET API.
+const TYPES_VERROUILLES: ReadonlySet<ArchiveType> = new Set([
+  // Obligation BRH
+  'rapport_liquidite',
+  'rapport_solvabilite',
+  'rapport_conformite',
+  'rapport_portefeuille',
+  'rapport_mensuel',
+  'etat_financier',
+  // Décision officielle de crédit
+  'pret_approuve',
+  'pret_refuse',
+  // Audit financier
+  'reconciliation_caisse',
+]);
+
+export function estDesactivable(archive: Archive): boolean {
+  return !TYPES_VERROUILLES.has(archive.type);
 }
 
-// Helper functions
-export const getCategoryLabel = (category: ArchiveCategory): string => {
-  const labels: Record<ArchiveCategory, string> = {
-    operational: 'Opérationnel',
-    regulatory: 'Réglementaire',
-    administrative: 'Administratif'
-  };
-  return labels[category];
-};
+export function getRaisonVerrouillage(type: ArchiveType): string {
+  if (['rapport_liquidite', 'rapport_solvabilite', 'rapport_conformite',
+       'rapport_portefeuille', 'rapport_mensuel', 'etat_financier'].includes(type))
+    return 'Rapport réglementaire BRH — obligation légale de conservation.';
+  if (['pret_approuve', 'pret_refuse'].includes(type))
+    return 'Décision officielle de crédit — valeur juridique.';
+  if (type === 'reconciliation_caisse')
+    return "Réconciliation de caisse — pièce d'audit financier.";
+  return 'Cette archive est protégée et ne peut pas être désactivée.';
+}
 
-export const getTypeLabel = (type: ArchiveType): string => {
+// ─── Helpers affichage ────────────────────────────────────────────────────────
+export function getCategoryLabel(c: ArchiveCategory): string {
+  return {
+    operational:    'Opérationnel',
+    regulatory:     'Réglementaire',
+    administrative: 'Administratif',
+  }[c];
+}
+
+export function getTypeLabel(t: ArchiveType): string {
   const labels: Record<ArchiveType, string> = {
     transaction_journaliere: 'Transaction journalière',
-    reconciliation_caisse: 'Réconciliation de caisse',
-    mouvement_tresorerie: 'Mouvement de trésorerie',
-    pret_approuve: 'Prêt approuvé',
-    pret_refuse: 'Prêt refusé',
-    depot: 'Dépôt',
-    retrait: 'Retrait',
-    rapport_mensuel: 'Rapport mensuel',
-    rapport_liquidite: 'Rapport de liquidité',
-    rapport_solvabilite: 'Rapport de solvabilité',
-    rapport_portefeuille: 'Rapport de portefeuille',
-    rapport_conformite: 'Rapport de conformité',
-    etat_financier: 'État financier',
-    horaire: 'Horaire',
-    poste: 'Poste',
-    branche: 'Branche',
-    parametre_bancaire: 'Paramètre bancaire',
-    document_interne: 'Document interne'
+    reconciliation_caisse:   'Réconciliation de caisse',
+    mouvement_tresorerie:    'Mouvement de trésorerie',
+    pret_approuve:           'Prêt approuvé',
+    pret_refuse:             'Prêt refusé',
+    depot:                   'Dépôt',
+    retrait:                 'Retrait',
+    rapport_mensuel:         'Rapport mensuel',
+    rapport_liquidite:       'Rapport de liquidité',
+    rapport_solvabilite:     'Rapport de solvabilité',
+    rapport_portefeuille:    'Rapport de portefeuille',
+    rapport_conformite:      'Rapport de conformité',
+    etat_financier:          'État financier',
+    horaire:                 'Horaire',
+    poste:                   'Poste',
+    branche:                 'Branche',
+    parametre_bancaire:      'Paramètre bancaire',
+    document_interne:        'Document interne',
   };
-  return labels[type];
-};
+  return labels[t];
+}
 
-export const getCategoryIcon = (category: ArchiveCategory): string => {
-  const icons: Record<ArchiveCategory, string> = {
-    operational: '⚙️',
-    regulatory: '📋',
-    administrative: '📁'
-  };
-  return icons[category];
-};
+export function getCategoryAccent(c: ArchiveCategory): { bg: string; text: string; border: string } {
+  return {
+    operational:    { bg: '#EBF2F8', text: '#355C7D', border: '#BFDBFE' },
+    regulatory:     { bg: '#DDEAD5', text: '#1B5E20', border: '#DDEAD5' },
+    administrative: { bg: '#FEF9EC', text: '#B45309', border: '#FDE68A' },
+  }[c];
+}
