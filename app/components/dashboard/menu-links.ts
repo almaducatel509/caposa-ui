@@ -97,41 +97,8 @@ export const links: MainLink[] = [
   },
   {
     name: 'Rapports',
-    href: '/dashboard/reports',
+    href: '/dashboard/rapports',
     icon: HiOutlineDocumentDuplicate,
-    hasSubmenu: true,
-    subLinks: [
-      { 
-        name: 'Vue d\'ensemble', 
-        href: '/dashboard/reports', 
-        icon: LayoutGrid,
-        description: 'Tous les rapports réglementaires'
-      },
-      { 
-        name: 'Liquidité', 
-        href: '/dashboard/reports/liquidite', 
-        icon: Droplet,
-        description: 'Capacité à honorer les retraits'
-      },
-      { 
-        name: 'Qualité portefeuille', 
-        href: '/dashboard/reports/portefeuille', 
-        icon: AlertTriangle,
-        description: 'Prêts en souffrance'
-      },
-      { 
-        name: 'Endettement', 
-        href: '/dashboard/reports/endettement', 
-        icon: Users,
-        description: 'Prévention du surendettement'
-      },
-      { 
-        name: 'Conformité', 
-        href: '/dashboard/reports/conformite', 
-        icon: CheckCircle,
-        description: 'Statut réglementaire mensuel'
-      },
-    ],
   },
 
   { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },

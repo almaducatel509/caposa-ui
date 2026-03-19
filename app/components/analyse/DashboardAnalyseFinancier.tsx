@@ -12,7 +12,6 @@ import { MemberFinancialData } from '@/types/analyses';
 import MemberCard from './MemberCardAnalyse';
 import MemberDetailModal from './MemberDetailModal';
 import { generateMemberData } from './MemberDataMock';
-import { FaSync } from 'react-icons/fa';
 import { GiReceiveMoney } from 'react-icons/gi';
 import PageHeader from '../header';
 import LoanForm from '../loans/LoanFormFields';
