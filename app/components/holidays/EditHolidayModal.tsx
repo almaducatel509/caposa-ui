@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, ChangeEvent } from "react";
 import { Modal } from "@/app/components/ui/Modal";
-import { X } from "lucide-react";
+import { X, CalendarDays, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { HolidayData, holidaySchema, ErrorMessages, HolidayFormData } from "./validations";
 import { updateHoliday, createHoliday, getHolidayById } from "@/app/lib/api/holiday";
 import HolidayFormFields from "./HolidayFormFields";
@@ -16,89 +16,57 @@ interface EditHolidayModalProps {
   mode?: "create" | "edit";
 }
 
-const EditHolidayModal: React.FC<EditHolidayModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  holiday,
-  isEditMode,
-  mode = "create",
-}) => {
-  const [formData, setFormData] = useState<HolidayFormData>({
-  id: "",
-  date: "",
-  description: "",
-  type: "ferie",
-  scope: "national",
-});
+const EMPTY_FORM: HolidayFormData = {
+  id: "", date: "", description: "",
+  type: "ferie", scope: "national",
+  branch_code: "", comment: "",
+};
 
-
-  const [errors, setErrors] = useState<ErrorMessages<HolidayData>>({});
+export default function EditHolidayModal({
+  isOpen, onClose, onSuccess, holiday, isEditMode, mode = "create",
+}: EditHolidayModalProps) {
+  const [formData, setFormData]         = useState<HolidayFormData>(EMPTY_FORM);
+  const [errors, setErrors]             = useState<ErrorMessages<HolidayData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [isLoading, setIsLoading]       = useState(false);
+  const [apiError, setApiError]         = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-  const loadData = async () => {
-    try {
+    if (!isOpen) return;
+    const load = async () => {
       setIsLoading(true);
       setApiError(null);
-
-      if (isEditMode && holiday) {
-        // Charger depuis API si nécessaire
-        const holidayDataFromApi = holiday.id
-          ? await getHolidayById(holiday.id)
-          : holiday;
-
-        setFormData({
-          id: holiday.id,
-          date: holiday.date,
-          description: holiday.description,
-          type: holiday.type,
-          scope: holiday.scope,
-          branch_code: holiday.branch_code ?? "",
-          comment: holiday.comment ?? "",
-        });
-
-      } else {
-        // Mode création
-        setFormData({
-          id: "",
-          date: "",
-          description: "",
-          type: "ferie",
-          scope: "national",
-          branch_code: "",
-          comment: "",
-        });
-      }
-
       setErrors({});
       setSuccessMessage(null);
-    } catch (error) {
-      console.error(error);
-      setApiError("Impossible de charger les données du jour férié.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      try {
+        if (isEditMode && holiday) {
+          // Tente le fetch API, sinon utilise les donnees locales
+          try { await getHolidayById(holiday.id); } catch {}
+          setFormData({
+            id: holiday.id, date: holiday.date,
+            description: holiday.description, type: holiday.type,
+            scope: holiday.scope, branch_code: holiday.branch_code ?? "",
+            comment: holiday.comment ?? "",
+          });
+        } else {
+          setFormData(EMPTY_FORM);
+        }
+      } catch {
+        setApiError("Impossible de charger les donnees du jour ferie.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [isOpen, isEditMode, holiday]);
 
-  if (isOpen) {
-    loadData();
-  }
-}, [isOpen, isEditMode, holiday]);
-
-
-  const validate = () => {
+  const validate = (): boolean => {
     const result = holidaySchema.safeParse(formData);
     if (!result.success) {
-      const fieldErrors: ErrorMessages<HolidayData> = {};
-      result.error.errors.forEach((e) => {
-        const key = e.path[0] as keyof HolidayData;
-        fieldErrors[key] = e.message;
-      });
-      setErrors(fieldErrors);
+      const errs: ErrorMessages<HolidayData> = {};
+      result.error.errors.forEach(e => { errs[e.path[0] as keyof HolidayData] = e.message; });
+      setErrors(errs);
       return false;
     }
     setErrors({});
@@ -108,59 +76,40 @@ const EditHolidayModal: React.FC<EditHolidayModalProps> = ({
   const handleSubmit = async () => {
     setApiError(null);
     setSuccessMessage(null);
+    if (!validate()) return;
     setIsSubmitting(true);
-
-    if (!validate()) {
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
       if (isEditMode && holiday?.id) {
         await updateHoliday(holiday.id, formData);
-        setSuccessMessage("Jour férié modifié avec succès !");
+        setSuccessMessage("Jour ferie modifie avec succes !");
       } else {
         await createHoliday(formData);
-        setSuccessMessage("Jour férié créé avec succès !");
+        setSuccessMessage("Jour ferie cree avec succes !");
       }
-
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1500);
-    } catch (error) {
-      console.error(error);
-      setApiError(
-        `Une erreur est survenue lors de ${
-          isEditMode ? "la modification" : "la création"
-        } du jour férié.`
-      );
+      setTimeout(() => { onSuccess(); onClose(); }, 1200);
+    } catch {
+      setApiError(`Erreur lors de ${isEditMode ? "la modification" : "la creation"} du jour ferie.`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleChangeDate = (date: string) => {
-    setFormData((prev) => ({ ...prev, date }));
-  };
+  const handleChangeDate = (date: string) =>
+    setFormData(prev => ({ ...prev, date }));
 
   if (!isOpen) return null;
 
   if (isLoading) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <div className="flex justify-center items-center p-8">
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full" />
-            </div>
-            <span className="text-emerald-600">Chargement...</span>
-          </div>
+        <div className="p-16 flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-[#2E7D32] animate-spin" />
+          <p className="text-sm text-gray-500 font-medium">Chargement...</p>
         </div>
       </Modal>
     );
@@ -168,40 +117,45 @@ const EditHolidayModal: React.FC<EditHolidayModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      <div className="bg-linear-to-r from-green-600 to-green-700 text-white p-6 rounded-t-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10"
-        >
-          <X size={20} />
+
+      {/* Header — style LoanForm : blanc sobre, icone + titre a gauche */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 relative">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+          <CalendarDays className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-gray-900">
+            {isEditMode ? "Modifier le jour ferie" : "Nouveau jour ferie"}
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {isEditMode ? "Apportez les changements necessaires" : "Remplissez les informations du jour ferie"}
+          </p>
+        </div>
+        <button onClick={onClose}
+          className="absolute right-4 top-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+          <X className="w-4 h-4" />
         </button>
-        <h3 className="text-xl font-bold">
-          {isEditMode ? "Modifier le jour férié" : "Nouveau jour férié"}
-        </h3>
-        <p className="text-sm opacity-90 mt-1">
-          {isEditMode
-            ? "Apportez les changements nécessaires"
-            : "Créer un nouveau jour férié"}
-        </p>
       </div>
 
-      <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+      {/* Body */}
+      <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
         {apiError && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {apiError}
+          <div className="flex items-start gap-3 px-4 py-3 bg-red-50 rounded-xl border border-red-100">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600">{apiError}</p>
           </div>
         )}
-
         {successMessage && (
-          <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-            {successMessage}
+          <div className="flex items-start gap-3 px-4 py-3 bg-[#DDEAD5] rounded-xl border border-[#2E7D32]/20">
+            <CheckCircle className="w-4 h-4 text-[#1B5E20] shrink-0 mt-0.5" />
+            <p className="text-sm font-semibold text-[#1B5E20]">{successMessage}</p>
           </div>
         )}
 
         <HolidayFormFields
           formData={formData}
           errors={errors}
-          handleChange={handleChange}
+          handleChange={handleChange as any}
           handleChangeDate={handleChangeDate}
           isSubmitting={isSubmitting}
           isEditMode={isEditMode}
@@ -209,46 +163,44 @@ const EditHolidayModal: React.FC<EditHolidayModalProps> = ({
           mode={mode}
         />
 
-        {/* Informations additionnelles en mode édition */}
         {isEditMode && holiday?.id && (
-          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
-            <p>
-              <strong>ID:</strong> {holiday.id}
-            </p>
+          <div className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 text-xs text-gray-500 flex flex-col gap-1">
+            <p><span className="font-semibold text-gray-600">ID :</span> {holiday.id}</p>
             {holiday.created_at && (
-              <p>
-                <strong>Créé le:</strong>{" "}
-                {new Date(holiday.created_at).toLocaleDateString("fr-FR")}
-              </p>
+              <p><span className="font-semibold text-gray-600">Cree le :</span>{" "}
+                {new Date(holiday.created_at).toLocaleDateString("fr-FR")}</p>
             )}
             {holiday.updated_at && (
-              <p>
-                <strong>Modifié le:</strong>{" "}
-                {new Date(holiday.updated_at).toLocaleDateString("fr-FR")}
-              </p>
+              <p><span className="font-semibold text-gray-600">Modifie le :</span>{" "}
+                {new Date(holiday.updated_at).toLocaleDateString("fr-FR")}</p>
             )}
           </div>
         )}
       </div>
 
-      <div className="border-t bg-gray-50 p-4 flex justify-end gap-3 rounded-b-2xl">
-        <button
-          onClick={onClose}
-          disabled={isSubmitting}
-          className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium disabled:opacity-50"
-        >
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+        <button onClick={onClose} disabled={isSubmitting}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200
+                     text-sm text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-50">
           Annuler
         </button>
-        <button
-          onClick={handleSubmit}
+        <button onClick={handleSubmit}
           disabled={isSubmitting || !formData.date.trim() || !formData.description.trim()}
-          className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-semibold disabled:opacity-50"
-        >
-          {isSubmitting ? "En cours..." : isEditMode ? "Sauvegarder" : "Créer"}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold
+                     bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white
+                     shadow-md hover:shadow-lg transition-all
+                     disabled:opacity-60 disabled:cursor-not-allowed">
+          {isSubmitting ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> En cours...</>
+          ) : isEditMode ? (
+            <><CheckCircle className="w-4 h-4" /> Sauvegarder</>
+          ) : (
+            <><CheckCircle className="w-4 h-4" /> Creer</>
+          )}
         </button>
       </div>
+
     </Modal>
   );
-};
-
-export default EditHolidayModal;
+}

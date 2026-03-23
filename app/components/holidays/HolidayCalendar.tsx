@@ -1,289 +1,187 @@
+"use client";
+
 import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, MapPin, MessageSquare, User, Search, Plus, Download, X, Edit2, Trash2 } from "lucide-react";
-import PageHeader from "../header";
+import {
+  ChevronLeft, ChevronRight, Calendar, MapPin,
+  MessageSquare, User, Search, Plus, Download, X, Edit2, Trash2,
+} from "lucide-react";
 import { TbCalendarCog } from "react-icons/tb";
+import PageHeader from "../header";
 import EditHolidayModal from "./EditHolidayModal";
 import DeleteHolidayModal from "./DeleteHolidayModal";
 
-// ================= TYPES =================
-interface Holiday {
-  id: string;
-  date: string;
-  description: string;
-  type: "ferie" | "local" | "interne" | "election" | "maintenance" | "autre";
-  scope: "national" | "regional" | "branch" | "autre";
-  branch_code?: string;
-  comment?: string;
-  modified_by?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+// 🔌 Source unique de données — remplacer par fetchHolidays() / fetchBranches() quand l'API est prête
+import {
+  MOCK_HOLIDAYS, MOCK_BRANCHES,
+  Holiday, HolidayType, HolidayScope,
+} from "../OpeningHours/mock";
 
-interface Branch {
-  id: string;
-  branch_name: string;
-}
-
-// ================= SAMPLE DATA =================
-const sampleBranches: Branch[] = [
-  { id: "001", branch_name: "Port-au-Prince" },
-  { id: "002", branch_name: "Cap-Haïtien" },
-  { id: "003", branch_name: "Les Cayes" },
-  { id: "004", branch_name: "Gonaïves" },
-];
-
-const sampleHolidays: Holiday[] = [
-  { 
-    id: "1", 
-    date: "2025-01-01", 
-    description: "Jour de l'An", 
-    type: "ferie", 
-    scope: "national",
-    comment: "Férié bancaire national",
-    modified_by: "Admin Système"
-  },
-  { 
-    id: "2", 
-    date: "2025-01-07", 
-    description: "Carnaval Local", 
-    type: "local", 
-    scope: "branch", 
-    branch_code: "002",
-    comment: "Événement culturel régional",
-    modified_by: "Jean Pierre"
-  },
-  { 
-    id: "3", 
-    date: "2025-01-15", 
-    description: "Réunion CA", 
-    type: "interne", 
-    scope: "national",
-    comment: "Conseil d'administration trimestriel",
-    modified_by: "Marie Dupont"
-  },
-  { 
-    id: "4", 
-    date: "2025-01-07", 
-    description: "Maintenance Serveurs", 
-    type: "maintenance", 
-    scope: "national",
-    comment: "Mise à jour infrastructure",
-    modified_by: "IT Team"
-  },
-  { 
-    id: "5", 
-    date: "2025-01-20", 
-    description: "Élections Locales", 
-    type: "election", 
-    scope: "regional",
-    branch_code: "003"
-  },
-];
-
-// ================= CONSTANTS =================
-const typeLabels: Record<string, string> = {
-  ferie: "Férié",
-  local: "Local",
-  interne: "Interne",
-  election: "Élection",
+// ─── Constants ─────────────────────────────────────────────────────────────────
+const TYPE_LABELS: Record<HolidayType, string> = {
+  ferie:       "Férié",
+  local:       "Local",
+  interne:     "Interne",
+  election:    "Élection",
   maintenance: "Maintenance",
-  autre: "Autre",
+  autre:       "Autre",
 };
 
-const scopeLabels: Record<string, string> = {
+const SCOPE_LABELS: Record<HolidayScope, string> = {
   national: "National",
   regional: "Régional",
-  branch: "Succursale",
-  autre: "Autre",
+  branch:   "Succursale",
+  autre:    "Autre",
 };
 
-const typeColors: Record<string, string> = {
-  ferie: 'bg-emerald-600 text-white',
-  local: 'bg-emerald-400 text-white',
-  interne: 'bg-green-700 text-white',
-  election: 'bg-blue-500 text-white',
-  maintenance: 'bg-red-500 text-white',
-  autre: 'bg-gray-500 text-white',
+const TYPE_COLORS: Record<HolidayType, string> = {
+  ferie:       "bg-[#1B5E20] text-white",
+  local:       "bg-[#2E7D32] text-white",
+  interne:     "bg-[#81C784] text-[#1B5E20]",
+  election:    "bg-[#355C7D] text-white",
+  maintenance: "bg-red-500 text-white",
+  autre:       "bg-gray-500 text-white",
 };
 
-// ================= HELPER FUNCTIONS =================
-const getDayPriorityColor = (holidays: Holiday[]): string => {
-  if (holidays.length === 0) return 'bg-white hover:bg-gray-50';
-  
-  if (holidays.some(h => h.type === 'ferie' && h.scope === 'national')) {
-    return 'bg-red-50 border-red-300 hover:bg-red-100';
-  }
-  
-  if (holidays.some(h => h.type === 'election')) {
-    return 'bg-blue-50 border-blue-300 hover:bg-blue-100';
-  }
-  
-  if (holidays.some(h => h.type === 'local' || h.scope === 'branch')) {
-    return 'bg-orange-50 border-orange-300 hover:bg-orange-100';
-  }
-  
-  return 'bg-gray-50 border-gray-300 hover:bg-gray-100';
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+const getDayBg = (holidays: Holiday[]): string => {
+  if (holidays.length === 0) return "bg-white hover:bg-gray-50";
+  if (holidays.some(h => h.type === "ferie" && h.scope === "national"))
+    return "bg-red-50 border-red-200 hover:bg-red-100";
+  if (holidays.some(h => h.type === "election"))
+    return "bg-blue-50 border-blue-200 hover:bg-blue-100";
+  if (holidays.some(h => h.type === "local" || h.scope === "branch"))
+    return "bg-yellow-50 border-yellow-200 hover:bg-yellow-100";
+  return "bg-[#DDEAD5]/40 border-[#2E7D32]/20 hover:bg-[#DDEAD5]/70";
 };
 
-// ================= EVENT DETAIL CARD =================
-interface EventDetailCardProps {
+// ─── EventDetailCard ───────────────────────────────────────────────────────────
+function EventDetailCard({
+  holiday, onEdit, onDelete,
+}: {
   holiday: Holiday;
-  branch?: Branch;
-  canEdit: boolean;
-  onEdit: (holiday: Holiday) => void;
-  onDelete: (holiday: Holiday) => void;
-}
+  onEdit: (h: Holiday) => void;
+  onDelete: (h: Holiday) => void;
+}) {
+  const branch = MOCK_BRANCHES.find(b => b.branch_code === holiday.branch_code);
 
-const EventDetailCard: React.FC<EventDetailCardProps> = ({ 
-  holiday, 
-  branch, 
-  canEdit, 
-  onEdit, 
-  onDelete 
-}) => (
-  <div className=" rounded-lg p-4 
-        hover:shadow-md 
-        transition-shadow 
-        bg-linear-to-r from-green-50 via-white to-emerald-50  
-        shadow-sm"
-  >
-    {/* Header avec badges et boutons */}
-    <div className="flex justify-between items-start mb-3">
-      <div className="flex gap-2 flex-wrap">
-        <span className={`${typeColors[holiday.type]} px-3 py-1 rounded-full text-xs font-semibold`}>
-          {typeLabels[holiday.type]}
-        </span>
-        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
-          {scopeLabels[holiday.scope]}
-        </span>
-      </div>
-      
-      {/* Boutons toujours visibles si canEdit */}
-      {/* {canEdit && ( */}
-        <div className="flex gap-1">
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex gap-1.5 flex-wrap">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold
+            ${TYPE_COLORS[holiday.type]}`}>
+            {TYPE_LABELS[holiday.type]}
+          </span>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold
+                           bg-gray-100 text-gray-600 border border-gray-200">
+            {SCOPE_LABELS[holiday.scope]}
+          </span>
+        </div>
+        <div className="flex gap-1 shrink-0 ml-2">
           <button
             onClick={() => onEdit(holiday)}
-            className="p-2 hover:bg-gray-100 rounded-lg text-emerald-600 hover:text-emerald-600 transition-colors"
+            className="p-1.5 rounded-xl text-gray-400 hover:text-[#2E7D32] hover:bg-[#DDEAD5] transition-all"
             title="Modifier"
           >
-            <Edit2 size={18} />
+            <Edit2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => onDelete(holiday)}
-            className="p-2 hover:bg-red-50 rounded-lg text-emerald-600 hover:text-red-600 transition-colors"
+            className="p-1.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
             title="Supprimer"
           >
-            <Trash2 size={18} />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      {/* )} */}
-    </div>
+      </div>
 
-    {/* Content */}
-    <h4 className="font-semibold text-base mb-3 text-gray-900">{holiday.description}</h4>
-    
-    {/* Details */}
-    <div className="space-y-2 text-sm text-gray-600">
-      {branch && (
-        <div className="flex items-center gap-2">
-          <MapPin size={14} className="text-emerald-600 shrink-0" />
-          <span>{branch.branch_name}</span>
-        </div>
-      )}
-      
-      {holiday.comment && (
-        <div className="flex items-start gap-2">
-          <MessageSquare size={14} className="mt-0.5 text-blue-600 shrink-0" />
-          <span className="italic text-gray-700">"{holiday.comment}"</span>
-        </div>
-      )}
-      
-      {holiday.modified_by && (
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <User size={12} className="shrink-0" />
-          <span>Modifié par {holiday.modified_by}</span>
-        </div>
-      )}
-    </div>
-  </div>
-);
+      {/* Title */}
+      <h4 className="font-semibold text-gray-900 mb-2">{holiday.description}</h4>
 
-// ================= MAIN COMPONENT =================
+      {/* Details */}
+      <div className="flex flex-col gap-1.5 text-sm">
+        {branch && (
+          <div className="flex items-center gap-2 text-gray-600">
+            <MapPin className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />
+            <span>{branch.branch_name}</span>
+          </div>
+        )}
+        {holiday.comment && (
+          <div className="flex items-start gap-2 text-gray-600">
+            <MessageSquare className="w-3.5 h-3.5 text-[#355C7D] shrink-0 mt-0.5" />
+            <span className="italic text-gray-500">"{holiday.comment}"</span>
+          </div>
+        )}
+        {holiday.modified_by && (
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <User className="w-3 h-3 shrink-0" />
+            <span>Modifié par {holiday.modified_by}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 export default function HolidayCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 0, 1));
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [filterValue, setFilterValue] = useState("");
-  const [selectedType, setSelectedType] = useState("all");
+  const [currentDate, setCurrentDate]     = useState(new Date(2025, 0, 1));
+  const [selectedDay, setSelectedDay]     = useState<Date | null>(null);
+  const [filterValue, setFilterValue]     = useState("");
+  const [selectedType, setSelectedType]   = useState("all");
   const [selectedScope, setSelectedScope] = useState("all");
   const [selectedBranch, setSelectedBranch] = useState("all");
 
-  // Modals
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showEditModal, setShowEditModal]     = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode]           = useState(false);
 
-  // User permissions (simulated)
-  // const user = {
-  //   role: 'directeur', // 'employe' | 'directeur' | 'admin'
-  //   branch_code: '002'
-  // };
-// on mettera la restriction de edit dans bd
-  // const canEditHoliday = (holiday: Holiday) => {
-  //   if (user.role === 'admin') return true;
-  //   if (user.role === 'directeur') {
-  //     return holiday.scope === 'branch' && holiday.branch_code === user.branch_code;
-  //   }
-  //   return false;
-  // };
-
-  // const canAddHoliday = user.role === 'directeur' || user.role === 'admin';
-
-  // Filtering
-  const filteredHolidays = useMemo(() => {
-    return sampleHolidays.filter((holiday) => {
-      const matchSearch = !filterValue || 
-        holiday.description.toLowerCase().includes(filterValue.toLowerCase());
-      const matchType = selectedType === "all" || holiday.type === selectedType;
-      const matchScope = selectedScope === "all" || holiday.scope === selectedScope;
-      const matchBranch = selectedBranch === "all" || 
-        holiday.scope === "national" || 
-        holiday.branch_code === selectedBranch;
-
+  // ─── Filtering ───────────────────────────────────────────────────────────────
+  const filteredHolidays = useMemo(() =>
+    MOCK_HOLIDAYS.filter(h => {
+      const matchSearch = !filterValue ||
+        h.description.toLowerCase().includes(filterValue.toLowerCase());
+      const matchType   = selectedType  === "all" || h.type  === selectedType;
+      const matchScope  = selectedScope === "all" || h.scope === selectedScope;
+      const matchBranch = selectedBranch === "all" ||
+        h.scope === "national" ||
+        h.branch_code === selectedBranch;
       return matchSearch && matchType && matchScope && matchBranch;
-    });
-  }, [filterValue, selectedType, selectedScope, selectedBranch]);
+    }),
+  [filterValue, selectedType, selectedScope, selectedBranch]);
 
-  // Calendar generation
-  const generateCalendarDays = () => {
-    const year = currentDate.getFullYear();
+  // ─── Calendar ────────────────────────────────────────────────────────────────
+  const calendarDays = useMemo(() => {
+    const year  = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
+    const firstDay    = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     return [
       ...Array(firstDay).fill(null),
       ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
     ];
-  };
-
-  const days = generateCalendarDays();
+  }, [currentDate]);
 
   const holidaysForDate = (date: Date) => {
     const key = date.toISOString().split("T")[0];
-    return filteredHolidays.filter((h) => h.date === key);
+    return filteredHolidays.filter(h => h.date === key);
   };
 
-  const eventsToShow = selectedDay 
-    ? holidaysForDate(selectedDay) 
+  const eventsToShow = selectedDay
+    ? holidaysForDate(selectedDay)
     : filteredHolidays.slice(0, 10);
 
-  // Handlers
+  const prevMonth = () =>
+    setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const nextMonth = () =>
+    setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
   const handleCreate = () => {
     setSelectedHoliday(null);
     setIsEditMode(false);
-    setShowCreateModal(true);
     setShowEditModal(true);
   };
 
@@ -299,172 +197,174 @@ export default function HolidayCalendar() {
   };
 
   const handleSuccess = () => {
-    setShowCreateModal(false);
     setShowEditModal(false);
     setShowDeleteModal(false);
     setSelectedHoliday(null);
     setIsEditMode(false);
-    // TODO: Recharger les données
+    // 🔌 Recharger les données ici quand l'API est prête
   };
 
-  // ================= RENDER =================
+  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen bg-[#F9F9F6] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <PageHeader 
-              title="Gestion de calendrier" 
+
+        {/* ── Header card ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-start justify-between mb-6">
+            <PageHeader
+              title="Gestion de calendrier"
               subtitle="Gérez le calendrier et ses informations"
-              icon={<TbCalendarCog className="text-5xl" />}
+              icon={<TbCalendarCog className="text-[#2E7D32]" size={28} />}
             />
-    
-            {/* {canAddHoliday && ( */}
-              <button
-                onClick={handleCreate}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-3 rounded-lg flex items-center gap-2 transition-colors shadow-md whitespace-nowrap"
-              >
-                <Plus size={20} />
-                <span>Ajouter</span>
-              </button>
-            {/* )}   */}
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                         bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white
+                         shadow-lg hover:shadow-xl transition-all shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Ajouter
+            </button>
           </div>
-          
+
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Rechercher..."
                 value={filterValue}
-                onChange={(e) => setFilterValue(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:border-transparent"
+                onChange={e => setFilterValue(e.target.value)}
+                className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-300 rounded-xl
+                           focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
               />
               {filterValue && (
                 <button
                   onClick={() => setFilterValue("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <X size={18} />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
 
-            {/* Type Filter */}
+            {/* Type */}
             <select
               value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              onChange={e => setSelectedType(e.target.value)}
+              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
+                         focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]
+                         appearance-none transition-all"
             >
               <option value="all">Tous les types</option>
-              <option value="ferie">Férié</option>
-              <option value="local">Local</option>
-              <option value="interne">Interne</option>
-              <option value="election">Élection</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="autre">Autre</option>
-            </select>
-
-            {/* Scope Filter */}
-            <select
-              value={selectedScope}
-              onChange={(e) => setSelectedScope(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="all">Toutes les portées</option>
-              <option value="national">National</option>
-              <option value="regional">Régional</option>
-              <option value="branch">Succursale</option>
-            </select>
-
-            {/* Branch Filter */}
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="all">Toutes les succursales</option>
-              {sampleBranches.map(branch => (
-                <option key={branch.id} value={branch.id}>{branch.branch_name}</option>
+              {(Object.keys(TYPE_LABELS) as HolidayType[]).map(k => (
+                <option key={k} value={k}>{TYPE_LABELS[k]}</option>
               ))}
             </select>
 
-            {/* Actions */}
-            <div className="flex gap-2">
-              <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                <Download size={18} />
-                <span className="hidden sm:inline">Export</span>
-              </button>
-            </div>
+            {/* Scope */}
+            <select
+              value={selectedScope}
+              onChange={e => setSelectedScope(e.target.value)}
+              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
+                         focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]
+                         appearance-none transition-all"
+            >
+              <option value="all">Toutes les portées</option>
+              {(Object.keys(SCOPE_LABELS) as HolidayScope[]).map(k => (
+                <option key={k} value={k}>{SCOPE_LABELS[k]}</option>
+              ))}
+            </select>
+
+            {/* Branch — utilise MOCK_BRANCHES */}
+            <select
+              value={selectedBranch}
+              onChange={e => setSelectedBranch(e.target.value)}
+              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
+                         focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]
+                         appearance-none transition-all"
+            >
+              <option value="all">Toutes les succursales</option>
+              {MOCK_BRANCHES.map(b => (
+                <option key={b.branch_code} value={b.branch_code}>{b.branch_name}</option>
+              ))}
+            </select>
+
+            {/* Export */}
+            <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                               border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-all">
+              <Download className="w-4 h-4" />
+              Exporter
+            </button>
           </div>
 
-          {/* Stats */}
-          <div className="mt-4 text-sm text-gray-600">
-            <span className="font-semibold">{filteredHolidays.length}</span> événement(s) trouvé(s)
-          </div>
+          <p className="mt-3 text-xs text-gray-500">
+            <span className="font-semibold text-gray-700">{filteredHolidays.length}</span> événement(s) trouvé(s)
+          </p>
         </div>
 
-        {/* Calendar + Details */}
+        {/* ── Calendar + panel ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
           {/* Calendar */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            {/* Month Navigation */}
-            <div className="flex justify-between items-center mb-6">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            {/* Navigation */}
+            <div className="flex items-center justify-between mb-6">
               <button
-                onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={prevMonth}
+                className="p-2 rounded-xl hover:bg-gray-50 text-[#2E7D32] transition-all"
               >
-                <ChevronLeft className="text-emerald-600" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
-              <h2 className="font-bold text-xl text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900 capitalize">
                 {currentDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
               </h2>
               <button
-                onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={nextMonth}
+                className="p-2 rounded-xl hover:bg-gray-50 text-[#2E7D32] transition-all"
               >
-                <ChevronRight className="text-emerald-600" />
+                <ChevronRight className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Weekday Headers */}
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"].map(day => (
-                <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
-                  {day}
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 mb-2">
+              {["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"].map(d => (
+                <div key={d} className="text-center text-xs font-semibold text-gray-500 py-2">
+                  {d}
                 </div>
               ))}
             </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2 bg">
-              {days.map((day, idx) =>
+            {/* Days grid */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {calendarDays.map((day, idx) =>
                 day ? (
                   <button
                     key={idx}
-                    onClick={() => setSelectedDay(day)}
-                    className={`
-                      aspect-square border rounded-lg p-2 transition-all
-                      ${getDayPriorityColor(holidaysForDate(day))}
-                      ${selectedDay?.toDateString() === day.toDateString() ? 'ring-2 ring-emerald-500' : ''}
-                    `}
+                    onClick={() => setSelectedDay(
+                      selectedDay?.toDateString() === day.toDateString() ? null : day
+                    )}
+                    className={`aspect-square border rounded-xl p-1.5 transition-all text-left
+                      ${getDayBg(holidaysForDate(day))}
+                      ${selectedDay?.toDateString() === day.toDateString()
+                        ? "ring-2 ring-[#2E7D32] ring-offset-1"
+                        : ""}`}
                   >
-                    <div className="text-sm font-semibold text-gray-900">
+                    <div className="text-sm font-semibold text-gray-900 leading-none mb-1">
                       {day.getDate()}
                     </div>
-                    {holidaysForDate(day).length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-0.5">
-                        {holidaysForDate(day).slice(0, 3).map((h) => (
-                          <div
-                            key={h.id}
-                            className={`h-1 flex-1 rounded-full ${typeColors[h.type].split(' ')[0]}`}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-0.5">
+                      {holidaysForDate(day).slice(0, 3).map(h => (
+                        <div
+                          key={h.id}
+                          className={`h-1 flex-1 rounded-full ${TYPE_COLORS[h.type].split(" ")[0]}`}
+                        />
+                      ))}
+                    </div>
                   </button>
                 ) : (
                   <div key={idx} />
@@ -473,66 +373,68 @@ export default function HolidayCalendar() {
             </div>
 
             {/* Legend */}
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="text-xs font-semibold text-gray-700 mb-2">Légende</div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Légende</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-red-50 border border-red-300 rounded"></div>
+                  <div className="w-4 h-4 bg-red-50 border border-red-200 rounded-lg" />
                   <span>Férié national</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-blue-50 border border-blue-300 rounded"></div>
+                  <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded-lg" />
                   <span>Élection</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-orange-50 border border-orange-300 rounded"></div>
+                  <div className="w-4 h-4 bg-yellow-50 border border-yellow-200 rounded-lg" />
                   <span>Exception locale</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-[#DDEAD5] border border-[#2E7D32]/20 rounded-lg" />
+                  <span>Interne / autre</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Event Details Panel */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
-              <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900">
-                <Calendar size={20} className="text-emerald-600" />
-                {selectedDay 
-                  ? selectedDay.toLocaleDateString('fr-FR', { dateStyle: 'full' })
-                  : 'Tous les événements'
-                }
-              </h3>
+          {/* Event panel */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#2E7D32]" />
+                <h3 className="font-bold text-gray-900 text-sm">
+                  {selectedDay
+                    ? selectedDay.toLocaleDateString("fr-FR", { dateStyle: "full" })
+                    : "Tous les événements"}
+                </h3>
+              </div>
               {selectedDay && (
                 <button
                   onClick={() => setSelectedDay(null)}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  className="text-xs font-semibold text-[#2E7D32] hover:underline"
                 >
                   Voir tout
                 </button>
               )}
             </div>
 
-            {/* Event List */}
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 ">
+            <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1">
               {eventsToShow.length > 0 ? (
-                eventsToShow.map((holiday) => (
+                eventsToShow.map(holiday => (
                   <EventDetailCard
                     key={holiday.id}
                     holiday={holiday}
-                    branch={sampleBranches.find(b => b.id === holiday.branch_code)}
-                    // canEdit={canEditHoliday(holiday)}
                     onEdit={handleEdit}
-                    onDelete={handleDelete} canEdit={false}                  />
+                    onDelete={handleDelete}
+                  />
                 ))
               ) : (
-                <div className="text-center py-12 text-gray-400">
-                  <Calendar size={48} className="mx-auto mb-3 opacity-50" />
-                  <p className="font-medium">Aucun événement</p>
-                  <p className="text-sm mt-1">
-                    {selectedDay 
-                      ? "Pas d'événement pour cette date" 
-                      : "Aucun événement ne correspond aux filtres"
-                    }
+                <div className="py-12 text-center text-gray-400">
+                  <Calendar className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm font-medium">Aucun événement</p>
+                  <p className="text-xs mt-1 text-gray-400">
+                    {selectedDay
+                      ? "Pas d'événement pour cette date"
+                      : "Aucun événement ne correspond aux filtres"}
                   </p>
                 </div>
               )}
@@ -545,26 +447,17 @@ export default function HolidayCalendar() {
       {showEditModal && (
         <EditHolidayModal
           isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setShowCreateModal(false);
-            setSelectedHoliday(null);
-            setIsEditMode(false);
-          }}
+          onClose={() => { setShowEditModal(false); setSelectedHoliday(null); setIsEditMode(false); }}
           onSuccess={handleSuccess}
           holiday={selectedHoliday}
           isEditMode={isEditMode}
           mode={isEditMode ? "edit" : "create"}
         />
       )}
-
       {showDeleteModal && selectedHoliday && (
         <DeleteHolidayModal
           isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setSelectedHoliday(null);
-          }}
+          onClose={() => { setShowDeleteModal(false); setSelectedHoliday(null); }}
           onSuccess={handleSuccess}
           holiday={selectedHoliday}
         />

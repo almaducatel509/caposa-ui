@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Modal } from "@/app/components/ui/Modal";
-import { X, Calendar, AlertTriangle } from "lucide-react";
+import { X, Calendar, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { HolidayData } from "./validations";
 import { deleteHoliday } from "@/app/lib/api/holiday";
 
@@ -13,22 +13,22 @@ interface DeleteHolidayModalProps {
   holiday: HolidayData;
 }
 
-const DeleteHolidayModal: React.FC<DeleteHolidayModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  holiday,
-}) => {
+const formatDate = (dateString: string): string =>
+  new Date(dateString).toLocaleDateString("fr-FR", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
+export default function DeleteHolidayModal({
+  isOpen, onClose, onSuccess, holiday,
+}: DeleteHolidayModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiError, setApiError]     = useState<string | null>(null);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     setApiError(null);
-
     try {
       await deleteHoliday(holiday.id);
-      console.log("Suppression holiday:", holiday.id);
       onSuccess();
       onClose();
     } catch (error) {
@@ -39,104 +39,94 @@ const DeleteHolidayModal: React.FC<DeleteHolidayModalProps> = ({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <div className="bg-linear-to-r from-red-500 to-red-600 text-white p-6 rounded-t-2xl relative">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-5 rounded-t-2xl relative flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+          <Trash2 className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-white">Supprimer le jour férié</h3>
+          <p className="text-sm text-red-100 mt-0.5">Cette action est irréversible</p>
+        </div>
         <button
           onClick={onClose}
           disabled={isDeleting}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 disabled:opacity-50"
+          className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/20 text-white transition-all disabled:opacity-50"
         >
-          <X size={20} />
+          <X className="w-4 h-4" />
         </button>
-        <div className="flex items-center gap-2">
-          <Calendar size={24} />
-          <div>
-            <h3 className="text-xl font-bold">Supprimer le jour férié</h3>
-            <p className="text-sm opacity-90 mt-1">Cette action est irréversible</p>
-          </div>
-        </div>
       </div>
 
-      <div className="p-6">
+      {/* Body */}
+      <div className="p-6 flex flex-col gap-4">
+        {/* API error */}
         {apiError && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded mb-4">
-            {apiError}
+          <div className="flex items-start gap-3 px-4 py-3 bg-red-50 rounded-xl border border-red-100">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600">{apiError}</p>
           </div>
         )}
 
-        <div className="space-y-4">
-          <p className="text-gray-700">
-            Êtes-vous sûr de vouloir supprimer ce jour férié ?
-          </p>
+        <p className="text-sm text-gray-600">
+          Êtes-vous sûr de vouloir supprimer ce jour férié ?
+        </p>
 
-          {/* Card du jour férié à supprimer */}
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                <Calendar className="text-red-600" size={20} />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-red-800 capitalize">
-                  {formatDate(holiday.date)}
-                </h4>
-                <p className="text-sm text-red-700 mt-1">{holiday.description}</p>
-                {holiday.id && (
-                  <div className="text-xs text-red-600 mt-2">
-                    ID: {holiday.id.substring(0, 16)}...
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* Holiday card */}
+        <div className="flex items-start gap-3 px-4 py-4 bg-red-50 rounded-xl border border-red-100">
+          <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+            <Calendar className="w-4 h-4 text-red-600" />
           </div>
-
-          {/* Avertissement */}
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start gap-3">
-            <AlertTriangle className="text-yellow-600 shrink-0 mt-0.5" size={20} />
-            <p className="text-sm text-yellow-800">
-              <strong>Attention :</strong> Cette action supprimera définitivement ce
-              jour férié. Il ne pourra plus être récupéré.
+          <div>
+            <p className="text-sm font-semibold text-red-800 capitalize">
+              {formatDate(holiday.date)}
             </p>
+            <p className="text-sm text-red-700 mt-0.5">{holiday.description}</p>
+            {holiday.id && (
+              <p className="text-xs text-red-400 mt-1 font-mono">
+                ID: {holiday.id.substring(0, 16)}…
+              </p>
+            )}
           </div>
+        </div>
+
+        {/* Warning */}
+        <div className="flex items-start gap-3 px-4 py-3 bg-yellow-50 rounded-xl border border-yellow-200">
+          <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-yellow-800">
+            <span className="font-semibold">Attention :</span> Ce jour férié sera
+            définitivement supprimé et ne pourra pas être récupéré.
+          </p>
         </div>
       </div>
 
-      <div className="border-t bg-gray-50 p-4 flex justify-end gap-3 rounded-b-2xl">
+      {/* Footer */}
+      <div className="px-6 pb-6 flex justify-end gap-3">
         <button
           onClick={onClose}
           disabled={isDeleting}
-          className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200
+                     text-gray-700 bg-white hover:bg-gray-50 transition-all disabled:opacity-50"
         >
           Annuler
         </button>
         <button
           onClick={handleDelete}
           disabled={isDeleting}
-          className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                     bg-gradient-to-r from-red-500 to-red-600 text-white
+                     shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isDeleting ? (
-            <>
-              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              Suppression...
-            </>
+            <><Loader2 className="w-4 h-4 animate-spin" /> Suppression…</>
           ) : (
-            "Supprimer"
+            <><Trash2 className="w-4 h-4" /> Supprimer</>
           )}
         </button>
       </div>
     </Modal>
   );
-};
-
-export default DeleteHolidayModal;
+}

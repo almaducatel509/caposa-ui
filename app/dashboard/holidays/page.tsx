@@ -1,13 +1,12 @@
-"use client";
 
-import React, { useEffect, useState } from "react";
+// import React, { useEffect, useState } from "react";
 import { HolidayData } from "@/app/components/holidays/validations";
 import HolidayCalendar from "@/app/components/holidays/HolidayCalendar";
 import { fetchHolidays } from "@/app/lib/api/holiday";
 
 export default function HolidaysDashboard() {
-  const [holidays, setHolidays] = useState<HolidayData[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [holidays, setHolidays] = useState<HolidayData[]>([]);
+  // const [loading, setLoading] = useState(true);
 
   // const loadHolidays = async () => {
   //   try {
