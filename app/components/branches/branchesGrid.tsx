@@ -1,281 +1,197 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { FaBuildingWheat } from 'react-icons/fa6';
-import { PiBankLight } from 'react-icons/pi';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { PiBankLight } from "react-icons/pi";
 
-// Imports des composants
-import BranchCard from './BranchCard';
-import BranchFilterBar from './BranchFilterBar';
-import PageHeader from '../header';
-import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
-import BranchDetailsModal from './BranchDetailsModal';
-import DeleteBranchModal from './DeleteBranchModal';
-import EditBranchModal from './EditBranchModal';
-import { ScheduleForm } from '../ScheduleForm';
+/* ── Composants ── */
+import PageHeader         from "@/app/components/header";
+import BranchFilterBar    from "./BranchFilterBar";
+import BranchDetailsModal from "./BranchDetailsModal";
+import DeleteBranchModal  from "./DeleteBranchModal";
+import EditBranchModal    from "./EditBranchModal";   // ← modal, pas la page standalone
+
+/* ── API ── */
+import {
+  fetchBranches,
+  fetchHolidays,
+  fetchOpeningHours,
+} from "@/app/lib/api/branche";
+
+/* ── Types ── */
 import type { Branch, Holiday, OpeningHour } from "@/types/branche";
+import { BranchData }        from "./validations";
+import BrancheTable, { getEffectiveStatus } from "./BrancheTable";
 
+/* ─── Props ──────────────────────────────────────────────────────────────── */
 
 interface BranchesGridProps {
   branches?: Branch[];
 }
 
-// Composant Loading Skeleton
-const LoadingSkeleton = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {[...Array(6)].map((_, i) => (
-      <div key={i} className="bg-white rounded-xl p-6 border-2 border-gray-200 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded mb-4 w-1/3"></div>
-        <div className="h-4 bg-gray-200 rounded mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-        <div className="h-20 bg-gray-100 rounded mb-4"></div>
-        <div className="h-16 bg-gray-50 rounded"></div>
-      </div>
-    ))}
-  </div>
-);
+/* ─── Composant principal ────────────────────────────────────────────────── */
 
-// Composant Error Display
-const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="p-6 bg-red-50 border-2 border-red-200 rounded-lg mb-6">
-    <p className="text-red-700 mb-3">{error}</p>
-    <button
-      onClick={onRetry}
-      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-    >
-      Réessayer
-    </button>
-  </div>
-);
+const BranchesGrid: React.FC<BranchesGridProps> = ({
+  branches: initialBranches,
+}) => {
+  /* ── Data ── */
+  const [branches,      setBranches]      = useState<Branch[]>(initialBranches || []);
+  const [isLoading,     setIsLoading]     = useState(!initialBranches);
+  const [error,         setError]         = useState<string | null>(null);
+  const [holidays,      setHolidays]      = useState<Holiday[]>([]);
+  const [openingHours,  setOpeningHours]  = useState<OpeningHour[]>([]);
+  const [isLoadingRef,  setIsLoadingRef]  = useState(true);
 
-// Composant Empty State
-const EmptyState = ({ 
-  hasFilter, 
-  onClear, 
-  onAdd 
-}: { 
-  hasFilter: boolean; 
-  onClear: () => void; 
-  onAdd: () => void; 
-}) => (
-  <div className="col-span-full text-center py-16">
-    <div className="text-8xl mb-6 flex justify-center text-gray-300">
-      <FaBuildingWheat />
-    </div>
-    <h3 className="text-2xl font-semibold text-[#2c2e2f] mb-3">
-      {hasFilter ? "Aucune branche trouvée" : "Aucune branche"}
-    </h3>
-    <p className="text-[#2c2e2f]/70 mb-6 max-w-md mx-auto">
-      {hasFilter 
-        ? "Essayez de modifier vos critères de recherche"
-        : "Commencez par ajouter votre première branche"
-      }
-    </p>
-    {hasFilter ? (
-      <button
-        onClick={onClear}
-        className="px-6 py-3 bg-gray-100 text-[#34963d] rounded-lg hover:bg-gray-200 transition-colors font-medium"
-      >
-        Effacer les filtres
-      </button>
-    ) : (
-      <button
-        onClick={onAdd}
-        className="px-6 py-3 bg-[#34963d] text-white rounded-lg hover:bg-[#2d7a31] transition-colors font-medium"
-      >
-        Ajouter une branche
-      </button>
-    )}
-  </div>
-);
+  /* ── Filtres ── */
+  const [search,          setSearch]          = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedSize,    setSelectedSize]    = useState("all");
+  const [selectedStatus,  setSelectedStatus]  = useState("all");
 
-const BranchesGrid: React.FC<BranchesGridProps> = ({ branches: initialBranches }) => {
-  // États de référence
-  const [branches, setBranches] = useState<Branch[]>(initialBranches || []);
-  const [isLoading, setIsLoading] = useState(!initialBranches);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoadingReferenceData, setIsLoadingReferenceData] = useState(true);
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
-  const [showScheduleForm, setShowScheduleForm] = useState(false);
-const [showScheduleModal, setShowScheduleModal] = useState(false);
-const [branchToActivate, setBranchToActivate] = useState<Branch | null>(null);
+  /* ── Modals ── */
+  const [selectedBranch,   setSelectedBranch]   = useState<Branch | null>(null);
+  const [isEditMode,       setIsEditMode]        = useState(false);
+  const [editModalMode,    setEditModalMode]     = useState<"create" | "edit">("create");
+  const [showEditModal,    setShowEditModal]     = useState(false);
+  const [showDeleteModal,  setShowDeleteModal]   = useState(false);
+  const [showDetailsModal, setShowDetailsModal]  = useState(false);
 
-
-  // États de filtrage
-  const [filterValue, setFilterValue] = useState('');
-  const [debouncedValue, setDebouncedValue] = useState(filterValue);
-  const [selectedSize, setSelectedSize] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-
-  // États des modals
-  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editModalMode, setEditModalMode] = useState<'create' | 'edit' | 'activate'>('create');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-
-  // Effect pour le debouncing
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(filterValue);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [filterValue]);
-
-  // Chargement des branches
-  const loadBranches = async () => {
+  /* ── Chargement branches ── */
+  const loadBranches = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      // 🔌 IMPORT: import { fetchBranches } from '@/app/lib/api/branche';
       const data = await fetchBranches();
       setBranches(data);
-    } catch (error) {
-      console.error("Erreur lors du chargement des branches:", error);
+    } catch {
       setError("Impossible de charger les branches. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadBranches();
   }, []);
 
-  // Chargement des données de référence
-  const loadReferenceData = async () => {
-    try {
-      setIsLoadingReferenceData(true);
-      console.log('🔄 Chargement des données de référence...');
-      
-      // 🔌 IMPORT: import { fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
-      const [holidaysData, openingHoursData] = await Promise.all([
-        fetchHolidays(),
-        fetchOpeningHours()
-      ]);
+  useEffect(() => { loadBranches(); }, [loadBranches]);
 
-      console.log('📅 Données holidays reçues:', holidaysData);
-      console.log('⏰ Données openingHours reçues:', openingHoursData);
-      
-      setHolidays(holidaysData);
-      setOpeningHours(openingHoursData);
-      
-      console.log('✅ Données sauvegardées dans l\'état:', {
-        holidays: holidaysData.length,
-        openingHours: openingHoursData.length,
-      });
-      
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des données de référence:', error);
-      setHolidays([]);
-      setOpeningHours([]);
-    } finally {
-      setIsLoadingReferenceData(false);
-    }
-  };
-
+  /* ── Données de référence ── */
   useEffect(() => {
-    loadReferenceData();
+    const load = async () => {
+      setIsLoadingRef(true);
+      try {
+        const [h, oh] = await Promise.all([fetchHolidays(), fetchOpeningHours()]);
+        setHolidays(h);
+        setOpeningHours(oh);
+      } catch {
+        setHolidays([]);
+        setOpeningHours([]);
+      } finally {
+        setIsLoadingRef(false);
+      }
+    };
+    load();
   }, []);
 
-  // Logique de filtrage
+  /* ── Debounce ── */
+  useEffect(() => {
+    const t = setTimeout(
+      () => setDebouncedSearch(search.trim().toLowerCase()),
+      300
+    );
+    return () => clearTimeout(t);
+  }, [search]);
+
+  /* ── Filtrage ── */
   const filteredBranches = useMemo(() => {
-    let filtered = branches;
+    let filtered = branches as unknown as BranchData[];
 
-    if (debouncedValue) {
-      const lowercasedFilter = debouncedValue.toLowerCase();
-      filtered = filtered.filter((branch) => 
-        branch.branch_name.toLowerCase().includes(lowercasedFilter) ||
-        branch.branch_address.toLowerCase().includes(lowercasedFilter) ||
-        branch.branch_code.toLowerCase().includes(lowercasedFilter) ||
-        branch.branch_email.toLowerCase().includes(lowercasedFilter)
+    if (debouncedSearch) {
+      filtered = filtered.filter((b) =>
+        b.branch_name.toLowerCase().includes(debouncedSearch)     ||
+        b.branch_address.toLowerCase().includes(debouncedSearch)  ||
+        b.branch_code.toLowerCase().includes(debouncedSearch)     ||
+        b.branch_email.toLowerCase().includes(debouncedSearch)
       );
     }
 
-    switch (selectedSize) {
-      case 'large':
-        filtered = filtered.filter(branch => {
-          const total = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
-          return total >= 20;
-        });
-        break;
-      case 'medium':
-        filtered = filtered.filter(branch => {
-          const total = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
-          return total >= 10 && total < 20;
-        });
-        break;
-      case 'small':
-        filtered = filtered.filter(branch => {
-          const total = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
-          return total < 10;
-        });
-        break;
+    if (selectedSize !== "all") {
+      filtered = filtered.filter((b) => {
+        const total =
+          b.number_of_tellers +
+          b.number_of_clerks +
+          b.number_of_credit_officers;
+        if (selectedSize === "large")  return total >= 20;
+        if (selectedSize === "medium") return total >= 10 && total < 20;
+        if (selectedSize === "small")  return total < 10;
+        return true;
+      });
     }
 
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(branch => branch.status === selectedStatus);
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter((b) => {
+        const eff = getEffectiveStatus(b);
+        if (selectedStatus === "active")   return eff === "active";
+        if (selectedStatus === "inactive") return eff !== "active";
+        return true;
+      });
     }
 
-    return filtered.sort((a, b) => a.branch_name.localeCompare(b.branch_name));
-  }, [branches, debouncedValue, selectedSize, selectedStatus]);
+    return filtered.sort((a, b) =>
+      a.branch_name.localeCompare(b.branch_name)
+    );
+  }, [branches, debouncedSearch, selectedSize, selectedStatus]);
 
-  // Gestionnaires d'événements
+  /* ── Export CSV ── */
   const handleExport = useCallback(() => {
-    try {
-      const csvContent = [
-        'Code,Nom,Adresse,Téléphone,Email,Caissiers,Commis,Agents crédit,Date ouverture',
-        ...filteredBranches.map(branch => 
-          `"${branch.branch_code}","${branch.branch_name}","${branch.branch_address}","${branch.branch_phone_number}","${branch.branch_email}","${branch.number_of_tellers}","${branch.number_of_clerks}","${branch.number_of_credit_officers}","${branch.opening_date}"`
-        )
-      ].join('\n');
+    const rows = [
+      "Code,Nom,Ville,Département,Téléphone,Email,Caissiers,Commis,Agents,Ouverture,Statut",
+      ...filteredBranches.map((b) =>
+        [
+          b.branch_code,  b.branch_name,    b.city,
+          b.department_code,
+          b.branch_phone_number, b.branch_email,
+          b.number_of_tellers,   b.number_of_clerks, b.number_of_credit_officers,
+          b.opening_date, b.status,
+        ]
+          .map((v) => `"${v}"`)
+          .join(",")
+      ),
+    ].join("\n");
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `branches_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Export failed:', error);
-    }
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(
+      new Blob([rows], { type: "text/csv;charset=utf-8;" })
+    );
+    link.download = `branches_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }, [filteredBranches]);
 
+  /* ── Handlers ── */
   const handleAdd = () => {
     setSelectedBranch(null);
     setIsEditMode(false);
-    setEditModalMode('create');
+    setEditModalMode("create");
     setShowEditModal(true);
   };
 
-  const handleEdit = (branch: Branch) => {
-    setSelectedBranch(branch);
+  const handleEdit = (branch: BranchData) => {
+    setSelectedBranch(branch as unknown as Branch);
     setIsEditMode(true);
-    setEditModalMode('edit');
+    setEditModalMode("edit");
     setShowEditModal(true);
   };
 
-    const handleActivate = (branch: Branch) => {
-    console.log("🚀 Activating branch:", branch);
-    setSelectedBranch(branch);
-    setIsEditMode(true);
-    setEditModalMode('activate');
-    setShowEditModal(true);
-    setShowScheduleForm(true); 
-
+  const handleActivate = (branch: BranchData) => {
+    setSelectedBranch(branch as unknown as Branch);
+    setShowDetailsModal(true);
   };
 
-  const handleDelete = (branch: Branch) => {
-    setSelectedBranch(branch);
+  const handleDelete = (branch: BranchData) => {
+    setSelectedBranch(branch as unknown as Branch);
     setShowDeleteModal(true);
   };
 
-  const handleViewDetails = (branch: Branch) => {
-    setSelectedBranch(branch);
+  const handleView = (branch: BranchData) => {
+    setSelectedBranch(branch as unknown as Branch);
     setShowDetailsModal(true);
   };
 
@@ -286,102 +202,58 @@ const [branchToActivate, setBranchToActivate] = useState<Branch | null>(null);
     loadBranches();
   };
 
-  const onSearchChange = useCallback((value?: string) => {
-    setFilterValue(value || '');
-  }, []);
-
-  const onClear = useCallback(() => {
-    setFilterValue('');
-  }, []);
-
-  const onSizeChange = useCallback((key: string) => {
-    setSelectedSize(key);
-  }, []);
-
-  const onStatusChange = useCallback((key: string) => {
-    setSelectedStatus(key);
-  }, []);
-
+  /* ── Render ── */
   return (
-    <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-green-50 to-emerald-50 min-h-screen">
-      {/* Header */}
-      <PageHeader 
-        title="Gestion des branches" 
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+
+      <PageHeader
+        title="Gestion des branches"
         subtitle="Gérez toutes les branches et leurs informations"
-        icon={<PiBankLight  className="text-5xl" />}
+        icon={<PiBankLight className="w-8 h-8 text-[#2E7D32]" />}
       />
 
-
-      {/* Error State */}
-      {error && <ErrorDisplay error={error} onRetry={loadBranches} />}
-
-      {/* Filter Bar */}
-      {!isLoading && (
-        <BranchFilterBar
-          filterValue={filterValue}
-          selectedSize={selectedSize}
-          selectedStatus={selectedStatus}
-          onSearchChange={onSearchChange}
-          onClear={onClear}
-          onSizeChange={onSizeChange}
-          onStatusChange={onStatusChange}
-          onAdd={handleAdd}
-          onExport={handleExport}
-          totalCount={filteredBranches.length}
-        />
-      )}
-
-      {/* Loading State */}
-      {isLoading && <LoadingSkeleton />}
-
-      {/* Grid de cards */}
-      {!isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBranches.length > 0 ? (
-            filteredBranches.map((branch) => (
-              <BranchCard
-                key={branch.id}
-                branch={branch}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onViewDetails={handleViewDetails}
-                onActivate={handleActivate}
-              />
-            ))
-          ) : (
-            <EmptyState
-              hasFilter={!!filterValue || selectedSize !== 'all' || selectedStatus !== 'all'}
-              onClear={onClear}
-              onAdd={handleAdd}
-            />
-          )}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
+          <p className="text-sm text-red-700">{error}</p>
+          <button
+            onClick={loadBranches}
+            className="text-sm font-medium text-red-600 hover:text-red-800 underline"
+          >
+            Réessayer
+          </button>
         </div>
       )}
 
-      {showScheduleForm && selectedBranch && (
-        <ScheduleForm
-          branchId={selectedBranch.id}
-          branchName={selectedBranch.branch_name}
-          onSuccess={async (scheduleData) => {
-            console.log("✅ Horaire créé :", scheduleData);
+      {/*
+        onSearchChange reçoit string — compatible avec setSearch (Dispatch<SetStateAction<string>>)
+        L'ancien BranchFilterBar avait (value?: string) qui causait l'incompatibilité.
+        Le nouveau BranchFilterBar utilise (value: string) — aligné ici.
+      */}
+      <BranchFilterBar
+        filterValue={search}
+        selectedSize={selectedSize}
+        selectedStatus={selectedStatus}
+        totalCount={filteredBranches.length}
+        onSearchChange={setSearch}
+        onClear={() => setSearch("")}
+        onSizeChange={setSelectedSize}
+        onStatusChange={setSelectedStatus}
+        onAdd={handleAdd}
+        onExport={handleExport}
+      />
 
-            // 🔌 API plus tard
-            // await createOpeningHours(selectedBranch.id, scheduleData);
-            // await activateBranch(selectedBranch.id);
+      <BrancheTable
+        branches={filteredBranches}
+        isLoading={isLoading}
+        onView={handleView}
+        onEdit={handleEdit}
+        onActivate={handleActivate}
+        onDelete={handleDelete}
+      />
 
-            setShowScheduleForm(false);
-            setSelectedBranch(null);
-            loadBranches();
-          }}
-          onCancel={() => {
-            setShowScheduleForm(false);
-            setSelectedBranch(null);
-          }}
-        />
-      )}
+      {/* ── Modals ── */}
 
-      {/* CREATE / EDIT */}
-      {showEditModal && editModalMode !== 'activate' && (
+      {showEditModal && (
         <EditBranchModal
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
@@ -393,13 +265,12 @@ const [branchToActivate, setBranchToActivate] = useState<Branch | null>(null);
         />
       )}
 
-
       {showDeleteModal && selectedBranch && (
         <DeleteBranchModal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
           onSuccess={handleSuccess}
-          branch={selectedBranch}
+          branch={selectedBranch as any}
         />
       )}
 
@@ -408,20 +279,19 @@ const [branchToActivate, setBranchToActivate] = useState<Branch | null>(null);
           isOpen={showDetailsModal}
           onClose={() => setShowDetailsModal(false)}
           branch={selectedBranch}
-          onEdit={(branch, mode) => {
-            // setSelectedBranch(branch);
+          onEdit={(_branch, mode) => {
             setIsEditMode(true);
-            setEditModalMode(mode);
+            setEditModalMode(mode === "activate" ? "edit" : mode);
             setShowDetailsModal(false);
             setShowEditModal(true);
           }}
           openingHours={openingHours}
           holidays={holidays}
-          isLoadingData={isLoadingReferenceData}
+          isLoadingData={isLoadingRef}
         />
       )}
     </div>
   );
 };
 
-export default BranchesGrid;
+export default BranchesGrid; 

@@ -434,7 +434,7 @@ export default function DepositDashboard() {
             <div className="flex flex-col items-center py-14 gap-3">
               <div className="w-12 h-12 rounded-2xl bg-[#F9F9F6] border border-gray-100 flex items-center justify-center">
                 <ArrowDownCircle className="w-5 h-5 text-gray-300" />
-              </div>
+              </div> 
               <p className="text-sm font-medium text-gray-500">Aucun dépôt trouvé</p>
             </div>
           )}

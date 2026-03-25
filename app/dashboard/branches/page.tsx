@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import BranchTable from '@/app/components/branches/branchesGrid';
 import { fetchBranches } from '@/app/lib/api/branche';
+import BranchesGrid from '@/app/components/branches/branchesGrid';
 
 const BranchDashboard = () => {
   const [branches, setBranches] = useState([]);
@@ -28,7 +28,7 @@ const BranchDashboard = () => {
   return (
     <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
       <div className="px-6 py-6">
-        <BranchTable branches={branches} />
+        <BranchesGrid branches={branches} />
       </div>
     </main>
     )

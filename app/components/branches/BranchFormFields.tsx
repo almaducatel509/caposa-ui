@@ -1,119 +1,152 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
+import { MapPin, Clock, AlertTriangle } from "lucide-react";
+
+/* ── Source unique de vérité ── */
+import {
+  HAITI_DEPARTMENTS,
+  CITIES_BY_DEPARTMENT,
+  DepartmentCode,
+} from "@/app/data/haitiLocations";
+
 import { BranchData, BranchFormData, ErrorMessages } from "./validations";
+import { OpeningHourAutocomplete } from "./OpeningHourAutocomplete";
 
-// Types importés (à remplacer par vos vrais imports)
-type DepartmentCode = 'OUEST' | 'SUDEST' | 'NORD' | 'NORDEST' | 'ARTIBONITE' | 'CENTRE' | 'SUD' | 'GRAND_ANSE' | 'NORD_OUEST' | 'NIPPES';
+/* ─── Composants internes ────────────────────────────────────────────────── */
 
-// Mock data pour la démo
-const HAITI_DEPARTMENTS = [
-  { code: "OUEST" as DepartmentCode, name: "Ouest" },
-  { code: "NORD" as DepartmentCode, name: "Nord" },
-  { code: "SUD" as DepartmentCode, name: "Sud" },
-  { code: "ARTIBONITE" as DepartmentCode, name: "Artibonite" },
-  { code: "CENTRE" as DepartmentCode, name: "Centre" },
-  { code: "SUDEST" as DepartmentCode, name: "Sud-Est" },
-  { code: "NORDEST" as DepartmentCode, name: "Nord-Est" },
-  { code: "GRAND_ANSE" as DepartmentCode, name: "Grand'Anse" },
-  { code: "NORD_OUEST" as DepartmentCode, name: "Nord-Ouest" },
-  { code: "NIPPES" as DepartmentCode, name: "Nippes" },
-];
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">
+      {children}
+    </p>
+  );
+}
 
-const CITIES_BY_DEPARTMENT: Record<DepartmentCode, string[]> = {
-  OUEST: ["Port-au-Prince", "Pétion-Ville", "Carrefour"],
-  NORD: ["Cap-Haïtien", "Limonade", "Quartier Morin"],
-  SUD: ["Les Cayes", "Port-Salut", "Aquin"],
-  ARTIBONITE: ["Gonaïves", "Saint-Marc", "Dessalines"],
-  CENTRE: ["Hinche", "Mirebalais", "Lascahobas"],
-  SUDEST: ["Jacmel", "Marigot", "Cayes-Jacmel"],
-  NORDEST: ["Fort-Liberté", "Ouanaminthe", "Trou-du-Nord"],
-  GRAND_ANSE: ["Jérémie", "Anse-d'Hainault", "Corail"],
-  NORD_OUEST: ["Port-de-Paix", "Saint-Louis-du-Nord", "Môle-Saint-Nicolas"],
-  NIPPES: ["Miragoâne", "Petit-Goâve", "Anse-à-Veau"],
-};
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return (
+    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+      <AlertTriangle className="w-3 h-3 shrink-0" />
+      {msg}
+    </p>
+  );
+}
 
-const getCitiesByDepartment = (code: DepartmentCode): string[] => {
-  return CITIES_BY_DEPARTMENT[code] || [];
-};
+function SectionTitle({
+  icon: Icon,
+  label,
+  color = "#2E7D32",
+}: {
+  icon: React.ElementType;
+  label: string;
+  color?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div
+        className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+        style={{ backgroundColor: color + "18" }}
+      >
+        <Icon className="w-3.5 h-3.5" style={{ color }} />
+      </div>
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color }}>
+        {label}
+      </p>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
 
-// ================= LOCATION SELECTOR =================
-interface HaitiLocationSelectorProps {
+/* ─── HaitiLocationSelector (consomme haitiLocations.ts) ────────────────── */
+
+interface LocationSelectorProps {
   departmentCode: DepartmentCode | "";
   city: string;
   onDepartmentChange: (code: DepartmentCode | "") => void;
   onCityChange: (city: string) => void;
   disabled?: boolean;
+  departmentError?: string;
+  cityError?: string;
 }
 
-const HaitiLocationSelector: React.FC<HaitiLocationSelectorProps> = ({
+function HaitiLocationSelector({
   departmentCode,
   city,
   onDepartmentChange,
   onCityChange,
-  disabled = false,
-}) => {
-  const [cities, setCities] = useState<string[]>([]);
+  disabled,
+  departmentError,
+  cityError,
+}: LocationSelectorProps) {
+  const cities = departmentCode
+    ? (CITIES_BY_DEPARTMENT[departmentCode as DepartmentCode] ?? [])
+    : [];
 
   useEffect(() => {
-    if (departmentCode) {
-      const list = getCitiesByDepartment(departmentCode as DepartmentCode);
-      setCities(list);
-      if (city && !list.includes(city)) onCityChange("");
-    } else {
-      setCities([]);
+    if (departmentCode && city && !cities.includes(city)) {
       onCityChange("");
     }
-  }, [departmentCode, city, onCityChange]);
+  }, [departmentCode]);
+
+  const selectCls = (err?: string) =>
+    [
+      "w-full h-11 px-4 rounded-xl border-2 text-sm bg-[#F9F9F6]",
+      "appearance-none outline-none transition-colors",
+      disabled ? "opacity-50 cursor-not-allowed border-gray-100" : "",
+      err
+        ? "border-red-400 ring-2 ring-red-200"
+        : "border-gray-200 hover:border-[#355C7D]/40 focus:border-[#355C7D] focus:ring-2 focus:ring-[#355C7D]/20",
+    ].join(" ");
 
   return (
-    <>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <span className="text-lg">🗺️</span>
-          Département
-        </label>
-        <select
-          value={departmentCode}
-          onChange={(e) => onDepartmentChange(e.target.value as DepartmentCode | "")}
-          disabled={disabled}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-        >
-          <option value="">Sélectionnez un département</option>
-          {HAITI_DEPARTMENTS.map((d) => (
-            <option key={d.code} value={d.code}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Département */}
+      <div>
+        <Label>Département <span className="text-red-500">*</span></Label>
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#355C7D] pointer-events-none" />
+          <select
+            value={departmentCode}
+            onChange={(e) => onDepartmentChange(e.target.value as DepartmentCode | "")}
+            disabled={disabled}
+            className={selectCls(departmentError) + " pl-9"}
+          >
+            <option value="">Sélectionnez un département</option>
+            {HAITI_DEPARTMENTS.map((d) => (
+              <option key={d.code} value={d.code}>{d.name}</option>
+            ))}
+          </select>
+        </div>
+        <FieldError msg={departmentError} />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <span className="text-lg">🏙️</span>
-          Ville
-        </label>
+      {/* Ville */}
+      <div>
+        <Label>Ville <span className="text-red-500">*</span></Label>
         <select
           value={city}
           onChange={(e) => onCityChange(e.target.value)}
           disabled={!departmentCode || disabled}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
+          className={selectCls(cityError)}
         >
           <option value="">
-            {departmentCode ? "Sélectionnez une ville" : "Choisissez d'abord un département"}
+            {departmentCode
+              ? "Sélectionnez une ville"
+              : "Choisissez d'abord un département"}
           </option>
           {cities.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <FieldError msg={cityError} />
       </div>
-    </>
+    </div>
   );
-};
+}
 
-// ================= MAIN COMPONENT (EXPORT) =================
+/* ─── Props ──────────────────────────────────────────────────────────────── */
+
 interface BranchFormFieldsProps {
   formData: BranchFormData;
   errors: ErrorMessages<BranchFormData>;
@@ -122,7 +155,11 @@ interface BranchFormFieldsProps {
   isEditMode?: boolean;
   branch?: BranchData | null;
   mode?: "create" | "edit" | "activate";
+  /** Callback dédié pour opening_hour (évite de passer par handleChange) */
+  onOpeningHourChange?: (id: string) => void;
 }
+
+/* ─── Composant principal ────────────────────────────────────────────────── */
 
 const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
   formData,
@@ -130,277 +167,211 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
   handleChange,
   isSubmitting,
   isEditMode,
+  mode = "create",
+  onOpeningHourChange,
 }) => {
-
   const totalPosts =
-    (formData.number_of_tellers || 0) +
-    (formData.number_of_clerks || 0) +
-    (formData.number_of_credit_officers || 0);
+    (formData.number_of_tellers         || 0) +
+    (formData.number_of_clerks           || 0) +
+    (formData.number_of_credit_officers  || 0);
+
+  /* Adaptateurs localisation → handleChange synthétique */
+  const handleDepartmentChange = (code: DepartmentCode | "") =>
+    handleChange({
+      target: { name: "department_code", value: code },
+    } as React.ChangeEvent<HTMLSelectElement>);
+
+  const handleCityChange = (city: string) =>
+    handleChange({
+      target: { name: "city", value: city },
+    } as React.ChangeEvent<HTMLSelectElement>);
+
+  const fieldCls = (err?: string) =>
+    [
+      "w-full h-11 px-4 rounded-xl border-2 text-sm bg-[#F9F9F6] outline-none transition-colors",
+      isSubmitting ? "opacity-50 cursor-not-allowed" : "",
+      err
+        ? "border-red-400 ring-2 ring-red-200"
+        : "border-gray-200 hover:border-[#2E7D32]/40 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20",
+    ].join(" ");
 
   return (
-    <div className="space-y-6">
-      {/* ================= Section 1: Informations de Base ================= */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="p-6">
-                {/* En-tête */}
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-2">
-              <div className="w-2.5 h-2.5 bg-green-600 rounded-full mr-2"></div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {isEditMode ? "Modifier la Branche" : "Créer une Nouvelle Branche"}
-              </h2>
+    <div className="space-y-5">
+
+      {/* ── Section 1 : Identité ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionTitle
+          icon={() => <span style={{ fontSize: 14 }}>🏢</span>}
+          label="Identité de la branche"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="md:col-span-2">
+            <Label>Nom de la branche <span className="text-red-500">*</span></Label>
+            <input
+              type="text"
+              name="branch_name"
+              value={formData.branch_name || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              placeholder="Ex : Branche Pétionville"
+              className={fieldCls(errors.branch_name)}
+            />
+            <FieldError msg={errors.branch_name} />
+          </div>
+
+          <div>
+            <Label>Téléphone <span className="text-red-500">*</span></Label>
+            <input
+              type="tel"
+              name="branch_phone_number"
+              value={formData.branch_phone_number || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              placeholder="+509 xxxx xxxx"
+              className={fieldCls(errors.branch_phone_number)}
+            />
+            <FieldError msg={errors.branch_phone_number} />
+          </div>
+
+          <div>
+            <Label>Email <span className="text-red-500">*</span></Label>
+            <input
+              type="email"
+              name="branch_email"
+              value={formData.branch_email || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              placeholder="branche@caposa.ht"
+              className={fieldCls(errors.branch_email)}
+            />
+            <FieldError msg={errors.branch_email} />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label>Adresse (numéro et rue) <span className="text-red-500">*</span></Label>
+            <input
+              type="text"
+              name="branch_address"
+              value={formData.branch_address || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              placeholder="Ex : 13 Rue Capois"
+              className={fieldCls(errors.branch_address)}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              La ville et le département sont sélectionnés ci-dessous.
+            </p>
+            <FieldError msg={errors.branch_address} />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label>Date d'ouverture <span className="text-red-500">*</span></Label>
+            <input
+              type="date"
+              name="opening_date"
+              value={formData.opening_date || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              className={fieldCls(errors.opening_date)}
+            />
+            <FieldError msg={errors.opening_date} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 2 : Localisation ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionTitle icon={MapPin} label="Localisation" color="#355C7D" />
+        <HaitiLocationSelector
+          departmentCode={formData.department_code || ""}
+          city={formData.city || ""}
+          onDepartmentChange={handleDepartmentChange}
+          onCityChange={handleCityChange}
+          disabled={isSubmitting}
+          departmentError={errors.department_code}
+          cityError={errors.city}
+        />
+      </div>
+
+      {/* ── Section 3 : Personnel ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionTitle
+          icon={() => <span style={{ fontSize: 14 }}>👥</span>}
+          label="Personnel et postes"
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {[
+            { name: "number_of_tellers",        label: "Caissiers",     color: "#2E7D32", err: errors.number_of_tellers        },
+            { name: "number_of_clerks",          label: "Commis",        color: "#355C7D", err: errors.number_of_clerks          },
+            { name: "number_of_credit_officers", label: "Agents crédit", color: "#D4AF37", err: errors.number_of_credit_officers },
+          ].map(({ name, label, color, err }) => (
+            <div key={name}>
+              <Label>{label} <span className="text-red-500">*</span></Label>
+              <input
+                type="number"
+                name={name}
+                value={(formData as any)[name] || 0}
+                onChange={handleChange}
+                min={0}
+                disabled={isSubmitting}
+                className={[
+                  "w-full h-11 px-4 rounded-xl border-2 text-sm text-center font-semibold bg-[#F9F9F6] outline-none transition-colors",
+                  isSubmitting ? "opacity-50 cursor-not-allowed" : "",
+                  err ? "border-red-400 ring-2 ring-red-200" : "border-gray-200",
+                ].join(" ")}
+                style={{ color }}
+              />
+              <FieldError msg={err} />
             </div>
-            <p className="text-sm text-gray-500">
-              {isEditMode
-                ? "Mettez à jour les informations et permissions de la branche"
-                : "Définissez les informations de la branche"}
+          ))}
+
+          {/* Total (lecture seule) */}
+          <div>
+            <Label>Total postes</Label>
+            <input
+              type="number"
+              value={totalPosts}
+              readOnly
+              className="w-full h-11 px-4 rounded-xl border-2 border-gray-100 text-sm text-center font-bold text-gray-900 bg-gray-50 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-400 mt-1 text-center">Calculé auto.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 4 : Horaire d'ouverture ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionTitle icon={Clock} label="Horaire d'ouverture" color="#D4AF37" />
+
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-800 leading-relaxed">
+            <p className="font-semibold mb-0.5">Optionnel à la création</p>
+            <p>
+              Sélectionnez un horaire existant si disponible, ou laissez vide.
+              Vous pourrez en assigner un depuis la page{" "}
+              <span className="font-semibold">Horaires</span> après la création.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Nom de la Branche */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">🏢</span>
-                Nom de la Branche
-              </label>
-              <input
-                type="text"
-                name="branch_name"
-                value={formData.branch_name || ""}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.branch_name ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.branch_name && (
-                <p className="text-xs text-red-500">{errors.branch_name}</p>
-              )}
-            </div>
-
-            {/* Téléphone */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">📞</span>
-                Numéro de Téléphone
-              </label>
-              <input
-                type="tel"
-                name="branch_phone_number"
-                value={formData.branch_phone_number || ""}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.branch_phone_number ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.branch_phone_number && (
-                <p className="text-xs text-red-500">{errors.branch_phone_number}</p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">✉️</span>
-                Adresse Email
-              </label>
-              <input
-                type="email"
-                name="branch_email"
-                value={formData.branch_email || ""}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.branch_email ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.branch_email && (
-                <p className="text-xs text-red-500">{errors.branch_email}</p>
-              )}
-            </div>
-
-            {/* Adresse Complète */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Adresse (numéro et rue)
-              </label>
-              <input
-                type="text"
-                name="branch_address"
-                placeholder="Ex. : 13 Rue Capois"
-                value={formData.branch_address || ""}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.branch_address ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <p className="text-xs text-gray-500">
-                Saisissez uniquement le numéro et le nom de la rue. La ville et le département sont sélectionnés plus bas.
-              </p>
-              {errors.branch_address && (
-                <p className="text-xs text-red-500">{errors.branch_address}</p>
-              )}
-            </div>
-
-            {/* Département + Ville */}
-            <HaitiLocationSelector
-              departmentCode={formData.department_code || ""}
-              city={formData.city || ""}
-              onDepartmentChange={(code) =>
-                handleChange({
-                  target: { name: "department_code", value: code },
-                } as React.ChangeEvent<HTMLInputElement>)
-              }
-              onCityChange={(city) =>
-                handleChange({
-                  target: { name: "city", value: city },
-                } as React.ChangeEvent<HTMLInputElement>)
-              }
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {(errors.department_code || errors.city) && (
-            <div className="mt-2 space-y-1">
-              {errors.department_code && (
-                <p className="text-xs text-red-500">{errors.department_code}</p>
-              )}
-              {errors.city && <p className="text-xs text-red-500">{errors.city}</p>}
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* ================= Section 2: Personnel et Postes ================= */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
-            <h3 className="text-lg font-semibold text-gray-800">Personnel et Postes</h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Caissiers */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">💰</span>
-                Caissiers
-              </label>
-              <input
-                type="number"
-                name="number_of_tellers"
-                value={formData.number_of_tellers || 0}
-                onChange={handleChange}
-                min="0"
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg text-center font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.number_of_tellers ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.number_of_tellers && (
-                <p className="text-xs text-red-500">{errors.number_of_tellers}</p>
-              )}
-            </div>
-
-            {/* Personnel */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">👥</span>
-                Personnel
-              </label>
-              <input
-                type="number"
-                name="number_of_clerks"
-                value={formData.number_of_clerks || 0}
-                onChange={handleChange}
-                min="0"
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg text-center font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.number_of_clerks ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.number_of_clerks && (
-                <p className="text-xs text-red-500">{errors.number_of_clerks}</p>
-              )}
-            </div>
-
-            {/* Agents de Crédit */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">💼</span>
-                Agents de Crédit
-              </label>
-              <input
-                type="number"
-                name="number_of_credit_officers"
-                value={formData.number_of_credit_officers || 0}
-                onChange={handleChange}
-                min="0"
-                disabled={isSubmitting}
-                className={`w-full p-3 border rounded-lg text-center font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.number_of_credit_officers ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.number_of_credit_officers && (
-                <p className="text-xs text-red-500">{errors.number_of_credit_officers}</p>
-              )}
-            </div>
-
-            {/* Postes (total) */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">🪑</span>
-                Postes (total)
-              </label>
-              <input
-                type="number"
-                value={totalPosts}
-                readOnly
-                className="w-full p-3 border rounded-lg text-center font-medium bg-gray-50 border-gray-200 cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-500">
-                Somme des caissiers, personnel et agents de crédit.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ================= Section 3: Date d'Ouverture ================= */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-6 bg-linear-to-b from-purple-500 to-purple-600 rounded-full"></div>
-            <h3 className="text-lg font-semibold text-gray-800">Date d'Ouverture</h3>
-          </div>
-
-          <div className="max-w-md">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <span className="text-lg">📅</span>
-                Date d'Ouverture
-                <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium border border-blue-200">
-                  Date de création
-                </span>
-              </label>
-              <input
-                type="date"
-                value={formData.opening_date || ""}
-                readOnly
-                disabled
-                className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                📌 Cette date est automatiquement définie lors de la création de la branche
-              </p>
-              <p className="text-xs text-gray-500">
-                💡 Les horaires d'ouverture et jours fériés sont configurés au niveau de la ville
-              </p>
-            </div>
-          </div>
-        </div>
+        <OpeningHourAutocomplete
+          selectedKey={formData.opening_hour || ""}
+          onSelectionChange={(id) => {
+            if (onOpeningHourChange) {
+              onOpeningHourChange(id);
+            } else {
+              /* Fallback compatible handleChange */
+              handleChange({
+                target: { name: "opening_hour", value: id },
+              } as React.ChangeEvent<HTMLSelectElement>);
+            }
+          }}
+          errorMessage={errors.opening_hour}
+          isDisabled={isSubmitting}
+        />
       </div>
     </div>
   );

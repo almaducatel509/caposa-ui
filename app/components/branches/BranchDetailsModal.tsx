@@ -1,159 +1,138 @@
-
 "use client";
 
-import React, { useMemo, useState } from 'react';
-import { FaUniversity, FaCheckCircle, FaPlayCircle, FaBuilding, FaEdit, FaCalendarAlt, FaClock, FaExternalLinkAlt } from "react-icons/fa";
+import React, { useMemo, useState } from "react";
+import {
+  FaUniversity, FaCheckCircle, FaPlayCircle, FaBuilding,
+  FaCalendarAlt, FaClock, FaExternalLinkAlt,
+} from "react-icons/fa";
 import { BsTelephone, BsPeople } from "react-icons/bs";
 import { MdLocationOn, MdEmail } from "react-icons/md";
-import { X } from 'lucide-react';
+import { X, Loader2 } from "lucide-react";
 import type { Branch, Holiday, OpeningHour } from "@/types/branche";
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
 
 interface BranchDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   branch: Branch;
-  onEdit?: (branch: Branch, mode: 'edit' | 'activate') => void;
+  onEdit?: (branch: Branch, mode: "edit" | "activate") => void;
   openingHours?: OpeningHour[];
   holidays?: Holiday[];
   isLoadingData?: boolean;
 }
 
-// Modal Component
+/* ─── Modal générique ────────────────────────────────────────────────────── */
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = 'lg' }) => {
+const SIZES: Record<NonNullable<ModalProps["size"]>, string> = {
+  sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl",
+  "2xl": "max-w-2xl", "3xl": "max-w-3xl", "4xl": "max-w-4xl",
+};
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, size = "lg" }) => {
   if (!isOpen) return null;
-
-  const sizeClasses: Record<NonNullable<typeof size>, string> = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative ${sizeClasses[size]} w-full bg-white rounded-2xl shadow-2xl`}>
-        <div className="max-h-[85vh] overflow-y-auto">
-          {children}
-        </div>
+      <div className={`relative ${SIZES[size]} w-full bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}>
+        {children}
       </div>
     </div>
   );
 };
 
-// Schedule Detail Modal
-const ScheduleDetailModal = ({ isOpen, onClose, branch, openingHours }: any) => {
-  if (!isOpen) return null;
+/* ─── Modal horaires ─────────────────────────────────────────────────────── */
 
-  const branchOpeningHours = openingHours?.find((oh: OpeningHour) => oh.id === branch?.opening_hour);
-  
-  const daysOfWeek = [
-    { key: "monday", label: "Lundi", emoji: "📅" },
-    { key: "tuesday", label: "Mardi", emoji: "📅" },
-    { key: "wednesday", label: "Mercredi", emoji: "📅" },
-    { key: "thursday", label: "Jeudi", emoji: "📅" },
-    { key: "friday", label: "Vendredi", emoji: "📅" },
-    { key: "saturday", label: "Samedi", emoji: "🏖️" },
-    { key: "sunday", label: "Dimanche", emoji: "☀️" },
-  ];
+const DAYS_OF_WEEK = [
+  { key: "monday",    label: "Lundi",     weekend: false },
+  { key: "tuesday",   label: "Mardi",     weekend: false },
+  { key: "wednesday", label: "Mercredi",  weekend: false },
+  { key: "thursday",  label: "Jeudi",     weekend: false },
+  { key: "friday",    label: "Vendredi",  weekend: false },
+  { key: "saturday",  label: "Samedi",    weekend: true  },
+  { key: "sunday",    label: "Dimanche",  weekend: true  },
+];
 
-  // Parse schedule string back to individual days
-  const parseSchedule = (schedule: string) => {
-    const days: any = {};
-    schedule.split('\n').forEach(line => {
-      const match = line.match(/(\w+):\s*(.+)/);
-      if (match) {
-        const dayFr = match[1].toLowerCase();
-        const hours = match[2];
-        // Map French day names to keys
-        const dayMap: any = {
-          'lundi': 'monday',
-          'mardi': 'tuesday',
-          'mercredi': 'wednesday',
-          'jeudi': 'thursday',
-          'vendredi': 'friday',
-          'samedi': 'saturday',
-          'dimanche': 'sunday'
-        };
-        if (dayMap[dayFr]) {
-          days[dayMap[dayFr]] = hours;
-        }
-      }
-    });
-    return days;
-  };
+const FR_TO_KEY: Record<string, string> = {
+  lundi: "monday", mardi: "tuesday", mercredi: "wednesday",
+  jeudi: "thursday", vendredi: "friday", samedi: "saturday", dimanche: "sunday",
+};
 
-  const scheduleData = branchOpeningHours ? parseSchedule(branchOpeningHours.schedule) : {};
+function parseSchedule(schedule: string): Record<string, string> {
+  const days: Record<string, string> = {};
+  schedule.split("\n").forEach((line) => {
+    const match = line.match(/(\w+):\s*(.+)/);
+    if (match) {
+      const key = FR_TO_KEY[match[1].toLowerCase()];
+      if (key) days[key] = match[2];
+    }
+  });
+  return days;
+}
+
+const ScheduleDetailModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  branch: Branch;
+  openingHours: OpeningHour[];
+}> = ({ isOpen, onClose, branch, openingHours }) => {
+  const branchHours = openingHours.find((oh) => oh.id === branch?.opening_hour);
+  const scheduleData = branchHours ? parseSchedule(branchHours.schedule) : {};
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-t-2xl">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
-        >
-          <X size={20} />
-        </button>
+      {/* Header blanc */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-white/20 rounded-xl">
-            <FaClock size={24} />
+          <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+            <FaClock className="text-amber-600" size={15} />
           </div>
           <div>
-            <h3 className="text-2xl font-bold">Horaires d'ouverture</h3>
-            <p className="text-emerald-100 text-sm mt-1">{branch.branch_name}</p>
+            <h3 className="text-base font-bold text-gray-900">Horaires d'ouverture</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{branch.branch_name}</p>
           </div>
         </div>
+        <button
+          onClick={onClose}
+          className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Body */}
-      <div className="p-6">
-        {branchOpeningHours ? (
-          <div className="space-y-3">
-            {daysOfWeek.map(({ key, label, emoji }) => {
+      <div className="p-6 overflow-y-auto flex-1">
+        {branchHours ? (
+          <div className="space-y-2">
+            {DAYS_OF_WEEK.map(({ key, label, weekend }) => {
               const hours = scheduleData[key];
-              const isWeekend = key === 'saturday' || key === 'sunday';
-              const isClosed = !hours || hours === '';
-
+              const isClosed = !hours;
               return (
                 <div
                   key={key}
-                  className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
-                    isClosed
-                      ? 'bg-gray-50 border-gray-200'
-                      : isWeekend
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'bg-emerald-50 border-emerald-200'
+                  className={`flex items-center justify-between p-3.5 rounded-xl border-2 ${
+                    isClosed ? "bg-gray-50 border-gray-100 opacity-70"
+                    : weekend ? "bg-[#355C7D]/6 border-[#355C7D]/20"
+                    : "bg-[#DDEAD5]/40 border-[#2E7D32]/20"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{emoji}</span>
-                    <span className={`font-semibold ${
-                      isClosed ? 'text-gray-500' : 'text-gray-800'
-                    }`}>
-                      {label}
-                    </span>
-                  </div>
-                  <div className={`text-right ${
-                    isClosed
-                      ? 'text-gray-400 italic'
-                      : isWeekend
-                      ? 'text-blue-700 font-semibold'
-                      : 'text-emerald-700 font-semibold'
+                  <span className={`text-sm font-semibold ${isClosed ? "text-gray-400" : "text-gray-800"}`}>
+                    {label}
+                  </span>
+                  <span className={`text-sm ${
+                    isClosed ? "text-gray-400 italic"
+                    : weekend ? "text-[#355C7D] font-semibold"
+                    : "text-[#1B5E20] font-semibold"
                   }`}>
-                    {isClosed ? 'Fermé' : hours}
-                  </div>
+                    {isClosed ? "Fermé" : hours}
+                  </span>
                 </div>
               );
             })}
@@ -162,35 +141,21 @@ const ScheduleDetailModal = ({ isOpen, onClose, branch, openingHours }: any) => 
           <div className="text-center py-12">
             <FaClock className="text-gray-300 text-5xl mx-auto mb-4" />
             <p className="text-gray-500 font-medium">Aucun horaire configuré</p>
-            <p className="text-gray-400 text-sm mt-2">
-              Les horaires seront définis lors de l'activation de la branche
-            </p>
           </div>
         )}
 
-        {/* Info supplémentaire */}
-        {branchOpeningHours && (
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <FaCalendarAlt className="text-amber-600 mt-0.5" />
-              <div className="text-sm text-amber-800">
-                <p className="font-semibold mb-1">Note importante</p>
-                <p>
-                  Ces horaires sont susceptibles de changer pendant les jours fériés.
-                  Consultez la liste des jours fériés dans les détails de la branche.
-                </p>
-              </div>
-            </div>
+        {branchHours && (
+          <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <FaCalendarAlt className="text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Ces horaires peuvent changer pendant les jours fériés.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Footer */}
-      <div className="border-t p-4 flex justify-end">
-        <button
-          onClick={onClose}
-          className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
-        >
+      <div className="border-t border-gray-100 p-4 flex justify-end shrink-0">
+        <button onClick={onClose} className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors">
           Fermer
         </button>
       </div>
@@ -198,15 +163,11 @@ const ScheduleDetailModal = ({ isOpen, onClose, branch, openingHours }: any) => 
   );
 };
 
-// Main Component
+/* ─── Composant principal ────────────────────────────────────────────────── */
+
 const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
-  isOpen,
-  onClose,
-  branch,
-  onEdit,
-  openingHours = [],
-  holidays: passedHolidays = [],
-  isLoadingData = false
+  isOpen, onClose, branch, onEdit,
+  openingHours = [], holidays: passedHolidays = [], isLoadingData = false,
 }) => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
@@ -215,38 +176,34 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
   if (isLoadingData) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <div className="p-8">
-          <div className="text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600 mb-2">Chargement des données...</p>
-            <p className="text-sm text-gray-400">
-              Récupération des horaires et jours fériés pour {branch.branch_name}
-            </p>
-          </div>
+        <div className="p-12 flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
+          <p className="text-sm text-gray-500">Chargement des données…</p>
         </div>
       </Modal>
     );
   }
 
-  const isActive = branch.status === 'active';
-  const hasConfiguration = branch.opening_hour && branch.holidays && Array.isArray(branch.holidays) && branch.holidays.length > 0;
+  const isActive = branch.status === "active";
+  const hasConfiguration = branch.opening_hour && Array.isArray(branch.holidays) && branch.holidays.length > 0;
 
   const displayHolidays = useMemo(() => {
-    const branchHolidays = branch?.holidays || [];
-    if (!branch || !passedHolidays.length || !Array.isArray(branchHolidays)) return [];
-    return passedHolidays.filter(holiday => branchHolidays.includes(holiday.id));
+    const ids = branch?.holidays || [];
+    if (!passedHolidays.length || !Array.isArray(ids)) return [];
+    return passedHolidays.filter((h) => ids.includes(h.id));
   }, [branch?.holidays, passedHolidays]);
 
-  const branchOpeningHours = useMemo(() => {
-    return openingHours.find(oh => oh.id === branch?.opening_hour);
-  }, [openingHours, branch?.opening_hour]);
+  const branchOpeningHours = useMemo(
+    () => openingHours.find((oh) => oh.id === branch?.opening_hour),
+    [openingHours, branch?.opening_hour]
+  );
 
   const totalStaff = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
 
   const getBranchCategory = () => {
-    if (totalStaff >= 20) return { text: "Grande branche", bgColor: "bg-emerald-600" };
-    if (totalStaff >= 10) return { text: "Branche moyenne", bgColor: "bg-emerald-500" };
-    return { text: "Petite branche", bgColor: "bg-amber-500" };
+    if (totalStaff >= 20) return { text: "Grande branche",  bg: "bg-[#2E7D32]" };
+    if (totalStaff >= 10) return { text: "Branche moyenne", bg: "bg-[#2E7D32]" };
+    return                       { text: "Petite branche",  bg: "bg-[#D4AF37]" };
   };
 
   const category = getBranchCategory();
@@ -254,202 +211,142 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
   const formatDate = (dateString: string) => {
     if (!dateString) return "Date inconnue";
     try {
-      const date = dateString.includes('T') 
-        ? new Date(dateString)
-        : new Date(dateString + 'T12:00:00');
-      
-      return date.toLocaleDateString('fr-CA', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric'
-      });
-    } catch (error) {
-      return dateString;
-    }
+      const d = dateString.includes("T") ? new Date(dateString) : new Date(dateString + "T12:00:00");
+      return d.toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric" });
+    } catch { return dateString; }
   };
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-t-2xl">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors z-10"
-          >
-            <X size={20} />
-          </button>
-          
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <FaBuilding size={28} />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">{branch.branch_name}</h3>
-                <p className="text-emerald-100 text-sm mt-1">Détails complets de la branche</p>
-              </div>
+
+        {/* ── Header blanc ── */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
+              <FaBuilding className="text-[#2E7D32]" size={15} />
             </div>
-            
-            <div className="flex items-center gap-2">
-              {isActive ? (
-                <span className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-white/30 rounded-full text-sm font-semibold">
-                  <FaCheckCircle />
-                  Active
+            <div>
+              <h3 className="text-base font-bold text-gray-900">{branch.branch_name}</h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-gray-400 font-mono">{branch.branch_code}</span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  isActive ? "bg-[#DDEAD5] text-[#1B5E20]" : "bg-amber-50 text-amber-700"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-[#2E7D32]" : "bg-amber-400"}`} />
+                  {isActive ? "Active" : "Inactive"}
                 </span>
-              ) : (
-                <span className="flex items-center gap-2 px-3 py-1 bg-orange-500/20 border border-white/30 rounded-full text-sm font-semibold">
-                  <FaPlayCircle />
-                  Inactive
-                </span>
-              )}
-              <span className="px-3 py-1 bg-white/20 border border-white/30 rounded-full text-sm font-mono">
-                {branch.branch_code}
-              </span>
+              </div>
             </div>
           </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-6">
-          {/* Alert si inactive */}
+        {/* ── Body ── */}
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+
           {!isActive && (
-            <div className="bg-orange-50 border-2 border-orange-400 rounded-xl p-4">
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
               <div className="flex items-start gap-3">
-                <FaPlayCircle className="text-orange-500 text-xl mt-0.5" />
+                <FaPlayCircle className="text-amber-500 text-lg mt-0.5 shrink-0" />
                 <div>
-                  <h4 className="font-semibold text-orange-800 mb-1">Branche inactive</h4>
-                  <p className="text-sm text-orange-700">
-                    {!hasConfiguration 
-                      ? "Cette branche vient d’être créée et n’a pas encore d’horaire. Rendez-vous dans la section « Horaires » pour créer un horaire et permettre son activation."
-                      : "Cette branche est configurée mais reste inactive. Rendez-vous « Modifier » pour mettre à jour ses informations."
-                    }
+                  <h4 className="font-semibold text-amber-800 mb-0.5 text-sm">Branche inactive</h4>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    {!hasConfiguration
+                      ? "Cette branche n'a pas encore d'horaire. Activez-la pour la rendre opérationnelle."
+                      : "Cette branche est configurée mais reste inactive."}
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
             {/* Informations générales */}
-            <div className="bg-white border-2 border-emerald-100 rounded-xl p-5">
-              <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <FaBuilding className="text-emerald-600" />
-                Informations générales
-              </h4>
-              
-              <div className="space-y-4">
+            <div className="bg-white border-2 border-[#DDEAD5] rounded-2xl p-5">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-4 flex items-center gap-2">
+                <FaBuilding className="text-[#2E7D32]" /> Informations générales
+              </p>
+              <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Adresse complète</p>
-                  <div className="flex items-start gap-2">
-                    <MdLocationOn className="text-emerald-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-gray-800 font-medium">{branch.branch_address}</p>
+                  <p className="text-xs text-gray-500 mb-1">Adresse complète</p>
+                  <div className="flex items-start gap-2 text-sm text-gray-800 font-medium">
+                    <MdLocationOn className="text-[#2E7D32] mt-0.5 shrink-0" />
+                    {branch.branch_address}
                   </div>
                 </div>
-
-                <div className="h-px bg-gray-200"></div>
-
+                <div className="h-px bg-gray-100" />
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Date d'ouverture</span>
-                  <div className="flex items-center gap-2">
-                    <FaCalendarAlt className="text-amber-500" />
-                    <span className="font-medium text-gray-800">{formatDate(branch.opening_date)}</span>
+                  <span className="text-xs text-gray-500">Date d'ouverture</span>
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-gray-800">
+                    <FaCalendarAlt className="text-[#D4AF37]" />
+                    {formatDate(branch.opening_date)}
                   </div>
                 </div>
-
-                <div className="h-px bg-gray-200"></div>
-
+                <div className="h-px bg-gray-100" />
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Catégorie</span>
-                  <span className={`${category.bgColor} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
-                    {category.text}
-                  </span>
+                  <span className="text-xs text-gray-500">Catégorie</span>
+                  <span className={`${category.bg} text-white px-3 py-1 rounded-lg text-xs font-semibold`}>{category.text}</span>
                 </div>
-
-                <div className="h-px bg-gray-200"></div>
-
+                <div className="h-px bg-gray-100" />
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Statut</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    isActive ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {isActive ? 'Opérationnelle' : 'En attente'}
+                  <span className="text-xs text-gray-500">Statut</span>
+                  <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${isActive ? "bg-[#DDEAD5] text-[#1B5E20]" : "bg-amber-100 text-amber-700"}`}>
+                    {isActive ? "Opérationnelle" : "En attente"}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Contact & Horaires */}
-            <div className="bg-white border-2 border-blue-100 rounded-xl p-5">
-              <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <BsTelephone className="text-blue-600" />
-                Contact & Horaires
-              </h4>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-                  <BsTelephone className="text-emerald-600" />
+            <div className="bg-white border-2 border-blue-100 rounded-2xl p-5">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#355C7D] mb-4 flex items-center gap-2">
+                <BsTelephone className="text-[#355C7D]" /> Contact & Horaires
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-[#DDEAD5]/40 rounded-xl">
+                  <BsTelephone className="text-[#2E7D32] shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-600">Téléphone</p>
-                    <a 
-                      href={`tel:${branch.branch_phone_number}`}
-                      className="text-emerald-600 hover:text-emerald-700 font-medium"
-                    >
+                    <p className="text-xs text-gray-500">Téléphone</p>
+                    <a href={`tel:${branch.branch_phone_number}`} className="text-sm font-medium text-[#2E7D32] hover:underline">
                       {branch.branch_phone_number}
                     </a>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                  <MdEmail className="text-blue-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Email</p>
-                    <a 
-                      href={`mailto:${branch.branch_email}`}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm break-all"
-                    >
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                  <MdEmail className="text-[#355C7D] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">Email</p>
+                    <a href={`mailto:${branch.branch_email}`} className="text-sm font-medium text-[#355C7D] hover:underline truncate block">
                       {branch.branch_email}
                     </a>
                   </div>
                 </div>
-
-                {/* 🎯 HORAIRES - Afficher détails OU bouton activer */}
-                <div className={`p-3 rounded-lg border-2 ${
-                  branchOpeningHours ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className="flex items-center justify-between">
+                <div className={`p-3 rounded-xl border-2 ${branchOpeningHours ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100"}`}>
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <FaClock className={branchOpeningHours ? 'text-amber-600' : 'text-gray-400'} />
+                      <FaClock className={branchOpeningHours ? "text-amber-600" : "text-gray-400"} />
                       <div>
-                        <p className="text-xs text-gray-600">Heures d'ouverture</p>
-                        <p className={`text-sm font-medium ${
-                          branchOpeningHours ? 'text-gray-800' : 'text-gray-400 italic'
-                        }`}>
-                          {branchOpeningHours ? 'Configuré' : 'Non configuré'}
+                        <p className="text-xs text-gray-500">Heures d'ouverture</p>
+                        <p className={`text-sm font-medium ${branchOpeningHours ? "text-gray-800" : "text-gray-400 italic"}`}>
+                          {branchOpeningHours ? "Configuré" : "Non configuré"}
                         </p>
                       </div>
                     </div>
-                    
                     {branchOpeningHours ? (
-                      <button
-                        onClick={() => setShowScheduleModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Voir détails
-                        <FaExternalLinkAlt size={12} />
+                      <button onClick={() => setShowScheduleModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold transition-colors">
+                        Voir détails <FaExternalLinkAlt size={10} />
                       </button>
-                    ) : !isActive && onEdit && (
-                      <button
-                        onClick={() => {
-                          onEdit(branch, 'activate');
-                          onClose();
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        <FaPlayCircle size={14} />
-                        Fermer
+                    ) : (!isActive && onEdit && (
+                      <button onClick={() => { onEdit(branch, "activate"); onClose(); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold transition-colors">
+                        <FaPlayCircle size={12} /> Activer
                       </button>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
@@ -457,99 +354,85 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
           </div>
 
           {/* Personnel */}
-          <div className="bg-white border-2 border-amber-100 rounded-xl p-5">
-            <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <BsPeople className="text-emerald-600" />
+          <div className="bg-white border-2 border-amber-100 rounded-2xl p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-4 flex items-center gap-2">
+              <BsPeople className="text-[#2E7D32]" />
               Répartition du personnel
-              <span className="ml-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold">
-                {totalStaff} employés
-              </span>
-            </h4>
-
+              <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">{totalStaff} employés</span>
+            </p>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl">
-                <div className="text-2xl mb-2">💰</div>
-                <div className="text-3xl font-bold text-emerald-600">{branch.number_of_tellers}</div>
-                <div className="text-sm text-gray-600 mt-1">Caissiers</div>
-              </div>
-
-              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                <div className="text-2xl mb-2">📋</div>
-                <div className="text-3xl font-bold text-blue-600">{branch.number_of_clerks}</div>
-                <div className="text-sm text-gray-600 mt-1">Commis</div>
-              </div>
-
-              <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
-                <div className="text-2xl mb-2"><FaUniversity /></div>
-                <div className="text-3xl font-bold text-amber-600">{branch.number_of_credit_officers}</div>
-                <div className="text-sm text-gray-600 mt-1">Agents crédit</div>
-              </div>
+              {[
+                { emoji: "💰", count: branch.number_of_tellers,         label: "Caissiers",      from: "from-[#DDEAD5]", to: "to-[#c8e0bc]", color: "text-[#2E7D32]" },
+                { emoji: "📋", count: branch.number_of_clerks,          label: "Commis",         from: "from-blue-50",   to: "to-blue-100",   color: "text-[#355C7D]" },
+                { emoji: "🏦", count: branch.number_of_credit_officers, label: "Agents crédit",  from: "from-amber-50",  to: "to-amber-100",  color: "text-amber-600" },
+              ].map(({ emoji, count, label, from, to, color }) => (
+                <div key={label} className={`text-center p-4 bg-gradient-to-br ${from} ${to} rounded-xl`}>
+                  <div className="text-2xl mb-2">{emoji}</div>
+                  <div className={`text-3xl font-bold ${color}`}>{count}</div>
+                  <div className="text-xs text-gray-600 mt-1">{label}</div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Jours fériés */}
-          <div className="bg-white border-2 border-emerald-100 rounded-xl p-5">
-            <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <FaCalendarAlt className="text-emerald-600" />
+          <div className="bg-white border-2 border-[#DDEAD5] rounded-2xl p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-4 flex items-center gap-2">
+              <FaCalendarAlt className="text-[#2E7D32]" />
               Jours fériés
-              <span className="ml-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold">
-                {displayHolidays.length} jours
+              <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">
+                {displayHolidays.length} jour{displayHolidays.length !== 1 ? "s" : ""}
               </span>
-            </h4>
-
+            </p>
             {displayHolidays.length > 0 ? (
               <div className="space-y-2">
                 {displayHolidays
                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                  .map((holiday, index) => {
-                    const holidayDate = new Date(holiday.date);
-                    const isUpcoming = holidayDate > new Date();
-                    
+                  .map((holiday, i) => {
+                    const isUpcoming = new Date(holiday.date) > new Date();
                     return (
-                      <div 
-                        key={index}
-                        className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
-                          isUpcoming ? 'bg-blue-50 border-l-blue-400' : 'bg-gray-50 border-l-gray-400'
-                        }`}
-                      >
+                      <div key={i} className={`flex items-center justify-between p-3 rounded-xl border-l-4 ${isUpcoming ? "bg-blue-50 border-l-[#355C7D]" : "bg-gray-50 border-l-gray-300"}`}>
                         <div>
-                          <div className="font-medium text-gray-800">
-                            {formatDate(holiday.date)}
-                          </div>
-                          {holiday.description && (
-                            <p className="text-sm text-gray-600 mt-1">{holiday.description}</p>
-                          )}
+                          <p className="text-sm font-medium text-gray-800">{formatDate(holiday.date)}</p>
+                          {holiday.description && <p className="text-xs text-gray-500 mt-0.5">{holiday.description}</p>}
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          isUpcoming ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {isUpcoming ? 'À venir' : 'Passé'}
+                        <span className={`text-xs px-2 py-1 rounded-lg font-medium ${isUpcoming ? "bg-blue-100 text-[#355C7D]" : "bg-gray-100 text-gray-500"}`}>
+                          {isUpcoming ? "À venir" : "Passé"}
                         </span>
                       </div>
                     );
                   })}
               </div>
             ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <div className="text-center py-8 bg-gray-50 rounded-xl">
                 <FaCalendarAlt className="text-gray-300 text-4xl mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">Aucun jour férié configuré</p>
+                <p className="text-sm text-gray-500 font-medium">Aucun jour férié configuré</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t p-4 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
-          >
+        {/* ── Footer ── */}
+        <div className="border-t border-gray-100 p-4 bg-gray-50 rounded-b-2xl flex justify-end gap-3 shrink-0">
+          {!isActive && onEdit && (
+            <button onClick={() => { onEdit(branch, "activate"); onClose(); }}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors">
+              <FaPlayCircle /> Activer la branche
+            </button>
+          )}
+          {onEdit && (
+            <button onClick={() => { onEdit(branch, "edit"); onClose(); }}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#DDEAD5] hover:bg-[#c8e0bc] text-[#1B5E20] text-sm font-semibold transition-colors">
+              Modifier
+            </button>
+          )}
+          <button onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors">
             Fermer
-          </button>        
+          </button>
         </div>
       </Modal>
 
-      {/* Schedule Detail Modal */}
       <ScheduleDetailModal
         isOpen={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}

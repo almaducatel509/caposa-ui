@@ -1,36 +1,95 @@
 "use client";
 
-import React from "react";
-import {
-  Button,
-  Chip,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-} from "@heroui/react";
+import React, { useRef, useState, useEffect } from "react";
 import { FiSearch } from "react-icons/fi";
-import {
-  FaPlus,
-  FaDownload,
-  FaFilter,
-  FaBuilding,
-  FaCheckCircle,
-} from "react-icons/fa";
+import { FaPlus, FaDownload, FaBuilding, FaCheckCircle } from "react-icons/fa";
 import { MdKeyboardArrowDown } from "react-icons/md";
+import { Upload } from "lucide-react";
+
+/* ─── Types ──────────────────────────────────────────────────────────────── */
 
 interface BranchFilterBarProps {
-  filterValue: string;
-  selectedSize: string;
+  filterValue:    string;
+  selectedSize:   string;
   selectedStatus: string;
-  totalCount: number;
-  onSearchChange: (value?: string) => void;
-  onClear: () => void;
-  onSizeChange: (key: string) => void;
+  totalCount:     number;
+  onSearchChange: (value: string) => void;
+  onClear:        () => void;
+  onSizeChange:   (key: string) => void;
   onStatusChange: (key: string) => void;
-  onAdd: () => void;
-  onExport: () => void;
+  onAdd:          () => void;
+  onExport:       () => void;
+  onImport?:      () => void;
 }
+
+/* ─── Dropdown natif ─────────────────────────────────────────────────────── */
+
+interface DropdownProps {
+  value:    string;
+  onChange: (key: string) => void;
+  options:  { key: string; label: string }[];
+  icon:     React.ReactNode;
+  active:   boolean;
+}
+
+function NativeDropdown({ value, onChange, options, icon, active }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const currentLabel = options.find((o) => o.key === value)?.label ?? options[0].label;
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={[
+          "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm font-medium border transition-all",
+          active
+            ? "bg-[#DDEAD5] border-[#2E7D32] text-[#1B5E20]"
+            : "bg-white border-gray-200 text-gray-600 hover:border-gray-300",
+        ].join(" ")}
+      >
+        <span className="text-current">{icon}</span>
+        <span>{currentLabel}</span>
+        <MdKeyboardArrowDown
+          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <ul className="absolute z-50 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden py-1 left-0">
+          {options.map((opt) => (
+            <li key={opt.key}>
+              <button
+                type="button"
+                onClick={() => { onChange(opt.key); setOpen(false); }}
+                className={[
+                  "w-full text-left px-4 py-2 text-sm transition-colors",
+                  opt.key === value
+                    ? "bg-[#DDEAD5] text-[#1B5E20] font-semibold"
+                    : "text-gray-700 hover:bg-gray-50",
+                ].join(" ")}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ─── Composant principal ────────────────────────────────────────────────── */
 
 const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
   filterValue,
@@ -43,213 +102,134 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
   onStatusChange,
   onAdd,
   onExport,
+  onImport,
 }) => {
-  /* ================== OPTIONS ================== */
-
   const sizeOptions = [
-    { key: "all", label: "Toutes les tailles" },
-    { key: "small", label: "Petites (< 10 employés)" },
-    { key: "medium", label: "Moyennes (10–19 employés)" },
-    { key: "large", label: "Grandes (20+ employés)" },
+    { key: "all",    label: "Toutes les tailles"      },
+    { key: "small",  label: "Petites (< 10 employés)" },
+    { key: "medium", label: "Moyennes (10–19)"        },
+    { key: "large",  label: "Grandes (20+)"           },
   ];
 
   const statusOptions = [
-    { key: "all", label: "Tous les statuts" },
-    { key: "active", label: "Actives" },
-    { key: "inactive", label: "Inactives" },
+    { key: "all",      label: "Tous les statuts" },
+    { key: "active",   label: "Actives"          },
+    { key: "inactive", label: "Inactives"        },
   ];
 
-  const getSizeLabel =
-    () => sizeOptions.find(o => o.key === selectedSize)?.label || "Taille";
-
-  const getStatusLabel =
-    () => statusOptions.find(o => o.key === selectedStatus)?.label || "Statut";
-
   const activeFiltersCount = [
-    selectedSize !== "all",
+    selectedSize   !== "all",
     selectedStatus !== "all",
   ].filter(Boolean).length;
 
-  /* ================== RENDER ================== */
-
   return (
-    <div className="space-y-4">
-      {/* 🔍 Recherche + actions */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        {/* Recherche */}
-        <div className="relative w-full lg:max-w-xl">
-          <FiSearch
-            size={20}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
+    <div className="flex flex-col gap-3">
 
+      {/* ── Ligne 1 : Recherche + boutons ── */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+
+        {/* Barre de recherche — identique AccountFilterBar */}
+        <div className="relative flex-1 max-w-xl">
+          <FiSearch
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          />
           <input
             type="text"
             value={filterValue}
-            placeholder="Rechercher une branche par nom, ville, téléphone..."
+            placeholder="N° branche, nom, adresse, email..."
             onChange={(e) => onSearchChange(e.target.value)}
-            className="
-              w-full h-12 pl-12 pr-12
-              rounded-xl text-sm
-              bg-white shadow-sm
-              border-2 border-transparent
-              hover:border-green-200
-              focus:border-green-500 focus:outline-none
-              transition-colors
-            "
+            className="w-full h-10 pl-10 pr-10 rounded-xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32] transition-colors"
           />
-
           {filterValue && (
             <button
               type="button"
-              onClick={() => {
-                onSearchChange("");
-                onClear();
-              }}
-              className="
-                absolute right-3 top-1/2 -translate-y-1/2
-                p-1 rounded-md
-                text-gray-400
-                hover:text-gray-600
-                hover:bg-gray-100
-              "
+              onClick={() => { onSearchChange(""); onClear(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               ✕
             </button>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 w-full lg:w-auto">
-          <Button
-            color="success"
-            startContent={<FaPlus />}
-            onPress={onAdd}
-            className="
-              flex-1 lg:flex-none
-              bg-linear-to-r from-green-600 to-green-700
-              text-white font-semibold
-              h-12 px-6 rounded-md
-            "
+        {/* Boutons — mêmes que AccountFilterBar */}
+        <div className="flex items-center gap-2 shrink-0">
+          {onImport && (
+            <button
+              type="button"
+              onClick={onImport}
+              className="flex items-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <Upload size={14} />
+              Importer
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onExport}
+            className="flex items-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            Nouvelle branche
-          </Button>
-
-          <Button
-            variant="bordered"
-            startContent={<FaDownload />}
-            onPress={onExport}
-            className="
-              flex-1 lg:flex-none
-              border-2 border-green-600
-              text-green-600
-              hover:bg-green-50
-              h-12 px-6 rounded-md
-            "
-          >
+            <FaDownload size={12} />
             Exporter
-          </Button>
+          </button>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#1B5E20] text-white text-sm font-semibold transition-colors shadow-sm"
+          >
+            <FaPlus size={11} />
+            Nouvelle branche
+          </button>
         </div>
       </div>
 
-      {/* 🎛️ Filtres */}
-      <div className="bg-linear-to-r from-amber-50 via-white to-amber-50 rounded-xl p-4 shadow-sm border border-blue-100">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* ── Ligne 2 : Compteur + filtres ── */}
+      <div className="flex items-center gap-3 flex-wrap">
 
-          {/* Résultats */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">Résultats:</span>
-           <span className="bg-amber-100 text-amber-400 font-bold text-base px-4 py-1 rounded-lg">
-              {totalCount}
-            </span>
-          </div>
-
-          <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-
-          {/* Taille */}
-          <Dropdown className="bg-green-100 border rounded-md border-gray-400 font-semibold">
-            <DropdownTrigger>
-             <Button
-                variant="flat"
-                startContent={<FaBuilding />}
-                endContent={<MdKeyboardArrowDown />}
-                className={selectedSize !== "all"
-                  ? "bg-green-100 border-2 border-green-400 rounded-md font-semibold"
-                  : "bg-white border-2 border-gray-200 rounded-md"}
-              >
-                {getSizeLabel()}
-              </Button>
-
-            </DropdownTrigger>
-
-            <DropdownMenu
-              selectedKeys={[selectedSize]}
-              selectionMode="single"
-              onSelectionChange={(keys) => {
-                const v = Array.from(keys)[0]?.toString();
-                if (v) onSizeChange(v);
-              }}
-            >
-              {sizeOptions.map(opt => (
-                <DropdownItem key={opt.key}>
-                  {opt.label}
-                </DropdownItem>
-              ))}
-            </DropdownMenu>
-          </Dropdown>
-
-          {/* Statut */}
-          <Dropdown className="bg-green-100 border rounded-md border-gray-400 font-semibold">
-            <DropdownTrigger>
-              <Button
-                variant="flat"
-                startContent={<FaCheckCircle />}
-                endContent={<MdKeyboardArrowDown />}
-                className={selectedStatus !== "all"
-                  ? "bg-green-100 border-2 border-green-400 rounded-md font-semibold"
-                  : "bg-white border-2 border-gray-200 rounded-md"}
-              >
-                {getStatusLabel()}
-              </Button>
-            </DropdownTrigger>
-
-            <DropdownMenu
-              selectedKeys={[selectedStatus]}
-              selectionMode="single"
-              onSelectionChange={(keys) => {
-                const v = Array.from(keys)[0]?.toString();
-                if (v) onStatusChange(v);
-              }}
-            >
-              {statusOptions.map(opt => (
-                <DropdownItem key={opt.key} className="rounded-md" >
-                  {opt.label}
-                </DropdownItem>
-              ))}
-            </DropdownMenu>
-          </Dropdown>
-
-          {/* Filtres actifs */}
-          {activeFiltersCount > 0 && (
-            <>
-              <div className="h-8 w-px bg-gray-300 hidden sm:block" />
-              <Chip size="sm" color="warning">
-                {activeFiltersCount} filtre{activeFiltersCount > 1 ? "s" : ""} actif
-              </Chip>
-              <Button
-                size="sm"
-                variant="light"
-                color="danger"
-                onPress={() => {
-                  onSizeChange("all");
-                  onStatusChange("all");
-                }}
-              >
-                Réinitialiser
-              </Button>
-            </>
-          )}
+        {/* Résultats */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Résultats</span>
+          <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 bg-[#DDEAD5] text-[#1B5E20] text-xs font-bold rounded-lg">
+            {totalCount}
+          </span>
         </div>
+
+        <div className="h-5 w-px bg-gray-200" />
+
+        {/* Filtre taille */}
+        <NativeDropdown
+          value={selectedSize}
+          onChange={onSizeChange}
+          options={sizeOptions}
+          icon={<FaBuilding size={11} />}
+          active={selectedSize !== "all"}
+        />
+
+        {/* Filtre statut */}
+        <NativeDropdown
+          value={selectedStatus}
+          onChange={onStatusChange}
+          options={statusOptions}
+          icon={<FaCheckCircle size={11} />}
+          active={selectedStatus !== "all"}
+        />
+
+        {/* Reset filtres actifs */}
+        {activeFiltersCount > 0 && (
+          <>
+            <div className="h-5 w-px bg-gray-200" />
+            <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+              {activeFiltersCount} filtre{activeFiltersCount > 1 ? "s" : ""} actif
+            </span>
+            <button
+              type="button"
+              onClick={() => { onSizeChange("all"); onStatusChange("all"); }}
+              className="text-xs text-red-500 hover:text-red-700 underline underline-offset-2 transition-colors"
+            >
+              Réinitialiser
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

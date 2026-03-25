@@ -1,12 +1,12 @@
+"use client";
 
-// ============================================
-// FILE: src/components/autocomplete/BranchAutocomplete.tsx
-// ============================================
-'use client';
-import { Autocomplete, AutocompleteItem } from "@heroui/react";
-import React, { useState, useEffect } from 'react';
-import { fetchBranches } from '@/app/lib/api/branche';
-import type { BranchData, BaseAutocompleteProps } from '@/types/autocomplete.types';
+import React, { useState, useEffect, useRef } from "react";
+import { fetchBranches } from "@/app/lib/api/branche";
+import type { BranchData, BaseAutocompleteProps } from "@/types/autocomplete.types";
+import { CiBank } from "react-icons/ci";
+import { GrMapLocation } from "react-icons/gr";
+import { BsTelephone } from "react-icons/bs";
+import { FiSearch } from "react-icons/fi";
 
 interface BranchAutocompleteProps extends BaseAutocompleteProps {
   onAddNew?: () => void;
@@ -19,147 +19,228 @@ export function BranchAutocomplete({
   isDisabled = false,
   isRequired = false,
   onAddNew,
-  className = '',
+  className = "",
 }: BranchAutocompleteProps) {
   const [branches, setBranches] = useState<BranchData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
+  const [open, setOpen] = useState(false);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  /* ── Chargement ── */
   useEffect(() => {
-    const loadBranches = async () => {
+    const load = async () => {
       setIsLoading(true);
       try {
         const data = await fetchBranches();
         setBranches(data || []);
-      } catch (error) {
-        console.error('Error loading branches:', error);
+      } catch {
         setBranches([]);
       } finally {
         setIsLoading(false);
       }
     };
-
-    loadBranches();
+    load();
   }, []);
 
-  const selectedBranch = branches.find(b => b.id === selectedKey);
+  /* ── Fermer au clic extérieur ── */
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  /* ── Calculs dérivés ── */
+  const selectedBranch = branches.find((b) => b.id === selectedKey);
 
   const filteredBranches = searchValue
-    ? branches.filter(b =>
-        `${b.name} ${b.address} ${b.phone_number || ''}`
+    ? branches.filter((b) =>
+        `${b.name} ${b.address ?? ""} ${b.phone_number ?? ""}`
           .toLowerCase()
           .includes(searchValue.toLowerCase())
       )
     : branches;
 
+  /* ── Sélection d'un item ── */
+  const selectBranch = (branch: BranchData) => {
+    onSelectionChange(branch.id);
+    setSearchValue(branch.name);
+    setOpen(false);
+  };
+
+  /* ── Clear ── */
+  const clearSelection = () => {
+    onSelectionChange("");
+    setSearchValue("");
+    inputRef.current?.focus();
+  };
+
+  /* ── Hint sous le champ ── */
+  const hint = isLoading
+    ? "Chargement des branches…"
+    : searchValue && filteredBranches.length > 0
+    ? `${filteredBranches.length} branche${filteredBranches.length > 1 ? "s" : ""} trouvée${filteredBranches.length > 1 ? "s" : ""}`
+    : branches.length === 0
+    ? "Aucune branche disponible"
+    : "Recherchez par nom ou adresse";
+
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
-      <label className="text-sm font-medium text-gray-800 flex items-center justify-between">
-        <span className="flex items-center">
-          Select Branch {isRequired && <span className="text-red-500 ml-1">*</span>}
+    <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef}>
+
+      {/* Label */}
+      <label className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+        <span className="flex items-center gap-1.5">
+          Branche
+          {isRequired && <span className="text-red-500">*</span>}
           {!isLoading && (
-            <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">
-              {branches.length} available
+            <span className="ml-1 px-2 py-0.5 bg-[#DDEAD5] text-[#1B5E20] text-xs rounded-lg font-medium">
+              {branches.length} disponibles
             </span>
           )}
         </span>
       </label>
 
-      <Autocomplete
-        isRequired={isRequired}
-        label="Branch"
-        placeholder="Search by name or address..."
-        defaultItems={filteredBranches}
-        selectedKey={selectedKey}
-        onSelectionChange={(key) => onSelectionChange(key?.toString() || '')}
-        inputValue={searchValue}
-        onInputChange={setSearchValue}
-        isDisabled={isDisabled}
-        isLoading={isLoading}
-        size="lg"
-        variant="bordered"
-        startContent={<span className="text-gray-400 text-xl">🏢</span>}
-        description={
-          isLoading
-            ? "Loading branches..."
-            : searchValue && filteredBranches.length > 0
-            ? `Found ${filteredBranches.length} branch${filteredBranches.length !== 1 ? 'es' : ''}`
-            : branches.length === 0
-            ? "No branches available"
-            : "Search by name or address"
-        }
-        errorMessage={errorMessage}
-        isInvalid={!!errorMessage}
-        classNames={{
-          base: "max-w-full",
-          listboxWrapper: "max-h-[320px]",
-        }}
-        listboxProps={{
-          emptyContent: (
-            <div className="py-8 text-center">
-              <div className="text-4xl mb-3">🏢</div>
-              <p className="text-gray-600 mb-3 font-medium">
-                {isLoading ? "Loading..." : "No branches found"}
-              </p>
-              {!isLoading && onAddNew && (
-                <button
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
-                  onClick={onAddNew}
-                >
-                  + Add New Branch
-                </button>
-              )}
-            </div>
-          )
-        }}
-      >
-        {(branch) => (
-          <AutocompleteItem
-            key={branch.id}
-            textValue={branch.name}
-            startContent={
-              <div className="flex items-center justify-center w-10 h-10 bg-linear-to-br from-orange-100 to-orange-200 rounded-full">
-                <span className="text-lg">🏢</span>
-              </div>
-            }
-          >
-            <div className="flex flex-col py-2">
-              <span className="font-semibold text-gray-900">
-                {branch.name}
-              </span>
-              {branch.address && (
-                <span className="text-xs text-gray-500 mt-0.5">
-                  {branch.address}
-                </span>
-              )}
-              {branch.phone_number && (
-                <span className="text-xs text-gray-400 mt-0.5">
-                  {branch.phone_number}
-                </span>
-              )}
-            </div>
-          </AutocompleteItem>
-        )}
-      </Autocomplete>
+      {/* Input wrapper */}
+      <div className="relative">
+        <FiSearch
+          size={16}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+        />
 
-      {selectedBranch && (
-        <div className="mt-2 p-3 bg-linear-to-r from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="text-orange-600">🏢</span>
-              <span className="text-sm font-medium text-gray-900">
+        <input
+          ref={inputRef}
+          type="text"
+          disabled={isDisabled}
+          value={selectedBranch && !open ? selectedBranch.name : searchValue}
+          placeholder="Rechercher par nom ou adresse…"
+          onChange={(e) => {
+            setSearchValue(e.target.value);
+            setOpen(true);
+            if (selectedKey) onSelectionChange("");
+          }}
+          onFocus={() => setOpen(true)}
+          className={`w-full h-11 pl-10 pr-10 rounded-xl text-sm border-2 transition-colors outline-none
+            ${isDisabled ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-200" : "bg-white"}
+            ${errorMessage
+              ? "border-red-400 ring-2 ring-red-200 focus:border-red-400"
+              : open
+              ? "border-[#2E7D32] ring-2 ring-[#2E7D32]/20"
+              : "border-gray-200 hover:border-[#2E7D32]/40 focus:border-[#2E7D32]"
+            }
+          `}
+        />
+
+        {/* Spinner */}
+        {isLoading && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
+        )}
+
+        {/* Clear */}
+        {!isLoading && selectedKey && (
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      {/* Hint / error */}
+      {errorMessage ? (
+        <p className="text-xs text-red-500">{errorMessage}</p>
+      ) : (
+        <p className="text-xs text-gray-400">{hint}</p>
+      )}
+
+      {/* Dropdown */}
+      {open && !isDisabled && (
+        <div className="relative z-50">
+          <ul className="absolute w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto py-1">
+            {filteredBranches.length === 0 ? (
+              <li className="py-8 text-center">
+                <CiBank className="text-4xl text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 font-medium mb-3">
+                  {isLoading ? "Chargement…" : "Aucune branche trouvée"}
+                </p>
+                {!isLoading && onAddNew && (
+                  <button
+                    type="button"
+                    onClick={onAddNew}
+                    className="px-4 py-2 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white rounded-xl text-sm font-semibold hover:shadow-md transition-all"
+                  >
+                    + Ajouter une branche
+                  </button>
+                )}
+              </li>
+            ) : (
+              filteredBranches.map((branch) => (
+                <li key={branch.id}>
+                  <button
+                    type="button"
+                    onClick={() => selectBranch(branch)}
+                    className={`w-full text-left flex items-center gap-3 px-4 py-3 transition-colors ${
+                      branch.id === selectedKey
+                        ? "bg-[#DDEAD5] text-[#1B5E20]"
+                        : "hover:bg-gray-50 text-gray-800"
+                    }`}
+                  >
+                    {/* Icône */}
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#DDEAD5] to-[#c8e0bc] flex items-center justify-center shrink-0">
+                      <CiBank className="text-[#2E7D32] text-lg" />
+                    </div>
+
+                    {/* Infos */}
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-semibold text-sm truncate">{branch.name}</span>
+                      {branch.address && (
+                        <span className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                          <GrMapLocation className="text-[#2E7D32] shrink-0" size={10} />
+                          {branch.address}
+                        </span>
+                      )}
+                      {branch.phone_number && (
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <BsTelephone className="text-[#2E7D32] shrink-0" size={10} />
+                          {branch.phone_number}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+
+      {/* Sélection confirmée */}
+      {selectedBranch && !open && (
+        <div className="mt-1 p-3 bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-2 border-[#2E7D32]/20 rounded-xl">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <CiBank className="text-[#2E7D32] shrink-0 text-lg" />
+              <span className="text-sm font-semibold text-gray-900 truncate">
                 {selectedBranch.name}
               </span>
               {selectedBranch.address && (
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-gray-500 hidden sm:block truncate">
                   · {selectedBranch.address}
                 </span>
               )}
             </div>
             <button
-              onClick={() => onSelectionChange('')}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-              title="Clear selection"
+              type="button"
+              onClick={clearSelection}
+              className="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none shrink-0"
+              title="Effacer la sélection"
             >
               ×
             </button>
