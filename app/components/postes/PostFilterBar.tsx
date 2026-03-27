@@ -1,104 +1,66 @@
 "use client";
 
 import React from "react";
-import { Button, Chip } from "@heroui/react";
 import { FiSearch } from "react-icons/fi";
 import { FaPlus, FaDownload } from "react-icons/fa";
 
 interface PostFilterBarProps {
   filterValue: string;
-  totalCount: number;
-  onSearchChange: (value?: string) => void;
-  onClear: () => void;
-  onAdd: () => void;
+  totalCount:  number;
+  onSearchChange: (value: string) => void;
+  onClear:  () => void;
+  onAdd:    () => void;
   onExport: () => void;
 }
 
 const PostFilterBar: React.FC<PostFilterBarProps> = ({
-  filterValue,
-  totalCount,
-  onSearchChange,
-  onClear,
-  onAdd,
-  onExport,
+  filterValue, totalCount, onSearchChange, onClear, onAdd, onExport,
 }) => {
   return (
-    <div className="space-y-2">
-      {/* Recherche + actions */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        <div className="relative w-full lg:max-w-xl">
-          <FiSearch size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+    <div className="flex flex-col gap-3">
+
+      {/* ── Ligne 1 : Recherche + boutons ── */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+
+        <div className="relative flex-1 max-w-xl">
+          <FiSearch size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
             type="text"
             value={filterValue}
-            placeholder="Rechercher un poste..."
+            placeholder="Rechercher un poste par nom ou description…"
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full h-12 pl-12 pr-12 rounded-xl text-sm bg-white shadow-sm border-2 border-transparent hover:border-green-200 focus:border-green-500 focus:outline-none transition-colors"
+            className="w-full h-10 pl-10 pr-10 rounded-xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32] transition-colors"
           />
           {filterValue && (
-            <button
-              type="button"
-              onClick={() => {
-                onSearchChange("");
-                onClear();
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-            >
+            <button type="button"
+              onClick={() => { onSearchChange(""); onClear(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-sm">
               ✕
             </button>
           )}
         </div>
-        <div className="flex gap-2 w-full lg:w-auto">
-          {/* Nouveau Poste */}
-          <Button
-            startContent={<FaPlus />}
-            onPress={onAdd}
-            className="
-              flex-1 lg:flex-none
-              bg-green-600 
-              hover:bg-green-700
-              text-white
-              rounded-lg
-              shadow-sm
-              hover:shadow-md
-              transition-all
-            "
-          >
-            Nouveau Poste
-          </Button>
-          {/* Exporter */}
-          <Button
-            variant="bordered"
-            startContent={<FaDownload />}
-            onPress={onExport}
-            className="
-              flex-1 lg:flex-none
-              border border-gray-300
-              text-gray-700
-              hover:bg-gray-100
-              rounded-lg
-              transition-all
-            "
-          >
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button type="button" onClick={onExport}
+            className="flex items-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <FaDownload size={12} />
             Exporter
-          </Button>
+          </button>
+          <button type="button" onClick={onAdd}
+            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#1B5E20] text-white text-sm font-semibold transition-colors shadow-sm">
+            <FaPlus size={11} />
+            Nouveau poste
+          </button>
         </div>
       </div>
 
-      {/* Résultats */}
-      <div className=" border border-gray-100 bg-linear-to-r from-green-50 via-white to-emerald-50 rounded-xl p-4 shadow-xs shadow-green-700/20 ">
-          <span className="text-md font-semibold text-gray-600 pr-2">Résultats :</span>
-          <div className="
-            inline-flex items-center 
-            px-3 py-1.5 
-            bg-green-600/10 
-            text-green-700 
-            border border-green-200 
-            rounded-md 
-            text-sm font-medium
-          ">
-            {totalCount} Poste(s)
-          </div>
+      {/* ── Ligne 2 : Compteur ── */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-500">Résultats</span>
+        <span className="inline-flex items-center justify-center min-w-8 h-6 px-2 bg-[#DDEAD5] text-[#1B5E20] text-xs font-bold rounded-lg">
+          {totalCount}
+        </span>
       </div>
     </div>
   );
