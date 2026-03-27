@@ -5,14 +5,12 @@ import {
   ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package,
   Calculator, Lock, Unlock, Sun, Sunset, ChevronRight,
   Bell, RefreshCw, Banknote, FileText, XCircle,
-  History, LogIn, LogOut, Loader2,
+  History, LogIn, LogOut, Loader2, CheckCircle2,
 } from 'lucide-react';
-import { fetchDashboard, fetchAlerts, openSession, closeSession } from '@/app/lib/api/caisse';
-import { fetchTransactions } from '@/app/lib/api/transactions';
+import { fetchDashboard, fetchTransactions, fetchAlerts, openSession, closeSession } from '@/app/lib/api/caisse';
 import { CaisseAlert, CaisseTransaction, CaisseSession, CaisseStatus, OpenSessionPayload } from '@/types/caisse';
 import CloseSessionModal from './Closesessionmodal';
 import OpenSessionModal from './Opensessionmodal';
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatHTG(v: number) {
@@ -423,15 +421,39 @@ export default function DashboardCaissier() {
           <p className="text-sm text-green-200 mb-4">Complétez ces étapes avant de quitter votre poste.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { Icon: Package,    label: 'Faire la remise',       action: () => setQuickModal('remise') },
-              { Icon: Calculator, label: 'Réconciliation finale', action: () => setQuickModal('recon')  },
-              { Icon: Lock,       label: 'Fermer la caisse',      action: () => caisseStatus === 'ouverte' && setShowCloseModal(true) },
+              {
+                Icon:  Package,
+                label: 'Faire la remise',
+                done:  false,
+                action: () => setQuickModal('remise'),
+              },
+              {
+                Icon:  Calculator,
+                label: 'Réconciliation finale',
+                done:  false,
+                action: () => setQuickModal('recon'),
+              },
+              {
+                Icon:  Lock,
+                label: 'Fermer la caisse',
+                done:  caisseStatus === 'fermée',
+                action: () => caisseStatus === 'ouverte' && setShowCloseModal(true),
+              },
             ].map((item, i) => (
               <button key={i} onClick={item.action}
-                className="flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left">
-                <item.Icon className="w-5 h-5 text-[#DDEAD5] shrink-0" />
-                <span className="text-sm font-medium">{item.label}</span>
-                <ChevronRight className="w-4 h-4 ml-auto text-green-300" />
+                disabled={item.done}
+                className={[
+                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left w-full',
+                  item.done ? 'bg-white/20 opacity-80 cursor-default' : 'bg-white/10 hover:bg-white/20',
+                ].join(' ')}>
+                <item.Icon className="w-5 h-5 shrink-0 text-[#DDEAD5]" />
+                <span className={`text-sm font-medium flex-1 ${item.done ? 'line-through opacity-70' : ''}`}>
+                  {item.label}
+                </span>
+                {item.done
+                  ? <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                  : <ChevronRight className="w-4 h-4 text-green-300 shrink-0" />
+                }
               </button>
             ))}
           </div>
