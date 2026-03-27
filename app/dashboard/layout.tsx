@@ -1,30 +1,3 @@
-// // app/dashboard/layout.tsx
-// import { auth } from "@/auth";
-// import { redirect } from "next/navigation";
-// import SideNav from "@/app/components/dashboard/sidenav";
-
-// export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-//   const session = await auth();
-//   if (!session?.user) {
-//     redirect("/login?callbackUrl=/dashboard");
-//   }
-
-//   return (
-//     <div className="flex h-screen flex-col md:flex-row md:overflow-hidden bg-white">
-//       {/* SideNav sans position relative problématique */}
-//       <div className="w-full flex-none md:w-64">
-//         <SideNav />
-//       </div>
-      
-//       {/* Contenu principal - AUCUN z-index ou position qui pourrait créer un contexte d'empilement */}
-//       <div className="grow px-6 md:overflow-y-auto md:p-12">
-//         {children}
-//       </div>
-//     </div>
-//   );
-// }
-//ancien
-// app/dashboard/layout.tsx  (or whatever your dashboard layout path is)
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import SideNav from "@/app/components/dashboard/sidenav";
@@ -40,7 +13,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="w-full flex-none md:w-64">
         <SideNav />
       </div>
-      <div className="grow px-6 md:overflow-y-auto md:p-12">{children}</div>
+      {/* Zéro padding ici — chaque page gère son propre p-6 md:p-8 */}
+      <div className="grow md:overflow-y-auto">
+        {children}
+      </div>
     </div>
   );
 }

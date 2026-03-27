@@ -2,85 +2,82 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GrPower } from 'react-icons/gr';
 import { GiReceiveMoney } from 'react-icons/gi';
+import { LogOut } from 'lucide-react';
 import NavLinks from '@/app/components/dashboard/Navlink';
-import { Avatar } from "@heroui/react";
+import { signOut } from 'next-auth/react';
 
 export default function SideNav() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    
-    document.cookie.split(';').forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, '')
-        .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
-    });
-
-    router.push('/');
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push('/login');
   };
 
-  // 🧑 Données utilisateur (remplacer par vos vraies données de session)
+  /* TODO: remplacer par les vraies données de session NextAuth */
   const currentUser = {
-    name: "Jean Dupont",
-    email: "jean@caisse.com",
-    avatar: "https://i.pravatar.cc/150?img=12",
-    role: "Admin"
+    name:   "Jean Dupont",
+    email:  "jean@caisse.com",
+    role:   "Caissier",
   };
+
+  /* Initiales pour l'avatar */
+  const initials = currentUser.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 relative z-50 shadow-sm shadow-green-700/30 ">
-      {/* Logo Header */}
+    <div className="flex h-full flex-col bg-white border-r border-gray-100 shadow-sm">
+
+      {/* ── Logo ── */}
       <Link
-        className="mb-2 flex h-16 items-center justify-center bg-white p-4 shrink-0"
         href="/"
+        className="flex h-16 items-center gap-3 px-5 border-b border-gray-100 shrink-0 hover:bg-[#F9F9F6] transition-colors"
       >
-        <div className="w-12 text-green-600">
-          <GiReceiveMoney className="w-full h-full" />
+        <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
+          <GiReceiveMoney className="w-5 h-5 text-white" />
         </div>
-        <span className="ml-3 text-green-600 text-xl font-bold hidden md:block">
-          CAPOSA <span className="text-sm font-medium opacity-70">v1.0</span>
-        </span>
+        <div className="hidden md:block">
+          <span className="text-[#2E7D32] text-lg font-bold leading-none">CAPOSA</span>
+          <span className="text-xs text-gray-400 font-medium ml-1.5">v1.0</span>
+        </div>
       </Link>
 
-      {/* Scrollable Menu Area */}
+      {/* ── Menu scrollable ── */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
         <NavLinks />
       </div>
 
-      {/* Bottom Section: User Profile + Logout */}
-      <div className="shrink-0 border-t border-gray-200 bg-white">
-        {/* User Profile */}
+      {/* ── Utilisateur + Déconnexion ── */}
+      <div className="shrink-0 border-t border-gray-100">
+
+        {/* Profil */}
         <div className="p-3 border-b border-gray-100">
-          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-            <Avatar 
-              src={currentUser.avatar}
-              name={currentUser.name}
-              className="w-10 h-10 shrink-0"
-              showFallback
-            />
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F9F9F6] transition-colors cursor-default">
+
+            {/* Avatar initiales — zéro dépendance */}
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-[#1B5E20]">{initials}</span>
+            </div>
+
             <div className="hidden md:block flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {currentUser.name}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {currentUser.email}
-              </p>
+              <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.name}</p>
+              <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
             </div>
           </div>
         </div>
 
-        {/* Logout Button */}
+        {/* Déconnexion */}
         <div className="p-3">
           <button
             onClick={handleLogout}
-            className="flex h-11 w-full items-center justify-center gap-3 rounded-md bg-white border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 md:justify-start transition-all"
+            className="flex h-10 w-full items-center justify-center gap-3 rounded-xl border border-gray-200 px-3 text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 md:justify-start transition-all"
           >
-            <GrPower className="w-5 h-5" />
+            <LogOut className="w-4 h-4 shrink-0" />
             <span className="hidden md:block">Déconnexion</span>
           </button>
         </div>
