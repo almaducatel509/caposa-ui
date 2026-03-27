@@ -290,7 +290,7 @@ const CashHandoverHistory: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-8">
+<div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
       {/* Filtre de période */}
       <div className="mb-6 flex gap-3">
         {(['day', 'week', 'month', 'year'] as const).map(period => (

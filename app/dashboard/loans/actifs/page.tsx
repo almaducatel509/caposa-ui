@@ -12,7 +12,6 @@ export default function ActifsPage() {
         <PageHeader
           title="Prêts Actifs"
           subtitle="Suivez les prêts en cours de remboursement"
-          icon={<GiReceiveMoney className="w-8 h-8 text-[#2E7D32]" />}
         />
         <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-white hover:border-[#2E7D32]/30 transition-colors shrink-0">
           <FaSync className="w-3.5 h-3.5" />
