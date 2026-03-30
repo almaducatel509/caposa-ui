@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   TrendingUp, Clock, AlertTriangle, CheckCircle,
   ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package,
@@ -9,9 +10,10 @@ import {
 } from 'lucide-react';
 import { fetchDashboard, fetchTransactions, fetchAlerts, openSession, closeSession } from '@/app/lib/api/caisse';
 import { CaisseAlert, CaisseTransaction, CaisseSession, CaisseStatus, OpenSessionPayload } from '@/types/caisse';
-import CloseSessionModal from './Closesessionmodal';
-import OpenSessionModal from './Opensessionmodal';
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import OpenSessionModal  from '../../sessions/Opensessionmodal';
+import CloseSessionModal from '../../sessions/Closesessionmodal';
+
+// ─── Helpers ─────────────────────────────────────────────────────
 
 function formatHTG(v: number) {
   return new Intl.NumberFormat('fr-CA', {
@@ -33,7 +35,7 @@ function getGreeting() {
        :           { text: 'Bonsoir',        icon: Sunset };
 }
 
-// ─── Modal générique ──────────────────────────────────────────────────────────
+// ─── Modal générique ─────────────────────────────────────────────
 
 function Modal({ title, onClose, children, size = 'md' }: {
   title: React.ReactNode; onClose: () => void;
@@ -57,7 +59,7 @@ function Modal({ title, onClose, children, size = 'md' }: {
   );
 }
 
-// ─── Petits composants ────────────────────────────────────────────────────────
+// ─── Petits composants ────────────────────────────────────────────
 
 function KPICard({ icon: Icon, label, value, sub, color, border }: {
   icon: React.ElementType; label: string; value: string; sub?: string;
@@ -100,7 +102,7 @@ const TX_CFG: Record<string, { icon: React.ElementType; color: string; bg: strin
 };
 
 function TxRow({ tx }: { tx: CaisseTransaction }) {
-  const cfg = TX_CFG[tx.type] ?? TX_CFG['transfer'];
+  const cfg  = TX_CFG[tx.type] ?? TX_CFG['transfer'];
   const Icon = cfg.icon;
   return (
     <div className="flex items-center gap-4 px-5 py-3 hover:bg-[#DDEAD5]/10 transition-colors">
@@ -161,31 +163,27 @@ function QuickAction({ icon: Icon, label, color, onClick }: {
   );
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// ─── Dashboard principal ──────────────────────────────────────────
 
 export default function DashboardCaissier() {
-  /* ── État data ── */
-  const [sessions,       setSessions]      = useState<CaisseSession[]>([]);
-  const [transactions,   setTransactions]  = useState<CaisseTransaction[]>([]);
-  const [alerts,         setAlerts]        = useState<CaisseAlert[]>([]);
-  const [montantCaisse,  setMontantCaisse] = useState(0);
-
-  /* ── État UI ── */
-  const [caisseStatus,   setCaisseStatus]   = useState<CaisseStatus>('fermée');
-  const [isLoading,      setIsLoading]      = useState(true);
-  const [isRefreshing,   setIsRefreshing]   = useState(false);
-  const [activeTab,      setActiveTab]      = useState<'transactions' | 'sessions'>('transactions');
-  const [showOpenModal,  setShowOpenModal]  = useState(false);
-  const [showCloseModal, setShowCloseModal] = useState(false);
-  const [quickModal,     setQuickModal]     = useState<string | null>(null);
-  const [time,           setTime]           = useState(getNow());
-  const [isEndOfDay,     setIsEndOfDay]     = useState(false);
+  const [sessions,      setSessions]     = useState<CaisseSession[]>([]);
+  const [transactions,  setTransactions] = useState<CaisseTransaction[]>([]);
+  const [alerts,        setAlerts]       = useState<CaisseAlert[]>([]);
+  const [montantCaisse, setMontantCaisse] = useState(0);
+  const [caisseStatus,  setCaisseStatus]  = useState<CaisseStatus>('fermée');
+  const [isLoading,     setIsLoading]    = useState(true);
+  const [isRefreshing,  setIsRefreshing] = useState(false);
+  const [activeTab,     setActiveTab]    = useState<'transactions' | 'sessions'>('transactions');
+  const [showOpenModal, setShowOpenModal]  = useState(false);
+  const [showCloseModal,setShowCloseModal] = useState(false);
+  const [quickModal,    setQuickModal]   = useState<string | null>(null);
+  const [time,          setTime]         = useState(getNow());
+  const [isEndOfDay,    setIsEndOfDay]   = useState(false);
 
   const activeSession = sessions.find(s => s.statut === 'ouverte') ?? null;
   const greeting      = getGreeting();
   const GreetIcon     = greeting.icon;
 
-  /* ── Horloge ── */
   useEffect(() => {
     const t = setInterval(() => {
       setTime(getNow());
@@ -195,7 +193,6 @@ export default function DashboardCaissier() {
     return () => clearInterval(t);
   }, []);
 
-  /* ── Chargement initial ── */
   useEffect(() => {
     fetchDashboard().then(data => {
       setSessions(data.sessions);
@@ -206,7 +203,6 @@ export default function DashboardCaissier() {
     }).finally(() => setIsLoading(false));
   }, []);
 
-  /* ── Refresh ── */
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -219,7 +215,6 @@ export default function DashboardCaissier() {
     }
   }, [isRefreshing]);
 
-  /* ── Ouvrir session ── */
   const handleOpenSession = async (payload: OpenSessionPayload) => {
     const session = await openSession(payload);
     setSessions(prev => [...prev, session]);
@@ -227,7 +222,6 @@ export default function DashboardCaissier() {
     setShowOpenModal(false);
   };
 
-  /* ── Fermer session ── */
   const handleCloseSession = async (montantFermeture: number) => {
     if (!activeSession) return;
     const closed = await closeSession(activeSession.id, { montant_fermeture: montantFermeture });
@@ -376,8 +370,10 @@ export default function DashboardCaissier() {
         </div>
       </div>
 
-      {/* ── Onglets Sessions | Transactions ── */}
+      {/* ── Onglets Transactions | Sessions ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
+
+        {/* En-tête onglets — sans "Voir tout" */}
         <div className="flex items-center gap-1 px-5 pt-4 pb-0 border-b border-gray-100">
           {([
             { key: 'transactions', label: 'Transactions', count: transactions.length, Icon: TrendingUp },
@@ -397,10 +393,9 @@ export default function DashboardCaissier() {
               ].join(' ')}>{tab.count}</span>
             </button>
           ))}
-          <button className="ml-auto flex items-center gap-1 text-xs text-[#2E7D32] font-medium hover:underline pb-2.5">
-            Voir tout <ChevronRight className="w-3 h-3" />
-          </button>
         </div>
+
+        {/* Corps du tableau */}
         <div className="divide-y divide-gray-50">
           {activeTab === 'transactions'
             ? transactions.length === 0
@@ -410,6 +405,17 @@ export default function DashboardCaissier() {
               ? <p className="text-sm text-gray-400 text-center py-10">Aucune session enregistrée</p>
               : sessions.map(s => <SessionRow key={s.id} session={s} />)
           }
+        </div>
+
+        {/* ── Pied de tableau : Voir tout (en bas) ── */}
+        <div className="border-t border-gray-100 px-5 py-3">
+          <Link
+            href={activeTab === 'transactions' ? '/dashboard/transactions' : '/dashboard/sessions'}
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-semibold text-[#2E7D32] hover:bg-[#DDEAD5]/40 transition-colors"
+          >
+            Voir toutes les {activeTab === 'transactions' ? 'transactions' : 'sessions'}
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
 
@@ -421,27 +427,11 @@ export default function DashboardCaissier() {
           <p className="text-sm text-green-200 mb-4">Complétez ces étapes avant de quitter votre poste.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              {
-                Icon:  Package,
-                label: 'Faire la remise',
-                done:  false,
-                action: () => setQuickModal('remise'),
-              },
-              {
-                Icon:  Calculator,
-                label: 'Réconciliation finale',
-                done:  false,
-                action: () => setQuickModal('recon'),
-              },
-              {
-                Icon:  Lock,
-                label: 'Fermer la caisse',
-                done:  caisseStatus === 'fermée',
-                action: () => caisseStatus === 'ouverte' && setShowCloseModal(true),
-              },
+              { Icon: Package,    label: 'Faire la remise',       done: false,                    action: () => setQuickModal('remise') },
+              { Icon: Calculator, label: 'Réconciliation finale',  done: false,                    action: () => setQuickModal('recon')  },
+              { Icon: Lock,       label: 'Fermer la caisse',       done: caisseStatus === 'fermée', action: () => caisseStatus === 'ouverte' && setShowCloseModal(true) },
             ].map((item, i) => (
-              <button key={i} onClick={item.action}
-                disabled={item.done}
+              <button key={i} onClick={item.action} disabled={item.done}
                 className={[
                   'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left w-full',
                   item.done ? 'bg-white/20 opacity-80 cursor-default' : 'bg-white/10 hover:bg-white/20',
@@ -452,8 +442,7 @@ export default function DashboardCaissier() {
                 </span>
                 {item.done
                   ? <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                  : <ChevronRight className="w-4 h-4 text-green-300 shrink-0" />
-                }
+                  : <ChevronRight className="w-4 h-4 text-green-300 shrink-0" />}
               </button>
             ))}
           </div>
@@ -468,9 +457,9 @@ export default function DashboardCaissier() {
         </div>
         <div className="grid grid-cols-3 divide-x divide-gray-100">
           {[
-            { label: 'Transactions',   value: transactions.length.toString(),                              sub: "aujourd'hui" },
-            { label: 'Volume total',   value: formatHTG(transactions.reduce((s,t) => s + t.amount, 0)),   sub: 'traité'      },
-            { label: 'Taux de succès', value: '100%',                                                      sub: 'aucun écart' },
+            { label: 'Transactions',   value: transactions.length.toString(),                            sub: "aujourd'hui" },
+            { label: 'Volume total',   value: formatHTG(transactions.reduce((s,t) => s + t.amount, 0)), sub: 'traité'      },
+            { label: 'Taux de succès', value: '100%',                                                    sub: 'aucun écart' },
           ].map(stat => (
             <div key={stat.label} className="px-5 py-4 text-center">
               <p className="text-xl font-bold text-[#2E7D32]">{stat.value}</p>
@@ -558,6 +547,7 @@ export default function DashboardCaissier() {
           />
         </Modal>
       )}
+
     </div>
   );
 }

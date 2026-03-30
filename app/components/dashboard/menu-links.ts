@@ -7,7 +7,8 @@ import {
 } from "react-icons/hi2";
 import {
   MdOutlineSupervisorAccount, MdOutlineHolidayVillage,
-  MdOutlineDesignServices
+  MdOutlineDesignServices,
+  MdOutlineWorkHistory
 } from "react-icons/md";
 import {
   GrTransaction, 
@@ -20,7 +21,7 @@ import { GiTwoCoins, GiReceiveMoney, GiPayMoney, } from "react-icons/gi";
 import { RiDashboardLine, RiFileList3Line, RiBarChart2Line,  } from "react-icons/ri";
 import { BsFileEarmarkCheck, BsFileEarmarkBarGraph, BsShieldCheck } from "react-icons/bs";
 import { IconType } from "react-icons";
-import { PiVaultFill } from "react-icons/pi";
+import { PiCashRegisterFill, PiVaultFill } from "react-icons/pi";
 import { FiSettings } from "react-icons/fi";
 // Nouveaux imports pour les rapports
 import { Droplet, AlertTriangle, Users, CheckCircle, LayoutGrid } from "lucide-react";
@@ -48,6 +49,8 @@ export const links: MainLink[] = [
   { name: 'Membres', href: '/dashboard/members', icon: TbBrandUbuntu },
 
   { name: 'Comptes', href: '/dashboard/accounts', icon: MdOutlineSupervisorAccount },
+  { name: 'Session', href: '/dashboard/sessions', icon: MdOutlineWorkHistory },
+  { name: 'Caisse', href: '/dashboard/caisses', icon: PiCashRegisterFill  },
 
   {
     name: 'Transactions',

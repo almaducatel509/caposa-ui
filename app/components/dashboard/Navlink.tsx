@@ -31,13 +31,13 @@ export default function NavLinks() {
     {
       title: "FEATURES",
       items: links.filter(l =>
-        ['Transactions', 'Prêts', 'Trésorerie', 'Analyse', 'Rapports'].includes(l.name)
+        ['Session','Transactions', 'Prêts', 'Trésorerie', 'Analyse', 'Rapports'].includes(l.name)
       ),
     },
     {
       title: "GENERAL",
       items: links.filter(l =>
-        ['Horaires', 'Branches', 'Postes', 'Calendrier', 'Archives', 'Settings'].includes(l.name)
+        ['Caisse','Horaires', 'Branches', 'Postes', 'Calendrier', 'Archives', 'Settings'].includes(l.name)
       ),
     },
   ];

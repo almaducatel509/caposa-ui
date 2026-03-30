@@ -13,7 +13,6 @@ const imageSchema = z.union([
 
 // reçus
 
-// liste des membres visités
 export const employeeSchema = z.object({
   user: z.object({
     username: z.string().min(1, 'Username is required'),

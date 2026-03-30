@@ -9,11 +9,12 @@ export interface CaisseAlert {
 }
 
 export interface CaisseTransaction {
-  id:     number;
+  [x: string]: string;
+  id:     string;
   type:   'deposit' | 'withdrawal' | 'transfer' | 'loan';
-  amount: number;
-  time?:  string;
-  note?:  string;
+  amount: string;
+  time:  string;
+  note:  string; // a corriger
 }
 
 export interface CaisseSession {
@@ -30,7 +31,7 @@ export interface CaisseSession {
 }
 
 export interface OpenSessionPayload {
-  caissier_nom:        string;
+  username:            string;  // ← était caissier_nom
   numero_caisse:       string;
   superviseur:         string;
   montant_ouverture:   number;
@@ -40,6 +41,8 @@ export interface OpenSessionPayload {
 export interface CloseSessionPayload {
   montant_fermeture: number;
 }
+// @/types/caisse.ts
+
 
 export interface DashboardData {
   sessions:      CaisseSession[];
