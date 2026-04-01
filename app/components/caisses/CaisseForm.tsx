@@ -1,6 +1,20 @@
 'use client';
-import { useState } from 'react';
-import { Hash, MapPin, Banknote, Tag, ToggleLeft, ToggleRight, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  Hash, MapPin, Banknote, Tag,
+  ToggleLeft, ToggleRight, AlertCircle,
+  Loader2, CheckCircle2, Building2,
+} from 'lucide-react';
+
+// ─── Source unique : caisse.ts ────────────────────────────────────
+// Aucun AxiosInstance direct ici.
+// Tous les appels API passent par caisse.ts qui centralise :
+//   • les mocks de fallback
+//   • la gestion des erreurs réseau
+//   • les headers JWT via AxiosInstance
+import { fetchBranches, createCaisse, Branch } from '@/app/lib/api/caisse';
+import { CaisseFormValues, validateForm, CaisseSchema } from '../sessions/validation';
+
 
 // ─── Helpers UI ───────────────────────────────────────────────────
 
@@ -39,17 +53,29 @@ interface Props {
   onCancel?:  () => void;
 }
 
-// ─── Composant ────────────────────────────────────────────────────
+// ─── Composant ───────────────────────────────────────────────────
 
-export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
+export default function CaisseForm({ onSuccess, onCancel }: Props) {
   const [form, setForm] = useState<Partial<CaisseFormValues>>({
-    devise:       'HTG',
-    actif:        true,
+    devise:        'HTG',
+    actif:         true,
     solde_initial: 0,
+    branch:        '',
   });
-  const [errors,  setErrors]  = useState<Partial<Record<string, string>>>({});
-  const [loading, setLoading] = useState(false);
-  const [done,    setDone]    = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [errors,   setErrors]   = useState<Partial<Record<string, string>>>({});
+  const [loading,  setLoading]  = useState(false);
+  const [done,     setDone]     = useState(false);
+
+  // ── Chargement des agences ────────────────────────────────────────
+  // TODO API : fetchBranches() appelle GET /branches/
+  // Endpoint attendu : /api/branches/
+  // Format de réponse attendu : [{ id: "uuid", name: "Agence Port-au-Prince" }]
+  // Si l'API est absente → fallback automatique sur MOCK_BRANCHES dans caisse.ts.
+  // Quand l'API est prête : supprimer MOCK_BRANCHES de caisse.ts.
+  useEffect(() => {
+    fetchBranches().then(setBranches);
+  }, []);
 
   const set = (k: keyof CaisseFormValues, v: unknown) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -57,6 +83,7 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
   };
 
   const handleSubmit = async () => {
+    // 1. Validation Zod — entièrement côté front, sans appel réseau
     const result = validateForm(CaisseSchema, {
       ...form,
       solde_initial: Number(form.solde_initial ?? 0),
@@ -69,18 +96,30 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
 
     setLoading(true);
     try {
-      // TODO: remplacer par AxiosInstance.post('/caisses/', result.data)
-      await new Promise(r => setTimeout(r, 800)); // simulation API
+      // 2. Création via caisse.ts → POST /caisses/
+      // TODO API : createCaisse() envoie le payload validé à Django.
+      // Payload envoyé :
+      //   { numero_caisse, nom_caisse, localisation, branch (UUID),
+      //     devise, solde_initial, actif }
+      // Réponse attendue : objet Caisse créé (201 Created)
+      // Erreurs 4xx (ex: numéro déjà existant) → remontées au catch ci-dessous.
+      // Pas de fallback offline — une caisse doit exister en DB avant toute session.
+      await createCaisse(result.data);
       setDone(true);
       onSuccess?.(result.data);
-    } catch (err) {
-      setErrors({ numero_caisse: 'Erreur lors de l\'enregistrement. Réessayez.' });
+    } catch {
+      // TODO API : distinguer les erreurs quand l'API est prête :
+      //   409 Conflict → "Ce numéro de caisse existe déjà"
+      //   400 Bad Request → afficher le champ en erreur
+      //   503 / réseau → "Serveur indisponible, réessayez"
+      setErrors({ numero_caisse: "Erreur lors de l'enregistrement. Réessayez." });
     } finally {
       setLoading(false);
     }
   };
 
   // ── État succès ───────────────────────────────────────────────────
+
   if (done) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-4">
@@ -90,10 +129,12 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
         <div className="text-center">
           <p className="text-base font-bold text-gray-900">Caisse enregistrée</p>
           <p className="text-sm text-gray-500 mt-1">
-            La caisse <span className="font-semibold text-[#2E7D32]">{form.numero_caisse}</span> est prête à être utilisée.
+            La caisse{' '}
+            <span className="font-semibold text-[#2E7D32]">{form.numero_caisse}</span>{' '}
+            est prête à être utilisée.
           </p>
         </div>
-        <p className="text-xs text-gray-400 bg-[#DDEAD5]/40 px-4 py-2 rounded-xl">
+        <p className="text-xs text-gray-400 bg-[#DDEAD5]/40 px-4 py-2 rounded-xl text-center">
           Vous pouvez maintenant ouvrir une session avec ce numéro de caisse.
         </p>
       </div>
@@ -103,7 +144,7 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
   return (
     <div className="flex flex-col gap-5">
 
-      {/* Alerte info */}
+      {/* Info */}
       <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
         <AlertCircle size={16} className="shrink-0 mt-0.5" />
         <span>
@@ -112,10 +153,17 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
         </span>
       </div>
 
-      {/* Grille formulaire */}
+      {/* Formulaire */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-        <Field label="Numéro de caisse *" hint="Format : C-01, C-02, C-100" error={errors.numero_caisse}>
+        {/* Numéro de caisse
+            TODO API : Django doit valider l'unicité de numero_caisse
+            via unique=True sur le modèle ou validate() dans le serializer.
+            En cas de doublon → 409 ou 400 avec message clair. */}
+        <Field
+          label="Numéro de caisse *"
+          error={errors.numero_caisse}
+        >
           <div className="relative">
             <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -127,6 +175,7 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
           </div>
         </Field>
 
+        {/* Nom de la caisse */}
         <Field label="Nom de la caisse *" error={errors.nom_caisse}>
           <div className="relative">
             <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -139,7 +188,12 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
           </div>
         </Field>
 
-        <Field label="Localisation *" hint="Bureau, étage, département" error={errors.localisation}>
+        {/* Localisation */}
+        <Field
+          label="Localisation *"
+          hint="Bureau, étage, département"
+          error={errors.localisation}
+        >
           <div className="relative">
             <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -151,10 +205,34 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
           </div>
         </Field>
 
+        {/* Agence
+            TODO API : fetchBranches() charge GET /branches/
+            Le champ branch envoie l'UUID à Django (ForeignKey).
+            Quand l'API /branches/ est disponible → MOCK_BRANCHES dans caisse.ts
+            sera automatiquement ignoré (le try réussit avant le catch). */}
+        <Field label="Agence *" error={errors.branch}>
+          <div className="relative">
+            <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <select
+              value={form.branch ?? ''}
+              onChange={e => set('branch', e.target.value)}
+              className={inputCls(errors.branch) + ' pl-8'}
+            >
+              <option value="">Sélectionner une agence</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        </Field>
+
+        {/* Devise
+            TODO API : Django doit valider via choices=[('HTG','Gourde'),('USD','Dollar')]
+            sur le champ modèle. */}
         <Field label="Devise *" error={errors.devise}>
           <select
             value={form.devise ?? 'HTG'}
-            onChange={e => set('devise', e.target.value)}
+            onChange={e => set('devise', e.target.value as 'HTG' | 'USD')}
             className={inputCls(errors.devise)}
           >
             <option value="HTG">HTG — Gourde haïtienne</option>
@@ -162,8 +240,12 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
           </select>
         </Field>
 
+        {/* Solde initial
+            TODO API : Django enregistre ce montant comme solde de départ.
+            Le solde_actuel sera calculé dynamiquement par le backend
+            via annotate() ou SerializerMethodField en fonction des transactions. */}
         <Field
-          label="Solde initial (HTG)"
+          label="Solde initial"
           hint="Montant de départ — peut être 0"
           error={errors.solde_initial}
         >
@@ -179,6 +261,10 @@ export default function EnregistrementCaisse({ onSuccess, onCancel }: Props) {
           </div>
         </Field>
 
+        {/* Statut actif
+            TODO API : Django utilise actif=True/False pour filtrer
+            les caisses disponibles à l'ouverture de session.
+            Une caisse inactive ne peut pas recevoir de nouvelle session. */}
         <Field label="Statut" error={errors.actif}>
           <button
             type="button"

@@ -233,8 +233,8 @@ export default function ArchiveDetailTransactionPage() {
                 <p className="text-sm font-bold text-gray-800">{tx.memberName}</p>
                 <p className="text-xs font-mono text-gray-400">{tx.memberNumero}</p>
               </div>
-              {/* TODO: En prod, lien vers /dashboard/members/${tx.memberId} */}
-              <button onClick={() => router.push(`/dashboard/members/${tx.memberId}`)}
+              {/* TODO: En prod, lien vers dashboard/archives */}
+              <button onClick={() => router.push(`/dashboard/archives/`)}
                 className="text-xs font-semibold text-[#355C7D] hover:underline shrink-0">
                 Dossier
               </button>

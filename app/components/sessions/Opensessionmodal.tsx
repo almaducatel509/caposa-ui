@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import {
   LogIn, Hash, Shield, Banknote,
-  Eye, EyeOff, AlertCircle, Loader2, AtSign,
+  Eye, EyeOff, AlertCircle, Loader2,
+  AtSign, Building2, Coins,
 } from 'lucide-react';
-import { OpenSessionPayload } from '@/types/caisse';
+import { CaisseDevise, OpenSessionPayload,  } from '@/types/caisse';
 
 // ─── Helpers UI ───────────────────────────────────────────────────
 
@@ -36,42 +37,49 @@ const cls = (err?: string) =>
 
 // ─── Props ────────────────────────────────────────────────────────
 
+interface Branch {
+  id:   string;  // UUID
+  name: string;
+}
+
 interface Props {
   onClose:   () => void;
   onConfirm: (payload: OpenSessionPayload) => Promise<void>;
+  branches?: Branch[];  // liste des agences disponibles
 }
 
 // ─── Composant ───────────────────────────────────────────────────
 
-export default function OpenSessionModal({ onClose, onConfirm }: Props) {
-  const [form, setForm] = useState<Record<string, string>>({
-    username:            '',   // identifiant unique — lié à User.username
+export default function OpenSessionModal({ onClose, onConfirm, branches = [] }: Props) {
+  const [form, setForm] = useState({
+    username:            '',
     numero_caisse:       '',
+    branch:              '',
+    devise:              'HTG' as CaisseDevise,
     superviseur:         '',
-    montant_ouverture:   '',
     id_responsable_cash: '',
+    montant_ouverture:   '',
   });
-  const [showPin,  setShowPin]  = useState(false);
-  const [errors,   setErrors]   = useState<Record<string, string>>({});
-  const [loading,  setLoading]  = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [errors,  setErrors]  = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
-  const set = (k: string, v: string) => {
+  const set = <K extends keyof typeof form>(k: K, v: typeof form[K]) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: '' }));
   };
 
-  const validate = () => {
+  const validate = (): boolean => {
     const e: Record<string, string> = {};
 
     if (!form.username.trim())
       e.username = "Le nom d'utilisateur est requis";
-
     if (!form.numero_caisse.trim())
       e.numero_caisse = 'Le numéro de caisse est requis';
-
+    if (!form.branch)
+      e.branch = 'Sélectionnez une agence';
     if (!form.superviseur.trim())
       e.superviseur = 'Le superviseur est requis';
-
     if (!form.id_responsable_cash.trim())
       e.id_responsable_cash = "L'ID responsable cash est requis";
 
@@ -90,9 +98,11 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
       await onConfirm({
         username:            form.username,
         numero_caisse:       form.numero_caisse,
+        branch:              form.branch,
+        devise:              form.devise,
         superviseur:         form.superviseur,
-        montant_ouverture:   parseFloat(form.montant_ouverture),
         id_responsable_cash: form.id_responsable_cash,
+        montant_ouverture:   parseFloat(form.montant_ouverture),
       });
     } finally {
       setLoading(false);
@@ -102,12 +112,11 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
   return (
     <div className="flex flex-col gap-4">
 
+      {/* ── Ligne 1 : Username + Numéro caisse ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-        {/* Username — identifiant unique employé */}
         <Field
           label="Nom d'utilisateur *"
-          // hint="Votre username de connexion"
+          hint="Votre username de connexion"
           error={errors.username}
         >
           <div className="relative">
@@ -122,7 +131,6 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
           </div>
         </Field>
 
-        {/* Numéro de caisse */}
         <Field label="Numéro de caisse *" error={errors.numero_caisse}>
           <div className="relative">
             <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -136,21 +144,63 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
         </Field>
       </div>
 
-      {/* Superviseur */}
-      <Field label="Superviseur *" error={errors.superviseur}>
+      {/* ── Ligne 2 : Agence + Devise ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Agence *" error={errors.branch}>
+          <div className="relative">
+            <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            {branches.length > 0 ? (
+              <select
+                value={form.branch}
+                onChange={e => set('branch', e.target.value)}
+                className={cls(errors.branch) + ' pl-8'}
+              >
+                <option value="">Sélectionner une agence</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={form.branch}
+                onChange={e => set('branch', e.target.value)}
+                placeholder="UUID de l'agence"
+                className={cls(errors.branch) + ' pl-8'}
+              />
+            )}
+          </div>
+        </Field>
+
+        <Field label="Devise *" error={errors.devise}>
+          <div className="relative">
+            <Coins size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <select
+              value={form.devise}
+              onChange={e => set('devise', e.target.value as CaisseDevise)}
+              className={cls(errors.devise) + ' pl-8'}
+            >
+              <option value="HTG">HTG — Gourde haïtienne</option>
+              <option value="USD">USD — Dollar américain</option>
+            </select>
+          </div>
+        </Field>
+      </div>
+
+      {/* ── Superviseur ── */}
+      <Field label="Superviseur *" hint="Username du superviseur" error={errors.superviseur}>
         <div className="relative">
           <Shield size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
             value={form.superviseur}
             onChange={e => set('superviseur', e.target.value)}
-            placeholder="Username du superviseur"
+            placeholder="superviseur.dupont"
             className={cls(errors.superviseur) + ' pl-8'}
           />
         </div>
       </Field>
 
-      {/* Montant d'ouverture */}
-      <Field label="Montant d'ouverture (HTG) *" error={errors.montant_ouverture}>
+      {/* ── Montant d'ouverture ── */}
+      <Field label="Montant d'ouverture *" error={errors.montant_ouverture}>
         <div className="relative">
           <Banknote size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
@@ -164,7 +214,7 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
         </div>
       </Field>
 
-      {/* ID responsable cash */}
+      {/* ── ID responsable cash ── */}
       <Field
         label="ID responsable cash *"
         hint="Username de la personne qui remet le cash"
@@ -189,7 +239,7 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
         </div>
       </Field>
 
-      {/* Actions */}
+      {/* ── Actions ── */}
       <div className="flex gap-3 pt-2">
         <button
           onClick={onClose}
@@ -201,7 +251,7 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
         >
           {loading
             ? <><Loader2 size={14} className="animate-spin" />Ouverture…</>

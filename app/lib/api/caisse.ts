@@ -9,6 +9,7 @@
 
 import AxiosInstance from '../axiosInstance';
 import { isAxiosError } from 'axios';
+import { SessionManager } from './Sessionmanager';
 import { OfflineQueue }   from './Offlinequeue';
 import { CreateDepositResponse } from '@/app/components/dashboard/caissier/validation';
 import {
@@ -17,29 +18,31 @@ import {
   CaisseAlert,
   OpenSessionPayload,
 } from '@/types/caisse';
-import { SessionManager } from './Sessionmanager';
+import { CaisseFormValues } from '@/app/components/sessions/validation';
 
 // ─── Helper interne ───────────────────────────────────────────────
 
-/**
- * Retourne true si l'erreur est due au réseau (pas de réponse)
- * ou à un 5xx serveur → on peut basculer en fallback offline.
- * Retourne false pour les 4xx → erreurs métier à remonter à l'UI.
- */
 function isNetworkOrServerError(err: unknown): boolean {
   if (!isAxiosError(err)) return false;
-  if (!err.response) return true;         // réseau coupé
-  return err.response.status >= 500;      // panne serveur
+  if (!err.response) return true;
+  return err.response.status >= 500;
 }
 
-// ─── Mocks (données de démo, API absente) ────────────────────────
+// ─── Types ───────────────────────────────────────────────────────
+
+export interface Branch {
+  id:   string; // UUID
+  name: string;
+}
+
+// ─── Mocks ───────────────────────────────────────────────────────
 
 const MOCK_TRANSACTIONS: CaisseTransaction[] = [
-  { id: 't1', type: 'deposit',    amount: 15000, note: 'Dépôt ouverture',    time: '08:00', session: 'local_demo' },
-  { id: 't2', type: 'withdrawal', amount:  2500, note: 'Retrait caissier',   time: '09:30', session: 'local_demo' },
-  { id: 't3', type: 'transfer',   amount:  8350, note: 'Virement C-01→C-02', time: '11:15', session: 'local_demo' },
-  { id: 't4', type: 'deposit',    amount: 30000, note: 'Remise superviseur', time: '14:00', session: 'local_demo' },
-  { id: 't5', type: 'withdrawal', amount:  5000, note: 'Fond de caisse',     time: '15:00', session: 'local_demo' },
+  { transactionId: 't1', type: 'deposit',    amount: 15000, note: 'Dépôt ouverture',    time: '08:00', sessionId: 'local_demo' },
+  { transactionId: 't2', type: 'withdrawal', amount:  2500, note: 'Retrait caissier',   time: '09:30', sessionId: 'local_demo' },
+  { transactionId: 't3', type: 'transfer',   amount:  8350, note: 'Virement C-01→C-02', time: '11:15', sessionId: 'local_demo' },
+  { transactionId: 't4', type: 'deposit',    amount: 30000, note: 'Remise superviseur', time: '14:00', sessionId: 'local_demo' },
+  { transactionId: 't5', type: 'withdrawal', amount:  5000, note: 'Fond de caisse',     time: '15:00', sessionId: 'local_demo' },
 ];
 
 const MOCK_ALERTS: CaisseAlert[] = [
@@ -48,12 +51,47 @@ const MOCK_ALERTS: CaisseAlert[] = [
   { id: 'a3', severity: 'info',    message: "Audit prévu à 16h00 aujourd'hui", time: '09:00' },
 ];
 
-// ─── Dépôts ───────────────────────────────────────────────────────
+// Fallback branches si GET /branches/ échoue
+const MOCK_BRANCHES: Branch[] = [
+  { id: 'mock-uuid-1', name: 'Agence Port-au-Prince' },
+  { id: 'mock-uuid-2', name: 'Agence Pétion-Ville'   },
+  { id: 'mock-uuid-3', name: 'Agence Cap-Haïtien'    },
+];
+
+// ─── Branches ────────────────────────────────────────────────────
 
 /**
- * Crée un dépôt.
- * idemKey : Idempotency-Key optionnelle pour éviter les doublons.
+ * GET /branches/
+ * Retourne la liste des agences pour le dropdown du formulaire caisse.
+ * Fallback sur MOCK_BRANCHES si l'API est indisponible.
  */
+export async function fetchBranches(): Promise<Branch[]> {
+  try {
+    const { data } = await AxiosInstance.get<Branch[]>('/branches/');
+    return data;
+  } catch (err) {
+    console.warn('[caisse] fetchBranches → mock :', err);
+    return MOCK_BRANCHES;
+  }
+}
+
+// ─── Caisses ─────────────────────────────────────────────────────
+
+/**
+ * POST /caisses/
+ * Crée une nouvelle caisse.
+ * Payload validé par CaisseSchema (Zod) avant l'appel.
+ *
+ * @throws {AxiosError} 4xx → erreur métier remontée à l'UI
+ * @throws {AxiosError} 5xx / réseau → erreur remontée à l'UI
+ *   (pas de fallback offline — une caisse doit être créée côté serveur)
+ */
+export async function createCaisse(payload: CaisseFormValues): Promise<void> {
+  await AxiosInstance.post('/caisses/', payload);
+}
+
+// ─── Dépôts ───────────────────────────────────────────────────────
+
 export async function createDeposit(
   payload: unknown,
   idemKey?: string
@@ -71,14 +109,12 @@ export async function createDeposit(
 
 // ─── Dashboard ────────────────────────────────────────────────────
 
-/** Charge toutes les données initiales du dashboard caissier. */
 export async function fetchDashboard(): Promise<{
   sessions:       CaisseSession[];
   transactions:   CaisseTransaction[];
   alerts:         CaisseAlert[];
   montant_caisse: number;
 }> {
-  // GET /sessions/
   const sessions = await (async () => {
     try {
       const { data } = await AxiosInstance.get<CaisseSession[]>('/sessions/');
@@ -105,7 +141,6 @@ export async function fetchDashboard(): Promise<{
 
 // ─── Transactions ─────────────────────────────────────────────────
 
-/** GET /transactions/ */
 export async function fetchTransactions(): Promise<CaisseTransaction[]> {
   try {
     const { data } = await AxiosInstance.get<CaisseTransaction[]>('/transactions/');
@@ -116,7 +151,6 @@ export async function fetchTransactions(): Promise<CaisseTransaction[]> {
   }
 }
 
-/** GET /sessions/{id}/transactions/ */
 export async function fetchTransactionsBySession(
   sessionId: string
 ): Promise<CaisseTransaction[]> {
@@ -127,33 +161,20 @@ export async function fetchTransactionsBySession(
     return data;
   } catch (err) {
     console.warn(`[caisse] fetchTransactionsBySession(${sessionId}) → mock :`, err);
-    return MOCK_TRANSACTIONS.filter(tx => tx.session === sessionId);
+    return MOCK_TRANSACTIONS.filter(tx => tx.sessionId === sessionId);
   }
 }
 
-/**
- * Crée une transaction caisse.
- *
- * Règles appliquées :
- *   1. Session DOIT être ouverte → sinon erreur NO_ACTIVE_SESSION
- *   2. Session injectée automatiquement si non fournie
- *   3. Réseau/5xx → mise en file OfflineQueue (jamais perdu)
- *   4. 4xx Django → remontée à l'UI sans mise en queue
- *
- * @throws {Error} 'NO_ACTIVE_SESSION' si aucune session ouverte
- * @throws {AxiosError} erreurs 4xx Django (validation, droits…)
- */
 export async function createTransaction(payload: {
   type:         string;
   amount:       number;
   description?: string;
   note?:        string;
-  session?:     string; // injecté automatiquement si absent
+  session?:     string;
 }): Promise<
   CaisseTransaction |
   { _offline: true; queued: ReturnType<typeof OfflineQueue.enqueue> }
 > {
-  // 1. Résolution de la session
   let sessionId = payload.session;
 
   if (!sessionId) {
@@ -168,14 +189,11 @@ export async function createTransaction(payload: {
 
   const body = { ...payload, session: sessionId };
 
-  // 2. Appel API
   try {
     const { data } = await AxiosInstance.post<CaisseTransaction>('/transactions/', body);
     return data;
   } catch (err) {
-    if (!isNetworkOrServerError(err)) throw err; // 4xx → remonter à l'UI
-
-    // Réseau/5xx → queue offline
+    if (!isNetworkOrServerError(err)) throw err;
     console.warn('[caisse] createTransaction → hors ligne, mise en queue :', err);
     const queued = OfflineQueue.enqueue('createTransaction', body, sessionId);
     return { _offline: true, queued };
@@ -184,7 +202,6 @@ export async function createTransaction(payload: {
 
 // ─── Alertes ─────────────────────────────────────────────────────
 
-/** GET /alerts/ */
 export async function fetchAlerts(): Promise<CaisseAlert[]> {
   try {
     const { data } = await AxiosInstance.get<CaisseAlert[]>('/alerts/');
@@ -195,19 +212,16 @@ export async function fetchAlerts(): Promise<CaisseAlert[]> {
   }
 }
 
-// ─── Sessions (délèguent à SessionManager) ────────────────────────
+// ─── Sessions ────────────────────────────────────────────────────
 
-/** Rétrocompatibilité — délègue à SessionManager. */
 export async function fetchActiveSession(): Promise<CaisseSession | null> {
   return SessionManager.fetchActive();
 }
 
-/** POST /sessions/open/ — délègue à SessionManager. */
 export async function openSession(payload: OpenSessionPayload): Promise<CaisseSession> {
   return SessionManager.open(payload);
 }
 
-/** POST /sessions/{id}/close/ — délègue à SessionManager. */
 export async function closeSession(
   sessionId: string,
   payload: { montant_fermeture: number }
