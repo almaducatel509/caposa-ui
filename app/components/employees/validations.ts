@@ -140,11 +140,12 @@ export type FlatEmployeeFormData = {
 
 // Error messages type - supports both nested and flat structures
 export type ErrorMessages<T> = {
-  [K in keyof T]?: T[K] extends object 
-    ? ErrorMessages<T[K]> | string
+  [K in keyof T]?: T[K] extends object
+    ? T[K] extends Array<any>   // ← si c'est un tableau → string seulement
+      ? string
+      : ErrorMessages<T[K]> | string  // ← si c'est un objet → récursif
     : string;
 } & {
-  // Add specific error fields that might not be in the main type
   username?: string;
   email?: string;
   password?: string;

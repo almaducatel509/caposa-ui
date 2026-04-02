@@ -7,6 +7,77 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
 import { BranchData, Post, EmployeeFormData, ErrorMessages } from './validations';
 import { EmailField } from './EmailField';
 import EmployeePhotoField from './EmployeePhotoField';
+import {
+  User, Mail, Lock, Phone, MapPin, Building2,
+  Briefcase, CheckCircle2, AlertTriangle, ShieldCheck,
+} from 'lucide-react';
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionHeader({ step, title, icon: Icon }: {
+  step: number; title: string; icon: React.ElementType;
+}) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="w-6 h-6 rounded-lg bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+        <span className="text-white text-xs font-bold">{step}</span>
+      </div>
+      <Icon className="w-4 h-4 text-gray-400" />
+      <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+function Field({ label, required, error, hint, className = '', children }: {
+  label: string; required?: boolean; error?: string;
+  hint?: string; className?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      {children}
+      {hint && !error && <p className="text-xs text-gray-400">{hint}</p>}
+      {error && (
+        <p className="text-xs text-red-500 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3 shrink-0" /> {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Input({ hasError, className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement> & { hasError?: boolean }) {
+  return (
+    <input {...props}
+      className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none transition-all
+        focus:ring-2 focus:ring-[#DDEAD5] focus:border-[#2E7D32]
+        disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed
+        ${hasError
+          ? 'border-red-300 bg-red-50/30 focus:ring-red-100 focus:border-red-400'
+          : 'border-gray-200 bg-white hover:border-gray-300'
+        } ${className}`}
+    />
+  );
+}
+
+function Select({ hasError, className = '', ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { hasError?: boolean }) {
+  return (
+    <select {...props}
+      className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none transition-all appearance-none bg-white
+        focus:ring-2 focus:ring-[#DDEAD5] focus:border-[#2E7D32]
+        disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed
+        ${hasError
+          ? 'border-red-300 bg-red-50/30 focus:ring-red-100 focus:border-red-400'
+          : 'border-gray-200 hover:border-gray-300'
+        } ${className}`}
+    />
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 const EmployeeFormFields: React.FC<{
   formData: EmployeeFormData;
@@ -17,42 +88,30 @@ const EmployeeFormFields: React.FC<{
   posts?: Post[];
   isEditMode?: boolean;
   onKeepPasswordChange?: (keepCurrent: boolean) => void;
-}> = ({ 
-  formData, 
-  setFormData, 
-  errors, 
+}> = ({
+  formData,
+  setFormData,
+  errors,
   setErrors,
-  branches = [],  
-  posts = [], 
+  branches = [],
+  posts = [],
   isEditMode = false,
-  onKeepPasswordChange
+  onKeepPasswordChange,
 }) => {
 
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [keepCurrentPassword, setKeepCurrentPassword] = useState(true);
-  
-  // ✅ Local state for Haiti address components
   const [departmentCode, setDepartmentCode] = useState<DepartmentCode>(HAITI_DEPARTMENTS[0].code);
-  const [city, setCity] = useState<string>('');
+  const [city, setCity]     = useState<string>('');
   const [street, setStreet] = useState<string>('');
 
-  console.log('📋 Professional Employee Form:', {
-    mode: isEditMode ? 'EDIT' : 'CREATE',
-    branchesCount: branches.length,
-    postsCount: posts.length,
-    formData: formData
-  });
-
-  // ✅ Parse existing address in edit mode
+  // Parse existing address in edit mode
   useEffect(() => {
     if (isEditMode && formData.address) {
-      // Try to parse "35, Tozin, Limonade" format
       const parts = formData.address.split(',').map(p => p.trim());
       if (parts.length >= 2) {
         setStreet(parts[0] || '');
         setCity(parts[1] || '');
-        // Try to find department from city
-        const dept = HAITI_DEPARTMENTS.find(d => 
+        const dept = HAITI_DEPARTMENTS.find(d =>
           getCitiesByDepartment(d.code)?.includes(parts[1])
         );
         if (dept) setDepartmentCode(dept.code);
@@ -62,13 +121,15 @@ const EmployeeFormFields: React.FC<{
     }
   }, [isEditMode, formData.address]);
 
-  // ✅ Compose full address when components change
+  // Compose full address when components change
   useEffect(() => {
     const full = [street.trim(), city.trim()].filter(Boolean).join(', ');
-    if (full !== formData.address) {
-      setFormData({ address: full });
-    }
+    if (full !== formData.address) setFormData({ address: full });
   }, [street, city]);
+
+  useEffect(() => {
+    if (onKeepPasswordChange) onKeepPasswordChange(keepCurrentPassword);
+  }, [keepCurrentPassword, onKeepPasswordChange]);
 
   const clearFieldError = (key: keyof EmployeeFormData) => {
     if (!setErrors) return;
@@ -77,429 +138,357 @@ const EmployeeFormFields: React.FC<{
 
   const calculateCompletion = () => {
     const fields = [
-      formData.user.username,
-      formData.user.email,
-      formData.first_name,
-      formData.last_name,
-      formData.date_of_birth,
-      formData.phone_number,
-      formData.address,
-      formData.gender,
-      formData.payment_ref,
-      formData.branch,
-      formData.posts?.length > 0 ? 'has_posts' : ''
+      formData.user.username, formData.user.email,
+      formData.first_name, formData.last_name,
+      formData.date_of_birth, formData.phone_number,
+      formData.address, formData.gender,
+      formData.payment_ref, formData.branch,
+      formData.posts?.length > 0 ? 'has_posts' : '',
     ];
-    
     if (!isEditMode) {
       fields.push(formData.user.password, formData.user.confirm_password);
     } else if (!keepCurrentPassword) {
       fields.push(formData.user.password, formData.user.confirm_password);
     }
-    
-    const completed = fields.filter(field => field && field.toString().trim() !== '').length;
+    const completed = fields.filter(f => f && f.toString().trim() !== '').length;
     return Math.round((completed / fields.length) * 100);
   };
 
   const completionPercentage = calculateCompletion();
 
-  useEffect(() => {
-    if (onKeepPasswordChange) {
-      onKeepPasswordChange(keepCurrentPassword);
-    }
-  }, [keepCurrentPassword, onKeepPasswordChange]);
-
   const handleUserFieldChange = (field: keyof EmployeeFormData['user'], value: string) => {
-    setFormData({
-      user: {
-        ...formData.user,
-        [field]: value
-      }
-    });
-  };
-
-  const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData({ branch: e.target.value });
+    setFormData({ user: { ...formData.user, [field]: value } });
   };
 
   const handlePostChange = (postId: string, isChecked: boolean) => {
-    const currentPosts = formData.posts || [];
-    const newPosts = isChecked 
-      ? [...currentPosts, postId]
-      : currentPosts.filter(id => id !== postId);
-    
-    setFormData({ posts: newPosts });
+    const current = formData.posts || [];
+    setFormData({
+      posts: isChecked ? [...current, postId] : current.filter(id => id !== postId),
+    });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Professional Progress Indicator */}
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+    <div className="flex flex-col gap-5">
+          {/* ── Barre de progression ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">Form Completion</span>
-          <span className="text-sm font-bold text-green-600">{completionPercentage}%</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">Complétion du formulaire</span>
+          <span className="text-sm font-bold text-[#2E7D32]">{completionPercentage}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" 
+        <div className="w-full bg-gray-100 rounded-full h-2">
+          <div
+            className="bg-linear-to-r from-[#2E7D32] to-[#81C784] h-2 rounded-full transition-all duration-500"
             style={{ width: `${completionPercentage}%` }}
-          ></div>
+          />
         </div>
       </div>
 
-      {/* User Account Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <span className="text-xl mr-2">👤</span> Compte Utilisateur
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Nom d'utilisateur *</label>
-            <input
+      {/* ── 1. Compte utilisateur ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={1} title="Compte utilisateur" icon={User} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <Field label="Nom d'utilisateur" required error={errors.username}>
+            <Input
               type="text"
+              autoComplete="off"
               value={formData.user.username}
-              onChange={(e) => handleUserFieldChange('username', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
-              placeholder="Entrer le nom d'utilisateur"
+              onChange={e => handleUserFieldChange('username', e.target.value)}
+              placeholder="Ex: jdupont"
+              hasError={!!errors.username}
             />
-            {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
-          </div>
+          </Field>
 
-          <EmailField
-            value={formData.user.email}
-            onChange={(value) => handleUserFieldChange('email', value)}
-            context="employee"
-            error={errors.email}
-            required
-          />
+          <Field label="Email" required error={errors.email}>
+            <EmailField
+              value={formData.user.email}
+              onChange={value => handleUserFieldChange('email', value)}
+              context="employee"
+              error={errors.email}
+              required
+            />
+          </Field>
 
-          {/* Password Management */}
+          {/* Gestion mot de passe */}
           {isEditMode ? (
-            <div className="md:col-span-2 space-y-4">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={keepCurrentPassword}
-                    onChange={(e) => {
-                      setKeepCurrentPassword(e.target.checked);
-                      if (e.target.checked) {
-                        handleUserFieldChange('password', '');
-                        handleUserFieldChange('confirm_password', '');
-                      }
-                    }}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <div className="flex items-center space-x-2">
-                    <span className="text-blue-600 text-lg">🔐</span>
-                    <div>
-                      <span className="font-semibold text-blue-800">Garder le mot de passe actuel</span>
-                      <p className="text-sm text-blue-600">Recommandé - décocher uniquement pour changer</p>
-                    </div>
-                  </div>
-                </label>
-              </div>
+            <div className="sm:col-span-2 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setKeepCurrentPassword(p => {
+                    if (!p) {
+                      handleUserFieldChange('password', '');
+                      handleUserFieldChange('confirm_password', '');
+                    }
+                    return !p;
+                  });
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all
+                  ${keepCurrentPassword
+                    ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
+                    : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all
+                  ${keepCurrentPassword ? 'border-[#2E7D32] bg-[#2E7D32]' : 'border-gray-300'}`}>
+                  {keepCurrentPassword && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${keepCurrentPassword ? 'text-[#1B5E20]' : 'text-gray-700'}`}>
+                    Garder le mot de passe actuel
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">Décocher uniquement pour changer le mot de passe</p>
+                </div>
+              </button>
 
               {!keepCurrentPassword && (
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 space-y-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <span className="text-orange-600 text-lg">⚠️</span>
-                    <h4 className="font-semibold text-orange-800">Changer le mot de passe</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-orange-50 border border-orange-100 rounded-xl">
+                  <div className="flex items-start gap-2 sm:col-span-2 mb-1">
+                    <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-orange-700 font-medium">Vous êtes en train de changer le mot de passe.</p>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau mot de passe *</label>
-                      <input
-                        type="password"
-                        value={formData.user.password}
-                        onChange={(e) => handleUserFieldChange('password', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
-                        placeholder="Entrer le nouveau mot de passe"
-                      />
-                      {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe *</label>
-                      <input
-                        type="password"
-                        value={formData.user.confirm_password}
-                        onChange={(e) => handleUserFieldChange('confirm_password', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
-                        placeholder="Confirmer le mot de passe"
-                      />
-                      {errors.confirm_password && <p className="text-red-500 text-sm mt-1">{errors.confirm_password}</p>}
-                    </div>
-                  </div>
+                  <Field label="Nouveau mot de passe" required error={errors.password}>
+                    <Input type="password" value={formData.user.password}
+                      onChange={e => handleUserFieldChange('password', e.target.value)}
+                      placeholder="Nouveau mot de passe" hasError={!!errors.password} />
+                  </Field>
+                  <Field label="Confirmer le mot de passe" required error={errors.confirm_password}>
+                    <Input type="password" value={formData.user.confirm_password}
+                      onChange={e => handleUserFieldChange('confirm_password', e.target.value)}
+                      placeholder="Confirmer le mot de passe" hasError={!!errors.confirm_password} />
+                  </Field>
                 </div>
               )}
             </div>
           ) : (
             <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe *</label>
-                <input
-                  type="password"
-                  value={formData.user.password}
-                  onChange={(e) => handleUserFieldChange('password', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  placeholder="Entrer le mot de passe"
-                />
-                {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-              </div>
+              <Field label="Mot de passe" required error={errors.password}>
+                {/* // Password création */}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe *</label>
-                <input
+                <Input
                   type="password"
-                  value={formData.user.confirm_password}
-                  onChange={(e) => handleUserFieldChange('confirm_password', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  placeholder="Confirmer le mot de passe"
+                  autoComplete="new-password"
+                  value={formData.user.password}
+                  onChange={e => handleUserFieldChange('password', e.target.value)}
+                  placeholder="Mot de passe"
+                  hasError={!!errors.password}
                 />
-                {errors.confirm_password && <p className="text-red-500 text-sm mt-1">{errors.confirm_password}</p>}
-              </div>
+              </Field>
+              <Field label="Confirmer le mot de passe" required error={errors.confirm_password}>
+                {/* // Confirm password création   */}
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={formData.user.confirm_password}
+                  onChange={e => handleUserFieldChange('confirm_password', e.target.value)}
+                  placeholder="Confirmer le mot de passe"
+                  hasError={!!errors.confirm_password}
+                />
+              </Field>
             </>
           )}
         </div>
       </div>
 
-      {/* Personal Information Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <span className="text-xl mr-2">👨‍💼</span> Informations Personnelles
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
-            <input
-              type="text"
-              value={formData.first_name}
-              onChange={(e) => setFormData({ first_name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              placeholder="Entrer le prénom"
-            />
-            {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name}</p>}
-          </div>
+      {/* ── 2. Informations personnelles ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={2} title="Informations personnelles" icon={User} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
-            <input
-              type="text"
-              value={formData.last_name}
-              onChange={(e) => setFormData({ last_name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              placeholder="Entrer le nom"
-            />
-            {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name}</p>}
-          </div>
+          <Field label="Prénom" required error={errors.first_name}>
+            <Input type="text" value={formData.first_name}
+              onChange={e => setFormData({ first_name: e.target.value })}
+              placeholder="Prénom" hasError={!!errors.first_name} />
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date de naissance *</label>
-            <input
-              type="date"
-              value={formData.date_of_birth}
-              onChange={(e) => setFormData({ date_of_birth: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            />
-            {errors.date_of_birth && <p className="text-red-500 text-sm mt-1">{errors.date_of_birth}</p>}
-          </div>
+          <Field label="Nom" required error={errors.last_name}>
+            <Input type="text" value={formData.last_name}
+              onChange={e => setFormData({ last_name: e.target.value })}
+              placeholder="Nom de famille" hasError={!!errors.last_name} />
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Genre *</label>
-            <select
-              value={formData.gender}
-              onChange={(e) => setFormData({ gender: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
+          <Field label="Date de naissance" required error={errors.date_of_birth}>
+            <Input type="date" value={formData.date_of_birth}
+              onChange={e => setFormData({ date_of_birth: e.target.value })}
+              hasError={!!errors.date_of_birth} />
+          </Field>
+
+          <Field label="Genre" required error={errors.gender}>
+            <Select value={formData.gender}
+              onChange={e => setFormData({ gender: e.target.value })}
+              hasError={!!errors.gender}>
               <option value="">Sélectionner le genre</option>
               <option value="M">Masculin</option>
               <option value="F">Féminin</option>
               <option value="other">Autre</option>
-            </select>
-            {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone *</label>
-            <input
-              type="tel"
-              value={formData.phone_number}
-              onChange={(e) => setFormData({ phone_number: e.target.value.replace(/\D/g, '') })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              placeholder="Numéro de téléphone"
-            />
-            {errors.phone_number && <p className="text-red-500 text-sm mt-1">{errors.phone_number}</p>}
-          </div>
+          <Field label="Téléphone" required error={errors.phone_number}>
+            <div className="relative">
+              <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input type="tel" value={formData.phone_number}
+                onChange={e => setFormData({ phone_number: e.target.value.replace(/\D/g, '') })}
+                placeholder="Ex: 36000000" hasError={!!errors.phone_number}
+                className="pl-9" />
+            </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Référence de paiement *</label>
-            <input
-              type="text"
-              value={formData.payment_ref}
-              onChange={(e) => setFormData({ payment_ref: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              placeholder="Référence de paiement"
-            />
-            {errors.payment_ref && <p className="text-red-500 text-sm mt-1">{errors.payment_ref}</p>}
-          </div>
+          <Field label="Référence de paiement" required error={errors.payment_ref}>
+            <Input type="text" value={formData.payment_ref}
+              onChange={e => setFormData({ payment_ref: e.target.value })}
+              placeholder="Référence de paiement" hasError={!!errors.payment_ref} />
+          </Field>
 
-          {/* ✅ Haiti Address Components */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Département *</label>
-            <select
-              value={departmentCode}
-              onChange={(e) => {
-                const code = e.target.value as DepartmentCode;
-                setDepartmentCode(code);
-                setCity(''); // Reset city when department changes
-                clearFieldError('address');
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
-              <option value="">Sélectionner un département</option>
-              {HAITI_DEPARTMENTS.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Adresse Haïti */}
+          <Field label="Département" required>
+            <div className="relative">
+              <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Select value={departmentCode}
+                onChange={e => {
+                  setDepartmentCode(e.target.value as DepartmentCode);
+                  setCity('');
+                  clearFieldError('address');
+                }}
+                className="pl-9">
+                <option value="">Sélectionner un département</option>
+                {HAITI_DEPARTMENTS.map(d => (
+                  <option key={d.code} value={d.code}>{d.name}</option>
+                ))}
+              </Select>
+            </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Ville *</label>
-            <select
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-                clearFieldError('address');
-              }}
-              disabled={!departmentCode}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
+          <Field label="Ville" required>
+            <Select value={city}
+              onChange={e => { setCity(e.target.value); clearFieldError('address'); }}
+              disabled={!departmentCode}>
               <option value="">Sélectionner une ville</option>
-              {departmentCode && getCitiesByDepartment(departmentCode)?.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+              {departmentCode && getCitiesByDepartment(departmentCode)?.map(c => (
+                <option key={c} value={c}>{c}</option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rue / Numéro de maison *</label>
-            <input
-              type="text"
-              value={street}
-              onChange={(e) => {
-                setStreet(e.target.value);
-                clearFieldError('address');
-              }}
-              placeholder="Ex: 35, Tozin"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            />
-            {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
-            <p className="text-xs text-gray-500 mt-1">
-              Adresse complète: <strong>{formData.address || '—'}</strong>
-            </p>
-          </div>
+          <Field label="Rue / Numéro de maison" required error={errors.address}
+            hint={`Adresse complète : ${formData.address || '—'}`}
+            className="sm:col-span-2">
+            <Input type="text" value={street}
+              onChange={e => { setStreet(e.target.value); clearFieldError('address'); }}
+              placeholder="Ex: 35, Tozin" hasError={!!errors.address} />
+          </Field>
 
-          <div className="md:col-span-2">
+          <div className="sm:col-span-2">
             <EmployeePhotoField
               value={formData.photo_profil}
               isEditMode={isEditMode}
               error={errors.photo_profil}
-              onChange={(file) => setFormData({ photo_profil: file, remove_photo: false })}
+              onChange={file => setFormData({ photo_profil: file, remove_photo: false })}
               onRemove={() => setFormData({ photo_profil: null, remove_photo: true })}
             />
           </div>
+
         </div>
       </div>
 
-      {/* Work Assignment Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <span className="text-xl mr-2">🏢</span> Affectation de Travail
-        </h3>
-        
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Branche * <span className="text-xs text-gray-500 ml-2">({branches.length} disponibles)</span>
-          </label>
-          <select
-            value={formData.branch || ''}
-            onChange={handleBranchChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-          >
-            <option value="">Choisir une branche</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.branch_name}
-              </option>
-            ))}
-          </select>
-          {errors.branch && <p className="text-red-500 text-sm mt-1">{errors.branch}</p>}
-        </div>
+      {/* ── 3. Affectation de travail ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <SectionHeader step={3} title="Affectation de travail" icon={Building2} />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Postes * <span className="text-xs text-gray-500 ml-2">({posts.length} disponibles)</span>
-            {formData.posts && formData.posts.length > 0 && (
-              <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                {formData.posts.length} sélectionnés
-              </span>
-            )}
-          </label>
-          <div className="border border-gray-300 rounded-lg p-4 bg-white max-h-40 overflow-y-auto">
-            {posts.map((post) => (
-              <label key={post.id} className="flex items-center space-x-3 py-2 hover:bg-gray-50 cursor-pointer rounded">
-                <input
-                  type="checkbox"
-                  checked={formData.posts?.includes(post.id) || false}
-                  onChange={(e) => handlePostChange(post.id, e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-gray-900">{post.name || post.post_name}</span>
-              </label>
-            ))}
-          </div>
-          {errors.posts && <p className="text-red-500 text-sm mt-1">{errors.posts}</p>}
-        </div>
-      </div>
+        <div className="flex flex-col gap-4">
 
-      {/* Summary */}
-      {(formData.branch || (formData.posts && formData.posts.length > 0)) && (
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
-          <h4 className="font-medium text-green-800 mb-2 flex items-center">
-            <span className="mr-2">✅</span> Résumé de l'affectation
-          </h4>
-          
-          {formData.branch && (
-            <div className="mb-2">
-              <span className="text-sm font-medium text-green-700">Branche: </span>
-              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                {branches.find(b => b.id === formData.branch)?.branch_name || 'Unknown'}
-              </span>
+          <Field label={`Branche (${branches.length} disponibles)`} required error={errors.branch}>
+            <div className="relative">
+              <Building2 className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Select
+                value={formData.branch || ''}
+                onChange={e => setFormData({ branch: e.target.value })}
+                hasError={!!errors.branch}
+                className="pl-9">
+                <option value="">Choisir une branche</option>
+                {branches.map(b => (
+                  <option key={b.id} value={String(b.id)}>{b.branch_name}</option>
+                ))}
+              </Select>
             </div>
-          )}
+          </Field>
 
-          {formData.posts && formData.posts.length > 0 && (
-            <div>
-              <span className="text-sm font-medium text-blue-700">Postes ({formData.posts.length}): </span>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {formData.posts.map(postId => {
-                  const post = posts.find(p => p.id === postId);
-                  return (
-                    <span key={postId} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {post?.name || post?.post_name || 'Unknown'}
+          <Field
+            label={`Postes (${posts.length} disponibles)`}
+            required
+            error={errors.posts}>
+            <div className="flex items-center gap-2 mb-2">
+              <Briefcase className="w-4 h-4 text-gray-400" />
+              {formData.posts && formData.posts.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#DDEAD5] text-[#1B5E20] font-semibold">
+                  {formData.posts.length} sélectionné{formData.posts.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="border border-gray-200 rounded-xl p-3 bg-white max-h-44 overflow-y-auto flex flex-col gap-1">
+              {posts.map(post => {
+                const isChecked = formData.posts?.includes(String(post.id)) || false;
+                return (
+                  <button
+                    key={post.id}
+                    type="button"
+                    onClick={() => handlePostChange(String(post.id), !isChecked)}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-left transition-all
+                      ${isChecked
+                        ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
+                        : 'border-gray-100 bg-white hover:border-[#2E7D32]/30 hover:bg-[#DDEAD5]/10'}`}>
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all
+                      ${isChecked ? 'border-[#2E7D32] bg-[#2E7D32]' : 'border-gray-300'}`}>
+                      {isChecked && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                    </div>
+                    <span className={`text-sm ${isChecked ? 'font-semibold text-[#1B5E20]' : 'text-gray-700'}`}>
+                      {post.name || post.post_name}
                     </span>
-                  );
-                })}
-              </div>
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </Field>
+
+        </div>
+      </div>
+
+      {/* ── 4. Récapitulatif affectation ── */}
+      {(formData.branch || (formData.posts && formData.posts.length > 0)) && (
+        <div className="bg-[#F9F9F6] rounded-2xl border border-gray-100 p-5">
+          <SectionHeader step={4} title="Récapitulatif de l'affectation" icon={ShieldCheck} />
+          <div className="flex flex-col gap-3">
+
+            {formData.branch && (
+              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+                <p className="text-xs text-gray-400 mb-1">Branche</p>
+                <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-[#DDEAD5] text-[#1B5E20]">
+                  {branches.find(b => String(b.id) === String(formData.branch))?.branch_name || '—'}
+                </span>
+              </div>
+            )}
+
+            {formData.posts && formData.posts.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+                <p className="text-xs text-gray-400 mb-2">
+                  Postes ({formData.posts.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {formData.posts.map(postId => {
+                    const post = posts.find(p => String(p.id) === postId);
+                    return (
+                      <span key={postId}
+                        className="bg-blue-50 text-[#355C7D] px-3 py-1 rounded-full text-xs font-semibold">
+                        {post?.name || post?.post_name || '—'}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
+
     </div>
   );
 };

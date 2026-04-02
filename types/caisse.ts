@@ -30,6 +30,7 @@ export interface CaisseAlert {
 }
 
 export interface CaisseTransaction {
+  id: Key | null | undefined;
   transactionId: string;  // ← plus explicite que 'id'
   type:          'deposit' | 'withdrawal' | 'transfer' | 'loan';
   amount:        number;
@@ -39,6 +40,7 @@ export interface CaisseTransaction {
 }
 
 export interface CaisseSession {
+  caissier_nom: ReactNode;
   actif: any;
   nom_caisse: ReactNode;
   localisation: ReactNode;

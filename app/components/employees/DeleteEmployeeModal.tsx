@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { Modal } from "@/app/components/ui/Modal";
-import { X } from "lucide-react";
-import { FaUserTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { X, AlertTriangle, Archive, Loader2, UserX } from 'lucide-react';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { EmployeeData } from './validations';
 import { deleteEmployee } from '@/app/lib/api/employee';
@@ -19,34 +18,31 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  employee
+  employee,
 }) => {
-  if (!employee) return null;
-  
   const [isDeleting, setIsDeleting] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiError, setApiError]     = useState<string | null>(null);
+
+  if (!employee) return null;
 
   const handleDelete = async () => {
     if (!employee.id) {
       setApiError("ID de l'employé manquant");
       return;
     }
-
     setIsDeleting(true);
     setApiError(null);
-
     try {
       await deleteEmployee(employee.id);
       onSuccess(employee.id);
       onClose();
     } catch (error: any) {
-      console.error('Erreur lors de la suppression:', error);
       if (error.response?.status === 404) {
         setApiError("Cet employé n'existe plus.");
       } else if (error.response?.data?.message) {
         setApiError(error.response.data.message);
       } else {
-        setApiError("Une erreur est survenue lors de la suppression.");
+        setApiError("Une erreur est survenue lors de l'archivage.");
       }
     } finally {
       setIsDeleting(false);
@@ -54,94 +50,90 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={isDeleting ? () => {} : onClose} size="md">
-      {/* Header */}
-      <div className="bg-linear-to-r from-red-500 to-red-600 text-white p-6 rounded-t-2xl relative">
+    <Modal isOpen={isOpen} onClose={isDeleting ? () => {} : onClose} size="lg">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+            <UserX className="w-4 h-4 text-red-500" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Archiver l'employé</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {employee.first_name} {employee.last_name}
+            </p>
+          </div>
+        </div>
         {!isDeleting && (
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <X size={20} />
+          <button onClick={onClose}
+            className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+            <X size={18} />
           </button>
         )}
-        
-        <div className="flex items-center gap-2">
-          <FaUserTimes />
-          <div>
-            <h3 className="text-lg font-bold">Supprimer l'employé</h3>
-            <p className="text-sm opacity-90">Cette action est irréversible</p>
-          </div>
-        </div>
       </div>
 
-      {/* Body */}
-      <div className="p-6">
+      {/* ── Body ── */}
+      <div className="px-6 py-5 flex flex-col gap-4">
+
+        {/* Erreur API */}
         {apiError && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded mb-4">
-            {apiError}
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-red-600 font-medium">{apiError}</p>
           </div>
         )}
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
-            <FaExclamationTriangle className="text-xl shrink-0" />
-            <p className="text-sm">
-              Êtes-vous sûr de vouloir supprimer cet employé ? Toutes les données associées seront perdues.
+        {/* Info employé */}
+        <div className="flex items-center gap-3 px-4 py-3 bg-[#F9F9F6] rounded-xl border border-gray-100">
+          <UserAvatar user={employee} size="md" type="employee" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">
+              {employee.first_name} {employee.last_name}
             </p>
+            <p className="text-xs text-gray-400 truncate">{employee.user?.email}</p>
+            <p className="text-xs text-gray-400 font-mono mt-0.5">{employee.payment_ref}</p>
           </div>
+        </div>
 
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <UserAvatar
-                user={employee}
-                size="md"
-                type="employee"
-              />
-              <div className="flex-1">
-                <h4 className="font-semibold text-red-800">
-                  {employee.first_name} {employee.last_name}
-                </h4>
-                <p className="text-sm text-red-700 mt-1">
-                  {employee.user?.email}
-                </p>
-                <div className="text-xs text-red-600 mt-2 space-y-1">
-                  <div>Téléphone: {employee.phone_number}</div>
-                  <div>Référence: {employee.payment_ref}</div>
-                  <div>ID: {employee.id?.substring(0, 16)}...</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 bg-gray-100 border border-gray-200 rounded">
-            <p className="text-sm text-gray-700">
-              ⚠️ Cette opération est définitive. Assurez-vous d'avoir sauvegardé toutes les informations nécessaires avant de continuer.
+        {/* Message soft delete */}
+        <div className="flex items-start gap-3 px-4 py-3 bg-[#DDEAD5]/40 border border-[#2E7D32]/20 rounded-xl">
+          <Archive className="w-4 h-4 text-[#2E7D32] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-[#1B5E20]">Archivage sécurisé</p>
+            <p className="text-xs text-[#2E7D32] mt-0.5">
+              Le profil sera archivé et non supprimé définitivement.
+              Un enregistrement sera conservé dans le système d'archives.
             </p>
           </div>
         </div>
+
+        {/* Avertissement confirmation */}
+        <div className="flex items-start gap-2 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-yellow-700 font-medium">
+            L'employé n'aura plus accès au système après cette action.
+            Confirmez avant de continuer.
+          </p>
+        </div>
+
       </div>
 
-      {/* Footer */}
-      <div className="bg-gray-50 border-t p-4 flex justify-end gap-3 rounded-b-2xl">
-        <button
-          onClick={onClose}
-          disabled={isDeleting}
-          className="px-6 py-2 text-[#2c2e2f] hover:bg-gray-100 rounded-lg font-medium disabled:opacity-50 transition-colors"
-        >
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-100">
+        <button onClick={onClose} disabled={isDeleting}
+          className="px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50">
           Annuler
         </button>
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="px-6 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-medium disabled:opacity-50 transition-colors flex items-center gap-2"
-        >
-          {isDeleting && (
-            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-          )}
-          {isDeleting ? "Suppression..." : "Supprimer"}
+        <button onClick={handleDelete} disabled={isDeleting}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          {isDeleting
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Archivage…</>
+            : <><Archive className="w-4 h-4" /> Archiver l'employé</>
+          }
         </button>
       </div>
+
     </Modal>
   );
 };

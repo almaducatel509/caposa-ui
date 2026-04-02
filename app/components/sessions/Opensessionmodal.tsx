@@ -116,7 +116,6 @@ export default function OpenSessionModal({ onClose, onConfirm, branches = [] }: 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
           label="Nom d'utilisateur *"
-          hint="Votre username de connexion"
           error={errors.username}
         >
           <div className="relative">

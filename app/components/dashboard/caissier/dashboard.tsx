@@ -12,8 +12,12 @@ import { fetchDashboard, fetchTransactions, fetchAlerts, openSession, closeSessi
 import { CaisseAlert, CaisseTransaction, CaisseSession, CaisseStatus, OpenSessionPayload } from '@/types/caisse';
 import OpenSessionModal  from '../../sessions/Opensessionmodal';
 import CloseSessionModal from '../../sessions/Closesessionmodal';
+   // Remplace le quickModal générique actuel par tes vrais composants
 
-// ─── Helpers ─────────────────────────────────────────────────────
+import DepositForm    from '@/app/components/transactions/deposits/DepositForm';
+import WithdrawalForm from '@/app/components/transactions/withdrawals/WithdrawalForm';
+import TransferForm   from '@/app/components/transactions/transfers/TransferForm';
+
 
 function formatHTG(v: number) {
   return new Intl.NumberFormat('fr-CA', {
@@ -39,12 +43,18 @@ function getGreeting() {
 
 function Modal({ title, onClose, children, size = 'md' }: {
   title: React.ReactNode; onClose: () => void;
-  children: React.ReactNode; size?: 'sm' | 'md' | 'lg';
+  children: React.ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';  // ← ajoute 'xl'
 }) {
-  const w = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' }[size];
+  const w = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-3xl',  // ← ajoute cette ligne
+  }[size];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className={`relative w-full ${w} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           {title}
@@ -221,15 +231,19 @@ export default function DashboardCaissier() {
     setCaisseStatus('ouverte');
     setShowOpenModal(false);
   };
-
-  const handleCloseSession = async (montantFermeture: number) => {
-    if (!activeSession) return;
-    const closed = await closeSession(activeSession.id, { montant_fermeture: montantFermeture });
-    setSessions(prev => prev.map(s => s.id === activeSession.id ? closed : s));
-    setCaisseStatus('fermée');
-    setShowCloseModal(false);
-  };
-
+// ✅ Nouvelle signature — correspond exactement au type attendu par CloseSessionModal
+    const handleCloseSession = async (payload: {
+      montant_fermeture:        number;
+      note_fermeture?:          string;
+      remise_effectuee:         boolean;
+      reconciliation_effectuee: boolean;
+    }) => {
+      if (!activeSession) return;
+      const closed = await closeSession(activeSession.id, payload);
+      setSessions(prev => prev.map(s => s.id === activeSession.id ? closed : s));
+      setCaisseStatus('fermée');
+      setShowCloseModal(false);
+    };
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -471,41 +485,44 @@ export default function DashboardCaissier() {
       </div>
 
       {/* ── Modals actions rapides ── */}
-      {quickModal && (
-        <Modal size="md" onClose={() => setQuickModal(null)}
-          title={<h3 className="text-base font-bold text-gray-900">
-            {{ depot:'Faire un dépôt', retrait:'Faire un retrait', transfert:'Faire un transfert',
-               remise:'Créer une remise', recon:'Réconciliation', rapport:'Générer un rapport',
-            }[quickModal]}
-          </h3>}>
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Montant (HTG)</p>
-              <input type="number" placeholder="0.00"
-                className="w-full h-10 px-4 rounded-xl border-2 border-gray-200 text-sm bg-[#F9F9F6] focus:outline-none focus:border-[#2E7D32]" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Note (optionnel)</p>
-              <input type="text" placeholder="Référence ou commentaire…"
-                className="w-full h-10 px-4 rounded-xl border-2 border-gray-200 text-sm bg-[#F9F9F6] focus:outline-none focus:border-[#2E7D32]" />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => setQuickModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-                Annuler
-              </button>
-              <button onClick={() => setQuickModal(null)}
-                className="flex-1 py-2.5 bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white rounded-xl text-sm font-semibold shadow hover:shadow-md transition-all">
-                Confirmer
-              </button>
-            </div>
-          </div>
+          
+        {quickModal === 'depot' && (
+          <Modal size="xl" onClose={() => setQuickModal(null)}
+            title={<h3 className="text-base font-bold text-gray-900">Faire un dépôt</h3>}>
+            <DepositForm
+              onSubmit={async (_data) => {
+                setQuickModal(null);
+                const tx = await fetchTransactions();   // rafraîchit la liste
+                setTransactions(tx);
+              }}
+              onCancel={() => setQuickModal(null)}
+            />
+          </Modal>
+        )}
+
+          {quickModal === 'retrait' && (
+        <Modal size="xl" onClose={() => setQuickModal(null)}
+          title={<h3 className="text-base font-bold text-gray-900">Faire un retrait</h3>}>
+          <WithdrawalForm
+            onSubmit={async (_data) => {
+              setQuickModal(null);
+              const tx = await fetchTransactions();
+              setTransactions(tx);
+            }}
+            onCancel={() => setQuickModal(null)}
+          />
         </Modal>
       )}
 
+      {quickModal === 'transfert' && (
+        <Modal size="xl" onClose={() => setQuickModal(null)}
+          title={<h3 className="text-base font-bold text-gray-900">Faire un transfert</h3>}>
+          <TransferForm onCancel={() => setQuickModal(null)} />
+        </Modal>
+      )}
       {/* ── Modal ouverture session ── */}
       {showOpenModal && (
-        <Modal size="lg" onClose={() => setShowOpenModal(false)}
+        <Modal size="xl" onClose={() => setShowOpenModal(false)}
           title={
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
@@ -526,7 +543,7 @@ export default function DashboardCaissier() {
 
       {/* ── Modal fermeture session ── */}
       {showCloseModal && activeSession && (
-        <Modal size="md" onClose={() => setShowCloseModal(false)}
+        <Modal size="lg" onClose={() => setShowCloseModal(false)}
           title={
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">

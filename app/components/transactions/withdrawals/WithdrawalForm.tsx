@@ -323,8 +323,8 @@ export default function WithdrawalForm({
       {/* ── 1. Membre + Compte ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={1} title="Membre et compte à débiter" icon={User} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
+{/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Dropdown membre */}
           <Field label="Membre" required error={errors.member}>
             <div className="relative">
@@ -454,8 +454,9 @@ export default function WithdrawalForm({
       {/* ── 3. Montant + Motif ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={3} title="Montant et motif" icon={Banknote} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Montant (HTG)" required error={errors.amount}>
+{/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Montant (HTG)" required error={errors.amount}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">HTG</span>
               <StyledInput type="number" min={1} placeholder="0" hasError={!!errors.amount}

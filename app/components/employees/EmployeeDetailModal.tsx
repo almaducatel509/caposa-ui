@@ -2,301 +2,198 @@
 
 import React from 'react';
 import { Modal } from "@/app/components/ui/Modal";
-import { 
-  FaUser, 
-  FaPhone, 
-  FaEnvelope, 
-  FaMapMarkerAlt,
-  FaIdCard,
-  FaCalendarAlt,
-  FaBriefcase,
-  FaEdit,
-  FaClock,
-} from "react-icons/fa";
-import { HiOutlineOfficeBuilding } from "react-icons/hi";
-import { BsGenderAmbiguous } from "react-icons/bs";
-import { X } from "lucide-react";
+import {
+  X, User, Phone, Mail, MapPin, CreditCard,
+  Calendar, Briefcase, Building2, Clock, Pencil,
+} from "lucide-react";
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { EmployeeData, formatGender, getEmployeeStatus } from './validations';
 
 interface EmployeeDetailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  employee: EmployeeData | null;
-  onEdit: () => void;
+  isOpen:    boolean;
+  onClose:   () => void;
+  employee:  EmployeeData | null;
+  onEdit:    () => void;
 }
 
+function SectionHeader({ title, icon: Icon }: { title: string; icon: React.ElementType }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <Icon className="w-4 h-4 text-[#2E7D32]" />
+      <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+function InfoRow({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <p className="text-xs text-gray-400">{label}</p>
+      <p className={`text-sm font-medium text-gray-900 ${mono ? 'font-mono' : ''}`}>{value || '—'}</p>
+    </div>
+  );
+}
+
+const STATUS_CFG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
+  active:    { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Actif'    },
+  inactive:  { bg: 'bg-gray-100',  text: 'text-gray-600',  dot: 'bg-gray-400',   label: 'Inactif'  },
+  suspended: { bg: 'bg-orange-50', text: 'text-orange-700',dot: 'bg-orange-500', label: 'Suspendu' },
+};
+
 const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
-  isOpen,
-  onClose,
-  employee,
-  onEdit
+  isOpen, onClose, employee, onEdit,
 }) => {
   if (!employee) return null;
-  
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'active':
-        return { color: "bg-green-100 text-green-700", text: "Actif", dot: "bg-green-500" };
-      case 'inactive':
-        return { color: "bg-gray-100 text-gray-700", text: "Inactif", dot: "bg-gray-500" };
-      case 'suspended':
-        return { color: "bg-orange-100 text-orange-700", text: "Suspendu", dot: "bg-orange-500" };
-      default:
-        return { color: "bg-green-100 text-green-700", text: "Actif", dot: "bg-green-500" };
-    }
-  }
-  
-  ;console.log("EMPLOYEE CARD DATA", employee);
 
-  const status = getStatusConfig(getEmployeeStatus(employee));
+  const statusKey = getEmployeeStatus(employee);
+  const status    = STATUS_CFG[statusKey] ?? STATUS_CFG.active;
 
-  const age = employee.date_of_birth 
+  const age = employee.date_of_birth
     ? new Date().getFullYear() - new Date(employee.date_of_birth).getFullYear()
     : null;
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
+  const formatDate = (d?: string) => d
+    ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—';
 
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDateTime = (d?: string) => d
+    ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '—';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      {/* Header */}
-      <div className="bg-linear-to-r from-[#34963d] to-[#1e7367] text-white p-6 rounded-t-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
-        >
-          <X size={20} />
-        </button>
-        
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <UserAvatar
-            user={employee}
-            size="xl"
-            type="employee"
-            className="border-2 border-white"
-          />
-          <div className="flex-1 capitalize">
-            <h3 className="capitalize text-xl font-bold flex items-center gap-2">
-              {employee.first_name} {employee.last_name}
-              <span className={`${status.color} ml-2 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                {status.text}
+          <UserAvatar user={employee} size="sm" type="employee" />
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-gray-900 capitalize">
+                {employee.first_name} {employee.last_name}
+              </h3>
+              <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${status.bg} ${status.text}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                {status.label}
               </span>
-            </h3>
-            <p className="text-sm opacity-90 capitalize">
-              {employee.role || employee.user?.username || 'Employé'} • Réf: {employee.payment_ref}
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {employee.user?.username} · Réf: {employee.payment_ref}
             </p>
           </div>
         </div>
+        <button onClick={onClose}
+          className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+          <X size={18} />
+        </button>
       </div>
-      
-      {/* Body */}
-      <div className="p-6 max-h-[70vh] overflow-y-auto">
+
+      {/* ── Body ── */}
+      <div className="overflow-y-auto px-6 py-5 flex flex-col gap-5 max-h-[70vh]">
+
         {/* Informations personnelles */}
-        <div className="mb-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <FaUser className="text-[#34963d]" />
-            Informations personnelles
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <FaIdCard className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Nom complet</p>
-                <p className="capitalize font-medium">{employee.first_name} {employee.last_name}</p>
-              </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <SectionHeader title="Informations personnelles" icon={User} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoRow label="Nom complet" value={`${employee.first_name} ${employee.last_name}`} />
+            <InfoRow label="Genre" value={formatGender(employee.gender)} />
+            <InfoRow label="Date de naissance"
+              value={age
+                ? <>{formatDate(employee.date_of_birth)} <span className="text-gray-400">({age} ans)</span></>
+                : formatDate(employee.date_of_birth)} />
+            <InfoRow label="Référence de paiement" value={employee.payment_ref} mono />
+          </div>
+        </div>
+
+        {/* Informations de contact */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <SectionHeader title="Informations de contact" icon={Phone} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs text-gray-400">Email</p>
+              <a href={`mailto:${employee.user?.email}`}
+                className="text-sm font-medium text-[#2E7D32] hover:underline truncate">
+                {employee.user?.email || '—'}
+              </a>
             </div>
-            <div className="flex items-start gap-3">
-              <BsGenderAmbiguous className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Genre</p>
-                <p className="font-medium">{formatGender(employee.gender)}</p>
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs text-gray-400">Téléphone</p>
+              <a href={`tel:${employee.phone_number}`}
+                className="text-sm font-medium text-[#2E7D32] hover:underline">
+                {employee.phone_number || '—'}
+              </a>
             </div>
-            <div className="flex items-start gap-3">
-              <FaCalendarAlt className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Date de naissance</p>
-                <p className="font-medium">
-                  {formatDate(employee.date_of_birth)}
-                  {age && <span className="text-sm text-gray-500 ml-2">({age} ans)</span>}
+            <div className="sm:col-span-2 flex flex-col gap-0.5">
+              <p className="text-xs text-gray-400">Adresse</p>
+              <p className="text-sm font-medium text-gray-900 capitalize">{employee.address || '—'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Informations professionnelles */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <SectionHeader title="Informations professionnelles" icon={Briefcase} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoRow label="Nom d'utilisateur" value={employee.user?.username} />
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs text-gray-400">Branche</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 capitalize">
+                  {employee.branch_details?.branch_name || '—'}
                 </p>
+                {employee.branch_details?.branch_code && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#DDEAD5] text-[#1B5E20] font-semibold">
+                    {employee.branch_details.branch_code}
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <FaIdCard className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Référence de paiement</p>
-                <p className="font-medium">{employee.payment_ref}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="h-px bg-gray-200 my-6"></div>
-
-        {/* Contact */}
-        <div className="my-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <FaPhone className="text-[#34963d]" />
-            Informations de contact
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <FaEnvelope className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <a 
-                  href={`mailto:${employee.user?.email}`}
-                  className="font-medium text-[#34963d] hover:underline"
-                >
-                  {employee.user?.email || 'N/A'}
-                </a>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <FaPhone className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Téléphone</p>
-                <a 
-                  href={`tel:${employee.phone_number}`}
-                  className="font-medium text-[#34963d] hover:underline"
-                >
-                  {employee.phone_number}
-                </a>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 md:col-span-2">
-              <FaMapMarkerAlt className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Adresse</p>
-                <p className="capitalize font-medium">{employee.address}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="h-px bg-gray-200 my-6"></div>
-
-        {/* Professionnelles */}
-        <div className="my-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <FaBriefcase className="text-[#34963d]" />
-            Informations professionnelles
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <FaUser className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Nom d'utilisateur</p>
-                <p className="capitalize font-medium">{employee.user?.username || 'N/A'}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <HiOutlineOfficeBuilding className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Branche</p>
-                <p className="capitalize font-medium">
-                  {employee.branch_details?.branch_name || 'N/A'} 
-                  {employee.branch_details?.branch_code && (
-                    <span className="capitalize text-sm text-gray-500 ml-2">
-                      ({employee.branch_details.branch_code})
+            <div className="sm:col-span-2 flex flex-col gap-1.5">
+              <p className="text-xs text-gray-400">Postes</p>
+              {employee.posts_details && employee.posts_details.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {employee.posts_details.map(post => (
+                    <span key={post.id}
+                      className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#355C7D] font-semibold capitalize">
+                      {post.name}
                     </span>
-                  )}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 md:col-span-2">
-              <FaBriefcase className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Postes</p>
-                <div className="capitalize flex gap-2 flex-wrap mt-1">
-                  {employee.posts_details && employee.posts_details.length > 0 ? (
-                    employee.posts_details.map((post) => (
-                      <span 
-                        key={post.id}
-                        className="capitalize px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-700"
-                      >
-                        {post.name}
-                      </span>
-                    ))
-                  ) : (
-                    <p className="font-medium">Aucun poste assigné</p>
-                  )}
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-400">Aucun poste assigné</p>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="h-px bg-gray-200 my-6"></div>
-
-        {/* Système */}
-        <div className="mt-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <FaClock className="text-[#34963d]" />
-            Informations système
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <FaClock className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Date de création</p>
-                <p className="font-medium">{formatDateTime(employee.created_at)}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <FaClock className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Dernière modification</p>
-                <p className="font-medium">{formatDateTime(employee.updated_at)}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <FaIdCard className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">ID Employé</p>
-                <p className="font-medium text-xs">{employee.id}</p>
-              </div>
+        {/* Informations système */}
+        <div className="bg-[#F9F9F6] rounded-2xl border border-gray-100 p-5">
+          <SectionHeader title="Informations système" icon={Clock} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoRow label="Date de création"   value={formatDateTime(employee.created_at)} />
+            <InfoRow label="Dernière modification" value={formatDateTime(employee.updated_at)} />
+            <div className="sm:col-span-2 flex flex-col gap-0.5">
+              <p className="text-xs text-gray-400">ID Employé</p>
+              <p className="text-xs font-mono text-gray-500">{employee.id}</p>
             </div>
           </div>
         </div>
+
       </div>
 
-      {/* Footer */}
-      <div className="bg-gray-50 border-t p-4 flex justify-end gap-3 rounded-b-2xl">
-        <button 
-          onClick={onClose}
-          className="px-6 py-2 text-[#2c2e2f] hover:bg-gray-100 rounded-lg font-medium transition-colors"
-        >
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+        <button onClick={onClose}
+          className="px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
           Fermer
         </button>
-        <button 
-          onClick={onEdit}
-          className="flex items-center gap-2 px-6 py-2 bg-[#34963d] text-white hover:bg-[#1e7367] rounded-lg font-medium transition-colors"
-        >
-          <FaEdit />
-          Modifier
+        <button onClick={onEdit}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all">
+          <Pencil className="w-4 h-4" /> Modifier
         </button>
       </div>
+
     </Modal>
   );
 };

@@ -347,7 +347,7 @@ export default function CaissesPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8">
 
       {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
@@ -369,7 +369,7 @@ export default function CaissesPage() {
               Après succès → load(true) rafraîchit la liste. */}
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
           >
             <Plus size={16} />Nouvelle caisse
           </button>

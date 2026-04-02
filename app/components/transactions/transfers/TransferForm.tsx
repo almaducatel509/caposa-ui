@@ -372,7 +372,8 @@ export default function TransferForm({ onCancel }: { onCancel?: () => void }) {
 
           {/* Fournisseur */}
           {transferType === 'supplier' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+// Partout où tu as md:grid-cols-2, change en sm:grid-cols-2
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">  
               <Field label="Nom du fournisseur" required error={errors.supplier}>
                 <div className="relative">
                   <Building2 className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -451,8 +452,9 @@ export default function TransferForm({ onCancel }: { onCancel?: () => void }) {
       {/* ── 4. Montant ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={4} title="Montant et description" icon={Banknote} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Montant (HTG)" required error={errors.amount}>
+{/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Montant (HTG)" required error={errors.amount}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">HTG</span>
               <Input type="number" min={1} placeholder="0" hasError={!!errors.amount}

@@ -228,14 +228,17 @@ export default function DepositForm({
 
   const handleReset = () => {
     setSubmitted(false);
-    setForm({ idCompte: '', codeAutorisation: '', montantTransaction: '',
-      depositSubtype: 'cash', source: '', description: '', transferReference: '', senderName: '' });
+    setForm({
+      idCompte: '', codeAutorisation: '', montantTransaction: '',
+      depositSubtype: 'cash', source: '', description: '', transferReference: '', senderName: '',
+    });
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
     setErrors({});
   };
 
+  // ── Écran succès ────────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -252,14 +255,16 @@ export default function DepositForm({
     );
   }
 
+  // ── Formulaire ──────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
 
       {/* ── 1. Membre + Compte ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={1} title="Membre et compte cible" icon={User} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
+          {/* Membre */}
           <Field label="Membre" required
             error={errors.idCompte && !selectedMember ? 'Sélectionnez un membre' : undefined}>
             <div className="relative">
@@ -310,6 +315,7 @@ export default function DepositForm({
                 </div>
               )}
             </div>
+
             {selectedMember && (
               <div className="flex items-center gap-3 px-3 py-2 bg-[#F9F9F6] rounded-xl border border-gray-100 text-xs text-gray-500">
                 <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -319,6 +325,7 @@ export default function DepositForm({
             )}
           </Field>
 
+          {/* Compte cible */}
           <Field label="Compte cible" required error={errors.idCompte}
             hint={!selectedMember ? "Sélectionnez un membre d'abord" : undefined}>
             <Input placeholder="Ex: 636-922-093-4469" hasError={!!errors.idCompte}
@@ -355,13 +362,15 @@ export default function DepositForm({
               </div>
             )}
           </Field>
+
         </div>
       </div>
 
       {/* ── 2. Montant + Type ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={2} title="Montant et type de dépôt" icon={ArrowDownCircle} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+
           <Field label="Montant (HTG)" required error={errors.montantTransaction}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">HTG</span>
@@ -381,6 +390,7 @@ export default function DepositForm({
                 value={form.codeAutorisation} onChange={set('codeAutorisation')} />
             </div>
           </Field>
+
         </div>
 
         <Field label="Mode de dépôt" required error={errors.depositSubtype}>
@@ -408,14 +418,17 @@ export default function DepositForm({
       {/* ── 3. Détails ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={3} title="Détails" icon={FileText} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
           <Field label="Source" required error={errors.source}>
             <Input placeholder="Ex: Salaire, Remboursement, Vente…"
               hasError={!!errors.source} value={form.source} onChange={set('source')} />
           </Field>
+
           <Field label="Description">
             <Input placeholder="Notes optionnelles…" value={form.description} onChange={set('description')} />
           </Field>
+
           {form.depositSubtype === 'transfer' && (
             <>
               <Field label="Référence du virement" hint="N° de référence de la transaction source">
@@ -434,6 +447,7 @@ export default function DepositForm({
               </Field>
             </>
           )}
+
         </div>
       </div>
 
@@ -442,10 +456,12 @@ export default function DepositForm({
         <div className="bg-[#F9F9F6] rounded-2xl border border-gray-100 p-5">
           <SectionHeader step={4} title="Récapitulatif" icon={ShieldCheck} />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
             <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
               <p className="text-xs text-gray-400 mb-1">Disponible immédiatement</p>
               <p className="text-base font-bold text-[#2E7D32]">{formatHTG(availImm)}</p>
             </div>
+
             <div className={`rounded-xl border px-4 py-3 ${hold > 0 ? 'bg-yellow-50 border-yellow-100' : 'bg-white border-gray-100'}`}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Clock className={`w-3.5 h-3.5 ${hold > 0 ? 'text-yellow-600' : 'text-gray-400'}`} />
@@ -455,6 +471,7 @@ export default function DepositForm({
                 {hold > 0 ? `${hold} jour${hold > 1 ? 's' : ''}` : 'Immédiat'}
               </p>
             </div>
+
             <div className={`rounded-xl border px-4 py-3 ${needsVerif ? 'bg-blue-50 border-blue-100' : 'bg-white border-gray-100'}`}>
               <div className="flex items-center gap-1.5 mb-1">
                 <ShieldCheck className={`w-3.5 h-3.5 ${needsVerif ? 'text-[#355C7D]' : 'text-gray-400'}`} />
@@ -464,7 +481,9 @@ export default function DepositForm({
                 {needsVerif ? 'Requise' : 'Non requise'}
               </p>
             </div>
+
           </div>
+
           {amount > 50000 && (
             <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
               <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
@@ -473,6 +492,7 @@ export default function DepositForm({
               </p>
             </div>
           )}
+
           {isBlocked && (
             <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
               <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -498,6 +518,7 @@ export default function DepositForm({
           }
         </button>
       </div>
+
     </form>
   );
-}
+} 

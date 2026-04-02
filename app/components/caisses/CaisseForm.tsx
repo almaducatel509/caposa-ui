@@ -297,7 +297,7 @@ export default function CaisseForm({ onSuccess, onCancel }: Props) {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
         >
           {loading
             ? <><Loader2 size={14} className="animate-spin" />Enregistrement…</>
