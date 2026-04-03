@@ -1,116 +1,86 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X } from "lucide-react";
-import { FaEdit, FaPlus } from "react-icons/fa";
-
+import { X, UserPlus, UserCog } from "lucide-react";
 import {
-  MemberData,
-  MemberUiForm,
-  FieldErrors,
-  validateMemberUi,
-  memberDataToUi,
-  toMemberApiFormData,
+  MemberData, MemberUiForm, FieldErrors,
+  validateMemberUi, memberDataToUi, toMemberApiFormData,
 } from "./validations";
-
 import { updateMember, createMember } from "@/app/lib/api/members";
 import MemberFormFields from "./MemberFormFields";
 import { HAITI_DEPARTMENTS } from "@/app/data/haitiLocations";
 import { Modal } from "../ui/Modal";
 
 interface EditMemberModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen:    boolean;
+  onClose:   () => void;
   onSuccess: () => void;
-  member: MemberData | null;
+  member:    MemberData | null;
 }
 
+const EMPTY_FORM: MemberUiForm = {
+  first_name: "",
+  last_name: "",
+  id_number: "",
+  phone_number: "",
+  department_code: HAITI_DEPARTMENTS[0].code,
+  city: "",
+  address: "",
+  gender: "F",
+  date_of_birthday: "",
+  email: "",
+  initial_balance: undefined,
+  photo_profil: null,
+  id_type: "autre",
+  income_source: "autre",
+  account_type: "savings",
+  devise: "HTG",
+  consent: true
+};
+
 const EditMemberModal: React.FC<EditMemberModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  member,
+  isOpen, onClose, onSuccess, member,
 }) => {
   const isEditMode = !!member;
-  const [errors, setErrors] = useState<FieldErrors<MemberUiForm>>({});
+
+  const [formData,     setFormData]     = useState<MemberUiForm>(EMPTY_FORM);
+  const [errors,       setErrors]       = useState<FieldErrors<MemberUiForm>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const [formData, setFormData] = useState<MemberUiForm>({
-    first_name: "",
-    last_name: "",
-    id_number: "",
-    phone_number: "",
-    department_code: HAITI_DEPARTMENTS[0].code,
-    city: "",
-    address: "",
-    gender: "F",
-    date_of_birthday: "",
-    email: "",
-    initial_balance: undefined,
-    photo_profil: null,
-  });
+  const [isLoading,    setIsLoading]    = useState(false);
+  const [apiError,     setApiError]     = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
-    
     setIsLoading(true);
     setApiError(null);
-    
-    if (isEditMode && member) {
-      const uiData = memberDataToUi(member);
-      setFormData(uiData);
-    } else {
-      // Reset for create mode
-      setFormData({
-        first_name: "",
-        last_name: "",
-        id_number: "",
-        phone_number: "",
-        department_code: HAITI_DEPARTMENTS[0].code,
-        city: "",
-        address: "",
-        gender: "F",
-        date_of_birthday: "",
-        email: "",
-        initial_balance: undefined,
-        photo_profil: null,
-      });
-    }
-    
+    setErrors({});
+    setFormData(isEditMode && member ? memberDataToUi(member) : EMPTY_FORM);
     setIsLoading(false);
   }, [isOpen, isEditMode, member]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setApiError(null);
-
     const result = validateMemberUi(formData);
     if (!result.data) {
       setErrors(result.errors || {});
       setIsSubmitting(false);
       return;
     }
-
     try {
       const fd = toMemberApiFormData(result.data, { includePhoto: true });
-
       if (isEditMode && member?.id_member) {
         await updateMember(member.id_member, fd);
       } else {
         await createMember(fd);
       }
-
       onSuccess();
       onClose();
     } catch (error: any) {
       setApiError(
-        `Error: ${error?.response?.status ?? ""} ${
-          error?.response?.data
-            ? JSON.stringify(error.response.data)
-            : error?.message || "Unknown error"
-        }`
+        error?.response?.data
+          ? JSON.stringify(error.response.data)
+          : error?.message || "Une erreur est survenue."
       );
     } finally {
       setIsSubmitting(false);
@@ -118,10 +88,10 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
   };
 
   const handleFormUpdate = (patch: Partial<MemberUiForm>) => {
-    setFormData((prev) => ({ ...prev, ...patch }));
-    setErrors((prev) => {
+    setFormData(prev => ({ ...prev, ...patch }));
+    setErrors(prev => {
       const next = { ...prev };
-      Object.keys(patch).forEach((k) => delete (next as Record<string, string>)[k]);
+      Object.keys(patch).forEach(k => delete (next as any)[k]);
       return next;
     });
   };
@@ -130,51 +100,44 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-      {/* Header */}
-      <div className="bg-linear-to-r from-purple-600 to-pink-600 text-white p-6 rounded-t-2xl relative">
+
+      {/* ── Header ── */}
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+        <div className="w-10 h-10 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
+          {isEditMode
+            ? <UserCog  className="w-5 h-5 text-[#2E7D32]" />
+            : <UserPlus className="w-5 h-5 text-[#2E7D32]" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900">
+            {isEditMode ? "Modifier le membre" : "Nouveau membre"}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {isEditMode && member
+              ? `Mise à jour de ${member.first_name} ${member.last_name}`
+              : "Enregistrer un nouveau membre"}
+          </p>
+        </div>
         <button
           onClick={onClose}
           disabled={isSubmitting}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
         >
-          <X size={20} />
+          <X className="w-4 h-4" />
         </button>
-        
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center ring-2 ring-white/50">
-            {isEditMode ? <FaEdit className="text-white" size={18} /> : <FaPlus className="text-white" size={18} />}
-          </div>
-          
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xl font-bold">
-                {isEditMode ? "Modifier Membre" : "Nouveau Membre"}
-              </h3>
-            </div>
-            <p className="text-sm opacity-90 mt-1">
-              {isEditMode && member
-                ? `Mise à jour de ${member.first_name} ${member.last_name}`
-                : "Enregistrer un nouveau membre"}
-            </p>
-          </div>
-        </div>
       </div>
 
-      {/* Body */}
+      {/* ── Body ── */}
       <div className="p-6 max-h-[70vh] overflow-y-auto bg-gray-50">
         {apiError && (
-          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="text-red-500 text-lg">⚠️</span>
-              <p className="text-red-700 font-medium">{apiError}</p>
-            </div>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            {apiError}
           </div>
         )}
-
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-600 border-t-transparent"></div>
-            <p className="mt-4 text-gray-600 font-medium">Chargement des données...</p>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-8 h-8 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-500">Chargement...</p>
           </div>
         ) : (
           <MemberFormFields
@@ -187,31 +150,28 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
         )}
       </div>
 
-      {/* Footer */}
-      <div className="bg-white border-t border-gray-200 p-4 flex items-center justify-between rounded-b-2xl">
-        <div className="text-sm text-gray-600">
-          {isEditMode ? (
-            <span>💡 Les modifications seront appliquées immédiatement</span>
-          ) : (
-            <span>💡 Tous les champs marqués * sont obligatoires</span>
-          )}
-        </div>
-        
-        <div className="flex gap-3">
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-100 rounded-b-2xl">
+        <p className="text-xs text-gray-400">
+          {isEditMode
+            ? "Les modifications seront appliquées immédiatement"
+            : "Tous les champs marqués * sont obligatoires"}
+        </p>
+        <div className="flex gap-2">
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-6 py-2.5 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Annuler
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || isLoading}
-            className="px-6 py-2.5 rounded-lg font-semibold bg-linear-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] rounded-xl hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting && (
-              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
             {isSubmitting
               ? (isEditMode ? "Mise à jour..." : "Création...")

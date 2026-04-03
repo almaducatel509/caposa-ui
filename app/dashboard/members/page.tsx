@@ -27,17 +27,6 @@ export default function Members() {
 
     loadMembers();
   }, []);
+  return <MemberGrid />;
 
-  return (
-    <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
-      <div className="px-6 py-6">
-        <MemberGrid
-          members={members}
-          isLoading={loading}
-          error={error}
-          onRetry={() => window.location.reload()}
-        />
-      </div>
-    </main>
-  );
 }

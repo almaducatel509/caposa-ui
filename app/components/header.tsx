@@ -18,7 +18,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   className = ""
 }) => {
   return (
-    <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 ${className}`}>
+    <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between ${className}`}>
       <div className="flex items-center gap-3">
         {icon && (
           <div className="shrink-0">
@@ -26,7 +26,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           </div>
         )}
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-[#2c2e2f]">
+          <h1 className="md:text-2xl text-2xl font-bold text-gray-900">
             {title}
           </h1>
           {subtitle && (

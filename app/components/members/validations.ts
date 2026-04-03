@@ -1,8 +1,8 @@
 // app/components/members/member.schema.ts
 // ============================================
-// MEMBER — Types, Zod Schema, Converters & Utils
+// MEMBER — Types, Zod Schema, Converters & Utils 
 // ============================================
-
+// app/components/members/validations.ts
 import { z } from "zod";
 import {
   getCitiesByDepartment,
@@ -11,141 +11,144 @@ import {
   type DepartmentCode,
 } from "@/app/data/haitiLocations";
 
-// --------------------------------------------
-// Types
-// --------------------------------------------
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Gender = "M" | "F";
 
-/** API response model (read model) */
 export interface MemberData {
-  id: string;
+  status:          boolean;
+  id:              string;
+  id_member:       string;
+  first_name:      string;
+  last_name:       string;
+  gender:          Gender | string;
+  date_of_birthday:string;
+  phone_number:    string;
+  address:         string;
+  city:            string;
+  department:      string;
   department_code: string | number | readonly string[] | undefined;
-  id_member: string;
-  first_name: string;
-  last_name: string;
-  gender: Gender | string; // tolerate legacy
-  date_of_birthday: string; // YYYY-MM-DD
-  phone_number: string;
-  address: string;
-  city: string;
-  department: string; // Human name (not code)
 
-  // optional/legacy
-  email?: string | null;
-  id_number?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  email?:          string | null;
+  id_number?:      string | null;
+  id_type?:        string | null;
+  income_source?:  string | null;
+  monthly_income?: number | null;
+  account_type?:   string | null;
+  devise?:         string | null;
 
-  /** Montant initial saisi lors de la création du membre */
+  beneficiary_name?:     string | null;
+  beneficiary_relation?: string | null;
+  beneficiary_phone?:    string | null;
+
+  created_at?:     string | null;
+  updated_at?:     string | null;
   initial_balance?: number | null;
-
-  /** Montant cumulé des dépôts/cotisations si disponible */
-  total_amount?: number | null;
+  total_amount?:   number | null;
+  photo_profil?:   string | null;
+  date_of_birth?:  string; // legacy
 
   accounts?: Array<{
-    id: string;
+    id:             string;
     account_number: string;
-    account_type: "savings" | "checking" | "investment" | "loan" | string;
-    balance?: number;
+    account_type:   "savings" | "checking" | "investment" | "loan" | string;
+    balance?:       number | string;
+    account_status?: boolean;
   }>;
-
-  /** Compat retro */
-  date_of_birth?: string;
-  /** URL or path */
-  photo_profil?: string | null;
 }
 
-
-// Branch details interface
 export interface BranchDetails {
-  id_branch: string;
-  branch_name: string;
-  branch_code?: string; // ✅ Permet null ET undefined
+  id_branch:    string;
+  branch_name:  string;
+  branch_code?: string;
 }
 
-// Post details interface
 export interface PostDetails {
-  id_post: string;
-  name: string;
+  id_post:   string;
+  name:      string;
   post_name?: string;
-
 }
 
-/** UI form model (what your form edits) */
-export type MemberUiForm = z.infer<typeof memberUiSchema>;
+// ─── Zod schemas ──────────────────────────────────────────────────────────────
 
-/** API create/update payload (exactly what your backend expects per your notes) */
-export type MemberApiPayload = {
-  first_name: string;
-  last_name: string;
-  id_number: string;
-  phone_number: string;
-  department: string; // human name, not code
-  city: string;
-  address: string;
-  gender: Gender;
-  date_of_birthday: string; // YYYY-MM-DD
-};
-
-// --------------------------------------------
-// Zod schema (strict UI validation)
-// --------------------------------------------
-// Utility functions
-export function formatGender(gender?: string) {
-  switch (gender?.toLowerCase()) {
-    case 'male':
-    case 'm':
-      return 'Homme';
-    case 'female':
-    case 'f':
-      return 'Femme';
-    case 'other':
-      return 'Autre';
-    default:
-      return 'Non spécifié';
-  }
-}
 const DepartmentCodeZ = z.enum(
   HAITI_DEPARTMENTS.map((d) => d.code) as [DepartmentCode, ...DepartmentCode[]]
 );
-const GenderZ = z.enum(["M", "F"]);
-const DateYMDZ = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format YYYY-MM-DD");
-const PhoneDigitsZ = z
-  .string()
-  .regex(/^\d+$/, "Le téléphone doit contenir uniquement des chiffres");
-
-// Optional File | string | null schema (no runtime `instanceof File` in Node, so keep UI-friendly)
-const PhotoZ = z
-  .union([z.instanceof(File), z.string()])
-  .optional()
-  .nullable();
+const GenderZ    = z.enum(["M", "F"]);
+const DateYMDZ   = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format YYYY-MM-DD");
+const PhoneZ     = z.string().regex(/^\d+$/, "Le téléphone doit contenir uniquement des chiffres");
+const PhotoZ     = z.union([z.instanceof(File), z.string()]).optional().nullable();
 
 export const memberUiSchema = z.object({
-  first_name: z.string().min(1, "Prénom est requis"),
-  last_name: z.string().min(1, "Nom est requis"),
-  id_number: z.string().min(1, "Numéro d'identité est requis"),
-  phone_number: PhoneDigitsZ,
-  department_code: DepartmentCodeZ,
-  city: z.string().min(1, "Ville est requise"),
-  address: z.string().min(1, "Adresse est requise"),
-  gender: GenderZ,
-  date_of_birthday: DateYMDZ,
 
-  // purely UI/extra (not sent to API unless you choose)
-  email: z.string().email("Email invalide").optional().or(z.literal("")).optional(),
-  initial_balance: z.number().nonnegative("Le solde initial ne peut pas être négatif").optional(),
-  photo_profil: PhotoZ,
-  
+  // ── Identité ──
+  first_name:       z.string().min(1, "Prénom est requis"),
+  last_name:        z.string().min(1, "Nom est requis"),
+  gender:           GenderZ,
+  date_of_birthday: DateYMDZ,
+  id_type:          z.enum(["cin", "passeport", "permis", "autre"], {
+                      required_error: "Type de pièce requis",
+                    }),
+  id_number:        z.string().min(1, "Numéro de pièce est requis"),
+  photo_profil:     PhotoZ,
+
+  // ── Contact & Localisation ──
+  phone_number:     PhoneZ,
+  email:            z.string().email("Email invalide").optional().or(z.literal("")).optional(),
+  department_code:  DepartmentCodeZ,
+  city:             z.string().min(1, "Ville est requise"),
+  address:          z.string().min(1, "Adresse est requise"),
+
+  // ── Situation financière ──
+  income_source:    z.enum(["salarie", "commercant", "agriculteur", "diaspora", "retraite", "autre"], {
+                      required_error: "Source de revenus requise",
+                    }),
+  monthly_income:   z.number().nonnegative().optional(),
+
+  // ── Compte à ouvrir ──
+  account_type:     z.enum(["savings", "checking"], {
+                      required_error: "Type de compte requis",
+                    }),
+  devise:           z.enum(["HTG", "USD"]),
+  initial_balance:  z.number().nonnegative("Le solde initial ne peut pas être négatif").optional(),
+
+  // ── Bénéficiaire désigné ──
+  beneficiary_name:     z.string().optional(),
+  beneficiary_relation: z.enum(["conjoint", "enfant", "parent", "frere_soeur", "autre"]).optional(),
+  beneficiary_phone:    z.string().regex(/^\d*$/, "Téléphone invalide").optional(),
+
+  // ── Consentement légal ──
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "Vous devez accepter le traitement de vos données" }),
+  }),
 });
 
-// --------------------------------------------
-// Error mapping (Zod -> flat field errors)
-// --------------------------------------------
-
+export type MemberUiForm   = z.infer<typeof memberUiSchema>;
 export type FieldErrors<T> = Partial<Record<Extract<keyof T, string>, string>>;
+
+export type MemberApiPayload = {
+  first_name:       string;
+  last_name:        string;
+  id_number:        string;
+  id_type:          string;
+  phone_number:     string;
+  department:       string;
+  city:             string;
+  address:          string;
+  gender:           Gender;
+  date_of_birthday: string;
+  email?:           string;
+  income_source:    string;
+  monthly_income?:  number;
+  account_type:     string;
+  devise:           string;
+  initial_balance?: number;
+  beneficiary_name?:     string;
+  beneficiary_relation?: string;
+  beneficiary_phone?:    string;
+};
+
+// ─── Error helpers ────────────────────────────────────────────────────────────
 
 export function zodToFieldErrors<T>(e: unknown): FieldErrors<T> {
   if (e instanceof z.ZodError) {
@@ -159,7 +162,6 @@ export function zodToFieldErrors<T>(e: unknown): FieldErrors<T> {
   return {};
 }
 
-/** Validate and return either data or field errors (no throws) */
 export function validateMemberUi(
   raw: unknown
 ): { data?: MemberUiForm; errors?: FieldErrors<MemberUiForm> } {
@@ -168,11 +170,8 @@ export function validateMemberUi(
   return { data: parsed.data };
 }
 
-// --------------------------------------------
-// Converters (UI ↔ API)
-// --------------------------------------------
+// ─── Converters ───────────────────────────────────────────────────────────────
 
-/** Map department name → code (case-insensitive). Fallbacks to first code if no match. */
 export function nameToCode(name?: string | null): DepartmentCode {
   if (!name) return HAITI_DEPARTMENTS[0].code as DepartmentCode;
   const n = name.trim().toLowerCase();
@@ -180,72 +179,73 @@ export function nameToCode(name?: string | null): DepartmentCode {
   return (found?.code ?? HAITI_DEPARTMENTS[0].code) as DepartmentCode;
 }
 
-/** UI → API JSON payload */
 export function toMemberApiPayload(ui: MemberUiForm): MemberApiPayload {
   return {
-    first_name: ui.first_name.trim(),
-    last_name: ui.last_name.trim(),
-    id_number: ui.id_number.trim(),
-    phone_number: ui.phone_number.trim(),
-    department: codeToName(ui.department_code),
-    city: ui.city.trim(),
-    address: ui.address.trim(),
-    gender: ui.gender,
+    first_name:       ui.first_name.trim(),
+    last_name:        ui.last_name.trim(),
+    id_number:        ui.id_number.trim(),
+    id_type:          ui.id_type,
+    phone_number:     ui.phone_number.trim(),
+    department:       codeToName(ui.department_code),
+    city:             ui.city.trim(),
+    address:          ui.address.trim(),
+    gender:           ui.gender,
     date_of_birthday: ui.date_of_birthday,
+    email:            ui.email || undefined,
+    income_source:    ui.income_source,
+    monthly_income:   ui.monthly_income,
+    account_type:     ui.account_type,
+    devise:           ui.devise,
+    initial_balance:  ui.initial_balance,
+    beneficiary_name:     ui.beneficiary_name     || undefined,
+    beneficiary_relation: ui.beneficiary_relation || undefined,
+    beneficiary_phone:    ui.beneficiary_phone    || undefined,
   };
 }
 
-/**
- * UI → API FormData (optional).
- * Your backend currently expects only the core fields; set `includePhoto`
- * to true ONLY if the endpoint supports `photo_profil`.
- */
 export function toMemberApiFormData(
   ui: MemberUiForm,
   opts?: { includePhoto?: boolean }
 ): FormData {
   const payload = toMemberApiPayload(ui);
   const fd = new FormData();
-
-  // required/expected by your API
-  Object.entries(payload).forEach(([k, v]) => fd.append(k, String(v)));
-
-  // optional extras (ONLY if backend supports it)
+  Object.entries(payload).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) fd.append(k, String(v));
+  });
   if (opts?.includePhoto && ui.photo_profil instanceof File) {
     fd.append("photo_profil", ui.photo_profil);
   }
-
   return fd;
 }
 
-/** API (read model) → UI form model (best effort for legacy fields) */
 export function memberDataToUi(member: MemberData): MemberUiForm {
-  const dob =
-    member.date_of_birthday ??
-    member.date_of_birth ?? // legacy fallback
-    "";
-
+  const dob = member.date_of_birthday ?? member.date_of_birth ?? "";
   return {
-    first_name: member.first_name ?? "",
-    last_name: member.last_name ?? "",
-    id_number: member.id_number ?? "",
-    phone_number: (member.phone_number ?? "").replace(/\D/g, ""), // keep digits for UI rule
-    department_code: nameToCode(member.department),
-    city: member.city ?? "",
-    address: member.address ?? "",
-    gender: (member.gender === "M" || member.gender === "F" ? member.gender : "F") as Gender, // default
+    first_name:       member.first_name ?? "",
+    last_name:        member.last_name ?? "",
+    id_number:        member.id_number ?? "",
+    id_type:          (member.id_type as any) ?? "autre",
+    phone_number:     (member.phone_number ?? "").replace(/\D/g, ""),
+    department_code:  nameToCode(member.department),
+    city:             member.city ?? "",
+    address:          member.address ?? "",
+    gender:           (member.gender === "M" || member.gender === "F" ? member.gender : "F") as Gender,
     date_of_birthday: dob,
-
-    // UI-only extras (not used by create payload)
-    email: member.email ?? "",
-    initial_balance: member.initial_balance ?? undefined,
-    photo_profil: member.photo_profil ?? null,
+    email:            member.email ?? "",
+    initial_balance:  member.initial_balance ?? undefined,
+    photo_profil:     member.photo_profil ?? null,
+    income_source:    (member.income_source as any) ?? "autre",
+    monthly_income:   member.monthly_income ?? undefined,
+    account_type:     (member.account_type as any) ?? "savings",
+    devise:           (member.devise as any) ?? "HTG",
+    beneficiary_name:     member.beneficiary_name     ?? "",
+    beneficiary_relation: (member.beneficiary_relation as any) ?? "autre",
+    beneficiary_phone:    member.beneficiary_phone    ?? "",
+    consent:          true,
   };
 }
 
-// --------------------------------------------
-// Nice-to-have display helpers
-// --------------------------------------------
+// ─── Display helpers ──────────────────────────────────────────────────────────
 
 export const formatMoney = (v?: number | null) =>
   typeof v === "number"
@@ -253,56 +253,70 @@ export const formatMoney = (v?: number | null) =>
     : "—";
 
 export const accountTypeLabel = (t?: string) => {
-  switch (t) {
-    case "savings":
-      return "Épargne";
-    case "checking":
-      return "Courant";
-    case "investment":
-      return "Investissement";
-    case "loan":
-      return "Prêt";
-    default:
-      return t || "Compte";
-  }
+  const map: Record<string, string> = {
+    savings:    "Épargne",
+    checking:   "Courant",
+    investment: "Investissement",
+    loan:       "Prêt",
+  };
+  return map[t ?? ""] ?? t ?? "Compte";
 };
 
-export function formatMemberName(m: Pick<MemberData, "first_name" | "last_name"> | Pick<MemberUiForm, "first_name" | "last_name">) {
-  return `${m.first_name} ${m.last_name}`.trim();
+export const idTypeLabel = (t?: string) => {
+  const map: Record<string, string> = {
+    cin:       "Carte d'identité nationale",
+    passeport: "Passeport",
+    permis:    "Permis de conduire",
+    autre:     "Autre",
+  };
+  return map[t ?? ""] ?? t ?? "—";
+};
+
+export const incomeSourceLabel = (s?: string) => {
+  const map: Record<string, string> = {
+    salarie:    "Salarié(e)",
+    commercant: "Commerçant(e)",
+    agriculteur:"Agriculteur(trice)",
+    diaspora:   "Diaspora / Transfert",
+    retraite:   "Retraité(e)",
+    autre:      "Autre",
+  };
+  return map[s ?? ""] ?? s ?? "—";
+};
+
+export const relationLabel = (r?: string) => {
+  const map: Record<string, string> = {
+    conjoint:    "Conjoint(e)",
+    enfant:      "Enfant",
+    parent:      "Parent",
+    frere_soeur: "Frère / Sœur",
+    autre:       "Autre",
+  };
+  return map[r ?? ""] ?? r ?? "—";
+};
+
+export function formatGender(gender?: string) {
+  switch (gender?.toLowerCase()) {
+    case "m": return "Homme";
+    case "f": return "Femme";
+    default:  return "Non spécifié";
+  }
 }
 
 export function getMemberInitials(m: { first_name?: string; last_name?: string }) {
-  const f = m.first_name?.[0]?.toUpperCase() ?? "";
-  const l = m.last_name?.[0]?.toUpperCase() ?? "";
-  return `${f}${l}`;
+  return `${m.first_name?.[0]?.toUpperCase() ?? ""}${m.last_name?.[0]?.toUpperCase() ?? ""}`;
 }
 
-export function formatDate(dateString?: string | null) {
-  if (!dateString) return "N/A";
-  const d = new Date(dateString);
-  if (Number.isNaN(d.getTime())) return "Invalid date";
-  return d.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
+export function formatMemberName(m: Pick<MemberData, "first_name" | "last_name">) {
+  return `${m.first_name} ${m.last_name}`.trim();
 }
-
-// --------------------------------------------
-// Optional: guard city by department in UI flows
-// (example helper you can use in your form)
-// --------------------------------------------
 
 export function isCityInDepartment(city: string, departmentCode: DepartmentCode) {
-  const cities = getCitiesByDepartment(departmentCode) ?? [];
-  return cities.some((c) => c.toLowerCase() === city.trim().toLowerCase());
+  return (getCitiesByDepartment(departmentCode) ?? [])
+    .some((c) => c.toLowerCase() === city.trim().toLowerCase());
 }
 
 export type ErrorMessages<T> = {
-  [K in keyof T]?: T[K] extends object 
-    ? ErrorMessages<T[K]> | string
-    : string;
-} & {
-  // Add specific error fields that might not be in the main type
-  first_name?: string;
-  last_name?: string;
-  department_code?: string;
-};
-
+  [K in keyof T]?: T[K] extends object ? ErrorMessages<T[K]> | string : string;
+} & { first_name?: string; last_name?: string; department_code?: string };
 

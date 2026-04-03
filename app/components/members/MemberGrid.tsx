@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Users } from 'lucide-react';
 // API
-import { fetchMembers }  from '@/app/lib/api/members';
+import { fetchMembers, updateMember }  from '@/app/lib/api/members';
 // UI
 import PageHeader        from '../header';
 import MemberFilterBar   from '@/app/components/members/MemberFilterBar';
@@ -14,6 +14,7 @@ import DeleteMemberModal from '@/app/components/members/DeleteMemberModal';
 // Types
 import { MemberData } from '@/app/components/members/validations';
 import MemberTable from './MemberTable';
+import { MemberBulkAction } from './MemberBulkActionDropdown';
 // ─── Skeleton card ─────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
@@ -111,8 +112,30 @@ const MemberGrid: React.FC = () => {
       setIsLoading(false);
     }
   };
+    useEffect(() => { loadMembers(); }, []);
 
-  useEffect(() => { loadMembers(); }, []);
+//le handler API
+const handleBulkAction = async (
+  action: MemberBulkAction,
+  ids: (string | number)[],
+) => {
+  switch (action) {
+    case 'activate':
+      await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
+      break;
+    case 'deactivate':
+      await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
+      break;
+    case 'archive':
+      await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
+      break;
+    case 'export':
+      // géré dans MemberTable directement
+      return;
+  }
+  await loadMembers();
+};
+
 
   // ── Debounce ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -137,10 +160,17 @@ const MemberGrid: React.FC = () => {
       );
     }
 
-    if (selectedStatus !== 'all') {
-      // MemberData n'a pas de champ status explicite — à adapter selon ton API
-      // list = list.filter(m => m.status === selectedStatus);
-    }
+   if (selectedStatus !== 'all') {
+    list = list.filter(m => {
+      const isActive   = m.status === true  || (m.status as any) === 'active';
+      const isArchived = (m.status as any) === 'archive' || (m.status as any) === 'suspended';
+
+      if (selectedStatus === 'active')    return isActive;
+      if (selectedStatus === 'inactive')  return !isActive && !isArchived;
+      if (selectedStatus === 'suspended') return isArchived;
+      return true;
+    });
+  }
 
     const now = new Date();
     if (selectedFilter === 'recent') {
@@ -175,12 +205,12 @@ const MemberGrid: React.FC = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20">
-
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
       <PageHeader
         title="Gestion des Membres"
         subtitle="Gérez tous les membres et leurs informations"
-        icon={<Users className="w-8 h-8 text-[#2E7D32]" />}
+        icon={<Users className="w-6 h-6 text-[#2E7D32]" />}
+        className="mb-0"
       />
 
       <MemberFilterBar
@@ -226,12 +256,19 @@ const MemberGrid: React.FC = () => {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewTransactions={handleViewTransactions}
+            onBulkAction={handleBulkAction}   // ← ajouter
+
           />
+        // APRÈS
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100">
             <EmptyState
-              hasFilter={!!filterValue}
-              onClear={onClear}
+              hasFilter={!!filterValue || selectedStatus !== 'all' || selectedFilter !== 'all'}
+              onClear={() => {
+                onClear();
+                setSelectedStatus('all');
+                setSelectedFilter('all');
+              }}
               onAdd={handleAdd}
             />
           </div>

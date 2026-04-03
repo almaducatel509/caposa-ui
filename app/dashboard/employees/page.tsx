@@ -30,10 +30,6 @@ export default function Members() {
   }, []);
 
   return (
-    <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
-      <div className="px-6 py-6">
-       <EmployeeGrid />
-      </div>
-    </main>
+    <EmployeeGrid />
   );
 }

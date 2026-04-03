@@ -101,7 +101,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 ">
 
       {/* ── Ligne 1 : Recherche + Actions ── */}
       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
@@ -163,7 +163,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
       </div>
 
       {/* ── Ligne 2 : Filtres avancés ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-2 py-2 flex flex-wrap items-center gap-3">
 
         {/* Badge résultats */}
         <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Users } from 'lucide-react';
 
 // API
-import { fetchEmployees } from '@/app/lib/api/employee';
+import { fetchEmployees, putEmployeeMultipart } from '@/app/lib/api/employee';
 import { fetchBranches }  from '@/app/lib/api/branche';
 import { fetchPosts }     from '@/app/lib/api/post';
 
@@ -21,7 +21,7 @@ import EmployeeTransactionModal from '@/app/components/employees/EmployeeTransac
 // Types
 import { EmployeeData, BranchData, Post } from '@/app/components/employees/validations';
 import EmployeeTable from './EmployeeTable';
-
+import { BulkAction } from '@/app/components/employees/BulkActionDropdown';
 // ─── Main ──────────────────────────────────────────────────────────────────────
 const EmployeeGrid: React.FC = () => {
 
@@ -155,14 +155,76 @@ const EmployeeGrid: React.FC = () => {
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
   const onClear                = useCallback(() => setFilterValue(''), []);
 
+  const handleBulkAction = async (
+  action: BulkAction,
+  ids: (string | number)[],
+  payload?: string,
+) => {
+  switch (action) {
+    case 'activate':
+      await Promise.all(
+        ids
+          .map(id => hydratedEmployees.find(e => e.id === id))
+          .filter(e => e && (e.status ?? 'active') !== 'active')
+          .map(e => putEmployeeMultipart(String(e!.id), { status: 'active' } as any))
+      );
+      break;
+    case 'deactivate':
+      await Promise.all(
+        ids
+          .map(id => hydratedEmployees.find(e => e.id === id))
+          .filter(e => e && e.status !== 'inactive')
+          .map(e => putEmployeeMultipart(String(e!.id), { status: 'inactive' } as any))
+      );
+      break;
+    case 'change_branch':
+      if (!payload) return;
+      await Promise.all(ids.map(id => putEmployeeMultipart(String(id), { branch: payload } as any)));
+      break;
+    case 'change_post':
+      if (!payload) return;
+      await Promise.all(ids.map(id => putEmployeeMultipart(String(id), { posts: [payload] } as any)));
+      break;
+    case 'archive':
+      await Promise.all(
+        ids
+          .map(id => hydratedEmployees.find(e => e.id === id))
+          .filter(e => e && e.status !== 'archive' && e.status !== 'suspended')
+          .map(e => putEmployeeMultipart(String(e!.id), { status: 'archive' } as any))
+      );
+      break;
+    case 'export':
+      const selected = hydratedEmployees.filter(e => ids.includes(e.id));
+      const headers  = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Succursale', 'Statut', 'Depuis'];
+      const rows     = selected.map(e => [
+        e.first_name ?? '',
+        e.last_name  ?? '',
+        e.user?.email ?? '',
+        e.phone_number ?? '',
+        e.branch_details?.branch_name ?? '',
+        e.status ?? 'active',
+        e.created_at ? new Date(e.created_at).toLocaleDateString('fr-FR') : '',
+      ]);
+      const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `employes_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+      return;
+  }
+  await loadEmployees();
+};
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20">
+<div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
 
-      <PageHeader
+     <PageHeader
         title="Gestion des Employés"
         subtitle="Gérez les employés, leurs rôles et affectations"
-        icon={<Users className="w-8 h-8 text-[#2E7D32]" />}
+        icon={<Users className="w-6 h-6 text-[#2E7D32]" />}
+        className="mb-0"  
       />
 
       <EmployeeFilterBar
@@ -188,7 +250,7 @@ const EmployeeGrid: React.FC = () => {
           <p className="flex-1 text-sm font-semibold text-red-700">{error}</p>
           <button
             onClick={loadEmployees}
-            className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
+            className="px-4 py-2 bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
           >
             Réessayer
           </button>
@@ -199,10 +261,13 @@ const EmployeeGrid: React.FC = () => {
       <EmployeeTable
         employees={hydratedEmployees}
         isLoading={isLoading}
+        branches={branches}
+        posts={posts}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onViewTransactions={handleViewTransactions}
+        onBulkAction={handleBulkAction}
       />
 
       {/* Modals — inchangés */}

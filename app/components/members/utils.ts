@@ -1,7 +1,8 @@
 // members/utils.ts (or keep your current filename)
 
+import { formatDate } from "@/config/appConfig";
 import type { MemberData } from "./validations";
-import { formatMoney, accountTypeLabel, formatDate } from "./validations";
+import { formatMoney, accountTypeLabel } from "./validations";
 // ^ reuse these to avoid duplicate logic
 
 export const toStr = (v: unknown) =>
@@ -46,7 +47,14 @@ export function formatGender(g?: string) {
 }
 
 // Re-export aliases if you like this naming where used
-export const formatBalance = formatMoney; // alias
+// Dans utils.ts
+export function formatBalance(v?: string | number | null): string {
+  if (v == null) return '—';
+  const num = typeof v === 'string' ? parseFloat(v) : v;
+  if (isNaN(num)) return '—';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'HTG' }).format(num);
+}
+
 export { accountTypeLabel, formatDate };  // reuse single source
 
 export type Tier = "junior" | "standard" | "senior";
