@@ -15,6 +15,7 @@ export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 export type PostDataBase = z.infer<typeof postSchema>;
 
 export interface PostData{
+  post_name?: string | undefined;  // ← CHANGER : string → string | undefined (ajouter le ?)
   id:string;
   name:string;
   description:string;

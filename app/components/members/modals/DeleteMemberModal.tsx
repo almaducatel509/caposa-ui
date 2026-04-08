@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { X, Trash2, AlertTriangle } from "lucide-react";
-import { Modal } from "../ui/Modal";
 import UserAvatar from "@/app/components/core/UserAvatar";
-import { MemberData } from "./validations";
 import { deleteMember } from "@/app/lib/api/members";
+import { Modal } from "@/app/components/ui/Modal";
+import { MemberData } from "../validations";
 
 interface DeleteMemberModalProps {
   isOpen:    boolean;

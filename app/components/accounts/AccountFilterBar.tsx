@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Search, Upload, Download, X,
+  Search, Upload, X,
   ChevronDown,
   Wallet, PiggyBank, CreditCard, Clock, CheckCircle,
+  Plus,
 } from 'lucide-react';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -18,8 +19,8 @@ interface AccountFilterBarProps {
   onTypeChange:   (v: string) => void;
   onStatusChange: (v: string) => void;
   onImport?:      () => void;
-  onExport?:      () => void;
   importLoading?: boolean;
+  onAdd:          () => void;
 }
 
 // ─── Dropdown ──────────────────────────────────────────────────────────────────
@@ -50,26 +51,27 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 // ─── Main ──────────────────────────────────────────────────────────────────────
 const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
   filterValue, selectedType, selectedStatus, totalCount,
-  onSearchChange, onClear, onTypeChange, onStatusChange,
-  onImport, onExport, importLoading = false,
+  onSearchChange, onClear, onTypeChange, onStatusChange, onAdd,
+  onImport, importLoading = false,
 }) => {
 
   const TYPE_OPTIONS = [
     { key: 'all',     label: 'Tous les types', icon: Wallet     },
-    { key: 'epargne', label: 'Épargne',         icon: PiggyBank  },
-    { key: 'cheques', label: 'Chèques',         icon: CreditCard },
-    { key: 'terme',   label: 'Terme',           icon: Clock      },
+    { key: 'epargne', label: 'Épargne',        icon: PiggyBank  },
+    { key: 'cheques', label: 'Chèques',        icon: CreditCard },
+    { key: 'terme',   label: 'Terme',          icon: Clock      },
   ];
 
+  // ← clés alignées avec handleStatusChange et matchStatus dans AccountGrid
   const STATUS_OPTIONS = [
-    { key: 'all',      label: 'Tous les statuts' },
-    { key: 'actif',    label: 'Actifs'           },
-    { key: 'suspendu', label: 'Suspendus'        },
-    { key: 'ferme',    label: 'Fermés'           },
-  ];
-
-  const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Type';
-  const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Statut';
+  { key: 'all',        label: 'Tous les statuts' },
+  { key: 'ouvert',     label: 'Ouverts'          },
+  { key: 'en_attente', label: 'En attente'       },  // ← ajout
+  { key: 'suspendu',   label: 'Gelés'            },
+  { key: 'ferme',      label: 'Fermés'           },
+];
+  const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Tous les types';
+  const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
   const activeCount = [selectedType !== 'all', selectedStatus !== 'all'].filter(Boolean).length;
 
   return (
@@ -78,7 +80,6 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
       {/* ── Ligne 1 : recherche + actions ── */}
       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
 
-        {/* Recherche */}
         <div className="relative w-full lg:max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
@@ -98,8 +99,14 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
           )}
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onAdd}
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter
+          </button>
           <button
             onClick={onImport}
             disabled={importLoading}
@@ -107,19 +114,12 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
           >
             <Upload className="w-4 h-4" /> {importLoading ? 'Import…' : 'Importer'}
           </button>
-          <button
-            onClick={onExport}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all"
-          >
-            <Download className="w-4 h-4" /> Exporter
-          </button>
         </div>
       </div>
 
       {/* ── Ligne 2 : filtres ── */}
       <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
 
-        {/* Compteur */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Résultats</span>
           <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#DDEAD5] text-[#1B5E20]">

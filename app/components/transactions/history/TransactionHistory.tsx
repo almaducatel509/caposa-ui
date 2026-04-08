@@ -5,8 +5,8 @@ import TransactionStats from '../TransactionStats';
 import TransactionFilters from '../TransactionFilters';
 import TransactionGrid from '../TransactionGrid';
 import { TransactionData } from '../types';
-import { fetchTransactions } from '@/app/lib/api/transactions';
-import { FaPlus, FaSync } from "react-icons/fa";
+import { fetchTransactions } from '@/app/lib/api/transaction';
+import { FaSync } from "react-icons/fa";
 
 const TransactionDashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);

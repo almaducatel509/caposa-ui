@@ -6,7 +6,7 @@ import TransactionStats from './TransactionStats';
 import TransactionTable from './TransactionTable';
 import PageHeader from '../header';
 import { TransactionData } from './types';
-import { fetchTransactions } from '@/app/lib/api/transactions';
+import { fetchTransactions } from '@/app/lib/api/transaction';
 import TransactionDetailModal, { TransactionDetail } from './DetailModal';
 
 const TransactionDashboard: React.FC = () => {
@@ -31,11 +31,22 @@ const TransactionDashboard: React.FC = () => {
     }
   };
 
+  // Mapper les statuts API → statuts métier DetailModal
+function mapStatus(apiStatus: TransactionData['status']): TransactionDetail['status'] {
+  const map: Record<TransactionData['status'], TransactionDetail['status']> = {
+    completed:  'decaisse',
+    pending:    'en_attente',
+    processing: 'en_cours',
+    failed:     'echoue',
+  };
+  return map[apiStatus] ?? 'en_attente';
+}
+
   const handleView = (tx: TransactionData) => {
     setDetailTx({
       id:             tx.id,
       kind:           tx.type as TransactionDetail['kind'],
-      status:         tx.status,
+      status:         mapStatus(tx.status),  // ← conversion ici
       montant:        tx.amount ?? 0,
       created_at:     tx.created_at ?? '',
       reference:      tx.reference,

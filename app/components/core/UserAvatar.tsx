@@ -1,117 +1,90 @@
 "use client";
 
 import React from 'react';
-import { Avatar } from "@heroui/react";
 
 interface UserAvatarProps {
   user: {
     first_name: string;
     last_name: string;
-    photo_profil?: string | null; // Pour Employee
-    photo_url?: string | null;     // Pour Member
+    photo_profil?: string | null;
+    photo_url?: string | null;
   };
-  size?: "sm" | "md" | "lg" | "xl"; // ✅ Ajout de "xl"
+  size?: "sm" | "md" | "lg" | "xl" | "xxl";
   className?: string;
   showBorder?: boolean;
   borderColor?: string;
   type?: 'employee' | 'member';
 }
 
+const SIZE_CLASSES: Record<string, string> = {
+  sm: 'w-8 h-8 text-xs',
+  md: 'w-10 h-10 text-sm',
+  lg: 'w-12 h-12 text-base',
+  xl: 'w-20 h-20 text-lg',
+  xxl:'w-22 h22 text-2xl'
+};
+
+const COLORS = [
+  'bg-[#2E7D32]',   // vert principal
+  'bg-[#1e7367]',   // teal
+  'bg-[#355C7D]',   // bleu ardoise
+  'bg-[#558B2F]',   // vert olive
+  'bg-[#00796B]',   // teal foncé
+  'bg-[#388E3C]',   // vert moyen
+  'bg-[#4527A0]',   // violet sobre
+  'bg-[#6D4C41]',   // brun
+];
+
 const UserAvatar: React.FC<UserAvatarProps> = ({
   user,
-  size = "md",
-  className = "",
+  size = 'md',
+  className = '',
   showBorder = false,
-  borderColor = "border-[#34963d]",
-  type = 'employee'
+  borderColor = 'ring-[#34963d]',
+  type = 'employee',
 }) => {
-  // Gérer les différents noms de champs selon le type
+  
   const photoUrl = type === 'employee' ? user.photo_profil : user.photo_url;
-  
-  // Générer les initiales
-  const getInitials = (firstName: string, lastName: string): string => {
-    const first = firstName?.charAt(0) || '';
-    const last = lastName?.charAt(0) || '';
-    return `${first}${last}`.toUpperCase();
-  };
-  
-  const initials = getInitials(user.first_name, user.last_name);
-  const fullName = `${user.first_name} ${user.last_name}`;
-  
-  // Générer une couleur basée sur les initiales pour consistency
-  const getAvatarColor = (initials: string): string => {
-    const colors = [
-      "bg-gradient-to-br from-[#34963d] to-[#1e7367]",
-      "bg-gradient-to-br from-blue-500 to-blue-700",
-      "bg-gradient-to-br from-purple-500 to-purple-700",
-      "bg-gradient-to-br from-orange-500 to-orange-700",
-      "bg-gradient-to-br from-pink-500 to-pink-700",
-      "bg-gradient-to-br from-indigo-500 to-indigo-700",
-      "bg-gradient-to-br from-teal-500 to-teal-700",
-      "bg-gradient-to-br from-cyan-500 to-cyan-700",
-    ];
-    
-    // Utiliser la somme des codes ASCII pour plus de variété
-    const charSum = initials.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const index = charSum % colors.length;
-    return colors[index];
-  };
-  
-  const avatarColor = getAvatarColor(initials);
-  
-  // ✅ Gérer la taille XL manuellement avec CSS
-  const getAvatarSize = (size: string) => {
-    if (size === 'xl') {
-      return 'lg'; // Utiliser 'lg' pour NextUI mais on va override avec CSS
-    }
-    return size as "sm" | "md" | "lg";
-  };
+  const initials = [user.first_name, user.last_name]
+    .map(n => n?.charAt(0) ?? '')
+    .join('')
+    .toUpperCase();
 
-  // ✅ Classes CSS pour la taille XL
-  const getCustomSizeClasses = (size: string): string => {
-    if (size === 'xl') {
-      return 'w-20 h-20'; // 80px - plus grand que lg
-    }
-    return '';
-  };
+  const charSum = initials.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0);
+  const gradient = COLORS[charSum % COLORS.length];
 
-  // ✅ Ajustement de la taille de la police selon la taille de l'avatar
-  const getFontSizeClass = (size: string): string => {
-    switch (size) {
-      case 'sm': return 'text-xs';
-      case 'md': return 'text-sm';
-      case 'lg': return 'text-base';
-      case 'xl': return 'text-lg'; // ✅ Taille de police pour XL
-      default: return 'text-sm';
-    }
-  };
-  
-  const fontSizeClass = getFontSizeClass(size);
-  const avatarSize = getAvatarSize(size);
-  const customSizeClasses = getCustomSizeClasses(size);
-  
+  const sizeClass  = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
+  const borderClass = showBorder ? `ring-2 ring-offset-2 ${borderColor}` : '';
+
+  const base = `relative inline-flex items-center justify-center rounded-lg shrink-0 overflow-hidden
+  ${sizeClass} ${borderClass} ${className}`;
+
+  if (photoUrl) {
+    return (
+      <div className={base}>
+        <img
+          src={photoUrl}
+          alt={`${user.first_name} ${user.last_name}`}
+          className="w-full h-full object-cover"
+          onError={e => {
+            // Si l'image plante, on bascule sur les initiales
+            const target = e.currentTarget;
+            target.style.display = 'none';
+            target.nextElementSibling?.removeAttribute('hidden');
+          }}
+        />
+        {/* Fallback initiales caché par défaut */}
+        <div hidden className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br ${gradient}`}>
+          <span className="font-semibold text-white">{initials}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Avatar
-      src={photoUrl || undefined}
-      name={fullName}
-      size={avatarSize} // ✅ Utilise la taille compatible NextUI
-      className={`
-        ${className}
-        ${customSizeClasses} // ✅ Classes CSS custom pour XL
-        ${showBorder ? `ring-2 ring-offset-2 ${borderColor}` : ''}
-        ${!photoUrl ? avatarColor : ''}
-      `}
-      classNames={{
-        base: !photoUrl ? avatarColor : '',
-        name: `font-medium text-white ${fontSizeClass}` // ✅ Font adaptatif
-      }}
-      showFallback
-      fallback={
-        <span className={`text-white font-semibold ${fontSizeClass}`}>
-          {initials}
-        </span>
-      }
-    />
+    <div className={`${base} bg-gradient-to-br ${gradient}`}>
+      <span className="font-semibold text-white">{initials}</span>
+    </div>
   );
 };
 

@@ -6,7 +6,7 @@ import {
   X, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Download, History, Banknote, Clock, UserCheck,
 } from "lucide-react";
-import UserAvatar from '@/app/components/core/UserAvatar';
+import UserAvatar from '@/app/components/core/UserAvatar'; //important
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -98,8 +98,8 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
-            <Banknote className="w-4 h-4 text-[#2E7D32]" />
+          <div className=" flex items-center justify-center shrink-0 pt-2">
+            <UserAvatar user={employee} size="xl" type="employee" />
           </div>
           <div>
             <h3 className="text-base font-bold text-gray-900">Transactions & Historique</h3>

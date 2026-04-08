@@ -2,56 +2,86 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Eye, XCircle, Phone, Mail,
+  Eye, XCircle, Phone, Mail, Receipt,
   ChevronDown, ChevronUp, ChevronsUpDown,
   Check, CheckCircle2, X, Archive,
   Wallet, ShieldAlert, TrendingUp, TrendingDown, Minus,
-  ShieldOff, ShieldCheck
+  ShieldOff, ShieldCheck, Clock,
 } from 'lucide-react';
 import { AccountData } from './validationsaccount';
+import AccountBulkActionDropdown, { AccountBulkAction } from './AccountBulkActionDropdown';
+import AccountBulkActionModal from './modals/AccountBulkActionModal';
+import UserAvatar from '../core/UserAvatar';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-type TabId = 'actif' | 'ferme';
+
+type TabId = 'ouvert' | 'gelé' | 'en_attente' | 'fermé';
+
+// Statuts alignés avec la décision architecturale :
+// statusAccount: 'ouvert' | 'fermé' | 'gelé' | 'en_attente'
+type AccountStatus = 'ouvert' | 'fermé' | 'gelé' | 'en_attente';
 
 interface AccountTableProps {
-  accounts:        AccountData[];
-  isLoading:       boolean;
-  onView:          (a: AccountData) => void;
-  onSuspend:       (a: AccountData) => void;
-  onClose:         (a: AccountData) => void;
-  forceSuspended?: boolean; // true quand filtre statut = 'suspendu' dans FilterBar
+  accounts:            AccountData[];
+  isLoading:           boolean;
+  onDelete: (acc: AccountData) => void;
+  onView:              (a: AccountData) => void;
+  onSuspend:           (a: AccountData) => void;
+  onClose:             (a: AccountData) => void;
+  onViewTransactions:  (a: AccountData) => void;
+  onBulkAction:        (action: AccountBulkAction, ids: string[]) => Promise<void>;
+  activeTab?:          'ouvert' | 'gelé' | 'en_attente' | 'fermé';
+  onTabChange?:        (tab: 'ouvert' | 'gelé' | 'en_attente' | 'fermé') => void;
 }
-
 // ─── Constants ─────────────────────────────────────────────────────────────────
-const STATUS_CFG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  actif:    { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Actif'    },
-  suspendu: { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Suspendu' },
-  ferme:    { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Fermé'    },
+
+const STATUS_CFG: Record<AccountStatus, { bg: string; text: string; dot: string; label: string }> = {
+  ouvert:      { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Ouvert'      },
+  gelé:        { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Gelé'         },
+  en_attente:  { bg: 'bg-yellow-50', text: 'text-[#854F0B]', dot: 'bg-amber-400',  label: 'En attente'  },
+  fermé:       { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',   label: 'Fermé'       },
 };
 
 const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
-  epargne: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', label: 'Épargne'  },
-  cheques: { bg: 'bg-blue-50',   text: 'text-[#355C7D]', label: 'Chèques'  },
-  terme:   { bg: 'bg-yellow-50', text: 'text-[#D4AF37]', label: 'Terme'    },
+  epargne: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', label: 'Épargne' },
+  cheques: { bg: 'bg-blue-50',   text: 'text-[#355C7D]', label: 'Chèques' },
+  terme:   { bg: 'bg-yellow-50', text: 'text-[#854F0B]', label: 'Terme'   },
 };
 
-const TAB_STATUSES: Record<TabId, string[]> = {
-  actif: ['actif'],
-  ferme: ['ferme'],
-};
+
+const COLS = [
+  { label: 'Compte / Membre', field: 'account_number' },
+  { label: 'Type',            field: 'typeCompte'      },
+  { label: 'Solde',           field: 'solde'           },
+  { label: 'Depuis',          field: 'created_at'      },  // ← nouveau
+  { label: 'Statut',          field: 'statusAccount'   },
+];
+
+const GRID = '40px 2.5fr 1fr 1.2fr 1fr 1fr 130px';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-function formatHTG(n?: number) {
-  if (n == null) return '0 HTG';
-  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' HTG';
+
+function getEffectiveStatus(a: AccountData): AccountStatus {
+  const s = (a as any).statusAccount ?? a.statutCompte;
+  if (s === 'fermé' || s === 'ferme' || s === 'closed') return 'fermé';
+  if (s === 'gelé'  || s === 'suspendu' || s === 'frozen') return 'gelé';
+  if (s === 'en_attente' || s === 'pending') return 'ouvert'; // ← 'ouvert' au lieu de 'en_attente'
+  if (a.account_status === false) return 'fermé';
+  return 'ouvert';
 }
 
-function getEffectiveStatus(a: AccountData): string {
-  return a.statutCompte ?? 'actif';
+function formatHTG(n?: number | null) {
+  if (n == null) return '0 HTG';
+  return new Intl.NumberFormat('fr-HT', {
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(n) + ' HTG';
 }
 
 // ─── Sort icon ─────────────────────────────────────────────────────────────────
-function SortIcon({ field, sortField, sortDir }: { field: string; sortField: string; sortDir: string }) {
+
+function SortIcon({ field, sortField, sortDir }: {
+  field: string; sortField: string; sortDir: string;
+}) {
   if (sortField !== field) return <ChevronsUpDown className="w-3.5 h-3.5 text-gray-300" />;
   return sortDir === 'asc'
     ? <ChevronUp   className="w-3.5 h-3.5 text-[#2E7D32]" />
@@ -59,10 +89,11 @@ function SortIcon({ field, sortField, sortDir }: { field: string; sortField: str
 }
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────────
+
 function SkeletonRow() {
   return (
     <div className="grid items-center px-5 py-3.5 border-b border-gray-50"
-      style={{ gridTemplateColumns: '40px 2fr 1.5fr 1fr 1.5fr 1fr 110px' }}>
+      style={{ gridTemplateColumns: GRID }}>
       <div className="flex justify-center"><div className="w-4 h-4 rounded bg-gray-100 animate-pulse" /></div>
       <div className="flex flex-col gap-1.5">
         <div className="h-3.5 w-36 bg-gray-100 animate-pulse rounded" />
@@ -80,150 +111,178 @@ function SkeletonRow() {
 }
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
+
 const AccountTable: React.FC<AccountTableProps> = ({
-  accounts, isLoading, onView, onSuspend, onClose, forceSuspended = false,
+  accounts, isLoading,
+  onView, onSuspend, onClose, onViewTransactions, onBulkAction,
+  activeTab: externalTab, onTabChange,
 }) => {
-  const [activeTab,     setActiveTab]     = useState<TabId>('actif');
-  const [showSuspended, setShowSuspended] = useState(false);
-  const [sortField,     setSortField]     = useState('account_number');
-  const [sortDir,       setSortDir]       = useState<'asc' | 'desc'>('asc');
-  const [selected,      setSelected]      = useState<Set<string>>(new Set());
+  const [localTab, setLocalTab] = useState<TabId>('ouvert');
+  const activeTab = externalTab ?? localTab;
+  const [sortField,    setSortField]    = useState('account_number');
+  const [sortDir,      setSortDir]      = useState<'asc' | 'desc'>('asc');
+  const [selected,     setSelected]     = useState<Set<string>>(new Set());
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Sync toggle avec le filtre externe (FilterBar)
-  const effectiveSuspended = showSuspended || forceSuspended;
-
-  // Counts
+  // ── Counts ────────────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
-    actif:    accounts.filter(a => getEffectiveStatus(a) === 'actif').length,
-    suspendu: accounts.filter(a => getEffectiveStatus(a) === 'suspendu').length,
-    ferme:    accounts.filter(a => getEffectiveStatus(a) === 'ferme').length,
+    ouvert:     accounts.filter(a => getEffectiveStatus(a) === 'ouvert').length,
+    gelé:       accounts.filter(a => getEffectiveStatus(a) === 'gelé').length,
+    en_attente: accounts.filter(a => getEffectiveStatus(a) === 'en_attente').length,
+    fermé:      accounts.filter(a => getEffectiveStatus(a) === 'fermé').length,
   }), [accounts]);
 
-  // Filter by tab + toggle suspendus
-  const tabAccounts = useMemo(() => {
-    if (activeTab === 'ferme') return accounts.filter(a => getEffectiveStatus(a) === 'ferme');
-    const statuses = effectiveSuspended ? ['actif', 'suspendu'] : ['actif'];
-    return accounts.filter(a => statuses.includes(getEffectiveStatus(a)));
-  }, [accounts, activeTab, effectiveSuspended]);
+  // ── Tab filter ────────────────────────────────────────────────────────────
+  const tabAccounts = useMemo(
+    () => accounts.filter(a => getEffectiveStatus(a) === activeTab),
+    [accounts, activeTab],
+  );
 
-  // Sort
+  // ── Sort ──────────────────────────────────────────────────────────────────
   const toggleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
   };
 
   const sorted = useMemo(() => [...tabAccounts].sort((a, b) => {
-    let va: any = sortField === 'member'  ? a.member_details?.full_name ?? ''
-                : sortField === 'solde'   ? a.soldeActuel ?? 0
+    let va: any = sortField === 'member' ? a.member_details?.full_name ?? ''
+                : sortField === 'solde'  ? (a.soldeActuel ?? 0)
                 : (a as any)[sortField] ?? '';
-    let vb: any = sortField === 'member'  ? b.member_details?.full_name ?? ''
-                : sortField === 'solde'   ? b.soldeActuel ?? 0
+    let vb: any = sortField === 'member' ? b.member_details?.full_name ?? ''
+                : sortField === 'solde'  ? (b.soldeActuel ?? 0)
                 : (b as any)[sortField] ?? '';
     if (typeof va === 'string') va = va.toLowerCase();
     if (typeof vb === 'string') vb = vb.toLowerCase();
     return sortDir === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
   }), [tabAccounts, sortField, sortDir]);
 
-  // Selection
+  const [activeAction, setActiveAction] = useState<AccountBulkAction | null>(null);
+
+  const selectedAccounts = useMemo(
+    () => sorted.filter(a => selected.has(a.id as string)),
+    [sorted, selected],
+  );
+
+  // ── Selection ─────────────────────────────────────────────────────────────
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
   const someSelected = selected.size > 0 && !allSelected;
-  const toggleAll    = () => allSelected ? setSelected(new Set()) : setSelected(new Set(sorted.map(a => a.id as string)));
-  const toggleRow    = (id: string) => {
+  const toggleAll    = () => allSelected
+    ? setSelected(new Set())
+    : setSelected(new Set(sorted.map(a => a.id as string)));
+  const toggleRow = (id: string) => {
     const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSelected(s);
   };
-  const handleTabChange = (tab: TabId) => { setActiveTab(tab); setSelected(new Set()); };
 
-  const isFermeTab = activeTab === 'ferme';
-  const isReadOnly = isFermeTab;
+  const handleTabChange = (tab: TabId) => {
+    setLocalTab(tab);
+    onTabChange?.(tab);
+    setSelected(new Set());
+  };
+  
+  const isFermeTab = activeTab === 'fermé';
+  // ── Export CSV pour comptes ───────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    const headers = [
+      'Numero de compte',
+      'Membre',
+      'Email',
+      'Type',
+      'Solde',
+      'Statut',
+      'Depuis'
+    ];
 
-  const COLS = [
-    { label: 'Compte / Membre', field: 'account_number' },
-    { label: 'Contact',         field: null              },
-    { label: 'Type',            field: 'typeCompte'      },
-    { label: 'Solde',           field: 'solde'           },
-    { label: 'Statut',          field: 'statutCompte'    },
-  ];
+    const rows = selectedAccounts.map(a => [
+      a.account_number ?? '',
+
+      // Nom du membre (depuis member_details)
+      a.member_details?.full_name
+        ?? `${a.member_details?.first_name ?? ''} ${a.member_details?.last_name ?? ''}`.trim(),
+
+      // Email
+      a.member_details?.email ?? '',
+
+      // Type (champ enrichi)
+      a.typeCompte ?? '',
+
+      // Solde (champ enrichi)
+      a.soldeActuel ?? '',
+
+      // Statut (champ enrichi)
+      a.statusAccount ?? '',
+
+      // Date d'ouverture
+      a.created_at
+        ? new Date(a.created_at).toLocaleDateString('fr-FR')
+        : '',
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${v}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `comptes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-      {/* ── Onglets + toggle suspendus ── */}
+      {/* ── Onglets ── */}
       <div className="flex items-center px-2 border-b border-gray-100 bg-white">
-        {/* Onglets Actifs / Fermés */}
-        <div className="flex items-center flex-1">
-          {([
-            { id: 'actif' as TabId, label: 'Actifs', icon: Wallet,  active: 'border-[#2E7D32] text-[#1B5E20]', badge: 'bg-[#DDEAD5] text-[#1B5E20]' },
-            { id: 'ferme' as TabId, label: 'Fermés', icon: Archive, active: 'border-gray-400 text-gray-600',   badge: 'bg-gray-100 text-gray-600'    },
-          ]).map(tab => {
-            const Icon     = tab.icon;
-            const isActive = activeTab === tab.id;
-            const count    = counts[tab.id];
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 ${
-                  isActive ? `${tab.active} font-semibold` : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 shrink-0" />
-                {tab.label}
-                {count > 0 && (
-                  <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${isActive ? tab.badge : 'bg-gray-100 text-gray-500'}`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Toggle suspendus — visible seulement sur l'onglet Actifs */}
-        {activeTab === 'actif' && counts.suspendu > 0 && (
-          <button
-            onClick={() => { setShowSuspended(s => !s); setSelected(new Set()); }}
-            className={`flex items-center gap-2 px-3 py-1.5 mr-2 rounded-xl text-xs font-medium transition-all border ${
-              effectiveSuspended
-                ? 'bg-blue-50 border-[#355C7D]/30 text-[#355C7D]'
-                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <ShieldOff className="w-3.5 h-3.5" />
-            {effectiveSuspended ? 'Masquer suspendus' : 'Voir suspendus'}
-            <span className={`px-1.5 py-0.5 rounded-md font-semibold ${
-              effectiveSuspended ? 'bg-[#355C7D]/10 text-[#355C7D]' : 'bg-gray-100 text-gray-500'
-            }`}>
-              {counts.suspendu}
-            </span>
-          </button>
-        )}
+        {([
+          { id: 'ouvert'     as TabId, label: 'Ouverts',    icon: Wallet,    active: 'border-[#2E7D32] text-[#1B5E20]',  badge: 'bg-[#DDEAD5] text-[#1B5E20]',  count: counts.ouvert     },
+          { id: 'gelé'       as TabId, label: 'Gelés',      icon: ShieldOff, active: 'border-[#355C7D] text-[#355C7D]',  badge: 'bg-blue-100 text-[#355C7D]',   count: counts.gelé       },
+          { id: 'en_attente' as TabId, label: 'En attente', icon: Clock,     active: 'border-amber-500 text-amber-700',  badge: 'bg-yellow-100 text-amber-700', count: counts.en_attente },
+          { id: 'fermé'      as TabId, label: 'Archive',     icon: Archive,   active: 'border-gray-400 text-gray-600',    badge: 'bg-gray-100 text-gray-600',    count: counts.fermé      },
+        ]).map(tab => {
+          const Icon      = tab.icon;
+          const isCurrent = activeTab === tab.id;
+          return (
+            <button key={tab.id} onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 ${
+                isCurrent ? `${tab.active} font-semibold` : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${isCurrent ? tab.badge : 'bg-gray-100 text-gray-500'}`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── Bannière comptes fermés ── */}
+      {/* ── Bannières ── */}
       {isFermeTab && (
         <div className="flex items-start gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200">
           <Archive className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-xs font-semibold text-gray-600">Comptes fermés — Lecture seule</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              Ces comptes ne peuvent plus recevoir ni émettre de transactions. Historique consultable uniquement.
+              Ces comptes ne peuvent plus recevoir ni émettre de transactions.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Bannière suspendus visibles ── */}
-      {effectiveSuspended && activeTab === 'actif' && counts.suspendu > 0 && (
+      {!isFermeTab && (counts.gelé > 0 || counts.en_attente > 0) && (
         <div className="flex items-start gap-3 px-5 py-3 bg-blue-50 border-b border-blue-100">
           <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
-          <div>
-            <p className="text-xs font-semibold text-[#355C7D]">
-              {counts.suspendu} compte{counts.suspendu > 1 ? 's' : ''} suspendu{counts.suspendu > 1 ? 's' : ''} affiché{counts.suspendu > 1 ? 's' : ''}
-            </p>
-            <p className="text-xs text-blue-400 mt-0.5">
-              Aucune transaction autorisée. La réactivation nécessite une validation superviseur.
-            </p>
-          </div>
+          <p className="text-xs text-[#355C7D]">
+            {counts.gelé > 0 && <span><strong>{counts.gelé}</strong> compte{counts.gelé > 1 ? 's' : ''} gelé{counts.gelé > 1 ? 's' : ''} </span>}
+            {counts.gelé > 0 && counts.en_attente > 0 && '· '}
+            {counts.en_attente > 0 && <span><strong>{counts.en_attente}</strong> en attente d'activation</span>}
+          </p>
         </div>
       )}
 
@@ -240,12 +299,16 @@ const AccountTable: React.FC<AccountTableProps> = ({
             <button className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all">
               Exporter
             </button>
-            {!isReadOnly && (
-              <button className="px-3 py-1.5 text-xs font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white rounded-xl hover:shadow-md transition-all">
-                Actions groupées
-              </button>
+            {!isFermeTab && (
+              <AccountBulkActionDropdown
+                selectedCount={selected.size}
+                isOpen={dropdownOpen}
+                onToggle={() => setDropdownOpen(o => !o)}
+                onAction={(action) => setActiveAction(action)}
+              />
             )}
-            <button onClick={() => setSelected(new Set())} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+            <button onClick={() => setSelected(new Set())}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -253,34 +316,29 @@ const AccountTable: React.FC<AccountTableProps> = ({
       )}
 
       {/* ── En-tête colonnes ── */}
-      <div
-        className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
-        style={{ display: 'grid', gridTemplateColumns: '40px 2fr 1.5fr 1fr 1.5fr 1fr 110px' }}
-      >
-        <div className="flex items-center justify-center">
-          <button
-            onClick={toggleAll}
-            className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
-              allSelected || someSelected ? 'bg-[#2E7D32] border-[#2E7D32]' : 'bg-white border-gray-300 hover:border-[#2E7D32]'
-            }`}
-          >
-            {(allSelected || someSelected) && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-          </button>
+      {(isLoading || sorted.length > 0) && (
+        <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
+          style={{ display: 'grid', gridTemplateColumns: GRID }}>
+          <div className="flex items-center justify-center">
+            <button onClick={toggleAll}
+              className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+                allSelected || someSelected ? 'bg-[#2E7D32] border-[#2E7D32]' : 'bg-white border-gray-300 hover:border-[#2E7D32]'
+              }`}>
+              {(allSelected || someSelected) && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+            </button>
+          </div>
+          {COLS.map(col => (
+            <button key={col.label} onClick={() => col.field && toggleSort(col.field)}
+              className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-left transition-colors ${
+                col.field ? 'text-gray-600 hover:text-[#1B5E20] cursor-pointer' : 'text-gray-600 cursor-default'
+              }`}>
+              {col.label}
+              {col.field && <SortIcon field={col.field} sortField={sortField} sortDir={sortDir} />}
+            </button>
+          ))}
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 text-center">Actions</span>
         </div>
-        {COLS.map(col => (
-          <button
-            key={col.label}
-            onClick={() => col.field && toggleSort(col.field)}
-            className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-left transition-colors ${
-              col.field ? 'text-gray-600 hover:text-[#1B5E20] cursor-pointer' : 'text-gray-600 cursor-default'
-            }`}
-          >
-            {col.label}
-            {col.field && <SortIcon field={col.field} sortField={sortField} sortDir={sortDir} />}
-          </button>
-        ))}
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 text-center">Actions</span>
-      </div>
+      )}
 
       {/* ── Lignes ── */}
       <div className="divide-y divide-gray-50">
@@ -299,63 +357,68 @@ const AccountTable: React.FC<AccountTableProps> = ({
 
         {!isLoading && sorted.map((acc, i) => {
           const status     = getEffectiveStatus(acc);
-          const statusCfg  = STATUS_CFG[status]  ?? STATUS_CFG['actif'];
-          const typeCfg    = (acc.typeCompte ? TYPE_CFG[acc.typeCompte] : undefined) ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: acc.typeCompte ?? '—' };
+          const statusCfg  = STATUS_CFG[status];
+          const typeCfg    = acc.typeCompte
+            ? (TYPE_CFG[acc.typeCompte] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: acc.typeCompte })
+            : { bg: 'bg-gray-100', text: 'text-gray-500', label: '—' };
           const isSelected = selected.has(acc.id as string);
           const solde      = acc.soldeActuel ?? 0;
 
           return (
-            <div
-              key={acc.id}
-              className={`grid items-center px-5 py-3.5 transition-all duration-150 group ${
+            <div key={acc.id}
+              className={`grid items-center px-5 py-3.5 transition-all duration-150 ${
                 isFermeTab ? 'opacity-65' : ''
               } ${
                 isSelected
                   ? 'bg-[#DDEAD5]/50 border-l-2 border-[#2E7D32]'
                   : i % 2 === 0 ? 'bg-white hover:bg-[#DDEAD5]/10' : 'bg-gray-50/40 hover:bg-[#DDEAD5]/10'
               }`}
-              style={{ gridTemplateColumns: '40px 2fr 1.5fr 1fr 1.5fr 1fr 110px' }}
-            >
+              style={{ gridTemplateColumns: GRID }}>
+
               {/* Checkbox */}
               <div className="flex items-center justify-center">
-                <button
-                  onClick={() => toggleRow(acc.id as string)}
+                <button onClick={() => toggleRow(acc.id as string)}
                   className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
                     isSelected ? 'bg-[#2E7D32] border-[#2E7D32]' : 'bg-white border-gray-300 hover:border-[#2E7D32]'
-                  }`}
-                >
+                  }`}>
                   {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
                 </button>
               </div>
 
               {/* Compte + Membre */}
-              <div className="min-w-0">
-                <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isFermeTab ? 'text-gray-400' : 'text-gray-900'}`}>
-                  {acc.account_number}
-                </p>
-                <p className="text-xs text-gray-500 truncate mt-0.5">
-                  {acc.member_details?.full_name ?? acc.id_membre ?? '—'}
-                </p>
-              </div>
-
-              {/* Contact */}
-              <div className="flex flex-col gap-0.5 min-w-0">
-                {acc.member_details?.email && (
-                  <div className="flex items-center gap-1">
-                    <Mail className="w-3 h-3 text-gray-300 shrink-0" />
-                    <span className="text-xs text-gray-400 truncate">{acc.member_details.email}</span>
+              {/* Compte + Membre */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`relative shrink-0 ${isFermeTab ? 'opacity-50 grayscale' : ''}`}>
+                    <UserAvatar
+                      user={{
+                        first_name: acc.member_details?.first_name ?? '',
+                        last_name:  acc.member_details?.last_name  ?? '',
+                        photo_profil:      acc.member_details?.photo_profil,
+                      }}
+                      size="sm"
+                    />
                   </div>
-                )}
-                {acc.member_details?.phone_number && (
-                  <div className="flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-gray-300 shrink-0" />
-                    <span className="text-xs text-gray-400">{acc.member_details.phone_number}</span>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isFermeTab ? 'text-gray-400' : 'text-gray-900'}`}>
+                      {acc.account_number}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {acc.member_details?.full_name ?? acc.id_membre ?? '—'}
+                    </p>
+                    {acc.member_details?.email && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Mail className="w-3 h-3 text-gray-300 shrink-0" />
+                        <span className="text-xs text-gray-400 truncate">{acc.member_details.email}</span>
+                      </div>
+                    )}
+                    {acc.member_details?.phone_number && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3 text-gray-300 shrink-0" />
+                        <span className="text-xs text-gray-400">{acc.member_details.phone_number}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {!acc.member_details?.email && !acc.member_details?.phone_number && (
-                  <span className="text-xs text-gray-400">—</span>
-                )}
-              </div>
+                </div>
 
               {/* Type */}
               <div>
@@ -370,8 +433,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   ? <TrendingUp   className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />
                   : solde < 0
                     ? <TrendingDown className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                    : <Minus        className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                }
+                    : <Minus        className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
                 <span className={`text-sm font-bold ${
                   isFermeTab ? 'text-gray-400' :
                   solde > 0  ? 'text-[#2E7D32]' :
@@ -380,7 +442,14 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   {formatHTG(solde)}
                 </span>
               </div>
-
+              {/* Depuis */}
+              <div>
+                <span className="text-xs text-gray-500">
+                  {acc.created_at
+                    ? new Date(acc.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—'}
+                </span>
+              </div>
               {/* Statut */}
               <div>
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusCfg.bg} ${statusCfg.text}`}>
@@ -391,37 +460,44 @@ const AccountTable: React.FC<AccountTableProps> = ({
 
               {/* Actions */}
               <div className="flex items-center justify-center gap-1">
-
-                {/* Voir — toujours disponible */}
-                <button title="Voir le détail" onClick={() => onView(acc)}
+                <button title="Voir" onClick={() => onView(acc)}
                   className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-blue-50 hover:text-blue-500">
                   <Eye className="w-3.5 h-3.5" />
                 </button>
 
-                {/* Compte actif → Suspendre + Fermer */}
-                {status === 'actif' && (
+                <button title="Transactions" onClick={() => onViewTransactions(acc)}
+                  className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-purple-50 hover:text-purple-500">
+                  <Receipt className="w-3.5 h-3.5" />
+                </button>
+
+                {status === 'ouvert' && (
                   <>
-                    <button title="Suspendre le compte" onClick={() => onSuspend(acc)}
+                    <button title="Geler" onClick={() => onSuspend(acc)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-blue-50 hover:text-[#355C7D]">
                       <ShieldOff className="w-3.5 h-3.5" />
                     </button>
-                    <button title="Fermer le compte" onClick={() => onClose(acc)}
+                    <button title="Fermer" onClick={() => onClose(acc)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
                       <XCircle className="w-3.5 h-3.5" />
                     </button>
                   </>
                 )}
 
-                {/* Compte suspendu → Réactiver seulement */}
-                {status === 'suspendu' && (
-                  <button title="Réactiver le compte" onClick={() => onSuspend(acc)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-                    <ShieldCheck className="w-3 h-3" /> Réactiver
+                {status === 'en_attente' && (
+                  <button title="Activer" onClick={() => onSuspend(acc)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all">
+                    <Clock className="w-3 h-3" /> Activer
                   </button>
                 )}
 
-                {/* Compte fermé → lecture seule */}
-                {status === 'ferme' && (
+                {status === 'gelé' && (
+                  <button title="Débloquer" onClick={() => onSuspend(acc)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
+                    <ShieldCheck className="w-3 h-3" /> Débloquer
+                  </button>
+                )}
+
+                {status === 'fermé' && (
                   <span className="px-2 py-1 text-xs text-gray-400 bg-gray-50 rounded-lg">Archivé</span>
                 )}
               </div>
@@ -436,26 +512,38 @@ const AccountTable: React.FC<AccountTableProps> = ({
           <p className="text-xs text-gray-400">
             <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
           </p>
-          <p>
-            <span className="font-semibold text-gray-600"> je prefere les boutons de compte</span> 
-          </p>
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {counts.actif} Actif{counts.actif !== 1 ? 's' : ''}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {counts.ouvert} Ouvert{counts.ouvert !== 1 ? 's' : ''}
             </span>
-            {counts.suspendu > 0 && (
+            {counts.gelé > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#355C7D]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#355C7D]" /> {counts.suspendu} Suspendu{counts.suspendu !== 1 ? 's' : ''}
+                <span className="w-1.5 h-1.5 rounded-full bg-[#355C7D]" /> {counts.gelé} Gelé{counts.gelé !== 1 ? 's' : ''}
               </span>
             )}
-            {counts.ferme > 0 && (
+            {counts.en_attente > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-50 text-[#854F0B]">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> {counts.en_attente} En attente
+              </span>
+            )}
+            {counts.fermé > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.ferme} Fermé{counts.ferme !== 1 ? 's' : ''}
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.fermé} Fermé{counts.fermé !== 1 ? 's' : ''}
               </span>
             )}
           </div>
         </div>
       )}
+      <AccountBulkActionModal
+        action={activeAction}
+        accounts={selectedAccounts}
+        onClose={() => setActiveAction(null)}
+        onConfirm={async (action, eligibleIds) => {
+          await onBulkAction(action, eligibleIds);
+          setSelected(new Set());
+          setActiveAction(null);
+        }}
+      />
     </div>
   );
 };

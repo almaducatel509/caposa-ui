@@ -3,209 +3,170 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Users } from 'lucide-react';
 // API
-import { fetchMembers, updateMember }  from '@/app/lib/api/members';
+import { fetchMembers, updateMember } from '@/app/lib/api/members';
 // UI
-import PageHeader        from '../header';
-import MemberFilterBar   from '@/app/components/members/MemberFilterBar';
+import PageHeader      from '../header';
+import MemberFilterBar from '@/app/components/members/MemberFilterBar';
 // Modals
-import MemberDetailModal from '@/app/components/members/MemberDetailModal';
-import EditMemberModal   from '@/app/components/members/EditMemberModal';
-import DeleteMemberModal from '@/app/components/members/DeleteMemberModal';
+import MemberDetailModal from '@/app/components/members/modals/MemberDetailModal';
+import EditMemberModal   from '@/app/components/members/modals/EditMemberModal';
+import DeleteMemberModal from '@/app/components/members/modals/DeleteMemberModal';
 // Types
-import { MemberData } from '@/app/components/members/validations';
+import { MemberData, normalizeMemberStatus } from '@/app/components/members/validations';
 import MemberTable from './MemberTable';
 import { MemberBulkAction } from './MemberBulkActionDropdown';
-// ─── Skeleton card ─────────────────────────────────────────────────────────────
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="bg-linear-to-br from-[#F9F9F6] to-[#DDEAD5]/20 pt-6 pb-10 flex justify-center">
-        <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse" />
-      </div>
-      <div className="px-5 pb-5 -mt-6 flex flex-col gap-3">
-        <div className="flex flex-col items-center gap-2 mt-2">
-          <div className="h-4 w-32 bg-gray-200 animate-pulse rounded-lg" />
-          <div className="h-3 w-16 bg-gray-100 animate-pulse rounded-lg" />
-        </div>
-        <div className="flex flex-col gap-2 mt-1">
-          <div className="h-3 w-full  bg-gray-100 animate-pulse rounded-lg" />
-          <div className="h-3 w-3/4  bg-gray-100 animate-pulse rounded-lg" />
-          <div className="h-3 w-2/3  bg-gray-100 animate-pulse rounded-lg" />
-          <div className="h-3 w-1/2  bg-gray-100 animate-pulse rounded-lg" />
-        </div>
-        <div className="flex justify-center gap-2 pt-3 border-t border-gray-100">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-8 h-8 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Empty state ────────────────────────────────────────────────────────────────
-function EmptyState({ hasFilter, onClear, onAdd }: {
-  hasFilter: boolean; onClear: () => void; onAdd: () => void;
-}) {
-  return (
-    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-20 h-20 bg-[#DDEAD5] rounded-full flex items-center justify-center mb-5">
-        <Users className="w-10 h-10 text-[#2E7D32]" />
-      </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">
-        {hasFilter ? 'Aucun membre trouvé' : 'Aucun membre'}
-      </h3>
-      <p className="text-sm text-gray-500 mb-6 max-w-sm">
-        {hasFilter
-          ? 'Essayez de modifier vos critères de recherche'
-          : 'Commencez par ajouter votre premier membre'
-        }
-      </p>
-      <button
-        onClick={hasFilter ? onClear : onAdd}
-        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-          hasFilter
-            ? 'bg-white border-2 border-[#2E7D32] text-[#2E7D32] hover:bg-[#DDEAD5]'
-            : 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-lg hover:shadow-xl'
-        }`}
-      >
-        {hasFilter ? 'Effacer les filtres' : 'Ajouter un membre'}
-      </button>
-    </div>
-  );
-}
+import MemberTransactionModal from './modals/MemberTransactionModal';
 
 // ─── Main Grid ──────────────────────────────────────────────────────────────────
 const MemberGrid: React.FC = () => {
 
   // ── Data ──
   const [members,   setMembers]   = useState<MemberData[]>([]);
-
-  // ── UI ──
   const [isLoading, setIsLoading] = useState(true);
   const [error,     setError]     = useState<string | null>(null);
 
   // ── Filters ──
-  const [filterValue,    setFilterValue]    = useState('');
-  const [debouncedValue, setDebouncedValue] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [search,          setSearch]          = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedType,    setSelectedType]    = useState('all');
+  const [selectedStatus,  setSelectedStatus]  = useState('all');
+  const [selectedFilter,  setSelectedFilter]  = useState('all');
+
+  // ── Tab ──
+  const [activeMemberTab, setActiveMemberTab] = useState<'actif' | 'inactif' | 'archive'>('actif');
 
   // ── Modals ──
   const [selectedMember,       setSelectedMember]       = useState<MemberData | null>(null);
   const [showDetailModal,      setShowDetailModal]      = useState(false);
   const [showEditModal,        setShowEditModal]        = useState(false);
   const [showDeleteModal,      setShowDeleteModal]      = useState(false);
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [selectedAccount,      setSelectedAccount]      = useState<MemberData | null>(null);
+  const [showHistory,          setShowHistory]          = useState(false);
+  const [showClose,            setShowClose]            = useState(false);
+const [showTransactionModal, setShowTransactionModal] = useState(false);
 
-  // ── Load data ──────────────────────────────────────────────────────────────
+  // ── Load ───────────────────────────────────────────────────────────────────
   const loadMembers = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
       const data = await fetchMembers();
       setMembers(data);
     } catch (err) {
-      console.error(err);
+      console.error('Erreur chargement membres:', err);
       setError('Impossible de charger les données des membres.');
     } finally {
       setIsLoading(false);
     }
   };
-    useEffect(() => { loadMembers(); }, []);
 
-//le handler API
-const handleBulkAction = async (
-  action: MemberBulkAction,
-  ids: (string | number)[],
-) => {
-  switch (action) {
-    case 'activate':
-      await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
-      break;
-    case 'deactivate':
-      await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
-      break;
-    case 'archive':
-      await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
-      break;
-    case 'export':
-      // géré dans MemberTable directement
-      return;
-  }
-  await loadMembers();
-};
+  useEffect(() => { loadMembers(); }, []);
 
-
-  // ── Debounce ───────────────────────────────────────────────────────────────
+  // ── Debounce search ────────────────────────────────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedValue(filterValue), 300);
+    const t = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 300);
     return () => clearTimeout(t);
-  }, [filterValue]);
+  }, [search]);
 
-  // ── Filter + sort ──────────────────────────────────────────────────────────
+  // ── Filter ─────────────────────────────────────────────────────────────────
   const filteredMembers = useMemo(() => {
-    let list = [...members];
+    return members.filter(m => {
+      const matchSearch =
+        !debouncedSearch ||
+        m.first_name?.toLowerCase().includes(debouncedSearch)   ||
+        m.last_name?.toLowerCase().includes(debouncedSearch)    ||
+        m.email?.toLowerCase().includes(debouncedSearch)        ||
+        m.phone_number?.toLowerCase().includes(debouncedSearch) ||
+        m.city?.toLowerCase().includes(debouncedSearch)         ||
+        m.department?.toLowerCase().includes(debouncedSearch)   ||
+        m.accounts?.[0]?.account_number?.toLowerCase().includes(debouncedSearch);
 
-    if (debouncedValue) {
-      const v = debouncedValue.toLowerCase();
-      list = list.filter(m =>
-        m.first_name?.toLowerCase().includes(v)              ||
-        m.last_name?.toLowerCase().includes(v)               ||
-        m.email?.toLowerCase().includes(v)                   ||
-        m.phone_number?.toLowerCase().includes(v)            ||
-        m.city?.toLowerCase().includes(v)                    ||
-        m.department?.toLowerCase().includes(v)              ||
-        m.accounts?.[0]?.account_number?.toLowerCase().includes(v)
-      );
-    }
+      const matchType = selectedType === 'all' || m.account_type === selectedType;
 
-   if (selectedStatus !== 'all') {
-    list = list.filter(m => {
-      const isActive   = m.status === true  || (m.status as any) === 'active';
-      const isArchived = (m.status as any) === 'archive' || (m.status as any) === 'suspended';
+      // ← normalizeMemberStatus garantit que 'active' → 'actif', 'inactive' → 'inactif', etc.
+      const effectiveStatus = normalizeMemberStatus(m.status);
 
-      if (selectedStatus === 'active')    return isActive;
-      if (selectedStatus === 'inactive')  return !isActive && !isArchived;
-      if (selectedStatus === 'suspended') return isArchived;
-      return true;
-    });
-  }
+      // ← clés alignées avec MemberFilterBar : 'actif' | 'inactif' | 'suspended'
+      const matchStatus =
+        selectedStatus === 'all'                                            ||
+        (selectedStatus === 'actif'    && effectiveStatus === 'actif')     ||
+        (selectedStatus === 'inactif'  && effectiveStatus === 'inactif')   ||
+        (selectedStatus === 'suspended'&& effectiveStatus === 'suspendu');
 
-    const now = new Date();
-    if (selectedFilter === 'recent') {
-      list = list.filter(m => m.created_at &&
-        (now.getTime() - new Date(m.created_at).getTime()) / 86400000 <= 30);
-    }
-    if (selectedFilter === 'thisMonth') {
-      list = list.filter(m => {
-        if (!m.created_at) return false;
-        const d = new Date(m.created_at);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
-    }
-    if (selectedFilter === 'thisYear') {
-      list = list.filter(m => m.created_at &&
-        new Date(m.created_at).getFullYear() === now.getFullYear());
-    }
+      const now = new Date();
+      const matchDate =
+        selectedFilter === 'all'       ? true :
+        selectedFilter === 'recent'    ? (!!m.created_at && (now.getTime() - new Date(m.created_at).getTime()) / 86400000 <= 30) :
+        selectedFilter === 'thisMonth' ? (!!m.created_at && new Date(m.created_at).getMonth() === now.getMonth() && new Date(m.created_at).getFullYear() === now.getFullYear()) :
+        selectedFilter === 'thisYear'  ? (!!m.created_at && new Date(m.created_at).getFullYear() === now.getFullYear()) :
+        true;
 
-    return list.sort((a, b) =>
+      return matchSearch && matchStatus && matchDate && matchType;
+    }).sort((a, b) =>
       new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
     );
-  }, [members, debouncedValue, selectedFilter, selectedStatus]);
+  }, [members, debouncedSearch, selectedStatus, selectedType, selectedFilter]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdd              = () => { setSelectedMember(null); setShowEditModal(true); };
   const handleView             = (m: MemberData) => { setSelectedMember(m); setShowDetailModal(true); };
   const handleEdit             = (m: MemberData) => { setSelectedMember(m); setShowEditModal(true); };
   const handleDelete           = (m: MemberData) => { setSelectedMember(m); setShowDeleteModal(true); };
-  const handleViewTransactions = (m: MemberData) => { setSelectedMember(m); setShowTransactionModal(true); };
-  const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
-  const onClear                = useCallback(() => setFilterValue(''), []);
+  const handleViewTransactions = (m: MemberData) => { 
+    setSelectedMember(m); 
+    setShowTransactionModal(true); 
+  };
+  // ← dropdown envoie 'actif' | 'inactif' | 'suspended' — tout aligné
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    if      (status === 'inactif')   setActiveMemberTab('inactif');
+    else if (status === 'suspended') setActiveMemberTab('archive');
+    else                             setActiveMemberTab('actif');
+  };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Bulk action ────────────────────────────────────────────────────────────
+  const handleBulkAction = async (action: MemberBulkAction, ids: string[]) => {
+    switch (action) {
+      case 'activate':
+      case 'deactivate':
+      case 'archive':
+        await Promise.all(ids.map(id => updateMember(String(id), new FormData())));
+        break;
+      case 'export':
+        exportToCSV(ids);
+        return;
+    }
+    await loadMembers();
+  };
+
+  // ── Export CSV ─────────────────────────────────────────────────────────────
+  const exportToCSV = (ids: string[]) => {
+    const selected = filteredMembers.filter(m => ids.includes(m.id));
+    const headers  = ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Ville', 'Département', 'Statut', 'Créé le'];
+    const rows     = selected.map(m => [
+      m.id_member ?? m.id,
+      m.first_name ?? '',
+      m.last_name ?? '',
+      m.email ?? '',
+      m.phone_number ?? '',
+      m.city ?? '',
+      m.department ?? '',
+      m.status ?? '',
+      m.created_at ?? '',
+    ]);
+    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = `membres_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
+
       <PageHeader
         title="Gestion des Membres"
         subtitle="Gérez tous les membres et leurs informations"
@@ -214,68 +175,49 @@ const handleBulkAction = async (
       />
 
       <MemberFilterBar
-        filterValue={filterValue}
-        selectedFilter={selectedFilter}
+        filterValue={search}
         selectedStatus={selectedStatus}
-        onSearchChange={onSearchChange}
-        onClear={onClear}
-        onFilterChange={setSelectedFilter}
-        onStatusChange={setSelectedStatus}
+        onSearchChange={setSearch}
+        onClear={() => setSearch('')}
+        onStatusChange={handleStatusChange}
         onAdd={handleAdd}
         onImport={() => console.log('Import')}
-        onExport={() => console.log('Export')}
         totalCount={filteredMembers.length}
+        onTypeChange={setSelectedType}
+        selectedType={selectedType}
       />
 
-      {/* Erreur */}
       {error && (
         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">{error}</p>
           </div>
-          <button
-            onClick={loadMembers}
-            className="px-4 py-2 bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
-          >
+          <button onClick={loadMembers}
+            className="px-4 py-2 bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all">
             Réessayer
           </button>
         </div>
       )}
 
-      {/* Table */}
-      <div>
-        {isLoading ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-sm text-gray-500">
-            Chargement des membres...
-          </div>
-        ) : filteredMembers.length > 0 ? (
-          <MemberTable
-            members={filteredMembers}
-            isLoading={isLoading}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onViewTransactions={handleViewTransactions}
-            onBulkAction={handleBulkAction}   // ← ajouter
+      <MemberTable
+        members={filteredMembers}
+        isLoading={isLoading}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onViewTransactions={handleViewTransactions}
+        onBulkAction={handleBulkAction}
+        activeTab={activeMemberTab}
+        // ← onglet → dropdown : clés alignées avec MemberFilterBar
+        onTabChange={(tab) => {
+          setActiveMemberTab(tab);
+          setSelectedStatus(
+            tab === 'inactif' ? 'inactif'   :
+            tab === 'archive' ? 'suspended' : 'actif'
+          );
+        }}
+      />
 
-          />
-        // APRÈS
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-100">
-            <EmptyState
-              hasFilter={!!filterValue || selectedStatus !== 'all' || selectedFilter !== 'all'}
-              onClear={() => {
-                onClear();
-                setSelectedStatus('all');
-                setSelectedFilter('all');
-              }}
-              onAdd={handleAdd}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
       <MemberDetailModal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
@@ -287,6 +229,11 @@ const handleBulkAction = async (
         onClose={() => setShowEditModal(false)}
         member={selectedMember}
         onSuccess={loadMembers}
+      />
+      <MemberTransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => setShowTransactionModal(false)}
+        member={selectedMember}
       />
       <DeleteMemberModal
         isOpen={showDeleteModal}

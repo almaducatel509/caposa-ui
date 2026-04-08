@@ -17,7 +17,7 @@ import EmployeeCard from '@/app/components/employees/EmployeeCard';
 import EmployeeDetailModal from '@/app/components/employees/EmployeeDetailModal';
 import EditEmployeeModal from '@/app/components/employees/EditEmployeeModal';
 import DeleteEmployeeModal from '@/app/components/employees/DeleteEmployeeModal';
-import EmployeeTransactionModal from '@/app/components/employees/EmployeeTransactionModal';
+import EmployeeTransactionModal from '@/app/components/employees/modals/EmployeeTransactionModal';
 import { BranchData, EmployeeData, Post } from '@/app/components/employees/validations';
 import { PiUsersThin } from 'react-icons/pi';
 

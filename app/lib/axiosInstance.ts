@@ -10,6 +10,23 @@ const AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
+AxiosInstance.interceptors.request.use((config) => {
+  // Fix: enlève le slash initial de l'URL pour éviter l'écrasement du baseURL
+  if (config.url?.startsWith('/')) {
+    config.url = config.url.slice(1);
+  }
+
+  if (typeof window !== "undefined") {
+    const access = getCookie(ACCESS_COOKIE) as string | undefined;
+    if (access) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${access}`;
+    }
+  }
+
+  return config;
+});
+
 // ---- Helpers
 const ACCESS_COOKIE = process.env.TOKEN_NAME || "auth_token";
 const REFRESH_COOKIE = process.env.REFRESH_TOKEN || "refresh_token";
@@ -52,5 +69,20 @@ AxiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+AxiosInstance.interceptors.request.use((config) => {
+  // Fix: enlève le slash initial de l'URL pour éviter l'écrasement du baseURL
+  if (config.url?.startsWith('/')) {
+    config.url = config.url.slice(1);
+  }
 
+  if (typeof window !== "undefined") {
+    const access = getCookie(ACCESS_COOKIE) as string | undefined;
+    if (access) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${access}`;
+    }
+  }
+
+  return config;
+});
 export default AxiosInstance;

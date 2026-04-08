@@ -2,89 +2,75 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Search, Plus, Upload, Download, Filter,
-  Calendar, CheckCircle, X, ChevronDown
+  Search, Upload, X,
+  ChevronDown, CheckCircle,
+  Calendar, Filter, Plus, Wallet,
 } from 'lucide-react';
 
 interface MemberFilterBarProps {
-  filterValue: string;
-  selectedFilter: string;
+  filterValue:    string;
+  selectedType:   string;
   selectedStatus: string;
-  onSearchChange: (value?: string) => void;
-  onClear: () => void;
-  onFilterChange: (key: string) => void;
-  onStatusChange: (key: string) => void;
-  onAdd: () => void;
-  onImport: () => void;
-  onExport: () => void;
-  totalCount: number;
+  totalCount:     number;
+  onSearchChange: (v: string) => void;
+  onClear:        () => void;
+  onTypeChange:   (v: string) => void;
+  onStatusChange: (v: string) => void;
+  onImport?:      () => void;
+  onAdd:          () => void;
   importLoading?: boolean;
 }
 
 // ─── Custom Dropdown ───────────────────────────────────────────────────────────
-const CustomDropdown: React.FC<{
-  trigger: React.ReactNode;
-  children: React.ReactNode;
-}> = ({ trigger, children }) => {
-  const [isOpen, setIsOpen] = useState(false);
+function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    if (isOpen) document.addEventListener('mousedown', handler);
+    if (open) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen]);
+  }, [open]);
 
   return (
     <div className="relative" ref={ref}>
-      <div onClick={() => setIsOpen(o => !o)}>{trigger}</div>
-      {isOpen && (
-        <div className="absolute top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[200px]">
-          {children}
+      <div onClick={() => setOpen(o => !o)}>{trigger}</div>
+      {open && (
+        <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[180px]">
+          <div onClick={() => setOpen(false)}>{children}</div>
         </div>
       )}
     </div>
   );
-};
+}
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
-  filterValue,
-  selectedFilter,
-  selectedStatus,
-  onSearchChange,
-  onClear,
-  onFilterChange,
-  onStatusChange,
-  onAdd,
-  onImport,
-  onExport,
-  totalCount,
-  importLoading = false,
+  filterValue, selectedType, selectedStatus, totalCount,
+  onSearchChange, onClear, onTypeChange, onStatusChange, onAdd,
+  onImport, importLoading = false,
 }) => {
-  const filterOptions = [
-    { key: 'all',       label: 'Tous',          icon: Filter },
+
+  const TYPE_OPTIONS = [
+    { key: 'all',       label: 'Tous',          icon: Filter   },
     { key: 'recent',    label: 'Récents (30j)', icon: Calendar },
     { key: 'thisMonth', label: 'Ce mois',       icon: Calendar },
     { key: 'thisYear',  label: 'Cette année',   icon: Calendar },
   ];
 
-  const statusOptions = [
+  // ← clés alignées avec handleStatusChange et matchStatus dans MemberGrid
+  const STATUS_OPTIONS = [
     { key: 'all',       label: 'Tous les statuts' },
-    { key: 'active',    label: 'Actifs' },
-    { key: 'inactive',  label: 'Inactifs' },
-    { key: 'suspended', label: 'Suspendus' },
+    { key: 'actif',     label: 'Actifs'           },
+    { key: 'inactif',   label: 'Inactifs'         },
+    { key: 'suspended', label: 'Suspendus'        },
   ];
 
-  const getFilterLabel = () => filterOptions.find(o => o.key === selectedFilter)?.label ?? 'Période';
-  const getStatusLabel = () => statusOptions.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
-
-  const activeCount = [
-    selectedFilter !== 'all',
-    selectedStatus !== 'all',
-  ].filter(Boolean).length;
+  const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Période';
+  const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Statut';
+  const activeCount = [selectedType !== 'all', selectedStatus !== 'all'].filter(Boolean).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -92,7 +78,6 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
       {/* ── Ligne 1 : Recherche + Actions ── */}
       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
 
-        {/* Barre de recherche */}
         <div className="relative w-full lg:max-w-xl">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
@@ -112,7 +97,6 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           )}
         </div>
 
-        {/* Boutons d'action */}
         <div className="flex gap-2 w-full lg:w-auto">
           <button
             onClick={onAdd}
@@ -124,34 +108,16 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           <button
             onClick={onImport}
             disabled={importLoading}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-50"
           >
-            {importLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
-                Import…
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Importer
-              </>
-            )}
-          </button>
-          <button
-            onClick={onExport}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all"
-          >
-            <Download className="w-4 h-4" />
-            Exporter
+            <Upload className="w-4 h-4" /> {importLoading ? 'Import…' : 'Importer'}
           </button>
         </div>
       </div>
 
-      {/* ── Ligne 2 : Filtres avancés ── */}
+      {/* ── Ligne 2 : Filtres ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 flex flex-wrap items-center gap-3">
 
-        {/* Badge résultats */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Résultats :</span>
           <span className="bg-[#DDEAD5] text-[#1B5E20] font-bold text-sm px-3 py-0.5 rounded-lg">
@@ -159,76 +125,79 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           </span>
         </div>
 
-        <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+        <div className="h-5 w-px bg-gray-200 hidden sm:block" />
 
         {/* Filtre période */}
-        <CustomDropdown
+        <Dropdown
           trigger={
-            <button className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
-              selectedFilter !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-semibold'
+            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
+              selectedType !== 'all'
+                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium'
                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
-              <Calendar className="w-3.5 h-3.5" />
-              {getFilterLabel()}
+              <Wallet className="w-3.5 h-3.5" />
+              {typeLabel}
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
           }
         >
-          {filterOptions.map(o => (
-            <button
-              key={o.key}
-              onClick={() => onFilterChange(o.key)}
-              className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-[#DDEAD5]/40 transition-colors ${
-                selectedFilter === o.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-semibold' : 'text-gray-700'
-              }`}
-            >
-              <o.icon className="w-3.5 h-3.5 text-[#2E7D32]" />
-              {o.label}
-            </button>
-          ))}
-        </CustomDropdown>
+          {TYPE_OPTIONS.map(opt => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => onTypeChange(opt.key)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
+                  selectedType === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
+                }`}
+              >
+                <Icon className="w-4 h-4 text-[#2E7D32]" />
+                {opt.label}
+              </button>
+            );
+          })}
+        </Dropdown>
 
         {/* Filtre statut */}
-        <CustomDropdown
+        <Dropdown
           trigger={
-            <button className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
+            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
               selectedStatus !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-semibold'
+                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium'
                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
               <CheckCircle className="w-3.5 h-3.5" />
-              {getStatusLabel()}
+              {statusLabel}
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
           }
         >
-          {statusOptions.map(o => (
+          {STATUS_OPTIONS.map(opt => (
             <button
-              key={o.key}
-              onClick={() => onStatusChange(o.key)}
-              className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-[#DDEAD5]/40 transition-colors ${
-                selectedStatus === o.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-semibold' : 'text-gray-700'
+              key={opt.key}
+              onClick={() => onStatusChange(opt.key)}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
+                selectedStatus === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
               }`}
             >
-              <CheckCircle className="w-3.5 h-3.5 text-[#2E7D32]" />
-              {o.label}
+              <CheckCircle className="w-4 h-4 text-[#2E7D32]" />
+              {opt.label}
             </button>
           ))}
-        </CustomDropdown>
+        </Dropdown>
 
-        {/* Badge filtres actifs + reset */}
+        {/* Réinitialiser */}
         {activeCount > 0 && (
           <>
-            <div className="h-6 w-px bg-gray-200 hidden sm:block" />
-            <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-lg text-xs font-semibold">
+            <div className="h-5 w-px bg-gray-200" />
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
               {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
             </span>
             <button
-              onClick={() => { onFilterChange('all'); onStatusChange('all'); }}
-              className="flex items-center gap-1 text-xs text-red-600 font-medium px-3 py-1 hover:bg-red-50 rounded-xl transition-colors"
+              onClick={() => { onTypeChange('all'); onStatusChange('all'); }}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all"
             >
-              <X className="w-3 h-3" /> Réinitialiser
+              <X className="w-3 h-3" /> Effacer
             </button>
           </>
         )}

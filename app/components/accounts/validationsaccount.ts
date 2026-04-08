@@ -5,7 +5,7 @@ import { z } from 'zod';
 ========================================================= */
 
 export interface AccountData {
-  [x: string]: any;
+  [x: string]: any; //Cet objet peut avoir d’autres propriétés que celles listées, tant que la clé est une string.
   limiteCredit: any;
   // ⬇️ Champs exacts de l'API
   id: string;
@@ -22,7 +22,12 @@ export interface AccountData {
   id_membre?: string;             // ← Alias pour "member"
   typeCompte?: 'epargne' | 'cheques' | 'terme';  // ← Mappé depuis "account_type"
   soldeActuel?: number;           // ← Mappé depuis "balance"
-  statutCompte: 'actif' | 'ferme' | 'suspendu';  // ← Mappé depuis "account_status"
+  statusAccount: 'ouvert' | 'fermé' | 'gelé' | 'en_attente' //← Mappé depuis "account_status"
+
+// ouvert     → transactions autorisées
+// fermé      → compte clôturé définitivement
+// gelé       → transactions bloquées temporairement (saisie, litige)
+// en_attente → compte créé mais pas encore activé (KYC en cours)// 
 
   // ⬇️ Champs optionnels pour la création/modification
   dateOuverture?: string;
@@ -56,7 +61,7 @@ export interface MemberData {
   department?: string;
   date_of_birthday?: string;
   gender?: string;
-  photo_url?: string | null;
+  photo_profil?: string | null;
   status?: boolean;
   created_at?: string;
   updated_at?: string;

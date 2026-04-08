@@ -4,45 +4,63 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Wallet } from 'lucide-react';
 import { AccountData } from './validationsaccount';
 import { mockAccounts } from './mockAccountData';
+import { AccountBulkAction } from './AccountBulkActionDropdown';
 
 // UI
-import PageHeader        from '@/app/components/header';
-import AccountFilterBar  from './AccountFilterBar';
-import AccountTable      from './AccountTable';           // ← remplace la grille de cartes
+import PageHeader       from '@/app/components/header';
+import AccountFilterBar from './AccountFilterBar';
+import AccountTable     from './AccountTable';
 
 // Modals
 import AccountDetailModal  from './modals/AccountDetailModal';
 import CloseAccountModal   from './modals/CloseAccountModal';
 import SuspendAccountModal from './modals/SuspendAccountModal';
+import AccountHistoryModal from './modals/AccountHistoryModal';
+
+// ─── TODO: remplacer mockAccounts par un vrai appel API ───────────────────────
+// import { fetchAccounts } from '@/app/lib/api/accounts';
+// ─────────────────────────────────────────────────────────────────────────────
 
 const AccountGrid: React.FC = () => {
 
   // ── Data ──
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
 
   // ── Filters ──
-  const [search,         setSearch]         = useState('');
-  const [debouncedSearch,setDebouncedSearch] = useState('');
-  const [selectedType,   setSelectedType]   = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [search,          setSearch]          = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedType,    setSelectedType]    = useState('all');
+  const [selectedStatus,  setSelectedStatus]  = useState('all');
 
   // ── Modals ──
   const [selectedAccount, setSelectedAccount] = useState<AccountData | null>(null);
   const [showDetail,      setShowDetail]      = useState(false);
   const [showClose,       setShowClose]       = useState(false);
   const [showSuspend,     setShowSuspend]     = useState(false);
+  const [showHistory,     setShowHistory]     = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal,   setShowEditModal]   = useState(false);
+
+  // ── Tab ──
+  const [activeAccountTab, setActiveAccountTab] = useState<'ouvert' | 'gelé' | 'en_attente' | 'fermé'>('ouvert');
 
   // ── Load ───────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      await new Promise(r => setTimeout(r, 500));   // remplacer par fetchAccounts()
+  const loadAccounts = async () => {
+    setLoading(true);
+    try {
+      await new Promise(r => setTimeout(r, 500));
       setAccounts(mockAccounts);
+    } catch (err) {
+      console.error('Erreur chargement comptes:', err);
+      setError('Impossible de charger les données des comptes.');
+    } finally {
       setLoading(false);
-    };
-    load();
-  }, []);
+    }
+  };
+
+  useEffect(() => { loadAccounts(); }, []);
 
   // ── Debounce search ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -61,30 +79,90 @@ const AccountGrid: React.FC = () => {
 
       const matchType = selectedType === 'all' || acc.typeCompte === selectedType;
 
-      // Le filtre statut 'suspendu' est géré par AccountTable via forceSuspended
-      // Ici on filtre seulement actif/ferme — suspendu = on passe tout
+      // effectiveStatus = valeur normalisée du compte
+      const effectiveStatus = (acc as any).statusAccount ?? acc.statutCompte;
+
+      // ← clés alignées avec AccountFilterBar : 'ouvert' | 'suspendu' | 'ferme'
       const matchStatus =
-        selectedStatus === 'all' ||
-        selectedStatus === 'suspendu' ||   // ← laisse passer, AccountTable gère
-        acc.statutCompte === selectedStatus;
+        selectedStatus === 'all'                                              ||
+        effectiveStatus === selectedStatus                                    ||
+        (selectedStatus === 'ouvert'   && effectiveStatus === 'actif')       ||
+        (selectedStatus === 'ferme'    && effectiveStatus === 'fermé')       ||
+        (selectedStatus === 'suspendu' && effectiveStatus === 'gelé');       // ← suspendu → gelé
 
       return matchSearch && matchType && matchStatus;
     });
   }, [accounts, debouncedSearch, selectedType, selectedStatus]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleView    = (a: AccountData) => { setSelectedAccount(a); setShowDetail(true); };
-  const handleSuspend = (a: AccountData) => { setSelectedAccount(a); setShowSuspend(true); };
-  const handleClose   = (a: AccountData) => { setSelectedAccount(a); setShowClose(true); };
+  const handleAdd    = () => { setSelectedAccount(null); setShowEditModal(true); };
+  const handleView   = (a: AccountData) => { setSelectedAccount(a); setShowDetail(true); };
+  const handleSuspend= (a: AccountData) => { setSelectedAccount(a); setShowSuspend(true); };
+  const handleClose  = (a: AccountData) => { setSelectedAccount(a); setShowClose(true); };
+  const handleDelete = (a: AccountData) => { setSelectedAccount(a); setShowDeleteModal(true); };
+  const handleViewTransactions = (a: AccountData) => { setSelectedAccount(a); setShowHistory(true); };
+
+  // ← dropdown envoie 'ouvert' | 'suspendu' | 'ferme' — tout aligné
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    if      (status === 'ferme' || status === 'fermé') setActiveAccountTab('fermé');
+    else if (status === 'suspendu' || status === 'gelé') setActiveAccountTab('gelé');
+    else if (status === 'en_attente') setActiveAccountTab('en_attente');
+    else    setActiveAccountTab('ouvert');
+  };
+
+  // ── Bulk action ────────────────────────────────────────────────────────────
+  const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
+    switch (action) {
+      case 'activate':
+        console.log('Débloquer comptes:', ids);
+        break;
+      case 'suspend':
+        console.log('Geler comptes:', ids);
+        break;
+      case 'close':
+        console.log('Fermer comptes:', ids);
+        break;
+      case 'export':
+        exportToCSV(ids);
+        return;
+    }
+    await loadAccounts();
+  };
+
+  // ── Export CSV ─────────────────────────────────────────────────────────────
+  const exportToCSV = (ids: string[]) => {
+    const selectedAccounts = filteredAccounts.filter(a => ids.includes(a.id));
+    const headers = ['Numero de compte', 'Membre', 'Email', 'Type', 'Solde', 'Statut', 'Depuis'];
+    const rows = selectedAccounts.map(a => [
+      a.account_number ?? '',
+      a.member_details?.full_name
+        ?? `${a.member_details?.first_name ?? ''} ${a.member_details?.last_name ?? ''}`.trim(),
+      a.member_details?.email ?? '',
+      a.typeCompte ?? '',
+      a.soldeActuel ?? '',
+      a.statusAccount ?? '',
+      a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '',
+    ]);
+    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `comptes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
 
       <PageHeader
         title="Gestion des Comptes"
         subtitle="Consultez et gérez tous les comptes bancaires"
-        icon={<Wallet className="w-8 h-8 text-[#2E7D32]" />}
+        icon={<Wallet className="w-6 h-6 text-[#2E7D32]" />}
+        className="mb-0"
       />
 
       <AccountFilterBar
@@ -95,26 +173,53 @@ const AccountGrid: React.FC = () => {
         onSearchChange={setSearch}
         onClear={() => setSearch('')}
         onTypeChange={setSelectedType}
-        onStatusChange={setSelectedStatus}
+        onStatusChange={handleStatusChange}
         onImport={() => console.log('Import')}
-        onExport={() => console.log('Export')}
+        onAdd={() => console.log('Ajouter')}
       />
 
-      {/* ── Table (remplace la grille de cartes) ── */}
+      {error && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">{error}</p>
+          </div>
+          <button onClick={loadAccounts}
+            className="px-4 py-2 bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all">
+            Réessayer
+          </button>
+        </div>
+      )}
+
       <AccountTable
         accounts={filteredAccounts}
         isLoading={loading}
         onView={handleView}
         onSuspend={handleSuspend}
         onClose={handleClose}
-        forceSuspended={selectedStatus === 'suspendu'}
+        onDelete={handleDelete}
+        onViewTransactions={handleViewTransactions}
+        onBulkAction={handleBulkAction}
+        activeTab={activeAccountTab}
+        // ← onglet → dropdown : clés alignées avec AccountFilterBar
+        onTabChange={(tab) => {
+          setActiveAccountTab(tab);
+          setSelectedStatus(
+            tab === 'gelé'       ? 'suspendu' :
+            tab === 'fermé'      ? 'ferme'    :
+            tab === 'en_attente' ? 'en_attente': 'ouvert'
+          );
+        }}
       />
 
-      {/* Modals — inchangés */}
       <AccountDetailModal
         isOpen={showDetail}
         account={selectedAccount}
         onClose={() => setShowDetail(false)}
+      />
+      <AccountHistoryModal
+        isOpen={showHistory}
+        account={selectedAccount}
+        onClose={() => { setShowHistory(false); setSelectedAccount(null); }}
       />
       <SuspendAccountModal
         isOpen={showSuspend}

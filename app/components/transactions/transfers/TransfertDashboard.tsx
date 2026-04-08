@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import TransferForm from './TransferForm';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
+import { STATUS_CFG, STATUS_FALLBACK } from '@/config/statusConfig';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface TransferData {
@@ -50,12 +51,6 @@ const TYPE_CFG: Record<string, { label: string; icon: React.ElementType; color: 
   loan_payment: { label: 'Remb. prêt',    icon: Landmark,       color: C.gold,  bg: '#FBF6E7'  },
 };
 
-const STATUS_CFG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  completed:  { label: 'Complété',   bg: C.greenPale, text: C.greenDark, dot: C.green   },
-  pending:    { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B' },
-  processing: { label: 'En cours',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue    },
-  failed:     { label: 'Échoué',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444' },
-};
 
 const tooltipStyle = {
   backgroundColor: 'white',

@@ -19,7 +19,6 @@ interface EmployeeFilterBarProps {
   onStatusChange: (key: string) => void;
   onAdd: () => void;
   onImport: () => void;
-  onExport: () => void;
   totalCount: number;
   importLoading?: boolean;
 }
@@ -66,7 +65,6 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   onStatusChange,
   onAdd,
   onImport,
-  onExport,
   totalCount,
   importLoading = false,
 }) => {
@@ -82,13 +80,14 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
     { key: 'all', label: 'Toutes les branches' },
     ...branches.map(b => ({ key: b.id, label: b.branch_name })),
   ];
-
+  
+  // ← clés alignées avec handleStatusChange et matchStatus dans AccountGrid
   const statusOptions = [
-    { key: 'all',       label: 'Tous les statuts' },
-    { key: 'active',    label: 'Actifs' },
-    { key: 'inactive',  label: 'Inactifs' },
-    { key: 'suspended', label: 'Suspendus' },
-  ];
+  { key: 'all',       label: 'Tous les statuts' },
+  { key: 'actif',     label: 'Actifs'           },  // 'active' → 'actif'
+  { key: 'inactif',   label: 'Inactifs'         },  // 'inactive' → 'inactif'
+  { key: 'suspended', label: 'Suspendus'        },  // ok
+];
 
   const getFilterLabel  = () => filterOptions.find(o => o.key === selectedFilter)?.label  ?? 'Période';
   const getBranchLabel  = () => branches.find(b => b.id === selectedBranch)?.branch_name   ?? 'Toutes les branches';
@@ -151,13 +150,6 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
                 Importer
               </>
             )}
-          </button>
-          <button
-            onClick={onExport}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all"
-          >
-            <Download className="w-4 h-4" />
-            Exporter
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import DepositForm from './DepositForm';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
+import { STATUS_CFG } from '@/config/statusConfig';
 
 interface DepositData {
   id: number;
@@ -49,13 +50,6 @@ const SUBTYPE_CFG: Record<string, { icon: React.ElementType; label: string; colo
   other:    { icon: MoreHorizontal, label: 'Autre',    color: '#6E6E6E', bg: '#F3F3F3'   },
 };
 
-const STATUS_CFG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  decaisse:   { label: 'Complété',   bg: C.greenPale, text: C.greenDark, dot: C.green   },
-  en_attente: { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B' },
-  en_cours:   { label: 'En cours',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue    },
-  echoue:     { label: 'Échoué',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444' },
-  annule:     { label: 'Annulé',     bg: '#F3F4F6',   text: '#4B5563',   dot: '#9CA3AF' },
-};
 
 const tooltipStyle = {
   backgroundColor: 'white',

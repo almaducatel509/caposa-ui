@@ -10,9 +10,12 @@ import {
   Clock, AlertTriangle, XCircle, Banknote, Eye,
   MoreHorizontal, ChevronDown, ChevronUp, ArrowLeft,
   FileText, DollarSign,
+  Check,
+  X,
 } from 'lucide-react';
 import TransactionDetailModal, { TransactionDetail } from '../transactions/DetailModal';
 import PageHeader from '../header';
+import LoanBulkActionDropdown, { LoanBulkAction } from './LoanBulkActionDropdown';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LoanStatus = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
@@ -69,12 +72,12 @@ const tooltipStyle = {
 
 // ─── Config statuts ───────────────────────────────────────────────────────────
 const STATUS_CFG: Record<LoanStatus, { label: string; bg: string; text: string; dot: string; icon: React.ElementType }> = {
-  en_attente: { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B', icon: Clock        },
-  approuve:   { label: 'Approuvé',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue,    icon: CheckCircle2 },
-  decaisse:   { label: 'Décaissé',   bg: C.greenPale, text: C.greenDark, dot: C.green,   icon: Banknote     },
-  rembourse:  { label: 'Remboursé',  bg: '#F0FDF4',   text: '#166534',   dot: '#22C55E', icon: CheckCircle2 },
-  rejete:     { label: 'Rejeté',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444', icon: XCircle      },
-  annule:     { label: 'Annulé',     bg: '#F3F4F6',   text: '#4B5563',   dot: '#9CA3AF', icon: XCircle      },
+  en_attente: { label: 'En attente', bg: 'bg-[#FEF9EC]',   text: 'text-[#B45309]',   dot: 'bg-[#F59E0B]', icon: Clock        },
+  approuve:   { label: 'Approuvé',   bg: 'bg-[#EBF2F8]',   text: 'text-[#355C7D]',   dot: 'bg-[#355C7D]', icon: CheckCircle2 },
+  decaisse:   { label: 'Décaissé',   bg: 'bg-[#DDEAD5]',   text: 'text-[#1B5E20]',   dot: 'bg-[#2E7D32]', icon: Banknote     },
+  rembourse:  { label: 'Remboursé',  bg: 'bg-[#F0FDF4]',   text: 'text-[#166534]',   dot: 'bg-[#22C55E]', icon: CheckCircle2 },
+  rejete:     { label: 'Rejeté',     bg: 'bg-[#FEF2F2]',   text: 'text-[#B91C1C]',   dot: 'bg-[#EF4444]', icon: XCircle      },
+  annule:     { label: 'Annulé',     bg: 'bg-[#F3F4F6]',   text: 'text-[#4B5563]',   dot: 'bg-[#9CA3AF]', icon: XCircle      },
 };
 
 const TYPE_LABELS: Record<LoanType, string> = {
@@ -194,6 +197,8 @@ export default function LoanRequestsTable() {
   const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
   const [sortField, setSortField] = useState<'date' | 'amount' | 'duration'>('date');
   const [sortAsc,   setSortAsc]   = useState(false);
+  const [dropdownOpen,  setDropdownOpen]  = useState(false);
+  const [activeAction,  setActiveAction]  = useState<LoanBulkAction | null>(null);
 
   const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
   const loans    = useMemo(() => generateLoanRequests(daysBack), [daysBack]);
@@ -380,8 +385,14 @@ export default function LoanRequestsTable() {
         <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-100 px-5 py-3">
           <div className="grid grid-cols-12 gap-3 items-center text-xs font-bold uppercase tracking-widest text-gray-500">
             <div className="col-span-1">
-              <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={handleSelectAll}
-                className="w-4 h-4 rounded border-gray-300 text-[#2E7D32] focus:ring-[#2E7D32]/30 cursor-pointer" />
+              <button onClick={handleSelectAll}
+                className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+                  selected.size === filtered.length && filtered.length > 0
+                    ? 'bg-[#2E7D32] border-[#2E7D32]'
+                    : 'bg-white border-gray-300 hover:border-[#2E7D32]'
+                }`}>
+                {selected.size > 0 && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+              </button>
             </div>
             <div className="col-span-1 cursor-pointer flex items-center gap-1 hover:text-[#2E7D32]" onClick={() => handleSort('date')}>Date <SortIcon f="date" /></div>
             <div className="col-span-2">Membre</div>
@@ -396,148 +407,170 @@ export default function LoanRequestsTable() {
 
         {/* Badge sélection */}
         {selected.size > 0 && (
-          <div className="bg-[#DDEAD5]/50 border-b border-[#DDEAD5] px-5 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-[#1B5E20]">{selected.size} prêt{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}</span>
-              <button onClick={() => setSelected(new Set())} className="text-xs text-[#2E7D32] hover:text-[#1B5E20] font-medium underline">Désélectionner</button>
-            </div>
-            <div className="flex gap-2">
-              <button className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Exporter la sélection</button>
-              <button className="px-3 py-1.5 rounded-lg bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all">Actions groupées</button>
-            </div>
-          </div>
-        )}
-
-        {/* Corps groupé par date */}
-        <div>
-          {Object.entries(grouped).map(([dateLabel, group]) => (
-            <div key={dateLabel}>
-              <div className="bg-linear-to-r from-[#DDEAD5]/40 to-[#F9F9F6] px-5 py-2 border-t border-gray-100">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{dateLabel}</p>
-              </div>
-              {group.map((loan, idx) => {
-                const sc = STATUS_CFG[loan.status];
-                const SIcon = sc.icon;
-                const isSelected = selected.has(loan.id);
-                const progress = Math.round((loan.loan_details.payments_made / loan.loan_details.duration_months) * 100);
-                const isLate = loan.loan_details.late_days > 0;
-
-                return (
-                  <div key={loan.id}
-                    className={`grid grid-cols-12 gap-3 items-center px-5 py-4 transition-all group border-b border-gray-50 last:border-0 ${
-                      isSelected   ? 'bg-[#DDEAD5]/30 border-l-4 border-[#2E7D32]'
-                      : isLate     ? 'bg-yellow-50/30 hover:bg-yellow-50/50'
-                      : idx % 2 === 0 ? 'bg-white hover:bg-[#F9F9F6]' : 'bg-[#F9F9F6]/40 hover:bg-[#F9F9F6]'
-                    }`}>
-
-                    <div className="col-span-1">
-                      <input type="checkbox" checked={isSelected}
-                        onChange={() => setSelected(s => { const n = new Set(s); n.has(loan.id) ? n.delete(loan.id) : n.add(loan.id); return n; })}
-                        onClick={e => e.stopPropagation()}
-                        className="w-4 h-4 rounded border-gray-300 text-[#2E7D32] focus:ring-[#2E7D32]/30 cursor-pointer" />
-                    </div>
-
-                    {/* Date */}
-                    <div className="col-span-1">
-                      <p className="text-xs font-semibold text-gray-700">{formatDate(loan.created_at)}</p>
-                      <p className="text-xs text-gray-400">{new Date(loan.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-
-                    {/* Membre */}
-                    <div className="col-span-2 flex items-center gap-2 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                        <Users className="w-4 h-4 text-[#2E7D32]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{loan.member_name}</p>
-                        {isLate && <p className="text-xs text-red-500 font-medium">{loan.loan_details.late_days}j retard</p>}
-                      </div>
-                    </div>
-
-                    {/* Type / But */}
-                    <div className="col-span-1">
-                      <p className="text-xs font-medium text-gray-700">{TYPE_LABELS[loan.loan_details.loan_type]}</p>
-                      <p className="text-xs text-gray-400">{PURPOSE_LABELS[loan.loan_details.purpose]}</p>
-                    </div>
-
-                    {/* Montant */}
-                    <div className="col-span-2">
-                      <p className="text-sm font-bold text-gray-800">{formatHTG(loan.amount)}</p>
-                      <p className="text-xs text-gray-400">{loan.loan_details.interest_rate}% · {FREQ_LABELS[loan.loan_details.repayment_frequency]}</p>
-                    </div>
-
-                    {/* Durée */}
-                    <div className="col-span-1">
-                      <p className="text-sm font-semibold text-gray-700">{loan.loan_details.duration_months} mois</p>
-                      <p className="text-xs text-gray-400">{formatHTG(Math.round(loan.loan_details.monthly_payment))}/mois</p>
-                    </div>
-
-                    {/* Statut */}
-                    <div className="col-span-1">
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium"
-                        style={{ backgroundColor: sc.bg, color: sc.text }}>
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
-                        {sc.label}
-                      </span>
-                    </div>
-
-                    {/* Paiements */}
-                    <div className="col-span-2">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-xs text-gray-500">{loan.loan_details.payments_made}/{loan.loan_details.duration_months}</span>
-                        <span className="text-xs font-semibold text-gray-700">{progress}%</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{
-                          width: `${progress}%`,
-                          backgroundColor: progress >= 75 ? C.green : progress >= 50 ? C.blue : progress >= 25 ? C.gold : '#EF4444',
-                        }} />
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{formatHTG(Math.max(0, loan.loan_details.remaining_balance))} restant</p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="col-span-1 flex items-center justify-center gap-1.5">
-                      <button title="Voir" onClick={() => handleView(loan)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button title="Plus"
-                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* État vide */}
-        {filtered.length === 0 && (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
-              <FileText className="w-7 h-7 text-[#2E7D32]" />
-            </div>
-            <p className="text-sm font-semibold text-gray-600">Aucun prêt trouvé</p>
-            <p className="text-xs text-gray-400">Modifiez les filtres pour voir plus de résultats</p>
-          </div>
-        )}
-
-        {/* Footer */}
-        {filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-            <p className="text-xs text-gray-400">
-              <span className="font-semibold text-gray-600">{filtered.length}</span> prêt{filtered.length !== 1 ? 's' : ''} · {loans.length} au total
-            </p>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
-              {activeCount} actifs · {pendingCount} en attente
+        <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
+            <span className="text-sm font-semibold text-[#1B5E20]">
+              {selected.size} membre{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}
             </span>
           </div>
-        )}
+          <div className="flex items-center gap-2 ml-auto">
+            <button className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all">
+              Exporter
+            </button>
+           <LoanBulkActionDropdown
+              selectedCount={selected.size}
+              isOpen={dropdownOpen}
+              onToggle={() => setDropdownOpen(o => !o)}
+              onAction={(action) => setActiveAction(action)}
+            />
+            <button onClick={() => setSelected(new Set())} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Corps groupé par date */}
+      <div>
+        {Object.entries(grouped).map(([dateLabel, group]) => (
+          <div key={dateLabel}>
+            <div className="bg-linear-to-r from-[#DDEAD5]/40 to-[#F9F9F6] px-5 py-2 border-t border-gray-100">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{dateLabel}</p>
+            </div>
+            {group.map((loan, idx) => {
+              const sc = STATUS_CFG[loan.status];
+              const SIcon = sc.icon;
+              const isSelected = selected.has(loan.id);
+              const progress = Math.round((loan.loan_details.payments_made / loan.loan_details.duration_months) * 100);
+              const isLate = loan.loan_details.late_days > 0;
+
+              return (
+                <div key={loan.id}
+                  className={`grid grid-cols-12 gap-3 items-center px-5 py-4 transition-all group border-b border-gray-50 last:border-0 ${
+                    isSelected   ? 'bg-[#DDEAD5]/30 border-l-4 border-[#2E7D32]'
+                    : isLate     ? 'bg-yellow-50/30 hover:bg-yellow-50/50'
+                    : idx % 2 === 0 ? 'bg-white hover:bg-[#F9F9F6]' : 'bg-[#F9F9F6]/40 hover:bg-[#F9F9F6]'
+                  }`}>
+
+                  <div className="col-span-1">
+                    <input type="checkbox" checked={isSelected}
+                      onChange={() => setSelected(s => { const n = new Set(s); n.has(loan.id) ? n.delete(loan.id) : n.add(loan.id); return n; })}
+                      onClick={e => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-gray-300 text-[#2E7D32] focus:ring-[#2E7D32]/30 cursor-pointer" />
+                  </div>
+
+                  {/* Date */}
+                  <div className="col-span-1">
+                    <p className="text-xs font-semibold text-gray-700">{formatDate(loan.created_at)}</p>
+                    <p className="text-xs text-gray-400">{new Date(loan.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+
+                  {/* Membre */}
+                  <div className="col-span-2 flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Users className="w-4 h-4 text-[#2E7D32]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{loan.member_name}</p>
+                      {isLate && <p className="text-xs text-red-500 font-medium">{loan.loan_details.late_days}j retard</p>}
+                    </div>
+                  </div>
+
+                  {/* Type / But */}
+                  <div className="col-span-1">
+                    <p className="text-xs font-medium text-gray-700">{TYPE_LABELS[loan.loan_details.loan_type]}</p>
+                    <p className="text-xs text-gray-400">{PURPOSE_LABELS[loan.loan_details.purpose]}</p>
+                  </div>
+
+                  {/* Montant */}
+                  <div className="col-span-2">
+                    <p className="text-sm font-bold text-gray-800">{formatHTG(loan.amount)}</p>
+                    <p className="text-xs text-gray-400">{loan.loan_details.interest_rate}% · {FREQ_LABELS[loan.loan_details.repayment_frequency]}</p>
+                  </div>
+
+                  {/* Durée */}
+                  <div className="col-span-1">
+                    <p className="text-sm font-semibold text-gray-700">{loan.loan_details.duration_months} mois</p>
+                    <p className="text-xs text-gray-400">{formatHTG(Math.round(loan.loan_details.monthly_payment))}/mois</p>
+                  </div>
+
+                  {/* Statut */}
+                  <div className="col-span-1">
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium ${sc.bg} ${sc.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
+                      {sc.label}
+                    </span>
+                  </div>
+
+                  {/* Paiements */}
+                  <div className="col-span-2">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs text-gray-500">{loan.loan_details.payments_made}/{loan.loan_details.duration_months}</span>
+                      <span className="text-xs font-semibold text-gray-700">{progress}%</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{
+                        width: `${progress}%`,
+                        backgroundColor: progress >= 75 ? C.green : progress >= 50 ? C.blue : progress >= 25 ? C.gold : '#EF4444',
+                      }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatHTG(Math.max(0, loan.loan_details.remaining_balance))} restant</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="col-span-1 flex items-center justify-center gap-1.5">
+                    <button title="Voir" onClick={() => handleView(loan)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button title="Plus"
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
+
+      {/* État vide */}
+      {filtered.length === 0 && (
+        <div className="py-16 flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+            <FileText className="w-7 h-7 text-[#2E7D32]" />
+          </div>
+          <p className="text-sm font-semibold text-gray-600">Aucun prêt trouvé</p>
+          <p className="text-xs text-gray-400">Modifiez les filtres pour voir plus de résultats</p>
+        </div>
+      )}
+
+      {/* Footer */}
+      {filtered.length > 0 && (
+        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            <span className="font-semibold text-gray-600">{filtered.length}</span> prêt{filtered.length !== 1 ? 's' : ''} · {loans.length} au total
+          </p>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {activeCount} actifs
+            </span>
+            {pendingCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#FEF9EC] text-[#B45309]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" /> {pendingCount} en attente
+              </span>
+            )}
+            {lateCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" /> {lateCount} en retard
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
 
       <TransactionDetailModal transaction={detailTx} onClose={() => setDetailTx(null)} />
     </div>

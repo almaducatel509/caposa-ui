@@ -206,7 +206,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-lg bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-10">
+      <div className="w-full max-w-3xl bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-10">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100">

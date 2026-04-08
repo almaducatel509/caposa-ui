@@ -30,6 +30,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 5, total_deposits: 20000, total_withdrawals: 5000,
     last_transaction_date: "2025-12-10",
+    statusAccount: 'ouvert'
   },
   {
     id: "a1b2c3d4-e5f6-4789-a1b2-c3d4e5f67890",
@@ -58,6 +59,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 12, total_deposits: 8000, total_withdrawals: 2500,
     last_transaction_date: "2025-12-08",
+    statusAccount: 'ouvert'
   },
   {
     id: "f1e2d3c4-b5a6-4321-9876-543210fedcba",
@@ -86,6 +88,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 2, total_deposits: 50000, total_withdrawals: 0,
     last_transaction_date: "2025-01-01",
+    statusAccount: 'ouvert'
   },
   {
     id: "b3c4d5e6-f7a8-4123-b3c4-d5e6f7a89012",
@@ -114,6 +117,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 18, total_deposits: 15000, total_withdrawals: 6250,
     last_transaction_date: "2025-12-05",
+    statusAccount: 'ouvert'
   },
   {
     id: "c4d5e6f7-a8b9-4234-c4d5-e6f7a8b90123",
@@ -142,6 +146,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 30, total_deposits: 12000, total_withdrawals: 9700,
     last_transaction_date: "2025-12-09",
+    statusAccount: 'ouvert'
   },
   {
     id: "d5e6f7a8-b9c0-4345-d5e6-f7a8b9c01234",
@@ -170,6 +175,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 7, total_deposits: 40000, total_withdrawals: 8000,
     last_transaction_date: "2025-11-30",
+    statusAccount: 'ouvert'
   },
   {
     id: "e6f7a8b9-c0d1-4456-e6f7-a8b9c0d12345",
@@ -198,6 +204,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 1, total_deposits: 100000, total_withdrawals: 0,
     last_transaction_date: "2024-06-01",
+    statusAccount: 'ouvert'
   },
 
   // ── Fermés ─────────────────────────────────────────────────────────────────
@@ -228,6 +235,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 45, total_deposits: 80000, total_withdrawals: 80000,
     last_transaction_date: "2025-06-28",
+    statusAccount: 'ouvert'
   },
 
   // ── Suspendus ──────────────────────────────────────────────────────────────
@@ -257,6 +265,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 8, total_deposits: 3000, total_withdrawals: 1800,
     last_transaction_date: "2025-11-10",
+    statusAccount: 'ouvert'
   },
   {
     id: "suspended-account-5678",
@@ -284,6 +293,7 @@ export const mockAccounts: AccountData[] = [
     },
     total_transactions: 22, total_deposits: 5000, total_withdrawals: 4550,
     last_transaction_date: "2025-10-15",
+    statusAccount: 'ouvert'
   },
 ];
 

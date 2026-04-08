@@ -49,11 +49,14 @@ export interface BranchDetails {
   branch_name: string;
   branch_code?: string; // ✅ Permet null ET undefined
 }
-
 export interface Post {
   id: string | number;
   name: string;
   post_name?: string;
+  description?: string;      // optionnel
+  deposit?: boolean | number; // optionnel
+  withdrawal?: boolean | number;
+  transfert?: boolean | number;
 }
 
 // Employee data interface (what comes from API)
@@ -72,7 +75,14 @@ export interface EmployeeData {
   photo_profil?: string | null;
   photo_url?: string | null;
   branch: string;
-  status?: string;
+// ⬇️ Champs calculés/enrichis côté front
+// ← Mappé depuis "employee_role"
+  statutEmploye?: 'actif' | 'inactif' | 'suspendu' | 'en_attente';
+// ← Mappé depuis "employee_status"
+  nomComplet?: string; 
+// ← Concatène first_name + last_name
+  estActif?: boolean; 
+// ← Dérivé depuis statutEmploye === 'actif'
   created_at?: string;
   updated_at?: string;
   user?: UserInfo;
@@ -91,12 +101,6 @@ export interface BranchData {
   branch_code?: string;
 }
 
-// // Post data interface
-// export interface PostData {
-//   id: string;
-//   post_name: string;
-//   name?: string; // Add name property for compatibility
-// }
 
 // Form data interface (what the form uses)
 export type EmployeeFormData = {
@@ -137,6 +141,15 @@ export type FlatEmployeeFormData = {
   posts: string[];
   photo_profil?: File | string | null;
 };
+export interface PostData {
+  id: string | number;
+  name: string;
+  post_name?: string | undefined;  // ← CHANGER : string → string | undefined (ajouter le ?)
+  description?: string;
+  deposit?: boolean | number;
+  withdrawal?: boolean | number;
+  transfert?: boolean | number;
+}
 
 // Error messages type - supports both nested and flat structures
 export type ErrorMessages<T> = {
@@ -168,8 +181,8 @@ export function formatGender(gender?: string) {
   }
 }
 
-export function getEmployeeStatus(employee: { status?: string }) {
-  return employee.status || 'active';
+export function getEmployeeStatus(employee: { statutEmploye?: string }) {
+  return employee.statutEmploye || 'active';
 }
 
 // Helper function to convert EmployeeData to EmployeeFormData

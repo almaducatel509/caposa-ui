@@ -5,11 +5,11 @@ import { X, UserPlus, UserCog } from "lucide-react";
 import {
   MemberData, MemberUiForm, FieldErrors,
   validateMemberUi, memberDataToUi, toMemberApiFormData,
-} from "./validations";
+} from "../validations";
 import { updateMember, createMember } from "@/app/lib/api/members";
-import MemberFormFields from "./MemberFormFields";
+import MemberFormFields from "../MemberFormFields";
 import { HAITI_DEPARTMENTS } from "@/app/data/haitiLocations";
-import { Modal } from "../ui/Modal";
+import { Modal } from "../../ui/Modal";
 
 interface EditMemberModalProps {
   isOpen:    boolean;

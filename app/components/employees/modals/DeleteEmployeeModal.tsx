@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Modal } from "@/app/components/ui/Modal";
 import { X, AlertTriangle, Archive, Loader2, UserX } from 'lucide-react';
 import UserAvatar from '@/app/components/core/UserAvatar';
-import { EmployeeData } from './validations';
+import { EmployeeData } from '../validations';
 import { deleteEmployee } from '@/app/lib/api/employee';
 
 interface DeleteEmployeeModalProps {

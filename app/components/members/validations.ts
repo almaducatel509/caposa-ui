@@ -16,7 +16,15 @@ import {
 export type Gender = "M" | "F";
 
 export interface MemberData {
-  status:          boolean;
+  member_number: string;
+  account_number: string;
+  member_details: any;
+  typeCompte: string;
+  soldeActuel: number;
+  statutCompte: any;
+  statutMember: any;
+  dateOuverture: string;
+  status: 'actif' | 'inactif' | 'suspendu';
   id:              string;
   id_member:       string;
   first_name:      string;
@@ -29,7 +37,7 @@ export interface MemberData {
   department:      string;
   department_code: string | number | readonly string[] | undefined;
 
-  email?:          string | null;
+  email:          string | null;
   id_number?:      string | null;
   id_type?:        string | null;
   income_source?:  string | null;
@@ -314,6 +322,28 @@ export function formatMemberName(m: Pick<MemberData, "first_name" | "last_name">
 export function isCityInDepartment(city: string, departmentCode: DepartmentCode) {
   return (getCitiesByDepartment(departmentCode) ?? [])
     .some((c) => c.toLowerCase() === city.trim().toLowerCase());
+}
+// ← AJOUTER cette fonction
+export function normalizeMemberStatus(raw: string | undefined): 'actif' | 'inactif' | 'suspendu' | string {
+  switch ((raw ?? '').toLowerCase().trim()) {
+    case 'actif':
+    case 'active':
+      return 'actif';
+    case 'inactif':
+    case 'inactive':
+      return 'inactif';
+    case 'suspendu':
+    case 'suspended':
+    case 'archive':
+    case 'archived':
+      return 'suspendu';
+    default:
+      return (raw ?? '').toLowerCase().trim();
+  }
+}
+
+export function getMemberStatus(member: { statutMember?: string }) {
+  return member.statutMember || 'active';
 }
 
 export type ErrorMessages<T> = {

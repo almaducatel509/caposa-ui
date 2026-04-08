@@ -13,22 +13,24 @@ import PageHeader        from '@/app/components/header';
 import EmployeeFilterBar from '@/app/components/employees/EmployeeFilterBar';
 
 // Modals
-import EmployeeDetailModal      from '@/app/components/employees/EmployeeDetailModal';
-import EditEmployeeModal        from '@/app/components/employees/EditEmployeeModal';
-import DeleteEmployeeModal      from '@/app/components/employees/DeleteEmployeeModal';
-import EmployeeTransactionModal from '@/app/components/employees/EmployeeTransactionModal';
+import EmployeeDetailModal      from '@/app/components/employees/modals/EmployeeDetailModal';
+import EditEmployeeModal        from '@/app/components/employees/modals/EditEmployeeModal';
+import DeleteEmployeeModal      from '@/app/components/employees/modals/DeleteEmployeeModal';
+import EmployeeTransactionModal from '@/app/components/employees/modals/EmployeeTransactionModal';
 
 // Types
-import { EmployeeData, BranchData, Post } from '@/app/components/employees/validations';
-import EmployeeTable from './EmployeeTable';
-import { BulkAction } from '@/app/components/employees/BulkActionDropdown';
+import { EmployeeData, BranchData, PostData } from '@/app/components/employees/validations';
+import EmployeeTable  from './EmployeeTable';
+import { EmployeeBulkAction } from './BulkActionDropdown';
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 const EmployeeGrid: React.FC = () => {
 
   // ── Data ──
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [branches,  setBranches]  = useState<BranchData[]>([]);
-  const [posts,     setPosts]     = useState<Post[]>([]);
+  // const [posts,     setPosts]     = useState<Post[]>([]);
+const [posts, setPosts] = useState<PostData[]>([]);
 
   // ── UI ──
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +43,9 @@ const EmployeeGrid: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
+  // ── Tab ───────────────────────────────────────────────────────────────────
+  const [activeEmplTab, setActiveEmplTab] = useState<'actif' | 'inactif' | 'archive'>('actif');
+
   // ── Modals ──
   const [selectedEmployee,     setSelectedEmployee]     = useState<EmployeeData | null>(null);
   const [showDetailModal,      setShowDetailModal]      = useState(false);
@@ -48,18 +53,24 @@ const EmployeeGrid: React.FC = () => {
   const [showDeleteModal,      setShowDeleteModal]      = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
 
+  //Tab, ce state AccountGrid
+
   // ── Load ───────────────────────────────────────────────────────────────────
   const loadEmployees = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [emp, bra, pos] = await Promise.all([fetchEmployees(), fetchBranches(), fetchPosts()]);
+      const [emp, bra, pos] = await Promise.all([
+        fetchEmployees(),
+        fetchBranches(),
+        fetchPosts(),
+      ]);
       setEmployees(emp);
       setBranches(bra);
       setPosts(pos);
     } catch (err) {
       console.error(err);
-      setError('Impossible de charger les employés.');
+      setError('Impossible de charger les employes.');
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +103,7 @@ const EmployeeGrid: React.FC = () => {
             .filter(Boolean)
             .map(p => ({
               id:        p!.id,
-              name:      p!.name || p!.post_name || 'Poste non défini',
+              name:      p!.name || p!.post_name || 'Poste non defini',
               post_name: p!.post_name,
             }))
         : [],
@@ -108,16 +119,19 @@ const EmployeeGrid: React.FC = () => {
     if (debouncedValue) {
       const v = debouncedValue.toLowerCase();
       list = list.filter(e =>
-        e.first_name?.toLowerCase().includes(v)    ||
-        e.last_name?.toLowerCase().includes(v)     ||
-        e.user?.email?.toLowerCase().includes(v)   ||
-        e.phone_number?.toLowerCase().includes(v)  ||
+        e.first_name?.toLowerCase().includes(v)   ||
+        e.last_name?.toLowerCase().includes(v)    ||
+        e.user?.email?.toLowerCase().includes(v)  ||
+        e.phone_number?.toLowerCase().includes(v) ||
         e.payment_ref?.toLowerCase().includes(v)
       );
     }
 
-    if (selectedBranch !== 'all') list = list.filter(e => e.branch === selectedBranch);
-    if (selectedStatus !== 'all') list = list.filter(e => (e.status ?? 'active') === selectedStatus);
+    if (selectedBranch !== 'all')
+      list = list.filter(e => e.branch === selectedBranch);
+
+    if (selectedStatus !== 'all')
+      list = list.filter(e => (e.statutEmploye ?? 'actif') === selectedStatus);
 
     const now = new Date();
     if (selectedFilter === 'recent') {
@@ -155,76 +169,99 @@ const EmployeeGrid: React.FC = () => {
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
   const onClear                = useCallback(() => setFilterValue(''), []);
 
+  // ── Sync filtre statut ↔ tab ───────────────────────────────────────────────
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    if      (status === 'inactif') setActiveEmplTab('inactif');
+    else if (status === 'archive' || status === 'suspended') setActiveEmplTab('archive');
+    else    setActiveEmplTab('actif');
+  };
+
+  // ── Bulk action ────────────────────────────────────────────────────────────
+  // Export géré directement dans EmployeeTable — ici on traite uniquement les
+  // actions métier qui nécessitent un appel API.
   const handleBulkAction = async (
-  action: BulkAction,
-  ids: (string | number)[],
-  payload?: string,
-) => {
-  switch (action) {
-    case 'activate':
-      await Promise.all(
-        ids
-          .map(id => hydratedEmployees.find(e => e.id === id))
-          .filter(e => e && (e.status ?? 'active') !== 'active')
-          .map(e => putEmployeeMultipart(String(e!.id), { status: 'active' } as any))
-      );
+    action:  EmployeeBulkAction,
+    ids:     string [],
+    payload?: string,
+  ) => {
+    switch (action) {
+      case 'activate':
+        await Promise.all(
+          ids
+            .map(id => hydratedEmployees.find(e => e.id === id))
+            .filter(Boolean)
+            .map(e => putEmployeeMultipart(String(e!.id), { status: 'actif' } as any))
+        );
+        break;
+      case 'deactivate':
+        await Promise.all(
+          ids
+            .map(id => hydratedEmployees.find(e => e.id === id))
+            .filter(Boolean)
+            .map(e => putEmployeeMultipart(String(e!.id), { status: 'inactif' } as any))
+        );
+        break;
+      case 'change_branch':
+        if (!payload) return;
+        await Promise.all(
+          ids.map(id => putEmployeeMultipart(String(id), { branch: payload } as any))
+        );
+        break;
+      case 'change_post':
+        if (!payload) return;
+        await Promise.all(
+          ids.map(id => putEmployeeMultipart(String(id), { posts: [payload] } as any))
+        );
+        break;
+      case 'archive':
+        await Promise.all(
+          ids
+            .map(id => hydratedEmployees.find(e => e.id === id))
+            .filter(Boolean)
+            .map(e => putEmployeeMultipart(String(e!.id), { status: 'archive' } as any))
+        );
       break;
-    case 'deactivate':
-      await Promise.all(
-        ids
-          .map(id => hydratedEmployees.find(e => e.id === id))
-          .filter(e => e && e.status !== 'inactive')
-          .map(e => putEmployeeMultipart(String(e!.id), { status: 'inactive' } as any))
-      );
-      break;
-    case 'change_branch':
-      if (!payload) return;
-      await Promise.all(ids.map(id => putEmployeeMultipart(String(id), { branch: payload } as any)));
-      break;
-    case 'change_post':
-      if (!payload) return;
-      await Promise.all(ids.map(id => putEmployeeMultipart(String(id), { posts: [payload] } as any)));
-      break;
-    case 'archive':
-      await Promise.all(
-        ids
-          .map(id => hydratedEmployees.find(e => e.id === id))
-          .filter(e => e && e.status !== 'archive' && e.status !== 'suspended')
-          .map(e => putEmployeeMultipart(String(e!.id), { status: 'archive' } as any))
-      );
-      break;
-    case 'export':
-      const selected = hydratedEmployees.filter(e => ids.includes(e.id));
-      const headers  = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Succursale', 'Statut', 'Depuis'];
-      const rows     = selected.map(e => [
-        e.first_name ?? '',
-        e.last_name  ?? '',
-        e.user?.email ?? '',
-        e.phone_number ?? '',
-        e.branch_details?.branch_name ?? '',
-        e.status ?? 'active',
-        e.created_at ? new Date(e.created_at).toLocaleDateString('fr-FR') : '',
-      ]);
-      const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = `employes_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click(); URL.revokeObjectURL(url);
-      return;
-  }
-  await loadEmployees();
-};
+       case 'export':
+        exportToCSV(ids);
+        return; // pas de reload
+    }
+    await loadEmployees();
+  };
+
+
+  // ── Export CSV direct ──────────────────────────────────────────────────────
+  const exportToCSV = (ids: string[]) => {
+    const headers = ['Prenom', 'Nom', 'Email', 'Telephone', 'Succursale', 'Statut', 'Depuis'];
+    const selectedEmployees = filteredEmployees.filter(e => ids.includes(e.id));
+    const rows    = selectedEmployees.map(e => [
+      e.first_name  ?? '',
+      e.last_name   ?? '',
+      e.user?.email ?? '',
+      e.phone_number ?? '',
+      e.branch_details?.branch_name ?? '',
+      e.statutEmploye ?? 'actif',
+      e.created_at ? new Date(e.created_at).toLocaleDateString('fr-FR') : '',
+    ]);
+    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `employes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-<div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
 
-     <PageHeader
-        title="Gestion des Employés"
-        subtitle="Gérez les employés, leurs rôles et affectations"
+      <PageHeader
+        title="Gestion des Employes"
+        subtitle="Gerez les employes, leurs roles et affectations"
         icon={<Users className="w-6 h-6 text-[#2E7D32]" />}
-        className="mb-0"  
+        className="mb-0"
       />
 
       <EmployeeFilterBar
@@ -237,14 +274,12 @@ const EmployeeGrid: React.FC = () => {
         onClear={onClear}
         onFilterChange={setSelectedFilter}
         onBranchChange={setSelectedBranch}
-        onStatusChange={setSelectedStatus}
+        onStatusChange={handleStatusChange}
         onAdd={handleAdd}
         onImport={() => console.log('Import')}
-        onExport={() => console.log('Export')}
         totalCount={filteredEmployees.length}
       />
 
-      {/* Erreur */}
       {error && (
         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
           <p className="flex-1 text-sm font-semibold text-red-700">{error}</p>
@@ -252,12 +287,11 @@ const EmployeeGrid: React.FC = () => {
             onClick={loadEmployees}
             className="px-4 py-2 bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-xl hover:shadow-md transition-all"
           >
-            Réessayer
+            Reessayer
           </button>
         </div>
       )}
 
-      {/* ── Table (remplace la grille de cartes) ── */}
       <EmployeeTable
         employees={hydratedEmployees}
         isLoading={isLoading}
@@ -268,9 +302,18 @@ const EmployeeGrid: React.FC = () => {
         onDelete={handleDelete}
         onViewTransactions={handleViewTransactions}
         onBulkAction={handleBulkAction}
+        activeTab={activeEmplTab}
+        // onTabChange={setActiveAccountTab}      // ← NOUVEAU
+        onTabChange={(tab) => {
+          setActiveEmplTab(tab);
+          // tab → dropdown (same as AccountGrid)
+          setSelectedStatus(
+            tab === 'inactif' ? 'inactif' :
+            tab === 'archive'  ? 'suspended' : 'actif'
+          );
+        }}
       />
 
-      {/* Modals — inchangés */}
       <EmployeeDetailModal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}

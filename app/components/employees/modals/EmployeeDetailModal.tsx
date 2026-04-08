@@ -7,7 +7,7 @@ import {
   Calendar, Briefcase, Building2, Clock, Pencil,
 } from "lucide-react";
 import UserAvatar from '@/app/components/core/UserAvatar';
-import { EmployeeData, formatGender, getEmployeeStatus } from './validations';
+import { EmployeeData, formatGender, getEmployeeStatus } from '../validations';
 
 interface EmployeeDetailModalProps {
   isOpen:    boolean;
@@ -67,7 +67,7 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <UserAvatar user={employee} size="sm" type="employee" />
+          <UserAvatar user={employee} size="xxl" type="employee" />
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-gray-900 capitalize">
