@@ -63,6 +63,7 @@ export interface MemberData {
     balance?:       number | string;
     account_status?: boolean;
   }>;
+  signature: string;
 }
 
 export interface BranchDetails {
@@ -99,7 +100,7 @@ export const memberUiSchema = z.object({
                     }),
   id_number:        z.string().min(1, "Numéro de pièce est requis"),
   photo_profil:     PhotoZ,
-
+  remove_photo: z.boolean().optional(), 
   // ── Contact & Localisation ──
   phone_number:     PhoneZ,
   email:            z.string().email("Email invalide").optional().or(z.literal("")).optional(),
@@ -124,7 +125,7 @@ export const memberUiSchema = z.object({
   beneficiary_name:     z.string().optional(),
   beneficiary_relation: z.enum(["conjoint", "enfant", "parent", "frere_soeur", "autre"]).optional(),
   beneficiary_phone:    z.string().regex(/^\d*$/, "Téléphone invalide").optional(),
-
+  signature: z.string().min(1, "La signature est requise"),
   // ── Consentement légal ──
   consent: z.literal(true, {
     errorMap: () => ({ message: "Vous devez accepter le traitement de vos données" }),
@@ -250,6 +251,7 @@ export function memberDataToUi(member: MemberData): MemberUiForm {
     beneficiary_relation: (member.beneficiary_relation as any) ?? "autre",
     beneficiary_phone:    member.beneficiary_phone    ?? "",
     consent:          true,
+    signature: member.signature,
   };
 }
 

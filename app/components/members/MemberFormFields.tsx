@@ -39,6 +39,8 @@ import { User, Phone, MapPin, Banknote, Users, ShieldCheck, Camera, X } from 'lu
 import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
 import type { DepartmentCode } from '@/app/data/haitiLocations';
 import type { MemberUiForm, FieldErrors } from './validations';
+import PhotoSelector from '../core/upload-file';
+import SignatureField from './SignatureField';
 
 // ─── Section wrapper ───────────────────────────────────────────────────────────
 
@@ -142,7 +144,7 @@ const MemberFormFields: React.FC<{
 }> = ({ formData, setFormData, errors, setErrors, isEditMode = false }) => {
 
   const [street, setStreet] = useState('');
-  const photoRef = useRef<HTMLInputElement>(null);
+  // const photoRef = useRef<HTMLInputElement>(null);
 
   const clear = (key: keyof MemberUiForm) => {
     if (!setErrors) return;
@@ -171,48 +173,15 @@ const MemberFormFields: React.FC<{
       {/* ── 1. Identité ── */}
       <Section number={1} icon={User} title="Identité">
 
-        {/* Photo */}
-        <div className="md:col-span-2 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0 overflow-hidden">
-            {formData.photo_profil && typeof formData.photo_profil === 'string' ? (
-              <img src={formData.photo_profil} className="w-full h-full object-cover" />
-            ) : formData.photo_profil instanceof File ? (
-              <img src={URL.createObjectURL(formData.photo_profil)} className="w-full h-full object-cover" />
-            ) : (
-              <Camera className="w-6 h-6 text-[#2E7D32]" />
-            )}
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => photoRef.current?.click()}
-              className="px-3 py-1.5 text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] rounded-lg hover:bg-[#c8e0bc] transition-colors"
-            >
-              {formData.photo_profil ? 'Changer la photo' : 'Ajouter une photo'}
-            </button>
-            {formData.photo_profil && (
-              <button
-                type="button"
-                onClick={() => setFormData({ photo_profil: null })}
-                className="ml-2 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"
-              >
-                Supprimer
-              </button>
-            )}
-            <p className="text-xs text-gray-400 mt-1">JPG, PNG — max 2 Mo</p>
-            <input
-              ref={photoRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={e => {
-                const file = e.target.files?.[0];
-                if (file) setFormData({ photo_profil: file });
-              }}
-            />
-          </div>
+      {/* Photo */}
+        <div className="space-y-1">
+          <PhotoSelector
+            value={typeof formData.photo_profil === 'string' ? formData.photo_profil : null}
+            onChange={(file) => setFormData({ photo_profil: file, remove_photo: false })}
+            onRemove={() => setFormData({ photo_profil: null, remove_photo: true })}
+          />
+          {errors.photo_profil && <p className="text-xs text-red-500">{errors.photo_profil}</p>}
         </div>
-
         <Field label="Prénom" required error={errors.first_name}>
           <Input
             value={formData.first_name}
@@ -475,7 +444,6 @@ const MemberFormFields: React.FC<{
         </Field>
 
       </Section>
-
       {/* ── 6. Consentement ── */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex items-start gap-3 mb-4">
@@ -488,6 +456,7 @@ const MemberFormFields: React.FC<{
           </div>
         </div>
 
+        {/* Checkbox consentement */}
         <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
           formData.consent
             ? 'bg-[#DDEAD5]/50 border-[#2E7D32]/30'
@@ -511,6 +480,13 @@ const MemberFormFields: React.FC<{
           </span>
         </label>
         {errors.consent && <p className="text-xs text-red-500 mt-2">{errors.consent}</p>}
+
+        {/* Signature — EN DEHORS du label */}
+        <SignatureField
+          value={formData.signature ?? ''}
+          onChange={(val) => setFormData({ signature: val })}
+          error={errors.signature}
+        />
       </div>
 
     </div>

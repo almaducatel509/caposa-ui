@@ -11,6 +11,7 @@ import {
   User, Mail, Lock, Phone, MapPin, Building2,
   Briefcase, CheckCircle2, AlertTriangle, ShieldCheck,
 } from 'lucide-react';
+import PhotoSelector from '../core/upload-file';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -292,6 +293,15 @@ const EmployeeFormFields: React.FC<{
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={2} title="Informations personnelles" icon={User} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div className="space-y-1">
+            <PhotoSelector
+              value={typeof formData.photo_profil === 'string' ? formData.photo_profil : null}
+              onChange={(file) => setFormData({ photo_profil: file, remove_photo: false })}
+              onRemove={() => setFormData({ photo_profil: null, remove_photo: true })}
+            />
+            {errors.photo_profil && <p className="text-xs text-red-500">{errors.photo_profil}</p>}
+          </div>
+
 
           <Field label="Prénom" required error={errors.first_name}>
             <Input type="text" value={formData.first_name}
@@ -375,17 +385,6 @@ const EmployeeFormFields: React.FC<{
               onChange={e => { setStreet(e.target.value); clearFieldError('address'); }}
               placeholder="Ex: 35, Tozin" hasError={!!errors.address} />
           </Field>
-
-          <div className="sm:col-span-2">
-            <EmployeePhotoField
-              value={formData.photo_profil}
-              isEditMode={isEditMode}
-              error={errors.photo_profil}
-              onChange={file => setFormData({ photo_profil: file, remove_photo: false })}
-              onRemove={() => setFormData({ photo_profil: null, remove_photo: true })}
-            />
-          </div>
-
         </div>
       </div>
 

@@ -296,9 +296,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all">
-              Exporter
-            </button>
+            
             {!isFermeTab && (
               <AccountBulkActionDropdown
                 selectedCount={selected.size}
