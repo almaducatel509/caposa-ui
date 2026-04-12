@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { User, Wallet, CheckCircle } from 'lucide-react';
 import CompteAutocomplete from './CompteAutocomplete';
 import { BANK_RULES, getRulesForAccountType } from '@/app/lib/bankRules';
 
@@ -8,7 +9,7 @@ import { BANK_RULES, getRulesForAccountType } from '@/app/lib/bankRules';
 interface CompteFormData {
   id_membre: string;
   typeCompte: 'epargne' | 'cheques' | 'terme' | '';
-  statutCompte: "actif" | "ferme" | "suspendu";
+  statutCompte: 'actif' | 'ferme' | 'suspendu';
   dateOuverture: string;
   tauxInteret: number | null;
   limiteTrait: number | null;
@@ -33,102 +34,126 @@ interface CompteFormFieldsProps {
   mode?: FormMode;
 }
 
+// ─── Section wrapper (style CAPOSA) ───────────────────────────────────────────
+function Section({ number, icon: Icon, title, children }: {
+  number: number; icon: any; title: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-[#DDEAD5]/40 to-transparent">
+        <div className="w-6 h-6 rounded-full bg-[#2E7D32] flex items-center justify-center shrink-0">
+          <span className="text-white text-xs font-bold">{number}</span>
+        </div>
+        <Icon className="w-4 h-4 text-[#2E7D32]" />
+        <p className="text-sm font-semibold text-gray-800">{title}</p>
+      </div>
+      <div className="p-5">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── Progress bar (style CAPOSA) ──────────────────────────────────────────────
+function ProgressBar({ currentStep }: { currentStep: number }) {
+  const pct = Math.round(((currentStep - 1) / 2) * 100);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 px-5 py-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Progression
+        </span>
+        <span className={`text-sm font-bold ${pct === 100 ? 'text-[#2E7D32]' : 'text-gray-700'}`}>
+          {pct}%
+        </span>
+      </div>
+      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-[#2E7D32] to-[#4CAF50] rounded-full transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {/* Step indicators */}
+      <div className="flex items-center justify-between mt-3">
+        {[
+          { step: 1, label: 'Membre' },
+          { step: 2, label: 'Type' },
+          { step: 3, label: 'Confirmation' },
+        ].map(({ step, label }) => (
+          <div key={step} className="flex items-center gap-1.5">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+              currentStep >= step
+                ? 'bg-[#2E7D32] text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              {currentStep > step ? '✓' : step}
+            </div>
+            <span className={`text-xs font-medium ${
+              currentStep >= step ? 'text-[#2E7D32]' : 'text-gray-400'
+            }`}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Label (style CAPOSA) ─────────────────────────────────────────────────────
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+      {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+  );
+}
+
 // ============= COMPONENT =============
 const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
-  formData,
-  setFormData,
-  errors,
-  setErrors,
-  mode = 'create',
+  formData, setFormData, errors, setErrors, mode = 'create',
 }) => {
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const isCreateMode = mode === 'create';
 
-  // ============= HANDLERS =============
   const clearError = (field: string) => {
-    if (setErrors) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
+    if (setErrors) setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
   };
 
-  // 🔥 Application automatique des règles métier
   const handleAccountTypeSelection = (type: 'epargne' | 'cheques' | 'terme') => {
     const rules = getRulesForAccountType(type);
-    
-    setFormData({ 
+    setFormData({
       typeCompte: type,
       tauxInteret: rules.interestRate,
       fraisServiceMensuel: rules.monthlyFees,
       limiteTrait: rules.withdrawalLimit || null,
     });
-    
     clearError('typeCompte');
     setCurrentStep(3);
-    
-    console.log(`✅ Type de compte "${type}" sélectionné`);
-    console.log(`📊 Règles appliquées automatiquement:`, {
-      taux: rules.interestRate,
-      frais: rules.monthlyFees,
-      limite: rules.withdrawalLimit || 'N/A'
-    });
   };
 
-  // ============= RENDER MODE EDIT/VIEW =============
+  // ── Mode edit non supporté ──
   if (!isCreateMode) {
     return (
-      <div className="p-6 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
-        <p className="text-yellow-800 font-semibold">⚠️ Mode {mode} non disponible dans cette version</p>
-        <p className="text-yellow-700 text-sm mt-2">Ce formulaire est optimisé pour la création de nouveaux comptes uniquement.</p>
+      <div className="p-5 bg-yellow-50 border border-yellow-200 rounded-xl">
+        <p className="text-sm font-semibold text-yellow-800">Mode {mode} non disponible</p>
+        <p className="text-xs text-yellow-700 mt-1">Ce formulaire est optimisé pour la création uniquement.</p>
       </div>
     );
   }
 
-  // ============= RENDER CREATE MODE =============
+  // ── Create mode ──
   return (
-    <div className="space-y-6">
-      {/* Progress Steps */}
-      <div className="bg-linear-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
-        <div className="flex items-center justify-between mb-4">
-          {[1, 2, 3].map((step) => (
-            <div key={step} className="flex items-center flex-1">
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all ${
-                currentStep >= step 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-300 text-gray-600'
-              }`}>
-                {step}
-              </div>
-              {step < 3 && (
-                <div className={`flex-1 h-1 mx-2 transition-all ${
-                  currentStep > step ? 'bg-blue-600' : 'bg-gray-300'
-                }`} />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between text-sm font-medium">
-          <span className={currentStep >= 1 ? 'text-blue-700' : 'text-gray-500'}>1. Membre</span>
-          <span className={currentStep >= 2 ? 'text-blue-700' : 'text-gray-500'}>2. Type</span>
-          <span className={currentStep >= 3 ? 'text-blue-700' : 'text-gray-500'}>3. Confirmation</span>
-        </div>
-      </div>
+    <div className="space-y-4">
 
-      {/* STEP 1: Sélection du Membre */}
+      <ProgressBar currentStep={currentStep} />
+
+      {/* ── STEP 1 : Membre ── */}
       {currentStep === 1 && (
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-4xl">👤</span>
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">Sélection du Membre</h3>
-              <p className="text-gray-600">Choisissez le titulaire du nouveau compte</p>
-            </div>
-          </div>
-          
+        <Section number={1} icon={User} title="Sélection du membre">
+          <FieldLabel label="Membre titulaire" required />
           <CompteAutocomplete
             selectedKey={formData.id_membre}
             onSelectionChange={(id: string) => {
@@ -138,74 +163,66 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
             }}
             errorMessage={errors.id_membre}
             isRequired
-            placeholder="Rechercher par nom ou ID..."
+            placeholder="Rechercher par nom ou numéro…"
           />
-          
+          {errors.id_membre && (
+            <p className="text-xs text-red-500 mt-1">{errors.id_membre}</p>
+          )}
           {formData.id_membre && (
-            <div className="mt-4 p-4 bg-green-50 rounded-lg border-2 border-green-200">
-              <p className="text-green-800 font-semibold">✅ Membre sélectionné</p>
-              <p className="text-green-700 text-sm mt-1">ID: <span className="font-mono">{formData.id_membre.slice(0, 12)}...</span></p>
+            <div className="mt-3 p-3 bg-[#DDEAD5]/50 border border-[#2E7D32]/20 rounded-xl">
+              <p className="text-xs font-semibold text-[#1B5E20]">Membre sélectionné</p>
+              <p className="text-xs text-[#2E7D32] mt-0.5 font-mono">{formData.id_membre.slice(0, 16)}…</p>
             </div>
           )}
-        </div>
+        </Section>
       )}
 
-      {/* STEP 2: Choix du Type de Compte */}
+      {/* ── STEP 2 : Type de compte ── */}
       {currentStep === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <button
             onClick={() => setCurrentStep(1)}
-            className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
+            className="text-xs font-semibold text-[#2E7D32] hover:text-[#1B5E20] flex items-center gap-1 transition-colors"
           >
             ← Retour à l'étape 1
           </button>
 
-          <div className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-lg">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-4xl">💼</span>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">Type de Compte</h3>
-                <p className="text-gray-600">Sélectionnez le type adapté aux besoins du membre</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Section number={2} icon={Wallet} title="Type de compte">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {(['epargne', 'cheques', 'terme'] as const).map((type) => {
                 const rule = BANK_RULES[type];
                 const isSelected = formData.typeCompte === type;
-                
+
                 return (
                   <div
                     key={type}
                     onClick={() => handleAccountTypeSelection(type)}
-                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                       isSelected
-                        ? 'border-blue-600 bg-blue-50 shadow-xl scale-105'
-                        : 'border-gray-300 hover:border-blue-400 hover:shadow-md'
+                        ? 'border-[#2E7D32] bg-[#DDEAD5]/40 shadow-md'
+                        : 'border-gray-200 hover:border-[#2E7D32]/40 hover:bg-[#DDEAD5]/10'
                     }`}
                   >
-                    <div className="text-5xl mb-3">{rule.icon}</div>
-                    <h4 className="font-bold text-lg text-gray-900 mb-2">{rule.title}</h4>
-                    <p className="text-sm text-gray-600 mb-4">{rule.description}</p>
-                    
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-gray-600">Dépôt min:</span>
-                        <span className="font-bold text-green-700">{rule.minDeposit} HTG</span>
-                      </div>
-                      <div className="flex justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-gray-600">Taux:</span>
-                        <span className="font-bold text-blue-700">{rule.interestRate}%</span>
-                      </div>
-                      <div className="flex justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-gray-600">Frais/mois:</span>
-                        <span className="font-bold text-purple-700">{rule.monthlyFees} HTG</span>
-                      </div>
+                    <div className="text-3xl mb-2">{rule.icon}</div>
+                    <h4 className="text-sm font-bold text-gray-900 mb-1">{rule.title}</h4>
+                    <p className="text-xs text-gray-500 mb-3 leading-relaxed">{rule.description}</p>
+
+                    <div className="space-y-1.5">
+                      {[
+                        { label: 'Dépôt min.', value: `${rule.minDeposit} HTG`, color: 'text-[#2E7D32]' },
+                        { label: 'Taux',       value: `${rule.interestRate}%`,   color: 'text-blue-700'   },
+                        { label: 'Frais/mois', value: rule.monthlyFees > 0 ? `${rule.monthlyFees} HTG` : 'Gratuit', color: 'text-purple-700' },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="flex justify-between items-center px-2 py-1 bg-white rounded-lg border border-gray-100">
+                          <span className="text-xs text-gray-500">{label}</span>
+                          <span className={`text-xs font-bold ${color}`}>{value}</span>
+                        </div>
+                      ))}
                     </div>
 
                     {isSelected && (
-                      <div className="mt-4 pt-4 border-t-2 border-blue-200">
-                        <span className="text-sm font-bold text-blue-600">✓ Sélectionné</span>
+                      <div className="mt-3 pt-2 border-t border-[#2E7D32]/20">
+                        <span className="text-xs font-bold text-[#2E7D32]">✓ Sélectionné</span>
                       </div>
                     )}
                   </div>
@@ -214,126 +231,91 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
             </div>
 
             {errors.typeCompte && (
-              <p className="text-red-500 text-sm mt-4 font-semibold">{errors.typeCompte}</p>
+              <p className="text-xs text-red-500 mt-3">{errors.typeCompte}</p>
             )}
-          </div>
+          </Section>
         </div>
       )}
 
-      {/* STEP 3: Confirmation et Règles Appliquées */}
-      {currentStep === 3 && formData.typeCompte && (
-        <div className="space-y-4">
-          <button
-            onClick={() => setCurrentStep(2)}
-            className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
-          >
-            ← Modifier le type de compte
-          </button>
+      {/* ── STEP 3 : Confirmation ── */}
+      {currentStep === 3 && formData.typeCompte && (() => {
+        const rules = getRulesForAccountType(formData.typeCompte);
+        return (
+          <div className="space-y-3">
+            <button
+              onClick={() => setCurrentStep(2)}
+              className="text-xs font-semibold text-[#2E7D32] hover:text-[#1B5E20] flex items-center gap-1 transition-colors"
+            >
+              ← Modifier le type
+            </button>
 
-          <div className="bg-linear-to-br from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-300 shadow-lg">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-4xl">✅</span>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">Règles Appliquées</h3>
-                <p className="text-gray-600">Vérifiez les paramètres du nouveau compte</p>
-              </div>
-            </div>
+            <Section number={3} icon={CheckCircle} title="Confirmation">
 
-            {(() => {
-              const rules = getRulesForAccountType(formData.typeCompte);
-              
-              return (
-                <div className="space-y-4">
-                  {/* Header */}
-                  <div className="flex items-center gap-3 p-4 bg-white rounded-lg border-2 border-green-200">
-                    <span className="text-4xl">{rules.icon}</span>
-                    <div>
-                      <h4 className="text-xl font-bold text-gray-900">{rules.title}</h4>
-                      <p className="text-sm text-gray-600">{rules.description}</p>
-                    </div>
-                  </div>
-
-                  {/* Règles Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="p-4 bg-white rounded-lg border">
-                      <p className="text-xs text-gray-600 mb-1">💰 Dépôt minimum</p>
-                      <p className="text-2xl font-bold text-green-700">{rules.minDeposit} HTG</p>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border">
-                      <p className="text-xs text-gray-600 mb-1">📈 Taux d'intérêt</p>
-                      <p className="text-2xl font-bold text-blue-700">{rules.interestRate}%</p>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border">
-                      <p className="text-xs text-gray-600 mb-1">💳 Frais mensuels</p>
-                      <p className="text-2xl font-bold text-purple-700">
-                        {rules.monthlyFees > 0 ? `${rules.monthlyFees} HTG` : 'Gratuit'}
-                      </p>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border">
-                      <p className="text-xs text-gray-600 mb-1">🔄 Calcul intérêts</p>
-                      <p className="text-lg font-bold text-indigo-700">
-                        {rules.interestCalculation === 'none' ? 'Aucun' :
-                         rules.interestCalculation === 'simple' ? 'Simple' :
-                         rules.interestCalculation === 'compound-monthly' ? 'Composé (mensuel)' :
-                         'Composé (quotidien)'}
-                      </p>
-                    </div>
-
-                    {rules.withdrawalLimit && (
-                      <div className="p-4 bg-white rounded-lg border">
-                        <p className="text-xs text-gray-600 mb-1">🏧 Limite retrait/jour</p>
-                        <p className="text-2xl font-bold text-orange-700">{rules.withdrawalLimit} HTG</p>
-                      </div>
-                    )}
-
-                    {rules.freeWithdrawalsPerMonth && (
-                      <div className="p-4 bg-white rounded-lg border">
-                        <p className="text-xs text-gray-600 mb-1">🎁 Retraits gratuits/mois</p>
-                        <p className="text-2xl font-bold text-teal-700">{rules.freeWithdrawalsPerMonth}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Features */}
-                  <div className="p-4 bg-white rounded-lg border">
-                    <p className="text-sm font-bold text-gray-700 mb-3">✨ Avantages inclus</p>
-                    <div className="space-y-2">
-                      {rules.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-blue-500 font-bold mt-0.5">•</span>
-                          <p className="text-sm text-gray-700">{feature}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Info métadonnées */}
-                  <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                    <p className="text-xs font-bold text-blue-800 mb-2">📋 Informations techniques</p>
-                    <div className="space-y-1 text-xs text-blue-700">
-                      <p>• Statut du compte : <span className="font-semibold">Actif</span></p>
-                      <p>• Date d'ouverture : <span className="font-semibold">{new Date(formData.dateOuverture).toLocaleDateString('fr-CA')}</span></p>
-                      <p>• Numéro de compte : <span className="font-semibold">Généré par le backend</span></p>
-                    </div>
-                  </div>
-
-                  {/* Note éducative */}
-                  {rules.educationalNote && (
-                    <div className="p-4 bg-linear-to-r from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-300">
-                      <p className="text-sm text-amber-900 leading-relaxed">
-                        {rules.educationalNote}
-                      </p>
-                    </div>
-                  )}
+              {/* Type sélectionné */}
+              <div className="flex items-center gap-3 p-4 bg-[#DDEAD5]/30 border border-[#2E7D32]/20 rounded-xl mb-4">
+                <span className="text-3xl">{rules.icon}</span>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{rules.title}</p>
+                  <p className="text-xs text-gray-500">{rules.description}</p>
                 </div>
-              );
-            })()}
+              </div>
+
+              {/* Grille de règles */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {[
+                  { label: 'Dépôt minimum',   value: `${rules.minDeposit} HTG`,    color: 'text-[#2E7D32]'  },
+                  { label: "Taux d'intérêt",  value: `${rules.interestRate}%`,      color: 'text-blue-700'   },
+                  { label: 'Frais mensuels',  value: rules.monthlyFees > 0 ? `${rules.monthlyFees} HTG` : 'Gratuit', color: 'text-purple-700' },
+                  { label: 'Calcul intérêts', value:
+                      rules.interestCalculation === 'none'             ? 'Aucun' :
+                      rules.interestCalculation === 'simple'           ? 'Simple' :
+                      rules.interestCalculation === 'compound-monthly' ? 'Composé mensuel' : 'Composé quotidien',
+                    color: 'text-indigo-700' },
+                  ...(rules.withdrawalLimit ? [{ label: 'Limite retrait/j', value: `${rules.withdrawalLimit} HTG`, color: 'text-orange-700' }] : []),
+                  ...(rules.freeWithdrawalsPerMonth ? [{ label: 'Retraits gratuits', value: `${rules.freeWithdrawalsPerMonth}/mois`, color: 'text-teal-700' }] : []),
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="p-3 bg-white border border-gray-100 rounded-xl">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+                    <p className={`text-sm font-bold ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Avantages */}
+              <div className="p-4 bg-white border border-gray-100 rounded-xl mb-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Avantages inclus</p>
+                <div className="space-y-1.5">
+                  {rules.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className="text-[#2E7D32] font-bold text-xs mt-0.5">•</span>
+                      <p className="text-xs text-gray-600">{feature}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Infos techniques */}
+              <div className="p-3 bg-[#DDEAD5]/20 border border-[#2E7D32]/15 rounded-xl">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Informations</p>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <p>Statut : <span className="font-semibold text-[#2E7D32]">Actif</span></p>
+                  <p>Date d'ouverture : <span className="font-semibold">{new Date(formData.dateOuverture).toLocaleDateString('fr-CA')}</span></p>
+                  <p>Numéro : <span className="font-semibold">Généré par le système</span></p>
+                </div>
+              </div>
+
+              {/* Note éducative */}
+              {rules.educationalNote && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-xs text-amber-800 leading-relaxed">{rules.educationalNote}</p>
+                </div>
+              )}
+
+            </Section>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
     </div>
   );
 };

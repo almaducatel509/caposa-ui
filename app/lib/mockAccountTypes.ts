@@ -25,3 +25,6 @@ export const mockAccountTypes = [
     minimum_depot: 500
   }
 ];
+
+// Format recommandé :
+// [Bloc membre] – [Bloc produit] – [Séquence unique]

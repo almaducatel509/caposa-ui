@@ -35,7 +35,8 @@ const EMPTY_FORM: MemberUiForm = {
   income_source: "autre",
   account_type: "savings",
   devise: "HTG",
-  consent: true
+  consent: true,
+  signature: ""
 };
 
 const EditMemberModal: React.FC<EditMemberModalProps> = ({

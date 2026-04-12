@@ -1,7 +1,31 @@
 // 📋 RÈGLES MÉTIER BANCAIRES
 // 🇭🇹 Configuration adaptée pour caisse populaire rurale en Haïti
 // ⚠️ TEMPORAIRE : Sera remplacé par API (GET/PUT) plus tard
+// Pour une caisse populaire, le format doit être :
 
+// [Code membre] – [Type de compte] – [Séquence unique]
+
+// Exemple basé sur ta page :
+// 321-654-987-0123  
+// 456-789-012-3456  
+// 789-123-456-7890  
+
+// Ce pattern montre :
+
+// 3 blocs d’identification (souvent liés au membre)
+
+// 1 bloc final séquentiel (unique par compte)
+
+// ✔️ Pourquoi ce format est bon ?
+// Facile à lire
+
+// Facile à retrouver
+
+// Compatible avec les systèmes comptables
+
+// Permet d’éviter les collisions
+
+// Permet de dériver des infos (membre, produit, séquence)
 export interface AccountTypeRule {
   icon: string;
   title: string;

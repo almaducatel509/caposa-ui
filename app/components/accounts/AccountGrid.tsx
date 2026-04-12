@@ -16,6 +16,7 @@ import AccountDetailModal  from './modals/AccountDetailModal';
 import CloseAccountModal   from './modals/CloseAccountModal';
 import SuspendAccountModal from './modals/SuspendAccountModal';
 import AccountHistoryModal from './modals/AccountHistoryModal';
+import CreateAccountModal from './modals/EditAccountModal'; // ← nom du fichier reste pareil
 
 // ─── TODO: remplacer mockAccounts par un vrai appel API ───────────────────────
 // import { fetchAccounts } from '@/app/lib/api/accounts';
@@ -41,7 +42,7 @@ const AccountGrid: React.FC = () => {
   const [showSuspend,     setShowSuspend]     = useState(false);
   const [showHistory,     setShowHistory]     = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showEditModal,   setShowEditModal]   = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false); // était showEditModal
 
   // ── Tab ──
   const [activeAccountTab, setActiveAccountTab] = useState<'ouvert' | 'gelé' | 'en_attente' | 'fermé'>('ouvert');
@@ -95,7 +96,10 @@ const AccountGrid: React.FC = () => {
   }, [accounts, debouncedSearch, selectedType, selectedStatus]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleAdd    = () => { setSelectedAccount(null); setShowEditModal(true); };
+  const handleAdd = () => {
+    setSelectedAccount(null);
+    setShowCreateModal(true); // était setShowEditModal
+  };
   const handleView   = (a: AccountData) => { setSelectedAccount(a); setShowDetail(true); };
   const handleSuspend= (a: AccountData) => { setSelectedAccount(a); setShowSuspend(true); };
   const handleClose  = (a: AccountData) => { setSelectedAccount(a); setShowClose(true); };
@@ -175,7 +179,7 @@ const AccountGrid: React.FC = () => {
         onTypeChange={setSelectedType}
         onStatusChange={handleStatusChange}
         onImport={() => console.log('Import')}
-        onAdd={() => console.log('Ajouter')}
+        onAdd={handleAdd}
       />
 
       {error && (
@@ -210,7 +214,16 @@ const AccountGrid: React.FC = () => {
           );
         }}
       />
-
+      <CreateAccountModal
+        isOpen={showCreateModal}
+        onClose={() => { setShowCreateModal(false); setSelectedAccount(null); }}
+        account={selectedAccount}
+        onSuccess={(created) => {
+          setAccounts(prev => [...prev, created]);
+          setShowCreateModal(false);
+          setSelectedAccount(null);
+        }}
+      />
       <AccountDetailModal
         isOpen={showDetail}
         account={selectedAccount}

@@ -392,7 +392,7 @@ const EmployeeFormFields: React.FC<{
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={3} title="Affectation de travail" icon={Building2} />
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 bg">
 
           <Field label={`Branche (${branches.length} disponibles)`} required error={errors.branch}>
             <div className="relative">

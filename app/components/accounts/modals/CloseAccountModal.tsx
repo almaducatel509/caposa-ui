@@ -26,7 +26,9 @@ const STATUS_COLORS: Record<string, string> = {
   fermé:      'bg-gray-100 text-gray-500',
 };
 
-export default function CloseAccountModal({ isOpen, onClose, onSuccess, account }: CloseAccountModalProps) {
+const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
+   isOpen, onClose, onSuccess, account,}) =>{
+
   const [isClosing,   setIsClosing]   = useState(false);
   const [error,       setError]       = useState<string | null>(null);
   const [closureDate, setClosureDate] = useState('');
@@ -70,13 +72,15 @@ export default function CloseAccountModal({ isOpen, onClose, onSuccess, account 
   const statut = account.statusAccount ?? (account.account_status ? 'ouvert' : 'fermé');
 
   const details = [
-    { label: 'Numéro',        value: account.account_number },
-    { label: 'Titulaire',     value: titulaire },
-    { label: 'Type',          value: typeCompte },
-    { label: 'Solde actuel',  value: `${solde.toLocaleString('fr-FR')} HTG`, danger: solde !== 0 },
-    { label: 'Ouvert le',     value: dateOuverture },
-    { label: 'Statut actuel', value: statut, chip: true },
-  ];
+  { label: 'Numéro', value: account.account_number || account.noCompte || '—' },
+  { label: 'Titulaire', value: titulaire },
+  { label: 'Type', value: typeCompte },
+  { label: 'Solde actuel', value: `${solde.toLocaleString('fr-FR')} HTG`, danger: solde !== 0 },
+  { label: 'Ouvert le', value: dateOuverture },
+  { label: 'Statut actuel', value: statut, chip: true },
+];
+
+console.log('🔍 Details array:', details); // ← Ajoute ça
 
   const handleSubmit = async () => {
     if (!canClose) { setError(blockingReason); return; }
@@ -105,7 +109,7 @@ export default function CloseAccountModal({ isOpen, onClose, onSuccess, account 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={() => { if (!isClosing) onClose(); }} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
 
       {/* Header */}
       <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-red-100 bg-red-50 rounded-t-2xl">
@@ -120,17 +124,32 @@ export default function CloseAccountModal({ isOpen, onClose, onSuccess, account 
             </p>
           </div>
         </div>
-        <button
-          onClick={() => { if (!isClosing) onClose(); }}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-red-100 transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-red-100 bg-red-50 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            {/* ... titre ... */}
+          </div>
+          {/* ← ICI: Bouton X avec feedback visuel */}
+          <button
+            onClick={() => { if (!isClosing) onClose(); }}
+            disabled={isClosing}
+            className={`p-1.5 rounded-lg transition-colors ${
+              isClosing 
+                ? 'text-gray-300 cursor-not-allowed bg-gray-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-red-100'
+            }`}
+          >
+            {isClosing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <X className="w-4 h-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Body */}
-      <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
-
+      <div className="overflow-y-auto px-6 py-5 flex flex-col gap-5 max-h-[70vh]">
         {/* Blocking alert */}
         {!canClose && (
           <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -153,7 +172,7 @@ export default function CloseAccountModal({ isOpen, onClose, onSuccess, account 
         </div>
 
         {/* Account details */}
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
           <p className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
             Détails du compte
           </p>
@@ -230,7 +249,7 @@ export default function CloseAccountModal({ isOpen, onClose, onSuccess, account 
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
         <button
           onClick={() => { if (!isClosing) onClose(); }}
           disabled={isClosing}
@@ -252,4 +271,5 @@ export default function CloseAccountModal({ isOpen, onClose, onSuccess, account 
 
     </Modal>
   );
-}
+} 
+export default CloseAccountModal;
