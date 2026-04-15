@@ -248,7 +248,7 @@ export default function CloseSessionModal({ session, onClose, onConfirm }: Props
       </div>
 
       {/* ── Actions ── */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3 pt-2 bg-white">
         <button
           onClick={onClose}
           disabled={loading}

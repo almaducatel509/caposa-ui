@@ -9,7 +9,7 @@ export interface AccountData {
   limiteCredit: any;
   // ⬇️ Champs exacts de l'API
   id: string;
-  account_number: string;         // ← API renvoie "account_number"
+  account_number: string;         // ← API renvoie "account_number" // [Bloc membre] – [Bloc produit] – [Séquence unique]
   member: string;                 // ← API renvoie "member" (UUID)
   account_type: string;           // ← API renvoie "account_type"
   balance: string;                // ← API renvoie "balance" en string

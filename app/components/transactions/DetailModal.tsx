@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   X, ArrowDownCircle, TrendingDown, ArrowLeftRight, Landmark,
@@ -9,6 +9,8 @@ import {
   Banknote, Building2, Calendar, Tag, ExternalLink,
   UserCheck, Cpu, Receipt,
 } from 'lucide-react';
+import { Modal } from '../ui/Modal';
+import { getDepositAudit } from '@/app/lib/api/deposit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type TransactionKind = 'deposit' | 'withdrawal' | 'transfer' | 'loan';
@@ -200,33 +202,35 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
   const accountHref = account
     ? `/dashboard/accounts/${account}`
     : '#';
+    // une fonction dédiée pour récupérer l’audit d’un dépôt 
+// useEffect(() => {
+//   async function loadAudit() {
+//     const data = await getDepositAudit(id);
+//     setAudit(data);
+//   }
+//   loadAudit();
+// }, [id]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-3xl bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-10">
-
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl bg-linear-to-br ${kindCfg.gradient} flex items-center justify-center`}>
-              <KindIcon className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">Détail — {kindCfg.label}</p>
-              <p className="text-xs text-gray-400 font-mono">
-                {transaction.reference ?? `#${transaction.id}`}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-            <X className="w-4 h-4" />
-          </button>
+    <Modal
+    isOpen
+    onClose={onClose}
+    size="3xl"
+    title={
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-xl bg-linear-to-br ${kindCfg.gradient} flex items-center justify-center`}>
+          <KindIcon className="w-4 h-4 text-white" />
         </div>
-
+        <div>
+          <p className="text-sm font-bold text-gray-900">Détail — {kindCfg.label}</p>
+          <p className="text-xs text-gray-400 font-mono">
+            {transaction.reference ?? `#${transaction.id}`}
+          </p>
+        </div>
+      </div>
+    }
+  >
+    <div className="overflow-y-auto max-h-[75vh] bg-[#F9F9F6]">
         {/* ── Bandeau montant + statut ── */}
         <div className="px-5 py-5 bg-white border-b border-gray-100 flex items-center justify-between gap-4">
           <div>
@@ -451,16 +455,14 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
             </div>
           )}
         </div>
-
-        {/* ── Footer ── */}
-        <div className="px-5 py-4 bg-white border-t border-gray-100 flex justify-end">
-          <button onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-            Fermer
-          </button>
-        </div>
-
       </div>
-    </div>
+      {/* Footer — fixe en bas, jamais dans le scroll */}
+      <div className="px-5 py-4 bg-white border-t border-gray-100 flex justify-end shrink-0 rounded-2xl">
+        <button onClick={onClose}
+          className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
+          Fermer
+        </button>
+      </div>
+  </Modal>
   );
 }

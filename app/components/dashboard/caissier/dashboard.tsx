@@ -10,13 +10,14 @@ import {
 } from 'lucide-react';
 import { fetchDashboard, fetchTransactions, fetchAlerts, openSession, closeSession } from '@/app/lib/api/caisse';
 import { CaisseAlert, CaisseTransaction, CaisseSession, CaisseStatus, OpenSessionPayload } from '@/types/caisse';
-import OpenSessionModal  from '../../sessions/Opensessionmodal';
-import CloseSessionModal from '../../sessions/Closesessionmodal';
+import OpenSessionModal  from '../../sessions/modals/Opensessionmodal';
+import CloseSessionModal from '../../sessions/modals/Closesessionmodal';
    // Remplace le quickModal générique actuel par tes vrais composants
 
 import DepositForm    from '@/app/components/transactions/deposits/DepositForm';
 import WithdrawalForm from '@/app/components/transactions/withdrawals/WithdrawalForm';
 import TransferForm   from '@/app/components/transactions/transfers/TransferForm';
+import { Modal } from '../../ui/Modal';
 
 
 function formatHTG(v: number) {
@@ -40,34 +41,34 @@ function getGreeting() {
 }
 
 // ─── Modal générique ─────────────────────────────────────────────
+// utilise le composant modal
+// function Modal({ title, onClose, children, size = 'md' }: {
+//   title: React.ReactNode; onClose: () => void;
+//   children: React.ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';  // ← ajoute 'xl'
+// }) {
+//   const w = {
+//     sm: 'max-w-sm',
+//     md: 'max-w-md',
+//     lg: 'max-w-lg',
+//     xl: 'max-w-3xl',  // ← ajoute cette ligne
+//   }[size];
 
-function Modal({ title, onClose, children, size = 'md' }: {
-  title: React.ReactNode; onClose: () => void;
-  children: React.ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';  // ← ajoute 'xl'
-}) {
-  const w = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-3xl',  // ← ajoute cette ligne
-  }[size];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${w} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-          {title}
-          <button onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-            <XCircle size={18} />
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-      </div>
-    </div>
-  );
-}
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+//       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+//       <div className={`relative w-full ${w} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}>
+//         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+//           {title}
+//           <button onClick={onClose}
+//             className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+//             <XCircle size={18} />
+//           </button>
+//         </div>
+//         <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
+//       </div>
+//     </div>
+//   );
+// }
 
 // ─── Petits composants ────────────────────────────────────────────
 
@@ -124,8 +125,8 @@ function TxRow({ tx }: { tx: CaisseTransaction }) {
         <p className="text-xs text-gray-400 truncate">{tx.note}</p>
       </div>
       <div className="text-right shrink-0">
-        <p className={`text-sm font-bold ${cfg.color}`}>{cfg.sign} {formatHTG(tx.amount)}</p>
-        <p className="text-xs text-gray-400">{tx.time}</p>
+        <p className={`text-sm font-bold ${cfg.color}`}>{cfg.sign} {formatHTG(tx.montant)}</p>
+        <p className="text-xs text-gray-400">{tx.timestamp}</p>
       </div>
     </div>
   );
@@ -333,7 +334,7 @@ export default function DashboardCaissier() {
         <KPICard icon={Banknote}   label="Montant en caisse"    value={formatHTG(montantCaisse)} sub="Solde actuel"
           color="bg-linear-to-br from-[#2E7D32] to-[#1B5E20]" border="border-[#DDEAD5]" />
         <KPICard icon={TrendingUp} label="Transactions du jour" value={transactions.length.toString()}
-          sub={`Total : ${formatHTG(transactions.reduce((s,t) => s + t.amount, 0))}`}
+          sub={`Total : ${formatHTG(transactions.reduce((s,t) => s + t.montant, 0))}`}
           color="bg-linear-to-br from-[#355C7D] to-[#2A4A5E]" border="border-blue-100" />
         <KPICard icon={Clock}      label="Dernière remise"      value="10h45" sub="Il y a 2h15"
           color="bg-linear-to-br from-[#D4AF37] to-[#C9B27C]" border="border-yellow-100" />
@@ -472,7 +473,7 @@ export default function DashboardCaissier() {
         <div className="grid grid-cols-3 divide-x divide-gray-100">
           {[
             { label: 'Transactions',   value: transactions.length.toString(),                            sub: "aujourd'hui" },
-            { label: 'Volume total',   value: formatHTG(transactions.reduce((s,t) => s + t.amount, 0)), sub: 'traité'      },
+            { label: 'Volume total',   value: formatHTG(transactions.reduce((s,t) => s + t.montant, 0)), sub: 'traité'      },
             { label: 'Taux de succès', value: '100%',                                                    sub: 'aucun écart' },
           ].map(stat => (
             <div key={stat.label} className="px-5 py-4 text-center">
@@ -487,7 +488,7 @@ export default function DashboardCaissier() {
       {/* ── Modals actions rapides ── */}
           
         {quickModal === 'depot' && (
-          <Modal size="xl" onClose={() => setQuickModal(null)}
+          <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
             title={<h3 className="text-base font-bold text-gray-900">Faire un dépôt</h3>}>
             <DepositForm
               onSubmit={async (_data) => {
@@ -501,7 +502,7 @@ export default function DashboardCaissier() {
         )}
 
           {quickModal === 'retrait' && (
-        <Modal size="xl" onClose={() => setQuickModal(null)}
+        <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
           title={<h3 className="text-base font-bold text-gray-900">Faire un retrait</h3>}>
           <WithdrawalForm
             onSubmit={async (_data) => {
@@ -515,18 +516,21 @@ export default function DashboardCaissier() {
       )}
 
       {quickModal === 'transfert' && (
-        <Modal size="xl" onClose={() => setQuickModal(null)}
+        <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
           title={<h3 className="text-base font-bold text-gray-900">Faire un transfert</h3>}>
           <TransferForm onCancel={() => setQuickModal(null)} />
         </Modal>
       )}
       {/* ── Modal ouverture session ── */}
       {showOpenModal && (
-        <Modal size="xl" onClose={() => setShowOpenModal(false)}
+        <Modal 
+          isOpen 
+          size="3xl" 
+          onClose={() => setShowOpenModal(false)}
           title={
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                <LogIn className="text-[#2E7D32]" size={15} />
+                <LogIn className="w-5 h-5 text-[#2E7D32]" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-gray-900">Ouvrir une session caisse</h3>
@@ -534,16 +538,18 @@ export default function DashboardCaissier() {
               </div>
             </div>
           }>
-          <OpenSessionModal
-            onClose={() => setShowOpenModal(false)}
-            onConfirm={handleOpenSession}
-          />
+            <div className="p-6 max-h-[90vh] overflow-y-auto">
+              <OpenSessionModal
+                onClose={() => setShowOpenModal(false)}
+                onConfirm={handleOpenSession}
+              />
+            </div>
         </Modal>
       )}
 
       {/* ── Modal fermeture session ── */}
       {showCloseModal && activeSession && (
-        <Modal size="lg" onClose={() => setShowCloseModal(false)}
+        <Modal isOpen size="lg" onClose={() => setShowCloseModal(false)}
           title={
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
@@ -557,11 +563,13 @@ export default function DashboardCaissier() {
               </div>
             </div>
           }>
-          <CloseSessionModal
-            session={activeSession}
-            onClose={() => setShowCloseModal(false)}
-            onConfirm={handleCloseSession}
-          />
+          <div className="p-6 max-h-[80vh] overflow-y-auto">
+            <CloseSessionModal
+              session={activeSession}
+              onClose={() => setShowCloseModal(false)}
+              onConfirm={handleCloseSession}
+            />
+          </div>
         </Modal>
       )}
 

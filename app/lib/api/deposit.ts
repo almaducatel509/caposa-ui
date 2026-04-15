@@ -21,6 +21,39 @@ export async function createDeposit(payload: any, idemKey?: string) {
   return data;
 }
 
+export async function getDeposits() {
+  return AxiosInstance.get("/deposits/");
+}
+
+export async function getDeposit(id: any) {
+  return AxiosInstance.get(`/deposits/${id}/`);
+}
+
+export async function updateDeposit(id: any, payload: any) {
+  return AxiosInstance.patch(`/deposits/${id}/`, payload);
+}
+
+export async function deleteDeposit(id: any) {
+  return AxiosInstance.delete(`/deposits/${id}/`);
+}
+// Une fonction API propre et centralisée
+
+// Un audit récupérable depuis n’importe quel composant
+
+// Une intégration cohérente avec ton AxiosInstance
+
+// Une base solide pour afficher l’historique dans ton UI (timeline, tableau, etc.)
+export async function getDepositAudit(id: any) {
+  try {
+    const response = await AxiosInstance.get(`/deposits/${id}/audit/`);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors du chargement de l'audit du dépôt :", error);
+    throw error;
+  }
+}
+
+
 /**
  * caisse.ts  —  API layer caisse
  * ─────────────────────────────────────────────────────────────────
@@ -40,6 +73,7 @@ const API_AVAILABLE = !!API_BASE;
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -54,13 +88,51 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ─── Mocks (données de démo quand l'API est absente) ─────────────
 
+// ✅ Mock corrigé
 const MOCK_TRANSACTIONS: CaisseTransaction[] = [
-  { id: 't1', type: 'deposit',    amount: 15000, note: 'Dépôt ouverture',    time: '08:00', session: 'local_demo' },
-  { id: 't2', type: 'withdrawal', amount:  2500, note: 'Retrait caissier',   time: '09:30', session: 'local_demo' },
-  { id: 't3', type: 'transfer',   amount:  8350, note: 'Virement C-01→C-02', time: '11:15', session: 'local_demo' },
-  { id: 't4', type: 'deposit',    amount: 30000, note: 'Remise superviseur', time: '14:00', session: 'local_demo' },
-  { id: 't5', type: 'withdrawal', amount:  5000, note: 'Fond de caisse',     time: '15:00', session: 'local_demo' },
+  {
+    id: 't1', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
+    cash_register_id: 'C-01', type: 'depot', montant: 15000,
+    solde_apres: 65000, client: 'Hudson Joseph', reference: 'DEP-001',
+    statut: 'normal', effectue_par: 'jean.dupont',
+    ip_address: '192.168.1.10', device_id: 'Chrome/124',
+    timestamp: new Date(Date.now() - 6 * 3600000).toISOString(),
+  },
+  {
+    id: 't2', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
+    cash_register_id: 'C-01', type: 'retrait', montant: 2500,
+    solde_apres: 62500, client: 'Marie Dupont', reference: 'RET-002',
+    statut: 'normal', effectue_par: 'jean.dupont',
+    ip_address: '192.168.1.10', device_id: 'Chrome/124',
+    timestamp: new Date(Date.now() - 5 * 3600000).toISOString(),
+  },
+  {
+    id: 't3', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
+    cash_register_id: 'C-01', type: 'transfert_sortant', montant: 8350,
+    solde_apres: 54150, client: 'Agence Tozin', reference: 'TRF-003',
+    statut: 'normal', effectue_par: 'jean.dupont',
+    ip_address: '192.168.1.10', device_id: 'Chrome/124',
+    timestamp: new Date(Date.now() - 4 * 3600000).toISOString(),
+  },
+  {
+    id: 't4', session_id: 'SES-local-demo', cashier_id: 'marie.joseph',
+    cash_register_id: 'C-01', type: 'depot', montant: 30000,
+    solde_apres: 84150, client: 'Réginald Beaumont', reference: 'DEP-004',
+    statut: 'normal', effectue_par: 'marie.joseph',
+    ip_address: '192.168.1.10', device_id: 'Chrome/124',
+    timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
+  },
+  {
+    id: 't5', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
+    cash_register_id: 'C-01', type: 'retrait', montant: 5000,
+    solde_apres: 79150, client: 'Roseline Pierre', reference: 'RET-005',
+    statut: 'annulee', motif_annulation: 'Erreur de saisie — montant incorrect.',
+    effectue_par: 'jean.dupont',
+    ip_address: '192.168.1.10', device_id: 'Chrome/124',
+    timestamp: new Date(Date.now() - 1 * 3600000).toISOString(),
+  },
 ];
+
 
 const MOCK_ALERTS: CaisseAlert[] = [
   { id: 'a1', severity: 'warning', message: 'Remise de 14h non complétée', time: '14:02' },
@@ -97,7 +169,7 @@ export async function fetchDashboard(): Promise<{
   ]);
 
   const montant_caisse = transactions.reduce(
-    (sum, tx) => tx.type === 'deposit' ? sum + tx.amount : sum - tx.amount,
+    (sum, tx) => tx.type === 'depot' ? sum + tx.montant : sum - tx.montant,
     0
   );
 
@@ -128,7 +200,7 @@ export async function fetchTransactionsBySession(sessionId: string): Promise<Cai
     }
   }
   // Filtre les mocks par session pour simuler le comportement
-  return MOCK_TRANSACTIONS.filter(tx => tx.session === sessionId);
+  return MOCK_TRANSACTIONS.filter(tx => tx.session_id === sessionId);
 }
 
 // ─── fetchAlerts ──────────────────────────────────────────────────
