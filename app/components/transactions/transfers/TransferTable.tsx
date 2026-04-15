@@ -2,42 +2,38 @@
 
 import React, { useState } from 'react';
 import {
-  Banknote, FileCheck, ArrowLeftRight, MoreHorizontal,
-  CheckCircle2, XCircle, Pencil,
-  Download,
+  ArrowLeftRight, Building2, Landmark, MoreHorizontal,
+  CheckCircle2, XCircle, AlertCircle, Download, Pencil,
 } from 'lucide-react';
 import { STATUS_CFG } from '@/config/statusConfig';
-import DepositExportModal from './DepositExportModal';
+import TransferExportModal from './TransferExportModal';
 
 // ─── Types ────────────────────────────────────────────────────────
 
-export interface DepositData {
-  id:                 number;
-  idCompte:           string;
-  codeAutorisation:   string;
-  montantTransaction: number;
-  depositSubtype:     'cash' | 'check' | 'transfer' | 'other';
-  source:             string;
-  description?:       string;
-  holdPeriod:         number;
-  status:             'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
-  created_at:         string;
-  member_name:        string;
-  processed_by:       string;
-  validated_by:       string;
-  caisse_numero:      string;
-  caisse_id:          string;
-  session_id:         string;
-  session_statut:     'ouverte' | 'fermée';
+export interface TransferData {
+  id:                number;
+  compteSource:      string;
+  compteDestination: string;
+  montant:           number;
+  reference:         string;
+  type:              'internal' | 'supplier' | 'loan_payment';
+  description?:      string;
+  memberName:        string;
+  status:            'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
+  created_at:        string;
+  processed_by:      string;
+  validated_by:      string;
+  caisse_numero:     string;
+  caisse_id:         string;
+  session_id:        string;
 }
 
-interface DepositTableProps {
-  deposits:  DepositData[];
+interface TransferTableProps {
+  transfers: TransferData[];
   loading:   boolean;
-  onView:    (dep: DepositData) => void;
-  onEdit:    (dep: DepositData) => void;
-  onExport:  (ids: number[]) => Promise<void>;  
-
+  onView:    (t: TransferData) => void;
+  onEdit:    (t: TransferData) => void;
+  onExport:  (ids: number[]) => Promise<void>;
 }
 
 // ─── Constantes ───────────────────────────────────────────────────
@@ -49,23 +45,24 @@ const C = {
   gold:      '#D4AF37',
 };
 
-const SUBTYPE_CFG: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
-  cash:     { icon: Banknote,       label: 'Espèces',  color: C.green, bg: C.greenPale },
-  check:    { icon: FileCheck,      label: 'Chèque',   color: C.blue,  bg: '#EBF2F8'   },
-  transfer: { icon: ArrowLeftRight, label: 'Virement', color: C.gold,  bg: '#FBF6E7'   },
-  other:    { icon: MoreHorizontal, label: 'Autre',    color: '#6E6E6E', bg: '#F3F3F3' },
+const TYPE_CFG: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
+  internal:     { icon: ArrowLeftRight, label: 'Entre comptes', color: C.green,   bg: C.greenPale },
+  supplier:     { icon: Building2,      label: 'Fournisseur',   color: C.blue,    bg: '#EBF2F8'   },
+  loan_payment: { icon: Landmark,       label: 'Remb. prêt',    color: C.gold,    bg: '#FBF6E7'   },
+  other:        { icon: MoreHorizontal, label: 'Autre',         color: '#6E6E6E', bg: '#F3F3F3'   },
 };
 
-const COLS = '40px 1.4fr 1.2fr 1fr 1fr 1.2fr 1fr 110px';
+const COLS = '40px 1.4fr 1.2fr 1.2fr 1fr 1.2fr 1fr 90px';
+
+// ─── Helpers ─────────────────────────────────────────────────────
 
 function formatHTG(n: number) {
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
 }
 
 function formatDate(iso: string) {
-  const d      = new Date(iso);
-  const now    = new Date();
-  const diffMs  = now.getTime() - d.getTime();
+  const d       = new Date(iso);
+  const diffMs  = Date.now() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);
   const diffH   = Math.floor(diffMs / 3600000);
   const diffD   = Math.floor(diffMs / 86400000);
@@ -74,8 +71,6 @@ function formatDate(iso: string) {
   if (diffD   <  7) return `Il y a ${diffD} j`;
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
-
-// ─── Icône Voir ───────────────────────────────────────────────────
 
 function EyeIcon() {
   return (
@@ -89,30 +84,30 @@ function EyeIcon() {
 
 // ─── Main ────────────────────────────────────────────────────────
 
-export default function DepositTable({ deposits, loading, onView, onEdit, onExport }: DepositTableProps) {
-  const [search,   setSearch]   = useState('');
-  const [statusF,  setStatusF]  = useState('all');
-  const [subtypeF, setSubtypeF] = useState('all');
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+export default function TransferTable({ transfers, loading, onView, onEdit, onExport }: TransferTableProps) {
+  const [search,     setSearch]     = useState('');
+  const [statusF,    setStatusF]    = useState('all');
+  const [typeF,      setTypeF]      = useState('all');
+  const [selected,   setSelected]   = useState<Set<number>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
 
-  const filtered = deposits.filter(d => {
+  const filtered = transfers.filter(t => {
     const q = search.toLowerCase();
     const matchSearch = !search ||
-      d.member_name.toLowerCase().includes(q) ||
-      d.source.toLowerCase().includes(q)       ||
-      d.idCompte.toLowerCase().includes(q);
+      t.memberName.toLowerCase().includes(q) ||
+      t.reference.toLowerCase().includes(q)   ||
+      t.compteSource.toLowerCase().includes(q);
     return matchSearch &&
-      (statusF  === 'all' || d.status        === statusF)  &&
-      (subtypeF === 'all' || d.depositSubtype === subtypeF);
+      (statusF === 'all' || t.status === statusF) &&
+      (typeF   === 'all' || t.type   === typeF);
   });
 
-  const pendingCount = deposits.filter(d => d.status === 'en_attente').length;
+  const pendingCount = transfers.filter(t => t.status === 'en_attente').length;
   const allSel  = selected.size === filtered.length && filtered.length > 0;
   const someSel = selected.size > 0 && !allSel;
 
   const toggleAll = () =>
-    allSel ? setSelected(new Set()) : setSelected(new Set(filtered.map(d => d.id)));
+    allSel ? setSelected(new Set()) : setSelected(new Set(filtered.map(t => t.id)));
 
   const toggleRow = (id: number) => {
     const s = new Set(selected);
@@ -126,7 +121,7 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
       {/* ── En-tête + filtres ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-4 border-b border-gray-100 gap-3">
         <div>
-          <p className="text-sm font-semibold text-gray-800">Liste des dépôts</p>
+          <p className="text-sm font-semibold text-gray-800">Liste des virements</p>
           <p className="text-xs text-gray-400">
             {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
           </p>
@@ -134,7 +129,7 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="text"
-            placeholder="Membre, compte…"
+            placeholder="Membre, référence…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-3 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] w-44"
@@ -152,15 +147,14 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
             <option value="annule">Annulé</option>
           </select>
           <select
-            value={subtypeF}
-            onChange={e => setSubtypeF(e.target.value)}
+            value={typeF}
+            onChange={e => setTypeF(e.target.value)}
             className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600"
           >
             <option value="all">Tous types</option>
-            <option value="cash">Espèces</option>
-            <option value="check">Chèque</option>
-            <option value="transfer">Virement</option>
-            <option value="other">Autre</option>
+            <option value="internal">Entre comptes</option>
+            <option value="supplier">Fournisseur</option>
+            <option value="loan_payment">Remb. prêt</option>
           </select>
         </div>
       </div>
@@ -204,7 +198,7 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
             className="w-3.5 h-3.5 rounded accent-[#2E7D32] cursor-pointer"
           />
         </div>
-        {['Membre', 'Compte', 'Type', 'Source', 'Montant', 'Statut', 'Actions'].map(col => (
+        {['Membre', 'Comptes', 'Référence', 'Type', 'Montant', 'Statut', 'Actions'].map(col => (
           <div key={col} className="text-xs font-semibold uppercase tracking-widest text-gray-500">
             {col}
           </div>
@@ -214,7 +208,6 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
       {/* ── Corps ── */}
       <div className="divide-y divide-gray-50">
 
-        {/* Squelette chargement */}
         {loading && Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="grid items-center px-5 py-3.5" style={{ gridTemplateColumns: COLS }}>
             {Array.from({ length: 8 }).map((_, j) => (
@@ -223,27 +216,26 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
           </div>
         ))}
 
-        {/* Vide */}
         {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center py-14 gap-3">
             <div className="w-12 h-12 rounded-2xl bg-[#F9F9F6] border border-gray-100 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-gray-300" />
+              <AlertCircle className="w-5 h-5 text-gray-300" />
             </div>
-            <p className="text-sm font-medium text-gray-500">Aucun dépôt trouvé</p>
+            <p className="text-sm font-medium text-gray-500">Aucun virement trouvé</p>
           </div>
         )}
 
-        {/* Lignes */}
-        {!loading && filtered.map(dep => {
-          const stCfg   = STATUS_CFG[dep.status]          ?? STATUS_CFG['en_attente'];
-          const subCfg  = SUBTYPE_CFG[dep.depositSubtype]  ?? SUBTYPE_CFG['other'];
-          const SubIcon = subCfg.icon;
-          const isSel   = selected.has(dep.id);
-          const canEdit = dep.session_statut === 'ouverte';
+        {!loading && filtered.map(t => {
+          const stCfg  = STATUS_CFG[t.status] ?? STATUS_CFG['en_attente'];
+          const tpCfg  = TYPE_CFG[t.type]     ?? TYPE_CFG['other'];
+          const TpIcon = tpCfg.icon;
+          const isSel  = selected.has(t.id);
+          const TERMINAL = ['decaisse', 'echoue', 'annule'];
+          const canEdit  = !TERMINAL.includes(t.status);
 
           return (
             <div
-              key={dep.id}
+              key={t.id}
               className={`grid items-center px-5 py-3 transition-colors border-l-2 ${
                 isSel
                   ? 'bg-[#DDEAD5]/50 border-[#2E7D32]'
@@ -256,7 +248,7 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
                 <input
                   type="checkbox"
                   checked={isSel}
-                  onChange={() => toggleRow(dep.id)}
+                  onChange={() => toggleRow(t.id)}
                   className="w-3.5 h-3.5 rounded accent-[#2E7D32] cursor-pointer"
                 />
               </div>
@@ -264,30 +256,34 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
               {/* Membre */}
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-[#2E7D32]">{dep.member_name[0]}</span>
+                  <span className="text-xs font-bold text-[#2E7D32]">{t.memberName[0]}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{dep.member_name}</p>
-                  <p className="text-xs text-gray-400">{formatDate(dep.created_at)}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{t.memberName}</p>
+                  <p className="text-xs text-gray-400">{formatDate(t.created_at)}</p>
                 </div>
               </div>
 
-              {/* Compte */}
-              <p className="text-xs font-mono text-gray-600 truncate">{dep.idCompte}</p>
+              {/* Comptes */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-mono text-gray-600 truncate">{t.compteSource}</span>
+                <ArrowLeftRight className="w-3 h-3 text-gray-300 shrink-0" />
+                <span className="text-xs font-mono text-gray-600 truncate">{t.compteDestination}</span>
+              </div>
+
+              {/* Référence */}
+              <p className="text-xs font-mono text-gray-500">{t.reference}</p>
 
               {/* Type */}
               <span
                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold w-fit"
-                style={{ backgroundColor: subCfg.bg, color: subCfg.color }}
+                style={{ backgroundColor: tpCfg.bg, color: tpCfg.color }}
               >
-                <SubIcon className="w-3 h-3 shrink-0" />{subCfg.label}
+                <TpIcon className="w-3 h-3 shrink-0" />{tpCfg.label}
               </span>
 
-              {/* Source */}
-              <p className="text-xs text-gray-500 truncate">{dep.source}</p>
-
               {/* Montant */}
-              <p className="text-sm font-bold text-[#2E7D32]">+{formatHTG(dep.montantTransaction)}</p>
+              <p className="text-sm font-bold text-[#355C7D]">{formatHTG(t.montant)}</p>
 
               {/* Statut */}
               <span
@@ -300,40 +296,29 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
 
               {/* Actions */}
               <div className="flex items-center gap-1">
-
-                {/* Voir */}
                 <button
                   title="Voir les détails"
-                  onClick={() => onView(dep)}
+                  onClick={() => onView(t)}
                   className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-[#355C7D] transition-colors"
                 >
                   <EyeIcon />
                 </button>
-
-                {/* Edit */}
                 {canEdit ? (
                   <button
-                    title="Modifier ce dépôt"
-                    onClick={() => onEdit(dep)}
+                    title="Modifier ce virement"
+                    onClick={() => onEdit(t)}
                     className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                 ) : (
                   <button
-                    title="Session fermée — modification non autorisée"
+                    title="Statut terminal — modification impossible"
                     disabled
                     className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
-                )}
-
-                {/* Badge hold */}
-                {dep.holdPeriod > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700">
-                    {dep.holdPeriod}j
-                  </span>
                 )}
               </div>
             </div>
@@ -346,7 +331,7 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
         <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
           <p className="text-xs text-gray-400">
             <span className="font-semibold text-gray-600">{filtered.length}</span>{' '}
-            dépôt{filtered.length !== 1 ? 's' : ''}
+            virement{filtered.length !== 1 ? 's' : ''}
           </p>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
@@ -354,9 +339,10 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
           </span>
         </div>
       )}
-       <DepositExportModal
+
+      <TransferExportModal
         open={exportOpen}
-        deposits={filtered.filter(d => selected.has(d.id))}
+        transfers={filtered.filter(t => selected.has(t.id))}
         onClose={() => setExportOpen(false)}
         onConfirm={async (ids) => {
           await onExport(ids);
