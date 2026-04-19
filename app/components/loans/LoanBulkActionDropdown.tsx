@@ -1,110 +1,90 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
-  ChevronDown, CheckCircle2, XCircle, X, Banknote,
-  Lock, AlertTriangle, MinusCircle, UserPlus,
-  MessageSquare, Mail, FileText, FileDown,
+  ChevronDown, Download, Bell, CheckCircle2, XCircle,
+  Banknote, Archive, Trash2,
 } from 'lucide-react';
 
 export type LoanBulkAction =
-  | 'approve' | 'reject' | 'cancel' | 'disburse' | 'close'
-  | 'mark_late' | 'remove_late' | 'apply_penalties'
-  | 'assign_agent' | 'send_sms' | 'send_email'
-  | 'export_csv' | 'export_pdf';
+  | 'export'
+  | 'send_reminder'
+  | 'approve'
+  | 'reject'
+  | 'disburse'
+  | 'mark_payment'
+  | 'archive'
+  | 'delete';
 
-interface LoanBulkActionDropdownProps {
+interface Props {
   selectedCount: number;
   isOpen:        boolean;
   onToggle:      () => void;
-  onAction:      (action: LoanBulkAction) => void;
+  onAction:      (a: LoanBulkAction) => void;
+  /** Contexte d'onglet pour filtrer les actions pertinentes */
+  context?: 'pending' | 'approved' | 'active' | 'archive' | 'all';
 }
 
-const ACTIONS: {
-  id:      LoanBulkAction;
-  label:   string;
-  icon:    React.ReactNode;
-  danger?: boolean;
-  section: 'decision' | 'suivi' | 'communication' | 'export';
-}[] = [
-  { id: 'approve',          label: 'Approuver',             icon: <CheckCircle2  className="w-3.5 h-3.5" />, section: 'decision'      },
-  { id: 'reject',           label: 'Rejeter',               icon: <XCircle       className="w-3.5 h-3.5" />, section: 'decision', danger: true },
-  { id: 'cancel',           label: 'Annuler',               icon: <X             className="w-3.5 h-3.5" />, section: 'decision', danger: true },
-  { id: 'disburse',         label: 'Décaisser',             icon: <Banknote      className="w-3.5 h-3.5" />, section: 'decision'      },
-  { id: 'close',            label: 'Clôturer (Remboursé)',  icon: <Lock          className="w-3.5 h-3.5" />, section: 'decision'      },
-  { id: 'mark_late',        label: 'Marquer en retard',     icon: <AlertTriangle className="w-3.5 h-3.5" />, section: 'suivi', danger: true },
-  { id: 'remove_late',      label: 'Retirer retard',        icon: <MinusCircle   className="w-3.5 h-3.5" />, section: 'suivi'         },
-  { id: 'apply_penalties',  label: 'Appliquer pénalités',   icon: <AlertTriangle className="w-3.5 h-3.5" />, section: 'suivi', danger: true },
-  { id: 'assign_agent',     label: 'Assigner à un agent',   icon: <UserPlus      className="w-3.5 h-3.5" />, section: 'communication' },
-  { id: 'send_sms',         label: 'Envoyer SMS',           icon: <MessageSquare className="w-3.5 h-3.5" />, section: 'communication' },
-  { id: 'send_email',       label: 'Envoyer Email',         icon: <Mail          className="w-3.5 h-3.5" />, section: 'communication' },
-  { id: 'export_csv',       label: 'Exporter CSV',          icon: <FileText      className="w-3.5 h-3.5" />, section: 'export'        },
-  { id: 'export_pdf',       label: 'Exporter PDF',          icon: <FileDown      className="w-3.5 h-3.5" />, section: 'export'        },
+const ALL_ACTIONS: { id: LoanBulkAction; label: string; icon: React.ElementType; danger?: boolean; color?: string }[] = [
+  { id: 'export',        label: 'Exporter la sélection',     icon: Download,    color: 'text-gray-600' },
+  { id: 'send_reminder', label: 'Envoyer un rappel',         icon: Bell,        color: 'text-[#355C7D]' },
+  { id: 'approve',       label: 'Approuver',                 icon: CheckCircle2, color: 'text-[#2E7D32]' },
+  { id: 'disburse',      label: 'Décaisser',                 icon: Banknote,     color: 'text-[#2E7D32]' },
+  { id: 'mark_payment',  label: 'Marquer un paiement',       icon: CheckCircle2, color: 'text-[#2E7D32]' },
+  { id: 'reject',        label: 'Rejeter',                   icon: XCircle,      color: 'text-red-600' },
+  { id: 'archive',       label: 'Archiver',                  icon: Archive,      color: 'text-gray-500' },
+  { id: 'delete',        label: 'Supprimer',                 icon: Trash2,       danger: true },
 ];
 
-const SECTIONS: { id: 'decision' | 'suivi' | 'communication' | 'export'; label: string }[] = [
-  { id: 'decision',      label: 'Décision'      },
-  { id: 'suivi',         label: 'Suivi'         },
-  { id: 'communication', label: 'Communication' },
-  { id: 'export',        label: 'Export'        },
-];
+const CONTEXT_MAP: Record<NonNullable<Props['context']>, LoanBulkAction[]> = {
+  pending:  ['export', 'approve', 'reject', 'delete'],
+  approved: ['export', 'disburse', 'reject'],
+  active:   ['export', 'send_reminder', 'mark_payment', 'archive'],
+  archive:  ['export'],
+  all:      ['export', 'send_reminder', 'approve', 'disburse', 'mark_payment', 'reject', 'archive', 'delete'],
+};
 
-const LoanBulkActionDropdown: React.FC<LoanBulkActionDropdownProps> = ({
-  selectedCount, isOpen, onToggle, onAction,
+const LoanBulkActionDropdown: React.FC<Props> = ({
+  selectedCount, isOpen, onToggle, onAction, context = 'all',
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
+  // Ferme au clic extérieur
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        if (isOpen) onToggle();
-      }
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onToggle();
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [isOpen, onToggle]);
 
+  const visible = ALL_ACTIONS.filter(a => CONTEXT_MAP[context].includes(a.id));
+
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white rounded-xl hover:shadow-md transition-all"
-      >
-        Actions groupées
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+    <div ref={ref} className="relative">
+      <button onClick={onToggle}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-[#2E7D32] text-white hover:bg-[#1B5E20] transition-all shadow-sm">
+        Actions ({selectedCount})
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-gray-100 rounded-2xl shadow-lg z-50 overflow-hidden py-1 max-h-[420px] overflow-y-auto">
-          {SECTIONS.map((section, si) => {
-            const items = ACTIONS.filter(a => a.section === section.id);
+        <div className="absolute right-0 mt-1.5 w-56 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+          {visible.map((a, i) => {
+            const Icon = a.icon;
+            const isLast = i === visible.length - 1;
+            const showDivider = a.danger && !isLast ? false : a.danger;
             return (
-              <React.Fragment key={section.id}>
-                {si > 0 && <div className="h-px bg-gray-100 my-1" />}
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                  {section.label}
-                </p>
-                {items.map(action => (
-                  <button
-                    key={action.id}
-                    onClick={() => { onAction(action.id); onToggle(); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                      action.danger
-                        ? 'text-red-600 hover:bg-red-50'
-                        : 'text-gray-700 hover:bg-[#DDEAD5]/60'
-                    }`}
-                  >
-                    <span className={action.danger ? 'text-red-400' : 'text-gray-400'}>
-                      {action.icon}
-                    </span>
-                    {action.label}
-                    {(action.id === 'export_csv' || action.id === 'export_pdf') && (
-                      <span className="ml-auto text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md font-medium">
-                        {selectedCount}
-                      </span>
-                    )}
-                  </button>
-                ))}
+              <React.Fragment key={a.id}>
+                {showDivider && <div className="border-t border-gray-100" />}
+                <button onClick={() => { onAction(a.id); onToggle(); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-left transition-colors ${
+                    a.danger ? 'text-red-600 hover:bg-red-50' : `${a.color ?? 'text-gray-600'} hover:bg-[#F9F9F6]`
+                  }`}>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  {a.label}
+                </button>
               </React.Fragment>
             );
           })}

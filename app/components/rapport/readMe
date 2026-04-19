@@ -1,0 +1,139 @@
+# CAPOSA — Système Rapports (v2)
+
+## 🎯 Architecture finale
+
+```
+📋 /dashboard/rapports               ← UNIQUE page d'entrée
+│
+├── Liste historique + filtres
+├── [+ Générer une analyse]  →  🪟 GenererAnalyseModal (plein écran)
+│                                 ├── [💾 Enregistrer comme rapport]
+│                                 ├── [🖨️ Imprimer]
+│                                 └── [✖ Fermer] → perdu
+│
+└── [👁 Voir]  →  📄 /dashboard/rapports/[id]  (figé, lecture seule)
+                  └── [🖨️ Export PDF]
+```
+
+## 📁 Fichiers livrés
+
+| Fichier | Rôle |
+|---|---|
+| `types/rapport.ts` | Types partagés (Rapport, Snapshot, etc.) |
+| `hooks/useEnregistrerRapport.ts` | Sauvegarde + génération référence |
+| `hooks/useImprimerRapport.ts` | Impression propre via fenêtre isolée |
+| `components/rapport/GenererAnalyseModal.tsx` | Modal plein écran |
+| `app/dashboard/rapports/[id]/page.tsx` | Détail figé |
+
+## 🔌 Branchement dans ta page `/dashboard/rapports` existante
+
+Dans `RapportPage.tsx`, tu remplaces le handler du bouton "Générer un rapport" par :
+
+```tsx
+"use client";
+import { useState } from "react";
+import GenererAnalyseModal from "@/components/rapport/GenererAnalyseModal";
+import type { TypeRapport, PeriodeRapport } from "@/types/rapport";
+
+// 1. Premier modal (celui de ton image 1) — "Choisir type + période"
+//    → quand il se valide, on ouvre le deuxième modal plein écran
+
+export default function RapportPage() {
+  // Étape 1 : modal de configuration
+  const [configOuvert, setConfigOuvert] = useState(false);
+
+  // Étape 2 : modal plein écran avec l'analyse
+  const [analyseParams, setAnalyseParams] = useState<{
+    type: TypeRapport;
+    periodicite: PeriodeRapport;
+    periodeLibelle: string;
+  } | null>(null);
+
+  const utilisateur = { id: "u_001", nom: "Jean Dupont" }; // depuis ton auth
+
+  return (
+    <>
+      {/* Ta liste actuelle + bouton */}
+      <button onClick={() => setConfigOuvert(true)}>
+        + Générer un rapport
+      </button>
+
+      {/* ... ta liste de rapports ... */}
+
+      {/* Modal 1 : config (tu l'as déjà — voir ton image 1) */}
+      {/* Quand l'utilisateur valide, tu appelles :
+          setAnalyseParams({ type, periodicite, periodeLibelle });
+          setConfigOuvert(false);
+      */}
+
+      {/* Modal 2 : analyse plein écran */}
+      {analyseParams && (
+        <GenererAnalyseModal
+          open={true}
+          onClose={() => setAnalyseParams(null)}
+          onEnregistre={(id) => {
+            console.log("Nouveau rapport :", id);
+            // refetch de la liste ici
+          }}
+          type={analyseParams.type}
+          periodicite={analyseParams.periodicite}
+          periodeLibelle={analyseParams.periodeLibelle}
+          utilisateur={utilisateur}
+        />
+      )}
+    </>
+  );
+}
+```
+
+## 🔄 Flow complet
+
+1. Utilisateur sur `/dashboard/rapports` → clique **[+ Générer un rapport]**
+2. Modal config (ton image 1) → choisit type + période → **[Générer]**
+3. Modal plein écran s'ouvre → charge l'analyse → affiche les KPIs
+4. 3 choix :
+   - **[💾 Enregistrer]** → POST `/api/reports` → ajouté à la liste → modal se ferme
+   - **[🖨️ Imprimer]** → fenêtre d'impression isolée → rien n'est sauvé
+   - **[✖ Fermer]** → tout disparaît, aucune trace
+5. Pour revoir un rapport sauvé → **[👁 Voir]** → `/dashboard/rapports/[id]` (figé)
+
+## 🗄️ API Django à prévoir
+
+```python
+# urls.py
+path("api/reports", ReportListCreateView.as_view()),
+path("api/reports/<uuid:id>", ReportDetailView.as_view()),
+path("api/analysis", GenerateAnalysisView.as_view()),  # pour fetch live
+
+# models.py
+class Report(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    type = models.CharField(max_length=30)
+    nom = models.CharField(max_length=100, blank=True)
+    periode_libelle = models.CharField(max_length=50)
+    filtres = models.JSONField()
+    snapshot = models.JSONField()     # ← LE truc important
+    statut = models.CharField(max_length=20)
+    etat = models.CharField(max_length=20, default="actif")
+    genere_par = models.ForeignKey(User, on_delete=models.PROTECT)
+    genere_le = models.DateTimeField(auto_now_add=True)
+    reference = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        ordering = ["-genere_le"]
+```
+
+## ⚠️ Rappels importants
+
+- Le **snapshot** est figé au moment du save — jamais recalculé après
+- Les rapports enregistrés sont **immuables** (pas de PUT, seulement PATCH pour archiver)
+- L'impression utilise une **fenêtre isolée** — ça évite d'imprimer le dashboard autour
+
+## ✂️ Nettoyage suggéré
+
+Tu peux maintenant supprimer ou simplifier :
+- `/dashboard/analysis` (plus utilisée)
+- `/dashboard/analysis/kpis` (plus utilisée)
+- Items "Dashboard" et "KPIs" du menu latéral sous "Analyse"
+
+Ou tu gardes juste **"Rapports"** comme seule entrée dans le menu.
