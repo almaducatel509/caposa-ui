@@ -20,8 +20,8 @@ import type {
   StatutRapport,
 } from "@/types/rapport";
 import { TYPE_RAPPORT_META } from "@/types/rapport";
-import { useEnregistrerRapport } from "@/hooks/useEnregistrerRapport";
 import { useImprimerRapport } from "@/hooks/useImprimerRapport";
+import { useEnregistrerRapport } from "@/hooks/useEnregistrerRapport";
 
 // ============================================================
 // GenererAnalyseModal

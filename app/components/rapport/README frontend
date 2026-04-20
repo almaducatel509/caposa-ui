@@ -1,0 +1,193 @@
+# 📘 README — Module Rapports (côté Frontend)
+
+> Document de référence personnel — CAPOSA v1.0
+> Dernière mise à jour : avril 2026
+
+---
+
+## 🎯 Objectif du module
+
+Permettre aux superviseurs de **générer, consulter et archiver** des rapports réglementaires BRH à partir des données réelles de la caisse.
+
+Chaque rapport est une **photo figée** (snapshot) des KPIs à un instant donné — immuable, traçable, auditable.
+
+---
+
+## 🏗️ Architecture implémentée
+
+```
+📋 /dashboard/rapports              ← Page unique d'entrée
+│
+├── 🔍 Filtres (type, période, état, recherche)
+├── 📊 Stats (total, actifs, archivés, non conformes)
+├── 📋 Table historique
+│
+└── [+ Générer un rapport]
+         ↓
+     🪟 Modal 1 : Configuration
+        • Type de rapport
+        • Périodicité (mensuel / trimestriel / annuel)
+        • Période ciblée
+        [Annuler] [Générer]
+              ↓
+     🪟 Modal 2 : Analyse plein écran
+        • KPI principal
+        • Note globale
+        • Indicateurs détaillés
+        • Recommandations
+        [💾 Enregistrer]  [🖨️ Imprimer]  [✖ Fermer]
+              ↓
+         📄 /dashboard/rapports/[id]
+            ← Détail figé (lecture seule)
+            • Badge "Données figées au [date]"
+            • Métadonnées (référence, généré par, période)
+            • Snapshot complet
+            [🖨️ Export PDF]
+```
+
+---
+
+## 📂 Fichiers du module
+
+### Types
+```
+types/
+└── rapport.ts                    Contrat de données (Rapport, Snapshot, Statut, etc.)
+```
+
+### Hooks réutilisables
+```
+hooks/
+├── useEnregistrerRapport.ts      Sauvegarde + génération référence unique
+└── useImprimerRapport.ts         Impression isolée (fenêtre dédiée)
+```
+
+### Composants UI
+```
+app/components/rapport/
+└── GenererAnalyseModal.tsx       Modal plein écran avec les 2 boutons
+```
+
+### Pages
+```
+app/dashboard/rapports/
+├── page.tsx                      Liste historique + filtres + modal config
+└── [id]/
+    └── page.tsx                  Détail figé d'un rapport sauvegardé
+```
+
+### Archivé (ancienne vision)
+```
+app/components/rapport/_archive/
+├── RaportPage.tsx
+├── RapportLiquidite.tsx
+├── RapportSolvabilite.tsx
+├── RapportConformite.tsx
+├── RapportPretsSouffrance.tsx
+├── ReportDocument.tsx
+├── ReportRow.tsx
+└── (autres fichiers de l'ancienne approche multi-onglets)
+```
+
+> 💡 **Note** : ces fichiers ne sont pas supprimés, juste archivés. Si un besoin réapparaît, ils sont récupérables.
+
+---
+
+## 🔑 Concepts clés
+
+### 1. Le snapshot
+Quand l'utilisateur clique sur **"Enregistrer comme rapport"**, les valeurs actuelles des KPIs sont **gelées** dans le champ `snapshot` du rapport.
+Même si les données source changent par la suite, le rapport continue d'afficher les valeurs d'origine.
+
+### 2. L'immuabilité
+Une fois enregistré, un rapport ne peut **jamais** être modifié. Seules actions possibles :
+- Archiver / Restaurer (changement d'état uniquement)
+- Imprimer / Exporter PDF
+
+### 3. La référence unique
+Format : `RPT-YYYYMM-{TYPE}-{NNN}`
+Exemple : `RPT-202604-LIQUIDITE-742`
+
+### 4. Les 3 statuts
+| Statut | Déclencheurs |
+|---|---|
+| 🟢 **Conforme** | Tous les KPIs dans les seuils BRH |
+| 🟡 **Alerte** | Au moins un KPI en zone de vigilance |
+| 🔴 **Critique** | Au moins un KPI en dépassement grave |
+
+### 4 types de rapports
+- `liquidite` — Ratio de liquidité
+- `solvabilite` — Fonds propres
+- `conformite` — Score global BRH
+- `prets_souffrance` — Portefeuille à risque
+
+---
+
+## 🔌 État du branchement backend
+
+> ⚠️ **IMPORTANT** : Le frontend utilise actuellement **`localStorage`** comme stockage temporaire.
+> Les données sont **fictives** — générées aléatoirement.
+> Il faudra brancher l'API Django pour les vraies données.
+
+### Points de branchement à faire
+
+| Fichier | Ligne approximative | Action |
+|---|---|---|
+| `hooks/useEnregistrerRapport.ts` | ~55 | Remplacer `localStorage.setItem` par `POST /api/reports/` |
+| `app/dashboard/rapports/page.tsx` | `rechargerRapports()` | Remplacer `localStorage.getItem` par `GET /api/reports/` |
+| `app/dashboard/rapports/[id]/page.tsx` | `useEffect` chargement | Remplacer localStorage par `GET /api/reports/:id` |
+| `components/rapport/GenererAnalyseModal.tsx` | `fetchAnalyse()` | Remplacer les données mockées par `GET /api/analytics/overview` |
+
+### Variables d'environnement à prévoir
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
+
+---
+
+## 🚧 Décisions prises pendant le développement
+
+| Décision | Raison |
+|---|---|
+| Suppression de `/dashboard/analysis` | La logique a été absorbée par le modal "Générer" |
+| Pas de versioning des rapports | Complexité disproportionnée à la valeur |
+| Archivage réversible (pas de suppression) | Exigence audit BRH |
+| Snapshot en JSONField (pas relations) | Les données figées restent stables même si le schéma évolue |
+| localStorage en attendant l'API | Permet de tester tout le flow sans backend |
+
+---
+
+## ✅ Ce qui est fait
+
+- [x] Architecture unique `/dashboard/rapports`
+- [x] Modal de configuration (type + période)
+- [x] Modal plein écran avec KPIs + boutons
+- [x] Sauvegarde locale (localStorage temporaire)
+- [x] Page détail figée avec badge daté
+- [x] Filtres + recherche + stats
+- [x] Impression isolée (pas le dashboard autour)
+- [x] Types TypeScript stricts
+- [x] Archivage / restauration
+
+## 🔜 Ce qui reste à faire
+
+- [ ] Brancher l'API Django (voir README backend)
+- [ ] Authentification utilisateur (récupérer `generePar` depuis l'auth, pas en dur)
+- [ ] Export PDF réel (actuellement juste impression navigateur)
+- [ ] Tests unitaires des hooks
+- [ ] Gestion d'erreurs API (toast, retry)
+- [ ] Pagination si > 50 rapports
+- [ ] Supprimer le dossier `_archive/` après validation du nouveau système
+
+---
+
+## 📝 Notes personnelles
+
+- L'utilisateur est actuellement en dur dans le code : `{ id: "u_001", nom: "Jean Dupont" }` — à remplacer par l'utilisateur de la session
+- Le localStorage utilise la clé `caposa:rapports`
+- Si besoin de reset pendant les tests : `localStorage.removeItem("caposa:rapports")` dans la console navigateur
+
+---
+
+**Fin du README frontend.**

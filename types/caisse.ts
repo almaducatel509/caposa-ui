@@ -50,7 +50,7 @@ export interface CaisseSession {
 
   // ── Identité ──────────────────────────────────────────────────
   username:             string;        // FK → User.username (caissier)
-  caissier_nom:        string;        // nom lisible — lecture seule, retourné par l'API
+  caissier_nom: string | undefined;       // nom lisible — lecture seule, retourné par l'API
   numero_caisse:        string;        // ex : C-01
   branch:               string;        // UUID agence
   branch_name?:         string;        // nom lisible — retourné par l'API
@@ -111,17 +111,17 @@ export interface CaisseTransaction {
   cashier_id:       string;
   cash_register_id: string;
   type:             TransactionType;
-  montant:          number;        // ← était 'amount', aligné sur le mock
+  montant:          number;
   solde_apres:      number;
   client?:          string;
   reference?:       string;
+  note?:            string;        
   statut:           TransactionStatut;
   motif_annulation?: string;
   ip_address?:      string;
   device_id?:       string;
   effectue_par:     string;
   timestamp:        string;
-  // Retirer [x: string]: string — trop permissif, cause des bugs TypeScript
 }
 
 // ─── Alerte caisse ───────────────────────────────────────────────
@@ -136,6 +136,7 @@ export interface CaisseAlert {
 // ─── Payload ouverture ───────────────────────────────────────────
 
 export interface OpenSessionPayload {
+  caissier_nom: string | undefined;
   username:            string;     // FK User.username (caissier)
   numero_caisse:       string;
   branch:              string;     // UUID agence

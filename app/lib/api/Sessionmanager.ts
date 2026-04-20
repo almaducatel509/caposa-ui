@@ -41,6 +41,14 @@ interface DjangoOpenPayload {
 interface DjangoClosePayload {
   counted_amount: number;
 }
+// ─── Codes d'erreur métier (remontés par le backend) ──────────────
+export const SESSION_ERROR_CODES = {
+  ALREADY_OPEN:      'SESSION_ALREADY_OPEN',
+  CLOSED_HOLIDAY:    'SESSION_CLOSED_HOLIDAY',
+  CLOSED_DAY:        'SESSION_CLOSED_DAY',
+  CLOSED_HOURS:      'SESSION_CLOSED_HOURS',
+  NETWORK:           'SESSION_NETWORK_ERROR',
+} as const;
 
 function toApiOpenPayload(p: OpenSessionPayload): DjangoOpenPayload {
   return {
@@ -104,18 +112,23 @@ function isNetworkOrServerError(err: unknown): boolean {
 
 function buildMockSession(payload: OpenSessionPayload): CaisseSession {
   return {
-    id:                  localId(),
-    caissier_nom:        payload.caissier_nom,
-    numero_caisse:       payload.numero_caisse,
-    superviseur:         payload.superviseur,
-    montant_ouverture:   payload.montant_ouverture,
-    id_responsable_cash: payload.id_responsable_cash,
-    statut:              'ouverte',
-    ouverture_at:        nowISO(),
-    fermeture_at:        undefined,
+    id:                       localId(),
+    username:                 payload.username,
+    caissier_nom:             payload.caissier_nom,
+    numero_caisse:            payload.numero_caisse,
+    branch:                   payload.branch,
+    devise:                   payload.devise,
+    superviseur:              payload.superviseur,
+    id_responsable_cash:      payload.id_responsable_cash,
+    montant_ouverture:        payload.montant_ouverture,
+    statut:                   'ouverte',
+    ouverture_at:             nowISO(),
+    fermeture_at:             undefined,
+    tentatives_ouverture:     0,
+    remise_effectuee:         false,
+    reconciliation_effectuee: false,
   };
 }
-
 // ─── Types internes ───────────────────────────────────────────────
 
 interface CachedEntry {
@@ -252,9 +265,24 @@ class SessionManagerClass {
       this.set(data);
       return data;
     } catch (err) {
+      // 🆕 Cas spécifique : caisse fermée selon horaire/calendrier
+      if (isAxiosError(err) && err.response?.status === 403) {
+        const data = err.response.data as {
+          code?: string;
+          message?: string;
+          reason?: string;
+        };
+
+        // Remonter une erreur claire à l'UI avec le message du backend
+        throw new Error(
+          data.message ||
+          'Caisse fermée. Consultez les horaires ou le calendrier des jours fériés.'
+        );
+      }
+
       if (!isNetworkOrServerError(err)) throw err; // 4xx → remonter à l'UI
 
-      // Réseau/5xx → session locale temporaire
+      // Réseau/5xx → session locale temporaire (existant)
       console.warn('[SessionManager] open() → API hors ligne, session locale :', err);
       const session = buildMockSession(payload);
       (session as CaisseSession & { _local?: boolean })._local = true;

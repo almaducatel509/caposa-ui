@@ -87,17 +87,7 @@ export const links: MainLink[] = [
       { name: 'Réconciliation', href: '/dashboard/treasury/reconciliation', icon: RiFileList3Line },
     ],
   },
-  {
-    name: 'Analyse',
-    href: '/dashboard/analysis',
-    icon: HiOutlineChartBar,
-    hasSubmenu: true,
-    subLinks: [
-      { name: 'Dashboard', href: '/dashboard/analysis', icon: RiDashboardLine },
-      { name: 'KPIs', href: '/dashboard/analysis/kpis', icon: RiBarChart2Line },
-      // { name: 'Performance', href: '/dashboard/analysis/performance', icon: HiOutlineChartBar },
-    ],
-  },
+  
   {
     name: 'Rapports',
     href: '/dashboard/rapports',

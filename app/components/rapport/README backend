@@ -1,0 +1,492 @@
+# 📘 README BACKEND — Module Analyse & Rapports CAPOSA
+
+> Spécification technique pour l'équipe Django
+> Projet : CAPOSA — Système de gestion pour caisse populaire (Haïti)
+> Conformité : BRH (Banque de la République d'Haïti)
+
+---
+
+## 🎯 Objectif du module
+
+Fournir au frontend les **données réelles** pour :
+1. Générer des analyses financières à la volée
+2. Sauvegarder des rapports réglementaires figés (snapshots immuables)
+3. Consulter l'historique des rapports
+
+**⚠️ Règle d'or** : Le frontend ne calcule RIEN. Tous les ratios, agrégats et statuts sont produits par le backend.
+
+---
+
+## 📐 Architecture API
+
+### Base URL
+```
+/api/
+```
+
+### Endpoints requis
+
+| Méthode | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/analytics/overview` | Récupère les KPIs calculés pour une période |
+| `GET` | `/api/reports/` | Liste les rapports enregistrés (filtrable) |
+| `POST` | `/api/reports/` | Enregistre un nouveau rapport (snapshot) |
+| `GET` | `/api/reports/<uuid>/` | Détail d'un rapport figé |
+| `PATCH` | `/api/reports/<uuid>/` | Archivage / restauration uniquement |
+
+> ❌ Pas de `PUT` ni de `DELETE` — les rapports sont immuables.
+
+---
+
+## 🔢 Formules de calcul des KPIs
+
+### Règle générale
+Toutes les valeurs doivent refléter les **données réelles** de la base : prêts, remboursements, membres, transactions.
+
+### 1. Ratio d'endettement
+
+```
+ratio_endettement = (total_prêts_actifs) / (revenus_mensuels_membres) × 100
+```
+
+**Sources de données** :
+- `Loan.objects.filter(status="active").aggregate(Sum("montant"))`
+- `Member.objects.aggregate(Sum("revenu_mensuel"))`
+
+**Unité** : pourcentage (ex: `31.5`)
+
+---
+
+### 2. Taux de recouvrement
+
+```
+taux_recouvrement = (remboursements_effectués / remboursements_attendus) × 100
+```
+
+**Sources de données** :
+- Attendus : toutes les échéances `Repayment` dont `due_date ≤ period_end`
+- Effectués : celles dont `status="paid"` dans la même période
+
+**Unité** : pourcentage (ex: `93.0`)
+
+---
+
+### 3. Capacité moyenne de remboursement
+
+```
+capacité = AVG(revenu_mensuel - charges_mensuelles) par membre actif
+```
+
+**Sources de données** :
+- `Member.objects.filter(is_active=True)`
+- Champs : `revenu_mensuel`, `charges_mensuelles`
+
+**Unité** : HTG (ex: `19595`)
+
+---
+
+### 4. Ratio de créances douteuses
+
+```
+créances_douteuses = (montant_prêts_retard_90j+ / montant_total_prêts) × 100
+```
+
+**Classification BRH des retards** :
+| Retard | Catégorie |
+|---|---|
+| 1–30 jours | Normal |
+| 31–90 jours | En souffrance légère |
+| 91–180 jours | Créance douteuse |
+| > 180 jours | Irrécouvrable |
+
+**Unité** : pourcentage (ex: `3.3`)
+
+---
+
+### 5. Ratio de liquidité
+
+```
+ratio_liquidité = liquidités_disponibles / dépôts_exigibles
+```
+
+**Sources de données** :
+- Numérateur : soldes des comptes de trésorerie et caisse
+- Dénominateur : total des dépôts à vue + dépôts à terme exigibles dans 30j
+
+**Seuil BRH** : doit être > 1.0 (idéalement > 1.5)
+
+**Unité** : ratio décimal (ex: `1.99`)
+
+---
+
+### 6. Réserves obligatoires
+
+```
+réserves = (réserves_BRH / dépôts_totaux) × 100
+```
+
+**Sources de données** :
+- `ReserveAccount.objects.filter(type="BRH").aggregate(Sum("montant"))`
+- `Deposit.objects.aggregate(Sum("montant"))`
+
+**Seuil BRH** : ≥ 10% des dépôts totaux
+
+**Unité** : pourcentage (ex: `11.83`)
+
+---
+
+### 7. Couverture des risques
+
+```
+couverture = (provisions_comptables / prêts_à_risque) × 100
+```
+
+**Sources de données** :
+- `Provision.objects.aggregate(Sum("montant"))`
+- Prêts à risque = ceux classés en souffrance ou douteux
+
+**Unité** : pourcentage (ex: `91.56`)
+
+---
+
+### 8. Ratio de solvabilité (fonds propres)
+
+```
+ratio_solvabilité = (capital_propre / actifs_pondérés_risque) × 100
+```
+
+**Sources de données** :
+- `BalanceSheet` ou équivalent comptable
+- Actifs pondérés selon catégories BRH (prêts, placements, immobilisations)
+
+**Seuil BRH** : ≥ 8%
+
+**Unité** : pourcentage (ex: `11.83`)
+
+---
+
+## 📊 Endpoint 1 : GET `/api/analytics/overview`
+
+### Paramètres de requête (query params)
+
+| Paramètre | Type | Obligatoire | Description |
+|---|---|---|---|
+| `start` | `YYYY-MM-DD` | ✅ | Date de début de la période |
+| `end` | `YYYY-MM-DD` | ✅ | Date de fin de la période |
+| `type` | string | ❌ | Si précisé : `liquidite` / `solvabilite` / `conformite` / `prets_souffrance` |
+| `region` | string | ❌ | Filtre par région |
+
+### Exemple d'appel
+
+```http
+GET /api/analytics/overview?start=2026-04-01&end=2026-04-30&type=liquidite
+```
+
+### Réponse JSON attendue
+
+```json
+{
+  "periode": {
+    "debut": "2026-04-01",
+    "fin": "2026-04-30",
+    "libelle": "Avril 2026"
+  },
+  "kpi_principal": {
+    "label": "Ratio de liquidité",
+    "valeur": 1.99,
+    "unite": "",
+    "seuil": 1.5
+  },
+  "kpis_detailles": {
+    "ratioEndettement": 31.5,
+    "tauxRecouvrement": 93.0,
+    "capaciteMoyenne": 19595,
+    "creancesDouteuses": 3.3,
+    "ratioLiquidite": 1.99,
+    "reservesObligatoires": 11.83,
+    "couvertureRisques": 91.56,
+    "ratioSolvabilite": 11.83
+  },
+  "note_globale": 92,
+  "statut": "conforme",
+  "recommandations": [
+    "Maintenir le suivi des remboursements mensuels.",
+    "Renforcer la communication avec les membres inactifs."
+  ]
+}
+```
+
+### Règles de calcul du statut
+
+| Condition | Statut |
+|---|---|
+| `tauxRecouvrement < 90` OU `ratioLiquidite < 1.2` OU `creancesDouteuses > 8` | `critique` |
+| `tauxRecouvrement < 95` OU `ratioLiquidite < 1.5` OU `creancesDouteuses > 5` | `alerte` |
+| Sinon | `conforme` |
+
+### Règles de calcul de la note globale (sur 100)
+
+```
+note_globale =
+    (tauxRecouvrement)          × 0.40    # 40 points max
+  + (min(reservesObligatoires, 15) / 15 × 100) × 0.30   # 30 points max
+  + (tauxActiviteMembres)       × 0.30    # 30 points max
+```
+
+---
+
+## 📊 Endpoint 2 : POST `/api/reports/`
+
+### Corps de requête (JSON)
+
+```json
+{
+  "type": "liquidite",
+  "nom": "Rapport mensuel — Direction",
+  "filtres": {
+    "periode": "mois",
+    "periodeLibelle": "Avril 2026",
+    "dateDebut": "2026-04-01",
+    "dateFin": "2026-04-30"
+  },
+  "snapshot": {
+    "kpiPrincipal": {
+      "label": "Ratio de liquidité",
+      "valeur": 1.99,
+      "unite": "",
+      "seuil": 1.5
+    },
+    "kpisDetailles": { ... },
+    "noteGlobale": 92,
+    "recommandations": [...]
+  },
+  "statut": "conforme"
+}
+```
+
+### Réponse attendue
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "liquidite",
+  "nom": "Rapport mensuel — Direction",
+  "reference": "RPT-202604-LIQUIDITE-742",
+  "filtres": { ... },
+  "snapshot": { ... },
+  "statut": "conforme",
+  "etat": "actif",
+  "generePar": {
+    "id": 1,
+    "nom": "Jean Dupont"
+  },
+  "generele": "2026-04-20T15:42:10Z"
+}
+```
+
+### Génération de la référence
+
+Format : `RPT-{YYYYMM}-{TYPE_PREFIX}-{NNN}`
+
+| Type | Préfixe |
+|---|---|
+| `liquidite` | `LIQUIDITE` |
+| `solvabilite` | `SOLVABILITE` |
+| `conformite` | `CONFORMITE` |
+| `prets_souffrance` | `PORTEFEUILLE` |
+
+`NNN` = numéro séquentiel à 3 chiffres (001, 002, …)
+
+---
+
+## 📊 Endpoint 3 : GET `/api/reports/`
+
+### Paramètres de requête
+
+| Paramètre | Type | Description |
+|---|---|---|
+| `type` | string | Filtrer par type (`liquidite`, `solvabilite`, …) |
+| `etat` | `actif` / `archive` | Filtrer par état |
+| `statut` | `conforme` / `alerte` / `critique` | Filtrer par statut |
+| `periode` | `mois` / `trimestre` / `annee` | Filtrer par périodicité |
+| `search` | string | Recherche dans référence, nom, période |
+| `page` | integer | Pagination (défaut 1) |
+| `page_size` | integer | Défaut 20, max 100 |
+
+### Réponse
+
+```json
+{
+  "count": 45,
+  "next": "/api/reports/?page=2",
+  "previous": null,
+  "results": [
+    { /* Rapport */ },
+    { /* Rapport */ }
+  ],
+  "stats": {
+    "total": 45,
+    "actifs": 15,
+    "archives": 30,
+    "non_conformes": 2
+  }
+}
+```
+
+---
+
+## 📊 Endpoint 4 : GET `/api/reports/<uuid>/`
+
+Réponse : un objet `Rapport` complet (voir structure POST).
+
+**Erreurs possibles** :
+- `404` si le rapport n'existe pas
+- `403` si l'utilisateur n'a pas les droits
+
+---
+
+## 📊 Endpoint 5 : PATCH `/api/reports/<uuid>/`
+
+**Seul champ modifiable** : `etat` (actif ↔ archive).
+
+### Corps de requête
+
+```json
+{
+  "etat": "archive"
+}
+```
+
+### Sécurité
+Rejeter toute tentative de modifier d'autres champs (snapshot, filtres, statut, etc.) avec un `400 Bad Request`.
+
+---
+
+## 🗄️ Modèle Django suggéré
+
+```python
+# models.py
+import uuid
+from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class Report(models.Model):
+    TYPES = [
+        ("liquidite", "Liquidité"),
+        ("solvabilite", "Solvabilité"),
+        ("conformite", "Conformité"),
+        ("prets_souffrance", "Prêts en souffrance"),
+    ]
+
+    STATUTS = [
+        ("conforme", "Conforme"),
+        ("alerte", "À surveiller"),
+        ("critique", "Critique"),
+    ]
+
+    ETATS = [
+        ("actif", "Actif"),
+        ("archive", "Archivé"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    type = models.CharField(max_length=30, choices=TYPES)
+    nom = models.CharField(max_length=100, blank=True)
+    reference = models.CharField(max_length=50, unique=True)
+
+    filtres = models.JSONField()              # period_libelle, date_debut, date_fin, …
+    snapshot = models.JSONField()             # 📸 Données figées (NE JAMAIS recalculer)
+
+    statut = models.CharField(max_length=20, choices=STATUTS)
+    etat = models.CharField(max_length=20, choices=ETATS, default="actif")
+
+    genere_par = models.ForeignKey(User, on_delete=models.PROTECT, related_name="rapports")
+    genere_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-genere_le"]
+        indexes = [
+            models.Index(fields=["type", "genere_le"]),
+            models.Index(fields=["etat"]),
+            models.Index(fields=["statut"]),
+        ]
+```
+
+### ⚠️ Points critiques pour l'immuabilité
+
+1. **Bloquer les updates** sur les champs snapshot, filtres, type, statut :
+```python
+def save(self, *args, **kwargs):
+    if self.pk:
+        orig = Report.objects.get(pk=self.pk)
+        for field in ["snapshot", "filtres", "type", "statut", "reference"]:
+            if getattr(orig, field) != getattr(self, field):
+                raise ValidationError(f"Le champ {field} est immuable.")
+    super().save(*args, **kwargs)
+```
+
+2. **Désactiver le DELETE** via les permissions DRF :
+```python
+http_method_names = ["get", "post", "patch", "head", "options"]
+```
+
+---
+
+## 🔐 Authentification
+
+- Endpoints protégés par authentification (JWT ou Session)
+- Seuls les utilisateurs avec rôle **superviseur** peuvent créer des rapports
+- Tous les utilisateurs authentifiés peuvent lire les rapports
+- `genere_par` est automatiquement rempli avec `request.user`
+
+---
+
+## 🧪 Cas de tests à couvrir
+
+- [ ] `GET /analytics/overview` retourne les bons calculs pour une période donnée
+- [ ] `POST /reports/` crée un rapport avec une référence unique
+- [ ] Deux POST rapprochés ne génèrent jamais la même référence
+- [ ] `PATCH /reports/:id` ne peut modifier que `etat`
+- [ ] Tentative de `PATCH snapshot` → 400
+- [ ] `GET /reports/:id` d'un UUID inexistant → 404
+- [ ] Un utilisateur non-superviseur ne peut pas POST → 403
+- [ ] Filtres `type`, `etat`, `statut` sur la liste fonctionnent
+- [ ] Recherche `search=Mars` renvoie bien les rapports de mars
+
+---
+
+## 📅 Règles métier BRH à respecter
+
+### Classification des retards
+| Retard | Catégorie | Provision recommandée |
+|---|---|---|
+| 1–30 jours | Normal | 0% |
+| 31–90 jours | Souffrance légère | 20% |
+| 91–180 jours | Créance douteuse | 50% |
+| > 180 jours | Irrécouvrable | 100% |
+
+### Seuils réglementaires
+| Indicateur | Seuil minimum BRH |
+|---|---|
+| Ratio de liquidité | ≥ 1.0 (idéal ≥ 1.5) |
+| Ratio de solvabilité | ≥ 8% |
+| Réserves obligatoires | ≥ 10% |
+| Taux de recouvrement | ≥ 95% |
+| Couverture des risques | ≥ 90% |
+
+---
+
+## 📞 Contact Frontend
+
+Si des questions sur :
+- Le format exact des données attendues par le frontend
+- Les champs optionnels / obligatoires
+- Les enums (types, statuts, états)
+
+→ Se référer au fichier `types/rapport.ts` dans le repo frontend.
+
+---
+
+**Fin du README backend.**
