@@ -14,8 +14,8 @@ export default function OpeningHoursPage() {
   const stats = useMemo(() => computeStats(MOCK_OPENING_HOURS), []);
 
   return (
-    <div className="min-h-screen bg-[#F9F9F6]">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 print:bg-white print:p-0 print:m-0 p-6 md:p-8">
+      <div className="max-w-7xl mx-auto ">
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-6">

@@ -72,7 +72,6 @@ export const links: MainLink[] = [
     subLinks: [
       { name: 'Tous', href: '/dashboard/loans', icon: FaClipboardList },
       { name: 'Demandes', href: '/dashboard/loans/loanList', icon: FaMoneyCheckAlt },
-      { name: 'Actifs', href: '/dashboard/loans/actifs', icon: HiOutlineChartBar },
     ],
   },
   {

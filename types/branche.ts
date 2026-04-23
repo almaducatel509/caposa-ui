@@ -18,7 +18,7 @@ export interface Branch {
   branch_address: string;
   branch_phone_number: string;
   branch_email: string;
-  status: "active" | "inactive";
+  statusBranche: "active" | "inactive"| "archive";
   department_code: DepartmentCode;
   city: string;
   number_of_posts: number;
@@ -32,4 +32,6 @@ export interface Branch {
   holidays_details?: Holiday[];
   created_at?: string;
   updated_at?: string;
+  total_staff: number;
+  full_address: string;
 }

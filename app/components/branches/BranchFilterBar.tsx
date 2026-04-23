@@ -123,80 +123,67 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
+      {/* Ligne 1 */}
+      <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
 
-      {/* ── Ligne 1 : Recherche + boutons ── */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-
-        {/* Barre de recherche — identique AccountFilterBar */}
-        <div className="relative flex-1 max-w-xl">
+        {/* Recherche */}
+        <div className="relative w-full lg:max-w-xl">
           <FiSearch
             size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
           />
+
           <input
             type="text"
             value={filterValue}
-            placeholder="N° branche, nom, adresse, email..."
+            placeholder="Code, nom, adresse, email..."
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full h-10 pl-10 pr-10 rounded-xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32] transition-colors"
+            className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent hover:border-[#2E7D32]/40 transition-all shadow-sm"
           />
+
           {filterValue && (
             <button
-              type="button"
-              onClick={() => { onSearchChange(""); onClear(); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => {
+                onSearchChange("");
+                onClear();
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               ✕
             </button>
           )}
         </div>
 
-        {/* Boutons — mêmes que AccountFilterBar */}
-        <div className="flex items-center gap-2 shrink-0">
-          {onImport && (
-            <button
-              type="button"
-              onClick={onImport}
-              className="flex items-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              <Upload size={14} />
-              Importer
-            </button>
-          )}
+        {/* Actions */}
+        <div className="flex gap-2 w-full lg:w-auto">
           <button
-            type="button"
-            onClick={onExport}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <FaDownload size={12} />
-            Exporter
-          </button>
-          <button
-            type="button"
             onClick={onAdd}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#1B5E20] text-white text-sm font-semibold transition-colors shadow-sm"
+            className="flex-1 lg:flex-none h-11 px-5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-lg"
           >
-            <FaPlus size={11} />
             Nouvelle branche
+          </button>
+
+          <button
+            onClick={onExport}
+            className="h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm"
+          >
+            Exporter
           </button>
         </div>
       </div>
 
-      {/* ── Ligne 2 : Compteur + filtres ── */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Ligne 2 */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 flex flex-wrap items-center gap-3">
 
-        {/* Résultats */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Résultats</span>
-          <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 bg-[#DDEAD5] text-[#1B5E20] text-xs font-bold rounded-lg">
-            {totalCount}
-          </span>
-        </div>
+        <span className="text-sm text-gray-500">Résultats :</span>
+
+        <span className="bg-[#DDEAD5] text-[#1B5E20] font-bold text-sm px-3 py-0.5 rounded-lg">
+          {totalCount}
+        </span>
 
         <div className="h-5 w-px bg-gray-200" />
 
-        {/* Filtre taille */}
         <NativeDropdown
           value={selectedSize}
           onChange={onSizeChange}
@@ -205,7 +192,6 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
           active={selectedSize !== "all"}
         />
 
-        {/* Filtre statut */}
         <NativeDropdown
           value={selectedStatus}
           onChange={onStatusChange}
@@ -214,19 +200,20 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
           active={selectedStatus !== "all"}
         />
 
-        {/* Reset filtres actifs */}
         {activeFiltersCount > 0 && (
           <>
-            <div className="h-5 w-px bg-gray-200" />
-            <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-              {activeFiltersCount} filtre{activeFiltersCount > 1 ? "s" : ""} actif
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
+              {activeFiltersCount} filtre(s)
             </span>
+
             <button
-              type="button"
-              onClick={() => { onSizeChange("all"); onStatusChange("all"); }}
-              className="text-xs text-red-500 hover:text-red-700 underline underline-offset-2 transition-colors"
+              onClick={() => {
+                onSizeChange("all");
+                onStatusChange("all");
+              }}
+              className="text-xs text-red-600"
             >
-              Réinitialiser
+              Effacer
             </button>
           </>
         )}

@@ -59,10 +59,10 @@ export default function BranchScheduleManager() {
   const hasFilters = !!(departmentCode || city || searchText);
 
   return (
-    <div>
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen  ">
       {/* Sub-header */}
       <div className="mb-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DDEAD5] text-[#1B5E20] rounded-full text-xs font-semibold mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1  text-[#1B5E20] rounded-full text-xs font-semibold mb-3">
           <Clock className="w-3 h-3" /> Gestion des horaires
         </div>
         <h2 className="text-xl font-bold text-gray-900 mb-1">Succursales</h2>

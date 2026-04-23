@@ -9,14 +9,14 @@ import {
   ErrorMessages,
   branchBaseSchema,
   BranchFormData,
-} from "./validations";
+} from "../validations";
 import {
   fetchBranches,
   updateBranch,
   createBranch,
   getBranchById,
 } from "@/app/lib/api/branche";
-import BranchFormFields from "./BranchFormFields";
+import BranchFormFields from "../BranchFormFields";
 import type { Branch, Holiday } from "@/types/branche";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */

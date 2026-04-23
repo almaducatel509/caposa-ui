@@ -45,10 +45,8 @@ export default function HolidaysDashboard() {
   // }
 
   return (
-    <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
-      <div className="px-6 py-6">      
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 print:bg-white print:p-0 print:m-0">
       <HolidayCalendar  />
     </div>
-    </main>
   );
 }

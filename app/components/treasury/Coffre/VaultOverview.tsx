@@ -6,7 +6,7 @@ import { BiImport, BiExport } from 'react-icons/bi';
 import PageHeader from '@/app/components/header';
 import VaultMovementModal from './VaultMovementModal';
 import VaultDeclarationModal from './VaultDeclarationModal';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Home, Link } from 'lucide-react';
 
 interface VaultStats {
   currentBalance: number;
@@ -60,17 +60,28 @@ const VaultOverview: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
-      <button onClick={() => router.push('/dashboard/treasury')}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#2E7D32] transition-colors mb-2">
-        <ArrowLeft className="w-4 h-4" />
-        Retour à la Trésorerie
-      </button>
+      {/* ── Breadcrumbs ── */}
+      {/* <nav className="flex items-center gap-1.5 text-xs text-gray-500 print:hidden">
+        <Link href="/dashboard" className="hover:text-[#2E7D32] flex items-center gap-1">
+          <Home className="w-3 h-3" />
+          Tableau de bord
+        </Link>
+        <ChevronRight className="w-3 h-3 text-gray-300" />
+        <Link
+          href="/dashboard/treasury"
+          className="hover:text-[#2E7D32] transition-colors"
+        >
+          Trésorerie
+        </Link>
+        <ChevronRight className="w-3 h-3 text-gray-300" />
+        <span className="font-medium text-gray-700">Coffre</span>
+      </nav> */}
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <PageHeader
+        {/* <PageHeader
           title="Coffre"
           subtitle="Gestion des réserves et mouvements"
-        />
+        /> */}
         <div className="flex gap-3 shrink-0">
           <button
             onClick={handleViewHistory}

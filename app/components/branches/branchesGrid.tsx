@@ -6,9 +6,9 @@ import { PiBankLight } from "react-icons/pi";
 /* ── Composants ── */
 import PageHeader         from "@/app/components/header";
 import BranchFilterBar    from "./BranchFilterBar";
-import BranchDetailsModal from "./BranchDetailsModal";
-import DeleteBranchModal  from "./DeleteBranchModal";
-import EditBranchModal    from "./EditBranchModal";   // ← modal, pas la page standalone
+import BranchDetailsModal from "./modals/BranchDetailsModal";
+import DeleteBranchModal  from "./modals/DeleteBranchModal";
+import EditBranchModal    from "./modals/EditBranchModal";   // ← modal, pas la page standalone
 
 /* ── API ── */
 import {
@@ -20,7 +20,7 @@ import {
 /* ── Types ── */
 import type { Branch, Holiday, OpeningHour } from "@/types/branche";
 import { BranchData }        from "./validations";
-import BrancheTable, { getEffectiveStatus } from "./BrancheTable";
+import BrancheTable from "./BrancheTable";
 
 /* ─── Props ──────────────────────────────────────────────────────────────── */
 
@@ -70,6 +70,7 @@ const BranchesGrid: React.FC<BranchesGridProps> = ({
   }, []);
 
   useEffect(() => { loadBranches(); }, [loadBranches]);
+console.log("Branches API:", branches);
 
   /* ── Données de référence ── */
   useEffect(() => {
@@ -88,6 +89,7 @@ const BranchesGrid: React.FC<BranchesGridProps> = ({
     };
     load();
   }, []);
+console.log("Branches API:", branches);
 
   /* ── Debounce ── */
   useEffect(() => {
@@ -97,46 +99,63 @@ const BranchesGrid: React.FC<BranchesGridProps> = ({
     );
     return () => clearTimeout(t);
   }, [search]);
+    
+  const hydrateBranch = useCallback((b: BranchData) => ({
+    ...b,
+    total_staff:
+      b.number_of_tellers +
+      b.number_of_clerks +
+      b.number_of_credit_officers,
+    full_address: `${b.branch_address}, ${b.city}`,
+  }), []);
+
+
+  const hydratedBranches = useMemo(
+    () => branches.map(hydrateBranch),
+    [branches, hydrateBranch],
+  );
+
+
 
   /* ── Filtrage ── */
   const filteredBranches = useMemo(() => {
-    let filtered = branches as unknown as BranchData[];
+  let filtered = [...branches];
 
-    if (debouncedSearch) {
-      filtered = filtered.filter((b) =>
-        b.branch_name.toLowerCase().includes(debouncedSearch)     ||
-        b.branch_address.toLowerCase().includes(debouncedSearch)  ||
-        b.branch_code.toLowerCase().includes(debouncedSearch)     ||
-        b.branch_email.toLowerCase().includes(debouncedSearch)
-      );
-    }
-
-    if (selectedSize !== "all") {
-      filtered = filtered.filter((b) => {
-        const total =
-          b.number_of_tellers +
-          b.number_of_clerks +
-          b.number_of_credit_officers;
-        if (selectedSize === "large")  return total >= 20;
-        if (selectedSize === "medium") return total >= 10 && total < 20;
-        if (selectedSize === "small")  return total < 10;
-        return true;
-      });
-    }
-
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter((b) => {
-        const eff = getEffectiveStatus(b);
-        if (selectedStatus === "active")   return eff === "active";
-        if (selectedStatus === "inactive") return eff !== "active";
-        return true;
-      });
-    }
-
-    return filtered.sort((a, b) =>
-      a.branch_name.localeCompare(b.branch_name)
+  // Recherche
+  if (debouncedSearch) {
+    filtered = filtered.filter((b) =>
+      b.branch_name.toLowerCase().includes(debouncedSearch)     ||
+      b.branch_address.toLowerCase().includes(debouncedSearch)  ||
+      b.branch_code.toLowerCase().includes(debouncedSearch)     ||
+      b.branch_email.toLowerCase().includes(debouncedSearch)
     );
-  }, [branches, debouncedSearch, selectedSize, selectedStatus]);
+  }
+
+  // Taille
+  if (selectedSize !== "all") {
+    filtered = filtered.filter((b) => {
+      const total =
+        b.number_of_tellers +
+        b.number_of_clerks +
+        b.number_of_credit_officers;
+
+      if (selectedSize === "large")  return total >= 20;
+      if (selectedSize === "medium") return total >= 10 && total < 20;
+      if (selectedSize === "small")  return total < 10;
+      return true;
+    });
+  }
+
+  // Statut (nouvelle version)
+  if (selectedStatus !== "all") {
+      filtered = filtered.filter(b => (b.statusBranche ?? 'actif') === selectedStatus);
+  }
+
+  // Tri
+  return filtered.sort((a, b) =>
+    a.branch_name.localeCompare(b.branch_name)
+  );
+}, [branches, debouncedSearch, selectedSize, selectedStatus]);
 
   /* ── Export CSV ── */
   const handleExport = useCallback(() => {
@@ -148,7 +167,7 @@ const BranchesGrid: React.FC<BranchesGridProps> = ({
           b.department_code,
           b.branch_phone_number, b.branch_email,
           b.number_of_tellers,   b.number_of_clerks, b.number_of_credit_officers,
-          b.opening_date, b.status,
+          b.opening_date, b.statusBranche,
         ]
           .map((v) => `"${v}"`)
           .join(",")
@@ -165,6 +184,8 @@ const BranchesGrid: React.FC<BranchesGridProps> = ({
     document.body.removeChild(link);
   }, [filteredBranches]);
 
+ 
+  
   /* ── Handlers ── */
   const handleAdd = () => {
     setSelectedBranch(null);
@@ -243,7 +264,7 @@ const BranchesGrid: React.FC<BranchesGridProps> = ({
       />
 
       <BrancheTable
-        branches={filteredBranches}
+        branches={hydratedBranches}
         isLoading={isLoading}
         onView={handleView}
         onEdit={handleEdit}

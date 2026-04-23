@@ -122,7 +122,7 @@ export interface BranchData {
   branch_email:        string;
 
   /** Persisté en base : "inactive" | "active" */
-  status: "active" | "inactive";
+  statusBranche: "active" | "inactive" | "archive";
 
   department_code: DepartmentCode;
   city:            string;
@@ -142,6 +142,9 @@ export interface BranchData {
   opening_hour_details?: OpeningHour;
   holidays_details?:     Holiday[];
 
+  total_staff: number;
+  full_address: string
+  
   created_at?: string;
   updated_at?: string;
 }

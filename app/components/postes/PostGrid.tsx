@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { BsBuilding } from "react-icons/bs";
+import { GoWorkflow } from "react-icons/go";
 
-import { PostData } from "./validations";
 import { fetchPosts, archivePost } from "@/app/lib/api/post";
 
 import PostTable, { Post } from "./PostTable";
@@ -31,7 +30,7 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
   const [showEditModal,  setShowEditModal]  = useState(false);
   const [showDeleteModal,setShowDeleteModal]= useState(false);
   const [isEditMode,     setIsEditMode]     = useState(false);
-
+  const [selectedType, setSelectedType] = useState("all");
   /* ── Chargement ── */
   const loadPosts = useCallback(async () => {
     try {
@@ -60,13 +59,25 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
   }, [search]);
 
   /* ── Filtrage ── */
-  const filteredPosts = useMemo(() => {
-    if (!debouncedSearch) return posts;
-    return posts.filter((p) =>
+ const filteredPosts = useMemo(() => {
+  return posts.filter((p) => {
+
+    // 🔍 Recherche (inchangé)
+    const matchSearch =
+      !debouncedSearch ||
       p.name.toLowerCase().includes(debouncedSearch) ||
-      p.description.toLowerCase().includes(debouncedSearch)
-    );
-  }, [posts, debouncedSearch]);
+      p.description.toLowerCase().includes(debouncedSearch);
+
+    // 🎯 Type (nouveau)
+    const matchType =
+      selectedType === "all" ||
+      (selectedType === "deposit" && p.deposit) ||
+      (selectedType === "withdrawal" && p.withdrawal) ||
+      (selectedType === "transfer" && p.transfert);
+
+    return matchSearch && matchType;
+  });
+}, [posts, debouncedSearch, selectedType]);
 
   /* ── Export CSV ── */
   const handleExport = useCallback(() => {
@@ -112,12 +123,12 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
 
   /* ── Render ── */
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen">
 
       <PageHeader
         title="Gestion des postes"
         subtitle="Gérez tous les postes et leurs permissions"
-        icon={<BsBuilding className="w-8 h-8 text-[#2E7D32]" />}
+        icon={<GoWorkflow  className="w-8 h-8 text-[#2E7D32]" />}
       />
 
       {error && (
@@ -132,9 +143,13 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
 
       <PostFilterBar
         filterValue={search}
+        selectedType={selectedType}
         totalCount={filteredPosts.length}
+
         onSearchChange={setSearch}
         onClear={() => setSearch("")}
+        onTypeChange={setSelectedType}
+
         onAdd={handleCreate}
         onExport={handleExport}
       />

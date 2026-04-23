@@ -50,11 +50,6 @@ const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
   terme:   { bg: 'bg-yellow-50', text: 'text-[#854F0B]', label: 'Terme'   },
 };
 
-// const TAB_STATUSES: Record<TabId, string[]> = {
-//   active:   ['active', 'en_conge', 'en_attente_validation'],
-//   inactive: ['inactive'],
-//   archive:  ['suspended', 'archive'],
-// };
 const GRID = '40px 2fr 1.5fr 1fr 1.5fr 1fr 130px';
 
 const COLS = [

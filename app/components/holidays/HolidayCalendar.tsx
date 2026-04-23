@@ -206,7 +206,7 @@ export default function HolidayCalendar() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#F9F9F6] p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ── Header card ── */}

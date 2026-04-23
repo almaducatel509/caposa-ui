@@ -246,14 +246,25 @@ const AccountTable: React.FC<AccountTableProps> = ({
           const Icon      = tab.icon;
           const isCurrent = activeTab === tab.id;
           return (
-            <button key={tab.id} onClick={() => handleTabChange(tab.id)}
+            <button 
+              key={tab.id} 
+              onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 ${
-                isCurrent ? `${tab.active} font-semibold` : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}>
+                isCurrent 
+                ? `${tab.active} font-semibold` 
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
               <Icon className="w-3.5 h-3.5 shrink-0" />
               {tab.label}
               {tab.count > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${isCurrent ? tab.badge : 'bg-gray-100 text-gray-500'}`}>
+                <span 
+                  className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
+                    isCurrent 
+                    ? tab.badge 
+                    : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
                   {tab.count}
                 </span>
               )}
@@ -348,8 +359,12 @@ const AccountTable: React.FC<AccountTableProps> = ({
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${isFermeTab ? 'bg-gray-100' : 'bg-[#DDEAD5]'}`}>
               <Wallet className={`w-7 h-7 ${isFermeTab ? 'text-gray-400' : 'text-[#2E7D32]'}`} />
             </div>
-            <p className="text-sm font-semibold text-gray-900 mb-1">Aucun compte trouvé</p>
-            <p className="text-xs text-gray-400">Modifiez vos critères de recherche</p>
+            <p className="text-sm font-semibold text-gray-900 mb-1">
+              Aucun compte trouvé
+            </p>
+            <p className="text-xs text-gray-400">
+              Modifiez vos critères de recherche
+            </p>
           </div>
         )}
 
@@ -364,7 +379,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
 
           return (
             <div key={acc.id}
-              className={`grid items-center px-5 py-3.5 transition-all duration-150 ${
+              className={`cursor-default grid items-center px-5 py-3.5 transition-all duration-150 ${
                 isFermeTab ? 'opacity-65' : ''
               } ${
                 isSelected
@@ -383,7 +398,6 @@ const AccountTable: React.FC<AccountTableProps> = ({
                 </button>
               </div>
 
-              {/* Compte + Membre */}
               {/* Compte + Membre */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`relative shrink-0 ${isFermeTab ? 'opacity-50 grayscale' : ''}`}>

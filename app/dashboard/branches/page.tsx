@@ -26,11 +26,9 @@ const BranchDashboard = () => {
     return <div>Loading branches...</div>;
   }
   return (
-    <main className="w-full min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
-      <div className="px-6 py-6">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 print:bg-white print:p-0 print:m-0">
         <BranchesGrid branches={branches} />
-      </div>
-    </main>
+    </div>
     )
   }
   export default BranchDashboard;
