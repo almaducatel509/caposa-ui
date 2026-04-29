@@ -53,36 +53,49 @@ const [posts, setPosts] = useState<PostData[]>([]);
   const [showDeleteModal,      setShowDeleteModal]      = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
 
-  //Tab, ce state AccountGrid
 
   // ── Load ───────────────────────────────────────────────────────────────────
-  const loadEmployees = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const [emp, bra, pos] = await Promise.all([
-        fetchEmployees(),
-        fetchBranches(),
-        fetchPosts(),
-      ]);
+  //avant const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => { 
+    // apres
+  try {
+    setIsLoading(true);
+    setError(null);
+    const [emp, bra, pos] = await Promise.all([
+      fetchEmployees(),
+      fetchBranches(),
+      fetchPosts(),
+    ]);
       setEmployees(emp);
       setBranches(bra);
       setPosts(pos);
     } catch (err) {
-      console.error(err);
+      console.error("Erreur loadEmployees:",err);
       setError('Impossible de charger les employes.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { loadEmployees(); }, []);
-
-  // ── Debounce ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedValue(filterValue.trim()), 300);
+    loadEmployees();
+  }, [loadEmployees]);
+
+
+    // ── Debounce ───────────────────────────────────────────────────────────────
+    useEffect(() => {
+    const t = setTimeout(() => {
+      const normalized = filterValue.trim().toLowerCase();
+      setDebouncedValue(normalized);
+    }, 300);
+
     return () => clearTimeout(t);
   }, [filterValue]);
+
+  // useEffect(() => {
+  //   const t = setTimeout(() => setDebouncedValue(filterValue.trim()), 300);
+  //   return () => clearTimeout(t);
+  // }, [filterValue]);
 
   // ── Hydration ──────────────────────────────────────────────────────────────
   const hydrateEmployee = useCallback((e: EmployeeData): EmployeeData => {

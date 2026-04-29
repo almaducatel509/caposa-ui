@@ -1,23 +1,12 @@
 import { z } from "zod";
 import { HAITI_DEPARTMENTS, DepartmentCode } from "@/app/data/haitiLocations";
+import { Holiday } from "../holidays/validations";
+// ─── NOUVEAU : on importe Branch (Cesar) pour étendre ────────────────────
+import type { Branch } from "@/types/branche";
 
-/* ─── Ré-export pour compatibilité des imports existants ─────────────────── */
 export type { DepartmentCode };
 
-/* ─── Interfaces API ─────────────────────────────────────────────────────── */
-
-export interface OpeningHour {
-  id:       string;
-  schedule: string;
-}
-
-export interface Holiday {
-  id:          string;
-  date:        string;
-  description: string;
-}
-
-/* ─── Enum Zod généré depuis haitiLocations.ts (source unique) ───────────── */
+// (ne pas redéfinir OpeningHour ici, on importe celui de @/types/branche si besoin)
 
 const DEPARTMENT_CODES = HAITI_DEPARTMENTS.map((d) => d.code) as [
   DepartmentCode,
@@ -25,9 +14,8 @@ const DEPARTMENT_CODES = HAITI_DEPARTMENTS.map((d) => d.code) as [
 ];
 
 /* =====================================================
-   1️⃣ Schéma BASE — Création / Édition (branche inactive)
+   1️⃣ Schéma BASE — Création / Édition (inchangé)
 ===================================================== */
-
 export const branchBaseSchema = z.object({
   branch_name:         z.string().min(1, "Le nom de la branche est requis"),
   branch_address:      z.string().min(1, "L'adresse est requise"),
@@ -46,11 +34,6 @@ export const branchBaseSchema = z.object({
   opening_date:    z.string().min(1, "La date d'ouverture est requise"),
   number_of_posts: z.number().optional(),
 
-  /*
-   * opening_hour et holidays sont OPTIONNELS à la création.
-   * Ils deviennent obligatoires uniquement dans branchActivationSchema.
-   * Flux : créer d'abord → assigner horaire → activer.
-   */
   opening_hour: z
     .string()
     .uuid("L'identifiant de l'horaire doit être un UUID valide")
@@ -60,24 +43,15 @@ export const branchBaseSchema = z.object({
     .array(z.string().uuid("L'identifiant du jour férié doit être un UUID valide"))
     .optional(),
 
-  /*
-   * status persisté en base : "inactive" | "active" uniquement.
-   * L'état intermédiaire "needs_activation" (horaire assigné, pas encore activée)
-   * est calculé côté frontend via getEffectiveStatus() dans BranchTable/BranchCard.
-   * Il n'est jamais envoyé à l'API.
-   */
-  status: z.enum(["inactive", "active"]).default("inactive"),
+  status: z.enum(["inactive", "active", "archive"]).default("inactive"),
 });
 
 /* =====================================================
-   2️⃣ Schéma ACTIVATION — requis pour activer la branche
+   2️⃣ Schéma ACTIVATION (inchangé)
 ===================================================== */
-
 export const branchActivationSchema = branchBaseSchema
   .extend({
-    opening_hour: z
-      .string()
-      .uuid("L'horaire d'ouverture est requis pour l'activation"),
+    opening_hour: z.string().uuid("L'horaire d'ouverture est requis pour l'activation"),
     holidays: z
       .array(z.string().uuid("L'identifiant du jour férié doit être un UUID valide"))
       .min(1, "Au moins un jour férié est requis pour l'activation"),
@@ -88,68 +62,55 @@ export const branchActivationSchema = branchBaseSchema
   });
 
 /* =====================================================
-   3️⃣ Schéma dynamique (utilitaire)
+   3️⃣ Schéma UPDATE — Modification partielle (PATCH)
 ===================================================== */
+export const branchUpdateSchema = branchBaseSchema.partial();
 
-export const branchSchemaByMode = (mode: "create" | "activate") =>
-  mode === "activate" ? branchActivationSchema : branchBaseSchema;
+/* =====================================================
+   4️⃣ Schéma dynamique
+===================================================== */
+export const branchSchemaByMode = (mode: "create" | "edit" | "activate") => {
+  if (mode === "activate") return branchActivationSchema;
+  if (mode === "edit")     return branchUpdateSchema;
+  return branchBaseSchema;
+};
 
 /* =====================================================
    Types TypeScript
 ===================================================== */
-
-/** Données du formulaire (création / édition) */
 export type BranchFormData = z.infer<typeof branchBaseSchema>;
-
-/** Données du formulaire pour l'activation */
 export type BranchActivationFormData = z.infer<typeof branchActivationSchema>;
+export type BranchUpdateFormData = z.infer<typeof branchUpdateSchema>;
 
+/* =====================================================
+   BranchData = Branch HYDRATED pour l'UI
+===================================================== */
+
+// ─── Ancienne version (commentée pour référence) ───────────────────────────
+// export interface BranchData {
+//   id: string;
+//   branch_code: string;
+//   branch_name: string;
+//   ... (28 lignes de duplication)
+//   total_staff: number;
+//   full_address: string;
+// }
+
+// ─── Nouvelle version : on étend Branch (Cesar) avec les champs calculés ──
 /**
- * Données complètes renvoyées par l'API.
+ * BranchData = Branch après hydratation côté UI.
  *
- * opening_hour est optionnel : une branche peut exister sans horaire assigné.
- * Quand absent → état UI "missing_schedule".
- * Quand présent + status inactive → état UI "needs_activation".
- * Quand présent + status active → état UI "active".
+ * Hérite TOUS les champs de Branch (l'API), et ajoute :
+ *   - total_staff   : somme des employés (calculée)
+ *   - full_address  : adresse complète formatée (calculée)
+ *
+ * Créée par hydrateBranch() dans branchesGrid.tsx.
  */
-export interface BranchData {
-  id:          string;
-  branch_code: string;
-
-  branch_name:         string;
-  branch_address:      string;
-  branch_phone_number: string;
-  branch_email:        string;
-
-  /** Persisté en base : "inactive" | "active" */
-  statusBranche: "active" | "inactive" | "archive";
-
-  department_code: DepartmentCode;
-  city:            string;
-
-  number_of_posts:           number;
-  number_of_tellers:         number;
-  number_of_clerks:          number;
-  number_of_credit_officers: number;
-
-  opening_date: string;
-
-  /** Optionnel — absent si créée sans horaire */
-  opening_hour?: string;
-  holidays?:     string[];
-
-  /** Données peuplées par l'API (populate) */
-  opening_hour_details?: OpeningHour;
-  holidays_details?:     Holiday[];
-
-  total_staff: number;
-  full_address: string
-  
-  created_at?: string;
-  updated_at?: string;
+export interface BranchData extends Branch {
+  total_staff: number;     // = tellers + clerks + credit_officers
+  full_address: string;    // = `${branch_address}, ${city}`
 }
 
-export type BranchFromAPI = BranchData & { id: string };
+export type BranchFromAPI = Branch;
 
-/** Gestion des messages d'erreur de formulaire */
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;

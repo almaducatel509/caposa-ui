@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MemberData } from '@/app/components/members/validations';
-import { fetchMembers } from '@/app/lib/api/members';
 import EmployeeGrid from '@/app/components/employees/EmployeeGrid';
 import { EmployeeData } from '@/app/components/employees/validations';
+import { fetchEmployees } from '@/app/lib/api/employee';
 
-export default function Members() {
+export default function EmployeePage() {
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +15,7 @@ export default function Members() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchMembers();
+        const data = await fetchEmployees();
         setEmployees(data);
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des membres :", err);

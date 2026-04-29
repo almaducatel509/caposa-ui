@@ -31,5 +31,3 @@ Ce sont des paramètres opérationnels qui peuvent changer sans remettre en caus
 > Seuls les paramètres opérationnels, susceptibles d’évoluer dans le cycle de vie du compte, sont modifiables. »
 
 ---
-
-Si tu veux, je peux aussi te rédiger une version **plus longue**, **plus académique**, ou **plus axée sur la cybersécurité** selon ton style de dossier.

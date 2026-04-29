@@ -106,3 +106,14 @@ export const computeStats = (hours: OpeningHrs[]): OpeningHoursStats => ({
   paused:   hours.filter(h => h.status === "paused").length,
   vacation: hours.filter(h => h.status === "vacation").length,
 });
+
+// ─── Days of the week ──────────────────────────────────────────────────────────
+export const DAYS = [
+  { key: "monday",    label: "Lundi" },
+  { key: "tuesday",   label: "Mardi" },
+  { key: "wednesday", label: "Mercredi" },
+  { key: "thursday",  label: "Jeudi" },
+  { key: "friday",    label: "Vendredi" },
+  { key: "saturday",  label: "Samedi" },
+  { key: "sunday",    label: "Dimanche" },
+] as const;

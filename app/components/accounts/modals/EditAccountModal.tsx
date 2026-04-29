@@ -8,13 +8,6 @@ import type { AccountData } from '../validationsaccount';
 import { createAccount, updateAccount } from '@/app/lib/api/accounts';
 import { Modal } from '../../ui/Modal';
 
-// ============= MODAL =============
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}
-
 
 // ============= TYPES =============
 interface EditAccountModalProps {

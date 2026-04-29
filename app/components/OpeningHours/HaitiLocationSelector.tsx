@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { MapPin, Building2 } from "lucide-react";
 import { DepartmentCode } from "./validations";
-import { HAITI_DEPARTMENTS, getCitiesByDepartment } from "./mock";
 import CapSelect from "./CapSelect";
+import { getCitiesByDepartment, HAITI_DEPARTMENTS } from "@/app/data/haitiLocations";
 
 interface HaitiLocationSelectorProps {
   departmentCode: DepartmentCode | "";

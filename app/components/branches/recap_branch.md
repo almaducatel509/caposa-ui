@@ -1,6 +1,3 @@
-De rien ! 🎉
-
-Juste pour récapituler ce qu'on a accompli ensemble :
 
 ## ✅ Ce qui a été fait :
 
@@ -36,4 +33,3 @@ Juste pour récapituler ce qu'on a accompli ensemble :
 
 Tout est maintenant cohérent et respecte la logique métier ! 🚀
 
-Si tu as besoin d'autres ajustements, n'hésite pas ! 😊

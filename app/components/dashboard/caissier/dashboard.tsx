@@ -540,9 +540,10 @@ export default function DashboardCaissier() {
           }>
             <div className="p-6 max-h-[90vh] overflow-y-auto">
               <OpenSessionModal
-                onClose={() => setShowOpenModal(false)}
-                onConfirm={handleOpenSession}
-              />
+              onClose={() => setShowOpenModal(false)}
+              onConfirm={handleOpenSession} branches={[]} openingHours={[]} holidays={[]} onRequireOverride={function (reason: string, details: string): void {
+                throw new Error('Function not implemented.');
+              } }              />
             </div>
         </Modal>
       )}

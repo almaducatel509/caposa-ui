@@ -49,6 +49,7 @@ export interface BranchDetails {
   branch_name: string;
   branch_code?: string; // ✅ Permet null ET undefined
 }
+
 export interface Post {
   id: string | number;
   name: string;
@@ -89,7 +90,6 @@ export interface EmployeeData {
   role?: string;
   // Add missing properties for details
   branch_details?: BranchDetails;
-  // posts_details?: PostDetails[];
   name?: string; // ✅ Ajout pour la propriété enrichie
 
 }

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { AlertCircle, CheckCircle, Loader2, X } from "lucide-react";
 import { openingHoursSchema, OpeningHours, ErrorMessages } from "./validations";
-import { DAYS } from "./mock";
+import { DAYS } from "./validations";
 
 interface ScheduleFormProps {
   branchId: string;

@@ -32,4 +32,3 @@ Verrouiller après X échecs de connexion.
 
 Envoyer une alerte IT en cas de tentatives suspectes.
 
-📌 Résumé : Quand ton application sera stable, applique ces mesures pour respecter les standards financiers et protéger les données des membres.

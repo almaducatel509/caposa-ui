@@ -9,12 +9,16 @@ import { TbCalendarCog } from "react-icons/tb";
 import PageHeader from "../header";
 import EditHolidayModal from "./EditHolidayModal";
 import DeleteHolidayModal from "./DeleteHolidayModal";
+import HolidayInvertedView from "./HolidayInvertedView";
 
 // 🔌 Source unique de données — remplacer par fetchHolidays() / fetchBranches() quand l'API est prête
 import {
   MOCK_HOLIDAYS, MOCK_BRANCHES,
   Holiday, HolidayType, HolidayScope,
 } from "../OpeningHours/mock";
+import type { Branch } from "@/types/branche";
+import { GroupedHoliday } from "@/types/holidayHelpers";
+import AssignBranchesModal from "./modals/AssignBranchesModal";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const TYPE_LABELS: Record<HolidayType, string> = {
@@ -54,7 +58,7 @@ const getDayBg = (holidays: Holiday[]): string => {
   return "bg-[#DDEAD5]/40 border-[#2E7D32]/20 hover:bg-[#DDEAD5]/70";
 };
 
-// ─── EventDetailCard ───────────────────────────────────────────────────────────
+// ─── EventDetailCard (panneau de droite du calendrier) ─────────────────────────
 function EventDetailCard({
   holiday, onEdit, onDelete,
 }: {
@@ -66,15 +70,12 @@ function EventDetailCard({
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
-      {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex gap-1.5 flex-wrap">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold
-            ${TYPE_COLORS[holiday.type]}`}>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${TYPE_COLORS[holiday.type]}`}>
             {TYPE_LABELS[holiday.type]}
           </span>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold
-                           bg-gray-100 text-gray-600 border border-gray-200">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
             {SCOPE_LABELS[holiday.scope]}
           </span>
         </div>
@@ -96,10 +97,8 @@ function EventDetailCard({
         </div>
       </div>
 
-      {/* Title */}
       <h4 className="font-semibold text-gray-900 mb-2">{holiday.description}</h4>
 
-      {/* Details */}
       <div className="flex flex-col gap-1.5 text-sm">
         {branch && (
           <div className="flex items-center gap-2 text-gray-600">
@@ -126,17 +125,26 @@ function EventDetailCard({
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function HolidayCalendar() {
-  const [currentDate, setCurrentDate]     = useState(new Date(2025, 0, 1));
-  const [selectedDay, setSelectedDay]     = useState<Date | null>(null);
-  const [filterValue, setFilterValue]     = useState("");
-  const [selectedType, setSelectedType]   = useState("all");
-  const [selectedScope, setSelectedScope] = useState("all");
+  const [currentDate,    setCurrentDate]    = useState(new Date(2025, 0, 1));
+  const [selectedDay,    setSelectedDay]    = useState<Date | null>(null);
+  const [filterValue,    setFilterValue]    = useState("");
+  const [selectedType,   setSelectedType]   = useState("all");
+  const [selectedScope,  setSelectedScope]  = useState("all");
   const [selectedBranch, setSelectedBranch] = useState("all");
 
-  const [showEditModal, setShowEditModal]     = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
-  const [isEditMode, setIsEditMode]           = useState(false);
+  /* ── Modaux ── */
+  const [showEditModal,    setShowEditModal]    = useState(false);
+  const [showDeleteModal,  setShowDeleteModal]  = useState(false);
+  const [showAssignModal,  setShowAssignModal]  = useState(false);
+  const [selectedHoliday,  setSelectedHoliday]  = useState<Holiday | null>(null);
+  const [selectedGroup,    setSelectedGroup]    = useState<GroupedHoliday | null>(null);
+  const [isEditMode,       setIsEditMode]       = useState(false);
+
+  /* ── Branches (mock pour l'instant — sera remplacé par fetchBranches) ── */
+  const allBranches = useMemo<Branch[]>(
+    () => MOCK_BRANCHES as unknown as Branch[],
+    []
+  );
 
   // ─── Filtering ───────────────────────────────────────────────────────────────
   const filteredHolidays = useMemo(() =>
@@ -196,10 +204,18 @@ export default function HolidayCalendar() {
     setShowDeleteModal(true);
   };
 
+  /** 🎯 Nouveau : déclenché par "Gérer" / "Assigner" sur une card de la vue inversée */
+  const handleManageGroup = (group: GroupedHoliday) => {
+    setSelectedGroup(group);
+    setShowAssignModal(true);
+  };
+
   const handleSuccess = () => {
     setShowEditModal(false);
     setShowDeleteModal(false);
+    setShowAssignModal(false);
     setSelectedHoliday(null);
+    setSelectedGroup(null);
     setIsEditMode(false);
     // 🔌 Recharger les données ici quand l'API est prête
   };
@@ -214,14 +230,12 @@ export default function HolidayCalendar() {
           <div className="flex items-start justify-between mb-6">
             <PageHeader
               title="Gestion de calendrier"
-              subtitle="Gérez le calendrier et ses informations"
+              subtitle="Calendrier haïtien — assignez chaque jour aux branches concernées"
               icon={<TbCalendarCog className="text-[#2E7D32]" size={28} />}
             />
             <button
               onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
-                         bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white
-                         shadow-lg hover:shadow-xl transition-all shrink-0"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-lg hover:shadow-xl transition-all shrink-0"
             >
               <Plus className="w-4 h-4" />
               Ajouter
@@ -230,7 +244,6 @@ export default function HolidayCalendar() {
 
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
@@ -238,8 +251,7 @@ export default function HolidayCalendar() {
                 placeholder="Rechercher..."
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
-                className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-300 rounded-xl
-                           focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
+                className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
               />
               {filterValue && (
                 <button
@@ -251,13 +263,10 @@ export default function HolidayCalendar() {
               )}
             </div>
 
-            {/* Type */}
             <select
               value={selectedType}
               onChange={e => setSelectedType(e.target.value)}
-              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
-                         focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]
-                         appearance-none transition-all"
+              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] appearance-none transition-all"
             >
               <option value="all">Tous les types</option>
               {(Object.keys(TYPE_LABELS) as HolidayType[]).map(k => (
@@ -265,13 +274,10 @@ export default function HolidayCalendar() {
               ))}
             </select>
 
-            {/* Scope */}
             <select
               value={selectedScope}
               onChange={e => setSelectedScope(e.target.value)}
-              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
-                         focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]
-                         appearance-none transition-all"
+              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] appearance-none transition-all"
             >
               <option value="all">Toutes les portées</option>
               {(Object.keys(SCOPE_LABELS) as HolidayScope[]).map(k => (
@@ -279,13 +285,10 @@ export default function HolidayCalendar() {
               ))}
             </select>
 
-            {/* Branch — utilise MOCK_BRANCHES */}
             <select
               value={selectedBranch}
               onChange={e => setSelectedBranch(e.target.value)}
-              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
-                         focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]
-                         appearance-none transition-all"
+              className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] appearance-none transition-all"
             >
               <option value="all">Toutes les succursales</option>
               {MOCK_BRANCHES.map(b => (
@@ -293,12 +296,10 @@ export default function HolidayCalendar() {
               ))}
             </select>
 
-            {/* Export */}
-            <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
-                               border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-all">
+            {/* <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-all">
               <Download className="w-4 h-4" />
               Exporter
-            </button>
+            </button> */}
           </div>
 
           <p className="mt-3 text-xs text-gray-500">
@@ -306,12 +307,12 @@ export default function HolidayCalendar() {
           </p>
         </div>
 
-        {/* ── Calendar + panel ── */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ── BLOC 1 : CALENDRIER (vue temporelle, en haut) ────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Calendar */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            {/* Navigation */}
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={prevMonth}
@@ -330,7 +331,6 @@ export default function HolidayCalendar() {
               </button>
             </div>
 
-            {/* Weekday headers */}
             <div className="grid grid-cols-7 mb-2">
               {["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"].map(d => (
                 <div key={d} className="text-center text-xs font-semibold text-gray-500 py-2">
@@ -339,7 +339,6 @@ export default function HolidayCalendar() {
               ))}
             </div>
 
-            {/* Days grid */}
             <div className="grid grid-cols-7 gap-1.5">
               {calendarDays.map((day, idx) =>
                 day ? (
@@ -348,11 +347,7 @@ export default function HolidayCalendar() {
                     onClick={() => setSelectedDay(
                       selectedDay?.toDateString() === day.toDateString() ? null : day
                     )}
-                    className={`aspect-square border rounded-xl p-1.5 transition-all text-left
-                      ${getDayBg(holidaysForDate(day))}
-                      ${selectedDay?.toDateString() === day.toDateString()
-                        ? "ring-2 ring-[#2E7D32] ring-offset-1"
-                        : ""}`}
+                    className={`aspect-square border rounded-xl p-1.5 transition-all text-left ${getDayBg(holidaysForDate(day))} ${selectedDay?.toDateString() === day.toDateString() ? "ring-2 ring-[#2E7D32] ring-offset-1" : ""}`}
                   >
                     <div className="text-sm font-semibold text-gray-900 leading-none mb-1">
                       {day.getDate()}
@@ -372,7 +367,6 @@ export default function HolidayCalendar() {
               )}
             </div>
 
-            {/* Legend */}
             <div className="mt-5 pt-4 border-t border-gray-100">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Légende</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600">
@@ -396,7 +390,6 @@ export default function HolidayCalendar() {
             </div>
           </div>
 
-          {/* Event panel */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
@@ -441,6 +434,19 @@ export default function HolidayCalendar() {
             </div>
           </div>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ── BLOC 2 : VUE INVERSÉE (cards par férié, en bas) ──────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <HolidayInvertedView
+            holidays={MOCK_HOLIDAYS}
+            branches={allBranches}
+            filteredHolidays={filteredHolidays}
+            onManageGroup={handleManageGroup}
+          />
+        </div>
+
       </div>
 
       {/* Modals */}
@@ -460,6 +466,22 @@ export default function HolidayCalendar() {
           onClose={() => { setShowDeleteModal(false); setSelectedHoliday(null); }}
           onSuccess={handleSuccess}
           holiday={selectedHoliday}
+        />
+      )}
+      {showAssignModal && selectedGroup && (
+        <AssignBranchesModal
+          isOpen={showAssignModal}
+          onClose={() => { setShowAssignModal(false); setSelectedGroup(null); }}
+          onSuccess={handleSuccess}
+          group={selectedGroup}
+          allBranches={allBranches}
+          onEditType={(group) => {
+            // Bascule vers le form d'édition du premier record du groupe
+            setShowAssignModal(false);
+            setSelectedHoliday(group.records[0]);
+            setIsEditMode(true);
+            setShowEditModal(true);
+          }}
         />
       )}
     </div>

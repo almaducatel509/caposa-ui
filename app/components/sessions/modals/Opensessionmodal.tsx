@@ -6,12 +6,17 @@ import {
   Building2, Coins,
 } from 'lucide-react';
 import { OpenSessionPayload, CaisseDevise } from '@/types/caisse';
+import { canOpenSessionNow } from '@/app/utils/sessionEligibility';
+import { BranchData, Holiday, OpeningHour } from '../../branches/validations';
 
 // ─── Props ───────────────────────────────────────────────────────
-
 interface Props {
-  onClose:   () => void;
-  onConfirm: (payload: OpenSessionPayload) => Promise<void>;
+  onClose:           () => void;
+  onConfirm:         (payload: OpenSessionPayload) => Promise<void>;
+  branches:          BranchData[];
+  openingHours:      OpeningHour[];
+  holidays:          Holiday[];
+  onRequireOverride: (reason: string, details: string) => void;
 }
 
 // ─── Field helper ─────────────────────────────────────────────────
@@ -47,7 +52,14 @@ const inputCls = (err?: string) =>
 
 // ─── Composant ───────────────────────────────────────────────────
 
-export default function OpenSessionModal({ onClose, onConfirm }: Props) {
+export default function OpenSessionModal({
+  onClose,
+  onConfirm,
+  branches,
+  openingHours,
+  holidays,
+  onRequireOverride,
+}: Props) {
   const [form, setForm] = useState({
     username:            '',
     numero_caisse:       '',
@@ -58,10 +70,10 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
     montant_ouverture:   '',
   });
 
-  const [showPin,  setShowPin]  = useState(false);
-  const [errors,   setErrors]   = useState<Record<string, string>>({});
-  const [loading,  setLoading]  = useState(false);
-  const [done,     setDone]     = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [errors,  setErrors]  = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [done,    setDone]    = useState(false);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -99,19 +111,63 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
   // ── Soumission ────────────────────────────────────────────────
 
   const handleSubmit = async () => {
+    // Étape 1 : validation des champs
     if (!validate()) return;
+
+    // Étape 2 : vérification de l'éligibilité de la branche
+    const branch = branches.find(b => b.id === form.branch);
+    if (!branch) {
+      setErrors({ branch: "Branche introuvable" });
+      return;
+    }
+
+    const branchHours    = openingHours.find(h => h.id === branch.opening_hour);
+    const branchHolidays = holidays.filter(h => branch.holidays?.includes(h.id));
+
+    if (!branchHours) {
+      setErrors({ branch: "Horaires de la branche non configurés" });
+      return;
+    }
+
+    const eligibility = canOpenSessionNow(
+      branch,
+      new Date(),
+      branchHours,
+      branchHolidays
+    );
+
+    // Cas 1 : Tout est bon → ouverture directe
+    if (eligibility.eligible) {
+      await doOpenSession();
+      return;
+    }
+
+    // Cas 2 : Hors horaires ou jour férié → demande d'approbation directeur
+    if (eligibility.requiresOverride) {
+      onRequireOverride(eligibility.reason, eligibility.details ?? '');
+      return;
+    }
+
+    // Cas 3 : Branche archivée ou non configurée → blocage total
+    setErrors({
+      branch: eligibility.details ?? "Impossible d'ouvrir une session dans cette branche",
+    });
+  };
+
+  // ── Ouverture effective ───────────────────────────────────────
+
+  const doOpenSession = async () => {
     setLoading(true);
     try {
       await onConfirm({
         username:            form.username.trim(),
+        caissier_nom:        form.username.trim(),
         numero_caisse:       form.numero_caisse.trim(),
         branch:              form.branch.trim(),
         devise:              form.devise,
         superviseur:         form.superviseur.trim(),
         id_responsable_cash: form.id_responsable_cash.trim(),
         montant_ouverture:   parseFloat(form.montant_ouverture),
-        // ip_address et device_id → collectés ici quand l'API est prête
-        // device_id: navigator.userAgent,
       });
       setDone(true);
     } catch {
@@ -184,18 +240,22 @@ export default function OpenSessionModal({ onClose, onConfirm }: Props) {
           </div>
         </Field>
 
-        {/* Agence */}
+        {/* Agence — <select> avec vraies branches */}
         <Field label="Agence *" error={errors.branch}>
           <div className="relative">
             <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
+            <select
               value={form.branch}
               onChange={e => set('branch', e.target.value)}
-              placeholder="UUID agence"
-              // TODO API : remplacer par un <select> chargé depuis GET /branches/
-              className={inputCls(errors.branch) + ' pl-8'}
-            />
+              className={inputCls(errors.branch) + ' pl-8 pr-4 appearance-none cursor-pointer'}
+            >
+              <option value="">-- Sélectionnez une agence --</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>
+                  {b.branch_name} ({b.branch_code})
+                </option>
+              ))}
+            </select>
           </div>
         </Field>
 

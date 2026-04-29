@@ -8,15 +8,38 @@ import {
   Archive,
   ShieldOff,
   Wallet,
+  Calendar,
 } from "lucide-react";
 import { BranchData } from "./validations";
 import BranchBulkActionDropdown, { BranchBulkAction } from "./BranchBulkActionDropdown";
 import BranchBulkActionModal from "./modals/BranchBulkActionModal";
-
+// AJOUTE ces 2 imports en haut du fichier (avec les autres imports lucide)
+import { useRouter } from 'next/navigation';
+// (Eye, Pencil, etc. sont déjà importés)
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
 type BranchStatus = "active" | "inactive" | "archive";
 type TabId = "active" | "inactive" | "archive";
+
+function getEffectiveStatus(b: BranchData): BranchStatus {
+  //unifie les différentes sources possibles Une fois l'API stable, ce code peut être nettoyé.
+  const s = (b as any).statusBranch ?? b.statusBranche;
+  const normalized = typeof s === 'string' ? s.toLowerCase() : s;
+
+  if (
+    normalized === 'inactive' || normalized === 'désactivé' ||
+    normalized === 'desactive' || normalized === 'disabled' ||
+    normalized === false
+  ) return 'inactive';
+
+  if (
+    normalized === 'archive' || normalized === 'archived' ||
+    normalized === 'suspendu' || normalized === 'suspended'
+  ) return 'archive';
+
+  // ⚠️ Par défaut "active" : couvre le cas où l'API ne renvoie pas statusBranche
+  return 'active';
+}
 
 export interface BranchTableProps {
   branches:    BranchData[];
@@ -109,7 +132,9 @@ const BranchTable: React.FC<BranchTableProps> = ({
   onDelete,
   onBulkAction,
 }) => {
+  
   /* ── État local ── */
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('active');
   const [sortField,    setSortField]    = useState<keyof BranchData>("branch_name");
   const [sortDir,      setSortDir]      = useState<"asc" | "desc">("asc");
@@ -117,21 +142,18 @@ const BranchTable: React.FC<BranchTableProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<BranchBulkAction | null>(null);
 
-  /* ── Compteurs par onglet ── */
+  // 📝 REMPLACER les useMemo "counts" et "tabBranches" par ceci :
+
+// ✅ Compteurs utilisent maintenant getEffectiveStatus pour gérer l'undefined
   const counts = useMemo(() => ({
-    active: branches.filter(b => b.statusBranche === "active").length,
-    inactive: branches.filter(b => b.statusBranche === "inactive").length,
-    archive: branches.filter(b => b.statusBranche === "archive").length,
+    active:   branches.filter(b => getEffectiveStatus(b) === "active").length,
+    inactive: branches.filter(b => getEffectiveStatus(b) === "inactive").length,
+    archive:  branches.filter(b => getEffectiveStatus(b) === "archive").length,
   }), [branches]);
 
-    /* ── Filtrage par onglet ── */
-  const tabBranches = useMemo(() =>
-    branches.filter(b => {
-      if (activeTab === "active") return b.statusBranche === "active";
-      if (activeTab === "inactive") return b.statusBranche === "inactive";
-      if (activeTab === "archive") return b.statusBranche === "archive";
-      return false;
-    }),
+  // ✅ Filtre par onglet — version simplifiée
+  const tabBranches = useMemo(
+    () => branches.filter(b => getEffectiveStatus(b) === activeTab),
     [branches, activeTab]
   );
 
@@ -196,37 +218,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
     { label: "Statut",      field: "statusBranche"           },
   ];
   // helper
- function getEffectiveStatus(b: BranchData): BranchStatus {
-  // On unifie les différentes sources possibles
-  const s = (b as any).statusBranch ?? b.statusBranche;
 
-  // Normalisation
-  const normalized = typeof s === 'string' ? s.toLowerCase() : s;
-
-  // Inactif
-  if (
-    normalized === 'inactive' ||
-    normalized === 'désactivé' ||
-    normalized === 'desactive' ||
-    normalized === 'disabled' ||
-    normalized === false
-  ) {
-    return 'inactive';
-  }
-
-  // Archivé
-  if (
-    normalized === 'archive' ||
-    normalized === 'archived' ||
-    normalized === 'suspendu' ||
-    normalized === 'suspended'
-  ) {
-    return 'archive';
-  }
-
-  // Actif par défaut
-  return 'active';
-}
 
   /* ── Export CSV interne ── */
   const handleExportCSV = (branchesToExport: BranchData[]) => {
@@ -292,7 +284,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
   /* ── Render ── */
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+<div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
 
       {/* ── Onglets ── */}
     <div className="flex items-center px-2 border-b border-gray-100 bg-white">
@@ -519,7 +511,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
               {/* Statut ternaire */}
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold w-fit $cCfg.bg} ${cfg.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${cfg.bg} ${cfg.text}`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
                 {cfg.label}
@@ -557,6 +549,33 @@ const BranchTable: React.FC<BranchTableProps> = ({
                 </button>
               )}
 
+              {/* ⏰ Bouton "Configurer horaires" — visible si pas d'horaire */}
+              {!branch.opening_hour && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/dashboard/opening-hours?branch=${branch.id}`);
+                  }}
+                  title="Configurer les horaires"
+                  className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                  <Clock className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* 📅 Bouton "Configurer fériés" — visible si pas de fériés */}
+              {(!branch.holidays || branch.holidays.length === 0) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/dashboard/holidays?branch=${branch.id}`);
+                  }}
+                  title="Configurer les jours fériés"
+                  className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+              )}
               {/* Supprimer */}
               <button
                 onClick={() => onDelete(branch)}

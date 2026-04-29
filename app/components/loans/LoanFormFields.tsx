@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
-import { FaInfoCircle, FaLock } from "react-icons/fa";
 import {
    LoanType, LoanPurpose, CollateralType, RepaymentFrequency,
   LoanFormErrors,

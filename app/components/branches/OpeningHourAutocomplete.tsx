@@ -128,10 +128,10 @@ export function OpeningHourAutocomplete({
     : `${openingHours.length} horaire(s) disponible(s)`;
 
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef}>
+    <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef} >
 
       {/* ── Label ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between ">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
           Horaire d'ouverture
           {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -208,10 +208,15 @@ export function OpeningHourAutocomplete({
         <p className="text-xs text-gray-400">{hint}</p>
       )}
 
-      {/* ── Dropdown ── */}
+      
       {open && !isDisabled && !isLoading && (
-        <div className="relative z-50">
-          <ul className="absolute w-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto py-1">
+        <div className="relative z-50 bg-amber-600">
+          {/* ─── Ancienne version (commentée pour référence) ──────────────── */}
+          {/* <ul className="absolute w-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto py-1"> */}
+
+          {/* ─── Nouvelle version : hauteur 320px pour voir 4-5 horaires ──── */}
+          {/* ─── scroll auto au-delà, le reste reste accessible en scrollant ─ */}
+          <ul className="absolute w-full mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto py-1">
             {filtered.length === 0 ? (
               <li className="py-8 text-center">
                 <FaClock className="text-3xl text-gray-300 mx-auto mb-2" />

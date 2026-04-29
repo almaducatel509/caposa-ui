@@ -1,18 +1,39 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Clock, Calendar, RefreshCw } from "lucide-react";
 // Quand API prete : importer fetchOpeningHours, useState, useEffect, convertToOpeningHours
 import { MOCK_OPENING_HOURS } from "@/app/components/OpeningHours/mock";
 import PageHeader from "@/app/components/header";
 import StatsCards from "@/app/components/OpeningHours/StatsCards";
-import { computeStats } from "@/app/components/OpeningHours/validations";
+import { computeStats, convertToOpeningHours, OpeningHrs } from "@/app/components/OpeningHours/validations";
 import BranchScheduleManager from "@/app/components/OpeningHours/BranchScheduleManager";
+import { fetchOpeningHours } from "@/app/lib/api/branche";
 
 export default function OpeningHoursPage() {
   // Quand API prete : remplacer par useState([]) + useEffect + fetchOpeningHours()
-  const stats = useMemo(() => computeStats(MOCK_OPENING_HOURS), []);
+  // const stats = useMemo(() => computeStats(MOCK_OPENING_HOURS), []);
+const [hours, setHours] = useState<OpeningHrs[]>([]);
 
+useEffect(() => {
+  const load = async () => {
+    const data = await fetchOpeningHours();
+
+    const mapped = data.map(convertToOpeningHours);
+
+    setHours(mapped);
+  };
+
+  load();
+}, []);
+
+const loadOpeningHours = async () => {
+  const data = await fetchOpeningHours();
+  const mapped = data.map(convertToOpeningHours);
+  setHours(mapped);
+};
+
+const stats = useMemo(() => computeStats(hours), [hours]);
   return (
     <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 print:bg-white print:p-0 print:m-0 p-6 md:p-8">
       <div className="max-w-7xl mx-auto ">
@@ -26,9 +47,11 @@ export default function OpeningHoursPage() {
           />
           {/* Quand API prete : brancher onClick sur loadOpeningHours() */}
           <button
+          onClick={loadOpeningHours}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
                        border border-gray-200 bg-white text-gray-700
                        hover:bg-gray-50 hover:border-gray-300 transition-all shrink-0 mt-1"
+                       
           >
             <RefreshCw className="w-4 h-4" />
             Actualiser

@@ -1,36 +1,39 @@
 "use client";
 
 import React, { useState } from "react";
-import { FaRegTrashCan, FaBuilding } from "react-icons/fa6";
+import { FaBuilding } from "react-icons/fa6";
 import { MdLocationOn } from "react-icons/md";
-import { AlertTriangle, Loader2, X } from "lucide-react";
-import { deleteBranch } from "@/app/lib/api/branche";
+import { Archive, AlertTriangle, Loader2, X, Info } from "lucide-react";
+// ─── Ancienne version (commentée) ──────────────────────────────────────────
+// import { deleteBranch } from "@/app/lib/api/branche";
+// ─── Nouvelle version : soft delete via archiveBranch ──────────────────────
+import { archiveBranch } from "@/app/lib/api/branche";
 
-interface Branch {
-  id: string;
-  branch_name: string;
-  branch_address: string;
-  branch_code: string;
-  number_of_tellers: number;
-  number_of_clerks: number;
-  number_of_credit_officers: number;
-}
+// ─── Ancienne version (commentée) : interface Branch dupliquée ─────────────
+// interface Branch { id, branch_name, ... }
+// ─── Nouvelle version : on utilise BranchData (Dieu = UI) ──────────────────
+import { BranchData } from "../validations";
 
-interface DeleteBranchModalProps {
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+
+interface ArchiveBranchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  branch: Branch;
+  /** Reçoit la branche archivée (objet complet renvoyé par l'API) */
+  onSuccess: (archived?: any) => void;
+  branch: BranchData;
 }
 
-const DeleteBranchModal: React.FC<DeleteBranchModalProps> = ({
+/* ─── Composant ──────────────────────────────────────────────────────────── */
+
+const DeleteBranchModal: React.FC<ArchiveBranchModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
   branch,
 }) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [error, setError]             = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -39,47 +42,65 @@ const DeleteBranchModal: React.FC<DeleteBranchModalProps> = ({
     branch.number_of_clerks +
     branch.number_of_credit_officers;
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     try {
-      setIsDeleting(true);
+      setIsArchiving(true);
       setError(null);
-      await deleteBranch(branch.id);
-      onSuccess();
+
+      // ─── Ancienne version (commentée) : hard delete ──────────────────────
+      // await deleteBranch(branch.id);
+
+      // ─── Nouvelle version : soft delete (statusBranche = "archive") ─────
+      const archived = await archiveBranch(branch.id);
+
+      onSuccess(archived);
       onClose();
-    } catch (err) {
-      console.error("Erreur lors de la suppression:", err);
-      setError("Erreur lors de la suppression de la branche. Veuillez réessayer.");
+    } catch (err: any) {
+      console.error("Erreur lors de l'archivage:", err);
+      setError(err?.message || "Erreur lors de l'archivage. Veuillez réessayer.");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
     }
   };
 
   return (
-    /* Overlay */
+    /* ── Overlay ── */
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={!isDeleting ? onClose : undefined}
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={!isArchiving ? onClose : undefined}
       />
 
-      {/* Modal */}
+      {/* ── Modal ── */}
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
 
-        {/* ── Header ── */}
+        {/* ── Header CAPOSA (style cohérent avec les autres modaux) ──────── */}
+        {/* ─── Ancienne version (commentée) : header rouge agressif ────────
         <div className="flex items-center gap-3 p-5 bg-red-50 border-b border-red-100">
-          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-red-100 ...">
             <FaRegTrashCan className="text-red-600 text-lg" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-red-700">Supprimer la branche</h3>
-            <p className="text-xs text-red-500 mt-0.5">Action irréversible</p>
+          <h3 className="text-base font-bold text-red-700">Supprimer la branche</h3>
+          <p className="text-xs text-red-500">Action irréversible</p>
+        */}
+
+        {/* ─── Nouvelle version : header gris-blanc, ambre, ton doux ───── */}
+        <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+              <Archive className="text-amber-600 w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Archiver la branche</h3>
+              <p className="text-xs text-gray-500 mt-0.5">L'opération est réversible</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            disabled={isDeleting}
-            className="p-2 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-100 transition-colors disabled:opacity-40"
+            disabled={isArchiving}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
           >
-            <X size={18} />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -95,18 +116,23 @@ const DeleteBranchModal: React.FC<DeleteBranchModalProps> = ({
           )}
 
           <p className="text-sm text-gray-700">
-            Êtes-vous sûr de vouloir supprimer définitivement cette branche ?
+            Voulez-vous archiver cette branche ? Elle sera déplacée vers l'onglet{" "}
+            <span className="font-semibold">Archive</span> et n'apparaîtra plus dans la liste active.
           </p>
 
-          {/* Card branche */}
-          <div className="flex items-start gap-3 p-4 bg-red-50/50 border border-red-100 rounded-xl">
-            <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-              <FaBuilding className="text-red-600" />
+          {/* Card branche — style CAPOSA (vert clair) */}
+          {/* ─── Ancienne version (commentée) : fond rouge ────────────────
+          <div className="flex items-start gap-3 p-4 bg-red-50/50 border border-red-100 ...">
+          */}
+          {/* ─── Nouvelle version : fond vert CAPOSA neutre ──────────────── */}
+          <div className="flex items-start gap-3 p-4 bg-[#DDEAD5]/30 border border-[#DDEAD5] rounded-xl">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
+              <FaBuilding className="text-[#2E7D32]" />
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-gray-900 text-sm">{branch.branch_name}</h4>
               <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                <MdLocationOn className="shrink-0" />
+                <MdLocationOn className="shrink-0 text-[#2E7D32]" />
                 <span className="truncate">{branch.branch_address}</span>
               </div>
               <div className="flex gap-3 mt-1.5 text-xs">
@@ -124,45 +150,59 @@ const DeleteBranchModal: React.FC<DeleteBranchModalProps> = ({
             </div>
           </div>
 
-          {/* Avertissement */}
+          {/* Info — ce que l'archivage implique (ambre = avertissement, pas rouge) */}
+          {/* ─── Ancienne version (commentée) : "irréversible" mensonger ─
+          <div className="bg-amber-50 ... ">
+            <p>Attention : cette action est irréversible</p>
+            <li>• Toutes les données ... perdues</li>
+          */}
+          {/* ─── Nouvelle version : info honnête sur les conséquences ───── */}
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-semibold text-amber-800 mb-1">
-                Attention : cette action est irréversible
+                Ce qui se passe quand vous archivez
               </p>
               <ul className="text-amber-700 space-y-0.5 text-xs">
-                <li>• Toutes les données de la branche seront perdues</li>
-                <li>• Les associations avec les employés seront supprimées</li>
-                <li>• L'historique des transactions sera affecté</li>
+                <li>• La branche disparaît de la liste active</li>
+                <li>• Les employés ne pourront plus s'y rattacher</li>
+                <li>• Les données restent conservées (historique préservé)</li>
+                <li>• Vous pourrez la restaurer depuis l'onglet Archive</li>
               </ul>
             </div>
           </div>
         </div>
 
-        {/* ── Footer ── */}
-        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+        {/* ── Footer CAPOSA (style cohérent) ──────────────────────────── */}
+        {/* ─── Ancienne version (commentée) : bouton rouge "Supprimer définitivement"
+        <button className="bg-red-600 hover:bg-red-700 ...">
+          Supprimer définitivement
+        </button>
+        */}
+
+        {/* ─── Nouvelle version : bouton ambre "Archiver la branche" ──── */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
           <button
             onClick={onClose}
-            disabled={isDeleting}
-            className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+            disabled={isArchiving}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
           >
             Annuler
           </button>
           <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all disabled:opacity-60 shadow-sm"
+            onClick={handleArchive}
+            disabled={isArchiving}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all disabled:opacity-60 shadow-sm"
           >
-            {isDeleting ? (
+            {isArchiving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Suppression…
+                Archivage…
               </>
             ) : (
               <>
-                <FaRegTrashCan />
-                Supprimer définitivement
+                <Archive className="w-4 h-4" />
+                Archiver la branche
               </>
             )}
           </button>

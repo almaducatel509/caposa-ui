@@ -1,14 +1,15 @@
+import { Holiday } from "@/app/components/holidays/validations";
 import { DepartmentCode } from "@/app/data/haitiLocations";
-
+//C:\Users\alma2\Documents\Final Project\caposa-ui\types\branche.ts
+// export interface OpeningHour {
+//   id: string;
+//   schedule: string;
+// }
 export interface OpeningHour {
   id: string;
+  name?: string;        // pour l'afficher dans le message
   schedule: string;
-}
-
-export interface Holiday {
-  id: string;
-  date: string;
-  description: string;
+  is_default: boolean;  // ← le flag clé
 }
 
 export interface Branch {

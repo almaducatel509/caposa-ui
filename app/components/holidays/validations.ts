@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+// ================= TYPES UNION (source unique) =================
+export type HolidayType =
+  | "ferie"
+  | "local"
+  | "interne"
+  | "election"
+  | "maintenance"
+  | "autre";
+
+export type HolidayScope = "national" | "regional" | "branch" | "autre";
+
 // ================= SCHEMA DE BASE =================
 export const baseHolidaySchema = z.object({
   id: z.string().optional(),
@@ -33,13 +44,23 @@ export const baseHolidaySchema = z.object({
     .optional(),
 
   modified_by: z.string().optional(),
+
+  /**
+   * 🎯 true tant que le férié n'a pas été assigné via AssignBranchesModal.
+   * Un brouillon ne bloque AUCUN caissier.
+   */
+  pending_assignment: z.boolean().default(true),
 });
 
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // ================= SCHEMA AVEC VALIDATION CONDITIONNELLE =================
 export const holidaySchema = baseHolidaySchema.superRefine((data, ctx) => {
-  if (data.scope === "branch" && !data.branch_code) {
+  if (
+    !data.pending_assignment &&
+    data.scope === "branch" &&
+    !data.branch_code
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Le code de branche est requis quand la portée est 'Succursale'",
@@ -48,44 +69,81 @@ export const holidaySchema = baseHolidaySchema.superRefine((data, ctx) => {
   }
 });
 
-// ================= SCHEMAS POUR CRÉATION/ÉDITION =================
 export const holidayCreateSchema = baseHolidaySchema.omit({ id: true });
 export const holidayUpdateSchema = baseHolidaySchema.required({ id: true });
 
+// ================= INTERFACES =================
 
+/** Type principal pour un jour férié — utilisé partout dans l'app */
 export interface HolidayData {
   id: string;
   date: string;
   description: string;
-  type: "ferie" | "local" | "interne" | "election" | "maintenance" | "autre";
-  scope: "national" | "regional" | "branch" | "autre";
+  type: HolidayType;
+  scope: HolidayScope;
   branch_code?: string;
   comment?: string;
   modified_by?: string;
   created_at?: string;
   updated_at?: string;
-}
-// Form data interface (what the form uses)
-export interface HolidayFormData {
-  id?: string;               // facultatif en création
-  date: string;              // requis
-  description: string;       // requis
-  type: "ferie" | "local" | "interne" | "election" | "maintenance" | "autre";
-  scope: "national" | "regional" | "branch" | "autre";
-  branch_code?: string;      // requis seulement si scope = "branch"
-  comment?: string;          // requis seulement si modification sensible
+  pending_assignment: boolean;
 }
 
-// Vérifie si branch_code est requis
-export const isBranchCodeRequired = (scope: string): boolean => {
+/**
+ * Alias `Holiday = HolidayData`.
+ * Permet aux anciens fichiers qui importent `Holiday` de continuer à fonctionner
+ * tant que tout n'a pas été migré.
+ */
+export type Holiday = HolidayData;
+
+export interface HolidayFormData {
+  id?: string;
+  date: string;
+  description: string;
+  type: HolidayType;
+  scope: HolidayScope;
+  branch_code?: string;
+  comment?: string;
+  pending_assignment?: boolean;
+}
+
+// ================= LABELS =================
+
+export const HOLIDAY_TYPE_LABELS: Record<HolidayType, string> = {
+  ferie: "Férié",
+  local: "Local",
+  interne: "Interne",
+  election: "Élection",
+  maintenance: "Maintenance",
+  autre: "Autre",
+};
+
+export const HOLIDAY_SCOPE_LABELS: Record<HolidayScope, string> = {
+  national: "National",
+  regional: "Régional",
+  branch: "Succursale",
+  autre: "Autre",
+};
+
+// ================= HELPERS =================
+
+export const isPendingAssignment = (
+  holiday: HolidayData | HolidayFormData
+): boolean => holiday.pending_assignment === true;
+
+export const isBranchCodeRequired = (
+  scope: string,
+  pendingAssignment: boolean
+): boolean => {
+  if (pendingAssignment) return false;
   return scope === "branch";
 };
 
-// Vérifie si un commentaire est requis (modification sensible)
 export const isCommentRequired = (
   originalHoliday: HolidayData,
   updatedHoliday: Partial<HolidayData>
 ): boolean => {
+  if (originalHoliday.pending_assignment) return false;
   return (
     (updatedHoliday.type !== undefined &&
       updatedHoliday.type !== originalHoliday.type) ||
@@ -95,30 +153,3 @@ export const isCommentRequired = (
       updatedHoliday.date !== originalHoliday.date)
   );
 };
-
-// 🎯 Résumé ultra‑compact
-// ✔️ Ce que tu peux faire :
-// Valider les données
-
-// Structurer les types
-
-// Gérer les constantes
-
-// Appliquer des règles métier simples
-
-// Construire des formulaires robustes
-
-// Gérer les erreurs UI
-
-// Séparer proprement ton architecture
-
-// ❌ Ce que tu ne peux pas faire :
-// Validation métier avancée (DB, permissions, conflits)
-
-// Audit automatique
-
-// Logique API
-
-// Logique d’affichage
-
-// Règles dépendantes d’autres entités

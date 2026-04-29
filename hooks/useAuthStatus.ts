@@ -6,3 +6,4 @@ export function useAuthStatus() {
   const token = getCookie('authjs.session-token');
   return Boolean(token);
 }
+  

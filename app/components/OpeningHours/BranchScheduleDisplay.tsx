@@ -2,8 +2,8 @@
 
 import React from "react";
 import { MapPin, Phone, Mail, Clock, Printer, CheckCircle } from "lucide-react";
-import { BranchData, OpeningHourDetail } from "./validations";
-import { HAITI_DEPARTMENTS, DAYS } from "./mock";
+import { BranchData, DAYS, OpeningHourDetail } from "./validations";
+import { HAITI_DEPARTMENTS } from "@/app/data/haitiLocations";
 
 interface BranchScheduleDisplayProps {
   branch: BranchData;

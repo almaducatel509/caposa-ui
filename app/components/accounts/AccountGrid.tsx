@@ -69,7 +69,7 @@ const AccountGrid: React.FC = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  // ── Filter ─────────────────────────────────────────────────────────────────
+  // ──── Filtrage ─────────────────────────────────────────────────────────────────
   const filteredAccounts = useMemo(() => {
     return accounts.filter(acc => {
       const matchSearch =
