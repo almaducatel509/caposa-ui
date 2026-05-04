@@ -3,13 +3,34 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, XCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import type { AccountData } from '../validationsaccount';
-import { updateAccount } from '@/app/lib/api/accounts';
+import { closeAccount } from '@/app/lib/api/accounts';
 import { Modal } from '../../ui/Modal';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFICATIONS apportées à ce fichier :
+//
+// 1. STATUS_COLORS réduit aux 3 statuts métier ('en_attente' supprimé).
+//
+// 2. handleSubmit :
+//    - AVANT : `updateAccount(id, { statutCompte: 'ferme', ... })`
+//      → champ inexistant + valeur inexistante → silent fail / corruption.
+//    - APRÈS : `closeAccount(id, { reason: closureReason })` qui envoie
+//      `statusAccount: 'fermé'` côté API. Voir accounts.ts.
+//
+// 3. onSuccess reçoit maintenant le COMPTE FERMÉ (AccountData) au lieu d'un
+//    void → permet à AccountGrid de mettre à jour le state au lieu de
+//    supprimer le compte (le compte fermé doit rester visible dans Archive).
+//
+// 4. Le bouton X dupliqué dans le header (deux divs imbriquées identiques)
+//    est SUPPRIMÉ — c'était un bug d'édition.
+//
+// 5. Le `console.log('🔍 Details array:', ...)` de debug est retiré.
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface CloseAccountModalProps {
   isOpen:    boolean;
   onClose:   () => void;
-  onSuccess: () => void;
+  onSuccess: (closed: AccountData) => void;
   account:   AccountData | null;
 }
 
@@ -20,14 +41,14 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  ouvert:     'bg-[#DDEAD5] text-[#1B5E20]',
-  gelé:       'bg-blue-50 text-[#355C7D]',
-  en_attente: 'bg-amber-50 text-amber-700',
-  fermé:      'bg-gray-100 text-gray-500',
+  ouvert: 'bg-[#DDEAD5] text-[#1B5E20]',
+  gelé:   'bg-blue-50 text-[#355C7D]',
+  fermé:  'bg-gray-100 text-gray-500',
 };
 
 const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
-   isOpen, onClose, onSuccess, account,}) =>{
+  isOpen, onClose, onSuccess, account,
+}) => {
 
   const [isClosing,   setIsClosing]   = useState(false);
   const [error,       setError]       = useState<string | null>(null);
@@ -72,15 +93,13 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
   const statut = account.statusAccount ?? (account.account_status ? 'ouvert' : 'fermé');
 
   const details = [
-  { label: 'Numéro', value: account.account_number || account.noCompte || '—' },
-  { label: 'Titulaire', value: titulaire },
-  { label: 'Type', value: typeCompte },
-  { label: 'Solde actuel', value: `${solde.toLocaleString('fr-FR')} HTG`, danger: solde !== 0 },
-  { label: 'Ouvert le', value: dateOuverture },
-  { label: 'Statut actuel', value: statut, chip: true },
-];
-
-console.log('🔍 Details array:', details); // ← Ajoute ça
+    { label: 'Numéro',        value: account.account_number || '—' },
+    { label: 'Titulaire',     value: titulaire },
+    { label: 'Type',          value: typeCompte },
+    { label: 'Solde actuel',  value: `${solde.toLocaleString('fr-FR')} HTG`, danger: solde !== 0 },
+    { label: 'Ouvert le',     value: dateOuverture },
+    { label: 'Statut actuel', value: statut, chip: true },
+  ];
 
   const handleSubmit = async () => {
     if (!canClose) { setError(blockingReason); return; }
@@ -95,11 +114,11 @@ console.log('🔍 Details array:', details); // ← Ajoute ça
     setIsClosing(true);
     setError(null);
     try {
-      await updateAccount(account.id, {
-        statutCompte:  'ferme',
-        dateFermeture: closureDate,
+      // ← Utilise l'API dédiée qui envoie statusAccount: 'fermé'
+      const closedAccount = await closeAccount(account.id, {
+        reason: reason.trim() || 'Fermeture standard',
       });
-      onSuccess();
+      onSuccess(closedAccount);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la fermeture du compte.');
@@ -124,32 +143,26 @@ console.log('🔍 Details array:', details); // ← Ajoute ça
             </p>
           </div>
         </div>
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-red-100 bg-red-50 rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            {/* ... titre ... */}
-          </div>
-          {/* ← ICI: Bouton X avec feedback visuel */}
-          <button
-            onClick={() => { if (!isClosing) onClose(); }}
-            disabled={isClosing}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isClosing 
-                ? 'text-gray-300 cursor-not-allowed bg-gray-50'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-red-100'
-            }`}
-          >
-            {isClosing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <X className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+
+        {/* Bouton X (un seul, plus de doublon) */}
+        <button
+          onClick={() => { if (!isClosing) onClose(); }}
+          disabled={isClosing}
+          className={`p-1.5 rounded-lg transition-colors ${
+            isClosing
+              ? 'text-gray-300 cursor-not-allowed bg-gray-50'
+              : 'text-gray-400 hover:text-gray-600 hover:bg-red-100'
+          }`}
+        >
+          {isClosing
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <X       className="w-4 h-4" />}
+        </button>
       </div>
 
       {/* Body */}
       <div className="overflow-y-auto px-6 py-5 flex flex-col gap-5 max-h-[70vh]">
+
         {/* Blocking alert */}
         {!canClose && (
           <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -172,7 +185,7 @@ console.log('🔍 Details array:', details); // ← Ajoute ça
         </div>
 
         {/* Account details */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
           <p className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
             Détails du compte
           </p>
@@ -245,7 +258,6 @@ console.log('🔍 Details array:', details); // ← Ajoute ça
         )}
 
         {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
-
       </div>
 
       {/* Footer */}
@@ -264,12 +276,12 @@ console.log('🔍 Details array:', details); // ← Ajoute ça
         >
           {isClosing
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fermeture…</>
-            : <><XCircle className="w-3.5 h-3.5" /> Confirmer la fermeture</>
-          }
+            : <><XCircle className="w-3.5 h-3.5" /> Confirmer la fermeture</>}
         </button>
       </div>
 
     </Modal>
   );
-} 
+};
+
 export default CloseAccountModal;

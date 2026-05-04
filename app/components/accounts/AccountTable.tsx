@@ -6,40 +6,54 @@ import {
   ChevronDown, ChevronUp, ChevronsUpDown,
   Check, CheckCircle2, X, Archive,
   Wallet, ShieldAlert, TrendingUp, TrendingDown, Minus,
-  ShieldOff, ShieldCheck, Clock,
+  ShieldOff, ShieldCheck,
 } from 'lucide-react';
 import { AccountData } from './validationsaccount';
 import AccountBulkActionDropdown, { AccountBulkAction } from './AccountBulkActionDropdown';
 import AccountBulkActionModal from './modals/AccountBulkActionModal';
 import UserAvatar from '../core/UserAvatar';
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFICATIONS apportées à ce fichier :
+//
+// 1. Suppression COMPLÈTE des références à 'en_attente', 'archive', 'suspendu',
+//    'inactif', 'ferme' et `statutCompte`.
+//
+// 2. Modèle unifié : 3 statuts seulement → 'ouvert' | 'gelé' | 'fermé'.
+//    Onglet "Archive" est juste le LABEL UI pour le statut métier 'fermé'.
+//
+// 3. `getEffectiveStatus` lit `acc.statusAccount` directement (plus aucune
+//    conversion `archive ↔ fermé` ni `suspendu ↔ gelé`).
+//
+// 4. Bannière "comptes en attente" supprimée — le concept n'existe plus.
+//
+// 5. Action "Activer" (qui prenait un compte 'en_attente' vers 'ouvert')
+//    supprimée. Il ne reste que : Voir, Transactions, Geler, Débloquer, Fermer.
+// ─────────────────────────────────────────────────────────────────────────────
 
-type TabId = 'ouvert' | 'gelé' | 'en_attente' | 'fermé';
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-// Statuts alignés avec la décision architecturale :
-// statusAccount: 'ouvert' | 'fermé' | 'gelé' | 'en_attente'
-type AccountStatus = 'ouvert' | 'fermé' | 'gelé' | 'en_attente';
+type AccountStatus = 'ouvert' | 'gelé' | 'fermé';
+type TabId         = AccountStatus;
 
 interface AccountTableProps {
-  accounts:            AccountData[];
-  isLoading:           boolean;
-  onDelete: (acc: AccountData) => void;
-  onView:              (a: AccountData) => void;
-  onSuspend:           (a: AccountData) => void;
-  onClose:             (a: AccountData) => void;
-  onViewTransactions:  (a: AccountData) => void;
-  onBulkAction:        (action: AccountBulkAction, ids: string[]) => Promise<void>;
-  activeTab?:          'ouvert' | 'gelé' | 'en_attente' | 'fermé';
-  onTabChange?:        (tab: 'ouvert' | 'gelé' | 'en_attente' | 'fermé') => void;
+  accounts:           AccountData[];
+  isLoading:          boolean;
+  onView:             (a: AccountData) => void;
+  onSuspend:          (a: AccountData) => void;
+  onClose:            (a: AccountData) => void;
+  onViewTransactions: (a: AccountData) => void;
+  onBulkAction:       (action: AccountBulkAction, ids: string[]) => Promise<void>;
+  activeTab?:         TabId;
+  onTabChange?:       (tab: TabId) => void;
 }
-// ─── Constants ─────────────────────────────────────────────────────────────────
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<AccountStatus, { bg: string; text: string; dot: string; label: string }> = {
-  ouvert:      { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Ouvert'      },
-  gelé:        { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Gelé'         },
-  en_attente:  { bg: 'bg-yellow-50', text: 'text-[#854F0B]', dot: 'bg-amber-400',  label: 'En attente'  },
-  fermé:       { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',   label: 'Fermé'       },
+  ouvert: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Ouvert' },
+  gelé:   { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Gelé'   },
+  fermé:  { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Fermé'  },
 };
 
 const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
@@ -48,36 +62,36 @@ const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
   terme:   { bg: 'bg-yellow-50', text: 'text-[#854F0B]', label: 'Terme'   },
 };
 
-
 const COLS = [
   { label: 'Compte / Membre', field: 'account_number' },
-  { label: 'Type',            field: 'typeCompte'      },
-  { label: 'Solde',           field: 'solde'           },
-  { label: 'Depuis',          field: 'created_at'      },  // ← nouveau
-  { label: 'Statut',          field: 'statusAccount'   },
+  { label: 'Type',            field: 'typeCompte'     },
+  { label: 'Solde',           field: 'solde'          },
+  { label: 'Depuis',          field: 'created_at'     },
+  { label: 'Statut',          field: 'statusAccount'  },
 ];
 
 const GRID = '40px 2.5fr 1fr 1.2fr 1fr 1fr 130px';
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Lit directement `statusAccount`. Fallback minimal sur le booléen API.
 function getEffectiveStatus(a: AccountData): AccountStatus {
-  const s = (a as any).statusAccount ?? a.statutCompte;
-  if (s === 'fermé' || s === 'ferme' || s === 'closed') return 'fermé';
-  if (s === 'gelé'  || s === 'suspendu' || s === 'frozen') return 'gelé';
-  if (s === 'en_attente' || s === 'pending') return 'ouvert'; // ← 'ouvert' au lieu de 'en_attente'
-  if (a.account_status === false) return 'fermé';
-  return 'ouvert';
+  if (a.statusAccount === 'gelé')  return 'gelé';
+  if (a.statusAccount === 'fermé') return 'fermé';
+  if (a.statusAccount === 'ouvert') return 'ouvert';
+  // Fallback : si statusAccount est vide, on déduit du booléen API
+  return a.account_status ? 'ouvert' : 'fermé';
 }
 
 function formatHTG(n?: number | null) {
   if (n == null) return '0 HTG';
   return new Intl.NumberFormat('fr-HT', {
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(n) + ' HTG';
 }
 
-// ─── Sort icon ─────────────────────────────────────────────────────────────────
+// ─── Sort icon ────────────────────────────────────────────────────────────────
 
 function SortIcon({ field, sortField, sortDir }: {
   field: string; sortField: string; sortDir: string;
@@ -88,7 +102,7 @@ function SortIcon({ field, sortField, sortDir }: {
     : <ChevronDown className="w-3.5 h-3.5 text-[#2E7D32]" />;
 }
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function SkeletonRow() {
   return (
@@ -110,26 +124,33 @@ function SkeletonRow() {
   );
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 const AccountTable: React.FC<AccountTableProps> = ({
-  accounts, isLoading,
-  onView, onSuspend, onClose, onViewTransactions, onBulkAction,
-  activeTab: externalTab, onTabChange,
+  accounts,
+  isLoading,
+  onView,
+  onSuspend,
+  onClose,
+  onViewTransactions,
+  onBulkAction,
+  activeTab: externalTab,
+  onTabChange,
 }) => {
-  const [localTab, setLocalTab] = useState<TabId>('ouvert');
+  const [localTab,     setLocalTab]     = useState<TabId>('ouvert');
   const activeTab = externalTab ?? localTab;
+
   const [sortField,    setSortField]    = useState('account_number');
   const [sortDir,      setSortDir]      = useState<'asc' | 'desc'>('asc');
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [activeAction, setActiveAction] = useState<AccountBulkAction | null>(null);
 
-  // ── Counts ────────────────────────────────────────────────────────────────
+  // ── Counts (3 statuts seulement) ──────────────────────────────────────────
   const counts = useMemo(() => ({
-    ouvert:     accounts.filter(a => getEffectiveStatus(a) === 'ouvert').length,
-    gelé:       accounts.filter(a => getEffectiveStatus(a) === 'gelé').length,
-    en_attente: accounts.filter(a => getEffectiveStatus(a) === 'en_attente').length,
-    fermé:      accounts.filter(a => getEffectiveStatus(a) === 'fermé').length,
+    ouvert: accounts.filter(a => getEffectiveStatus(a) === 'ouvert').length,
+    gelé:   accounts.filter(a => getEffectiveStatus(a) === 'gelé').length,
+    fermé:  accounts.filter(a => getEffectiveStatus(a) === 'fermé').length,
   }), [accounts]);
 
   // ── Tab filter ────────────────────────────────────────────────────────────
@@ -156,8 +177,6 @@ const AccountTable: React.FC<AccountTableProps> = ({
     return sortDir === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
   }), [tabAccounts, sortField, sortDir]);
 
-  const [activeAction, setActiveAction] = useState<AccountBulkAction | null>(null);
-
   const selectedAccounts = useMemo(
     () => sorted.filter(a => selected.has(a.id as string)),
     [sorted, selected],
@@ -178,93 +197,35 @@ const AccountTable: React.FC<AccountTableProps> = ({
     onTabChange?.(tab);
     setSelected(new Set());
   };
-  
+
   const isFermeTab = activeTab === 'fermé';
-  // ── Export CSV pour comptes ───────────────────────────────────────────────────
-  const handleExportCSV = () => {
-    const headers = [
-      'Numero de compte',
-      'Membre',
-      'Email',
-      'Type',
-      'Solde',
-      'Statut',
-      'Depuis'
-    ];
-
-    const rows = selectedAccounts.map(a => [
-      a.account_number ?? '',
-
-      // Nom du membre (depuis member_details)
-      a.member_details?.full_name
-        ?? `${a.member_details?.first_name ?? ''} ${a.member_details?.last_name ?? ''}`.trim(),
-
-      // Email
-      a.member_details?.email ?? '',
-
-      // Type (champ enrichi)
-      a.typeCompte ?? '',
-
-      // Solde (champ enrichi)
-      a.soldeActuel ?? '',
-
-      // Statut (champ enrichi)
-      a.statusAccount ?? '',
-
-      // Date d'ouverture
-      a.created_at
-        ? new Date(a.created_at).toLocaleDateString('fr-FR')
-        : '',
-    ]);
-
-    const csv = [headers, ...rows]
-      .map(r => r.map(v => `"${v}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `comptes_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-      {/* ── Onglets ── */}
+      {/* ── Onglets (3 seulement) ── */}
       <div className="flex items-center px-2 border-b border-gray-100 bg-white">
         {([
-          { id: 'ouvert'     as TabId, label: 'Ouverts',    icon: Wallet,    active: 'border-[#2E7D32] text-[#1B5E20]',  badge: 'bg-[#DDEAD5] text-[#1B5E20]',  count: counts.ouvert     },
-          { id: 'gelé'       as TabId, label: 'Gelés',      icon: ShieldOff, active: 'border-[#355C7D] text-[#355C7D]',  badge: 'bg-blue-100 text-[#355C7D]',   count: counts.gelé       },
-          { id: 'en_attente' as TabId, label: 'En attente', icon: Clock,     active: 'border-amber-500 text-amber-700',  badge: 'bg-yellow-100 text-amber-700', count: counts.en_attente },
-          { id: 'fermé'      as TabId, label: 'Archive',     icon: Archive,   active: 'border-gray-400 text-gray-600',    badge: 'bg-gray-100 text-gray-600',    count: counts.fermé      },
+          { id: 'ouvert' as TabId, label: 'Ouverts', icon: Wallet,    active: 'border-[#2E7D32] text-[#1B5E20]', badge: 'bg-[#DDEAD5] text-[#1B5E20]', count: counts.ouvert },
+          { id: 'gelé'   as TabId, label: 'Gelés',   icon: ShieldOff, active: 'border-[#355C7D] text-[#355C7D]', badge: 'bg-blue-100 text-[#355C7D]',  count: counts.gelé   },
+          { id: 'fermé'  as TabId, label: 'Archive', icon: Archive,   active: 'border-gray-400 text-gray-600',   badge: 'bg-gray-100 text-gray-600',   count: counts.fermé  },
         ]).map(tab => {
           const Icon      = tab.icon;
           const isCurrent = activeTab === tab.id;
           return (
-            <button 
-              key={tab.id} 
+            <button
+              key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 ${
-                isCurrent 
-                ? `${tab.active} font-semibold` 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                isCurrent ? `${tab.active} font-semibold` : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
               <Icon className="w-3.5 h-3.5 shrink-0" />
               {tab.label}
               {tab.count > 0 && (
-                <span 
-                  className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
-                    isCurrent 
-                    ? tab.badge 
-                    : 'bg-gray-100 text-gray-500'
-                  }`}
-                >
+                <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
+                  isCurrent ? tab.badge : 'bg-gray-100 text-gray-500'
+                }`}>
                   {tab.count}
                 </span>
               )}
@@ -286,13 +247,11 @@ const AccountTable: React.FC<AccountTableProps> = ({
         </div>
       )}
 
-      {!isFermeTab && (counts.gelé > 0 || counts.en_attente > 0) && (
+      {!isFermeTab && counts.gelé > 0 && (
         <div className="flex items-start gap-3 px-5 py-3 bg-blue-50 border-b border-blue-100">
           <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
           <p className="text-xs text-[#355C7D]">
-            {counts.gelé > 0 && <span><strong>{counts.gelé}</strong> compte{counts.gelé > 1 ? 's' : ''} gelé{counts.gelé > 1 ? 's' : ''} </span>}
-            {counts.gelé > 0 && counts.en_attente > 0 && '· '}
-            {counts.en_attente > 0 && <span><strong>{counts.en_attente}</strong> en attente d'activation</span>}
+            <strong>{counts.gelé}</strong> compte{counts.gelé > 1 ? 's' : ''} gelé{counts.gelé > 1 ? 's' : ''} nécessite{counts.gelé > 1 ? 'nt' : ''} une action
           </p>
         </div>
       )}
@@ -307,7 +266,6 @@ const AccountTable: React.FC<AccountTableProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            
             {!isFermeTab && (
               <AccountBulkActionDropdown
                 selectedCount={selected.size}
@@ -316,8 +274,10 @@ const AccountTable: React.FC<AccountTableProps> = ({
                 onAction={(action) => setActiveAction(action)}
               />
             )}
-            <button onClick={() => setSelected(new Set())}
-              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+            <button
+              onClick={() => setSelected(new Set())}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all"
+            >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -359,12 +319,8 @@ const AccountTable: React.FC<AccountTableProps> = ({
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${isFermeTab ? 'bg-gray-100' : 'bg-[#DDEAD5]'}`}>
               <Wallet className={`w-7 h-7 ${isFermeTab ? 'text-gray-400' : 'text-[#2E7D32]'}`} />
             </div>
-            <p className="text-sm font-semibold text-gray-900 mb-1">
-              Aucun compte trouvé
-            </p>
-            <p className="text-xs text-gray-400">
-              Modifiez vos critères de recherche
-            </p>
+            <p className="text-sm font-semibold text-gray-900 mb-1">Aucun compte trouvé</p>
+            <p className="text-xs text-gray-400">Modifiez vos critères de recherche</p>
           </div>
         )}
 
@@ -399,38 +355,38 @@ const AccountTable: React.FC<AccountTableProps> = ({
               </div>
 
               {/* Compte + Membre */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`relative shrink-0 ${isFermeTab ? 'opacity-50 grayscale' : ''}`}>
-                    <UserAvatar
-                      user={{
-                        first_name: acc.member_details?.first_name ?? '',
-                        last_name:  acc.member_details?.last_name  ?? '',
-                        photo_profil:      acc.member_details?.photo_profil,
-                      }}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isFermeTab ? 'text-gray-400' : 'text-gray-900'}`}>
-                      {acc.account_number}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {acc.member_details?.full_name ?? acc.id_membre ?? '—'}
-                    </p>
-                    {acc.member_details?.email && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Mail className="w-3 h-3 text-gray-300 shrink-0" />
-                        <span className="text-xs text-gray-400 truncate">{acc.member_details.email}</span>
-                      </div>
-                    )}
-                    {acc.member_details?.phone_number && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Phone className="w-3 h-3 text-gray-300 shrink-0" />
-                        <span className="text-xs text-gray-400">{acc.member_details.phone_number}</span>
-                      </div>
-                    )}
-                  </div>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`relative shrink-0 ${isFermeTab ? 'opacity-50 grayscale' : ''}`}>
+                  <UserAvatar
+                    user={{
+                      first_name:   acc.member_details?.first_name ?? '',
+                      last_name:    acc.member_details?.last_name  ?? '',
+                      photo_profil: acc.member_details?.photo_profil,
+                    }}
+                    size="sm"
+                  />
                 </div>
+                <div className="min-w-0">
+                  <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isFermeTab ? 'text-gray-400' : 'text-gray-900'}`}>
+                    {acc.account_number}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {acc.member_details?.full_name ?? acc.id_membre ?? '—'}
+                  </p>
+                  {acc.member_details?.email && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Mail className="w-3 h-3 text-gray-300 shrink-0" />
+                      <span className="text-xs text-gray-400 truncate">{acc.member_details.email}</span>
+                    </div>
+                  )}
+                  {acc.member_details?.phone_number && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Phone className="w-3 h-3 text-gray-300 shrink-0" />
+                      <span className="text-xs text-gray-400">{acc.member_details.phone_number}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Type */}
               <div>
@@ -454,6 +410,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   {formatHTG(solde)}
                 </span>
               </div>
+
               {/* Depuis */}
               <div>
                 <span className="text-xs text-gray-500">
@@ -462,6 +419,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
                     : '—'}
                 </span>
               </div>
+
               {/* Statut */}
               <div>
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusCfg.bg} ${statusCfg.text}`}>
@@ -495,18 +453,17 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   </>
                 )}
 
-                {status === 'en_attente' && (
-                  <button title="Activer" onClick={() => onSuspend(acc)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all">
-                    <Clock className="w-3 h-3" /> Activer
-                  </button>
-                )}
-
                 {status === 'gelé' && (
-                  <button title="Débloquer" onClick={() => onSuspend(acc)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-                    <ShieldCheck className="w-3 h-3" /> Débloquer
-                  </button>
+                  <>
+                    <button title="Débloquer" onClick={() => onSuspend(acc)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
+                      <ShieldCheck className="w-3 h-3" /> Débloquer
+                    </button>
+                    <button title="Fermer" onClick={() => onClose(acc)}
+                      className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
 
                 {status === 'fermé' && (
@@ -533,11 +490,6 @@ const AccountTable: React.FC<AccountTableProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-[#355C7D]" /> {counts.gelé} Gelé{counts.gelé !== 1 ? 's' : ''}
               </span>
             )}
-            {counts.en_attente > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-50 text-[#854F0B]">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> {counts.en_attente} En attente
-              </span>
-            )}
             {counts.fermé > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.fermé} Fermé{counts.fermé !== 1 ? 's' : ''}
@@ -546,6 +498,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
           </div>
         </div>
       )}
+
       <AccountBulkActionModal
         action={activeAction}
         accounts={selectedAccounts}

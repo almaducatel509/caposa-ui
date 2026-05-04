@@ -22,10 +22,9 @@ export interface AccountData {
   id_membre?: string;             // ← Alias pour "member"
   typeCompte?: 'epargne' | 'cheques' | 'terme';  // ← Mappé depuis "account_type"
   soldeActuel?: number;           // ← Mappé depuis "balance"
-  statusAccount: 'ouvert' | 'fermé' | 'gelé' | 'en_attente' //← Mappé depuis "account_status"
-
+  statusAccount: 'ouvert' | 'fermé' | 'gelé' | 'en_attente' | 'archive'
 // ouvert     → transactions autorisées
-// fermé      → compte clôturé définitivement
+// fermé      → compte clôturé définitivement archive
 // gelé       → transactions bloquées temporairement (saisie, litige)
 // en_attente → compte créé mais pas encore activé (KYC en cours)// 
 

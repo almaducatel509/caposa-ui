@@ -18,14 +18,14 @@ export function isBranchActive(b: BranchData): boolean {
  * Statut effectif de la branche, avec prise en compte de l'archivage manuel.
  */
 export function getEffectiveStatus(b: BranchData): BranchStatus {
-  // Archive = action manuelle explicite
   const manual = (b as any).statusBranch ?? b.statusBranche;
   const normalized = typeof manual === "string" ? manual.toLowerCase() : manual;
 
+  // Archivage manuel explicite
   if (["archive", "archived", "suspendu", "suspended"].includes(normalized)) {
     return "archive";
   }
 
-  // Sinon, règle métier
+  // Logique métier locale
   return isBranchActive(b) ? "active" : "inactive";
 }

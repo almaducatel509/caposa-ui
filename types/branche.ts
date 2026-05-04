@@ -13,6 +13,7 @@ export interface OpeningHour {
 }
 
 export interface Branch {
+  name: any;
   id: string;
   branch_code: string;
   branch_name: string;

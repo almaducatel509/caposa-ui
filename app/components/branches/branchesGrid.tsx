@@ -25,158 +25,116 @@ import BrancheTable from "./BrancheTable";
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
 import { Holiday, HolidayData } from "../holidays/validations";
 
-/* ─── Props ──────────────────────────────────────────────────────────────── */
-// Le modal reçoit BranchData (correct)
+/* ─── Type local pour les onglets ──────────────────────────────────────── */
+type BranchTabId = "active" | "inactive" | "archive";
 
-// onEdit reçoit BranchData (correct)
-// interface BranchesGridProps {
-//   branches?: Branch[];
-// }
-
-/* ─── Composant principal ────────────────────────────────────────────────── */
+/* ─── Composant principal ─────────────────────────────────────────────── */
 
 const BranchesGrid: React.FC = () => {
+
   /* ── Data ── */
   const [branches,     setBranches]     = useState<Branch[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading,    setIsLoading]    = useState(true);
   const [error,        setError]        = useState<string | null>(null);
   const [holidays,     setHolidays]     = useState<Holiday[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
 
-  // /* ── Filtres ── */ filterValue=search
+  /* ── Filtres ── */
   const [search,          setSearch]          = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedSize,    setSelectedSize]    = useState("all");
-  const [selectedBranch, setSelectedBranch] =  useState<BranchData | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  
+  const [selectedStatus,  setSelectedStatus]  = useState("all");
+  const [selectedBranch,  setSelectedBranch]  = useState<BranchData | null>(null);
+
+  /* ── Onglet actif (synchronisé avec le filtre statut, comme AccountGrid) ── */
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'archive'>("active");
+
   /* ── Modals ── */
-  // 🎯 Plus de "isEditMode" + "editModalMode" combinés.
-  //    Maintenant : 2 modals séparés (Create / Edit) + un sous-mode pour Edit
   const [showCreateModal,  setShowCreateModal]  = useState(false);
   const [showEditModal,    setShowEditModal]    = useState(false);
   const [editSubMode,      setEditSubMode]      = useState<"edit" | "activate">("edit");
   const [showDeleteModal,  setShowDeleteModal]  = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  /* ── Chargement branches ── */
-//   const loadBranches = useCallback(async () => {
-//   try {
-//     setIsLoading(true);
-//     setError(null);
-//     const data = await fetchBranches();
-//     setBranches(data);
-//   } catch (err) {
-//     console.error("Erreur loadBranches:", err);
-//     setError("Impossible de charger les branches.");
-//   } finally {
-//     setIsLoading(false);
-//   }
-// }, []);
-  const loadBranches = useCallback(async () => { 
-    try{ setIsLoading(true);
-    setError(null);
-    const [ bra, h, oh] = await Promise.all([
-      fetchBranches(),
-      fetchHolidays(),
-      fetchOpeningHours(),
-    ]);
-    setBranches(bra);
-    setHolidays(h);
-    setOpeningHours(oh);
+  /* ── Chargement (branches + horaires + fériés en parallèle) ── */
+  const loadBranches = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [bra, h, oh] = await Promise.all([
+        fetchBranches(),
+        fetchHolidays(),
+        fetchOpeningHours(),
+      ]);
+      setBranches(bra);
+      setHolidays(h);
+      setOpeningHours(oh);
     } catch (err) {
-      console.error("Erreur loadBranches:",err);
-      setError("Impossible de charger les données. Branche, Horaire, Jour ferie");
+      console.error("Erreur loadBranches:", err);
+      setError("Impossible de charger les données. Branche, Horaire, Jour férié.");
     } finally {
       setIsLoading(false);
     }
+      branches.forEach((b, i) => {
+      const raw = (b as any).statusBranch ?? b.statusBranche;
+      const normalized = typeof raw === "string" ? raw.toLowerCase() : raw;
+      const effective = getEffectiveStatus(b);
+
+      console.log(`Branch #${i + 1}`, {
+        id: b.id,
+        name: b.name,
+        rawStatus: raw,
+        normalizedStatus: normalized,
+        effectiveStatus: effective,
+      });
+    });
   }, []);
 
   useEffect(() => {
-    loadBranches();
+        loadBranches();
   }, [loadBranches]);
 
-  // /* ── Données de référence ── */
-  // useEffect(() => {
-  //   const load = async () => {
-  //     setIsLoadingRef(true);
-  //     try {
-  //       const [h, oh] = await Promise.all([fetchHolidays(), fetchOpeningHours()]);
-  //       setHolidays(h);
-  //       setOpeningHours(oh);
-  //     } catch {
-  //       setHolidays([]);
-  //       setOpeningHours([]);
-  //     } finally {
-  //       setIsLoadingRef(false);
-  //     }
-  //   };
-  //   load();
-  // }, []);
-
-  /* ── Debounce ── */
-    useEffect(() => {
+  /* ── Debounce de la recherche ── */
+  useEffect(() => {
     const t = setTimeout(() => {
-      const normalized = search.trim().toLowerCase();
-      setDebouncedSearch(normalized);
+      setDebouncedSearch(search.trim().toLowerCase());
     }, 300);
-
     return () => clearTimeout(t);
   }, [search]);
 
-  // useEffect(() => {
-  //   const t = setTimeout(
-  //     () => setDebouncedSearch(search.trim().toLowerCase()),
-  //     300
-  //   );
-  //   return () => clearTimeout(t);
-  // }, [search]);
-
-  // const hydrateBranch = useCallback(
-  //   (b: Branch) => ({
-  //     ...b,
-  //     total_staff:
-  //       b.number_of_tellers +
-  //       b.number_of_clerks +
-  //       b.number_of_credit_officers,
-  //     full_address: `${b.branch_address}, ${b.city}`,
-  //   }),
-  //   []
-  // );
-
+  /* ── Hydrate une Branch (raw API) en BranchData (UI) ──
+     Ajoute total_staff et full_address calculés, normalise holidays_details.
+  */
   const hydrateBranch = useCallback(
-  (b: Branch): BranchData => ({
-    ...b,
-
-    total_staff:
-      b.number_of_tellers +
-      b.number_of_clerks +
-      b.number_of_credit_officers,
-
-    full_address: `${b.branch_address}, ${b.city}`,
-
-    holidays_details: b.holidays_details?.map(
-      (h): HolidayData => ({
-        ...h, // ← garde toutes les propriétés existantes
-        type: h.type ?? "autre",
-        scope: h.scope ?? "autre",
-        pending_assignment: h.pending_assignment ?? false,
-      })
-    ),
-  }),
-  []
-);
-
-
-  const hydratedBranches = useMemo(
-    () => branches.map(hydrateBranch),
-    [branches, hydrateBranch]
+    (b: Branch): BranchData => ({
+      ...b,
+      total_staff:
+        b.number_of_tellers +
+        b.number_of_clerks +
+        b.number_of_credit_officers,
+      full_address: `${b.branch_address}, ${b.city}`,
+      holidays_details: b.holidays_details?.map(
+        (h): HolidayData => ({
+          ...h,
+          type: h.type ?? "autre",
+          scope: h.scope ?? "autre",
+          pending_assignment: h.pending_assignment ?? false,
+        })
+      ),
+    }),
+    []
   );
 
-  /* ── Filtrage ── */
+  /* ─── Filtrage : sur la liste brute, AVANT hydratation ─────────────────
+     Ordre logique :
+       1. on filtre les Branch (raw) sur search + size + status
+       2. on hydrate seulement les survivants → BranchData
+       3. on les passe au tableau
+  */
   const filteredBranches = useMemo(() => {
     let filtered = [...branches];
 
+    // Recherche textuelle
     if (debouncedSearch) {
       filtered = filtered.filter(
         (b) =>
@@ -187,13 +145,13 @@ const BranchesGrid: React.FC = () => {
       );
     }
 
+    // Filtre par taille (calculé depuis le total des employés)
     if (selectedSize !== "all") {
       filtered = filtered.filter((b) => {
         const total =
           b.number_of_tellers +
           b.number_of_clerks +
           b.number_of_credit_officers;
-
         if (selectedSize === "large")  return total >= 20;
         if (selectedSize === "medium") return total >= 10 && total < 20;
         if (selectedSize === "small")  return total < 10;
@@ -201,6 +159,7 @@ const BranchesGrid: React.FC = () => {
       });
     }
 
+    // Filtre par statut effectif
     if (selectedStatus !== "all") {
       filtered = filtered.filter((b) => getEffectiveStatus(b) === selectedStatus);
     }
@@ -208,7 +167,36 @@ const BranchesGrid: React.FC = () => {
     return filtered.sort((a, b) => a.branch_name.localeCompare(b.branch_name));
   }, [branches, debouncedSearch, selectedSize, selectedStatus]);
 
-  /* ── Export CSV ── */
+  /* ─── Hydratation APRÈS filtrage ──────────────────────────────────────
+     Ce qu'on passe au tableau = ce que l'utilisateur a filtré.
+  */
+  // ─── Ancienne version (commentée pour référence) ─────────────────────
+  // const hydratedBranches = useMemo(
+  //   () => branches.map(hydrateBranch),  // ❌ hydrate TOUTES, pas filtered
+  //   [branches, hydrateBranch]
+  // );
+  //
+  // ❌ Bug : on calculait filteredBranches mais on passait hydratedBranches
+  //         au tableau → le filtre n'avait aucun effet visible.
+
+  // ─── Nouvelle version : hydrate seulement les survivants des filtres ──
+  const hydratedFilteredBranches = useMemo(
+    () => filteredBranches.map(hydrateBranch),
+    [filteredBranches, hydrateBranch]
+  );
+
+  /* ─── Synchro filtre statut → onglet (aligné sur AccountGrid) ─────────
+     Quand l'utilisateur change le dropdown "Statut", on bouge aussi
+     l'onglet. Avec alias possibles pour résilience face à l'API.
+  */
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    if      (status === "archive"  || status === "archived")  setActiveTab("archive");
+    else if (status === "inactive" || status === "désactivé") setActiveTab("inactive");
+    else    setActiveTab("active"); // "all" ou "active" → onglet par défaut
+  };
+
+  /* ─── Export CSV ─────────────────────────────────────────────────────── */
   const handleExport = useCallback(() => {
     const rows = [
       "Code,Nom,Ville,Département,Téléphone,Email,Caissiers,Commis,Agents,Ouverture,Statut",
@@ -224,7 +212,7 @@ const BranchesGrid: React.FC = () => {
           b.number_of_clerks,
           b.number_of_credit_officers,
           b.opening_date,
-          getEffectiveStatus(b), // ← cohérent avec le filtre (statut effectif)
+          getEffectiveStatus(b),
         ]
           .map((v) => `"${v}"`)
           .join(",")
@@ -241,21 +229,21 @@ const BranchesGrid: React.FC = () => {
     document.body.removeChild(link);
   }, [filteredBranches]);
 
-  /* ── Handlers ── */
+  /* ─── Handlers actions ──────────────────────────────────────────────── */
   const handleAdd = () => {
     setSelectedBranch(null);
-    setShowCreateModal(true); // ← ouvre le modal de CRÉATION
+    setShowCreateModal(true);
   };
 
   const handleEdit = (branch: BranchData) => {
     setSelectedBranch(branch);
     setEditSubMode("edit");
-    setShowEditModal(true); // ← ouvre le modal d'ÉDITION
+    setShowEditModal(true);
   };
 
   /**
    * "Activer" depuis la liste = ouvrir le modal d'édition en mode "activate"
-   * (qui pré-sélectionne l'horaire par défaut + highlight la section qui manque)
+   * (pré-sélectionne l'horaire par défaut + highlight la section qui manque)
    */
   const handleActivate = (branch: BranchData) => {
     setSelectedBranch(branch);
@@ -281,7 +269,7 @@ const BranchesGrid: React.FC = () => {
     loadBranches();
   };
 
-  /* ── Render ── */
+  /* ─── Render ────────────────────────────────────────────────────────── */
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
       <PageHeader
@@ -310,18 +298,32 @@ const BranchesGrid: React.FC = () => {
         onSearchChange={setSearch}
         onClear={() => setSearch("")}
         onSizeChange={setSelectedSize}
-        onStatusChange={setSelectedStatus}
+        // ─── Aligné sur AccountGrid : handleStatusChange synchronise dropdown + onglet ──
+        onStatusChange={handleStatusChange}
         onAdd={handleAdd}
-        onExport={handleExport}
-      />
+    />
 
       <BrancheTable
-        branches={hydratedBranches}
+        // ─── Branches FILTRÉES + hydratées (cohérent avec le compteur) ─
+        branches={hydratedFilteredBranches}
+
         isLoading={isLoading}
         onView={handleView}
         onEdit={handleEdit}
         onActivate={handleActivate}
         onDelete={handleDelete}
+
+        // ─── Onglet contrôlé par le parent (comme AccountGrid) ──────────
+        activeTab={activeTab}
+        // ─── onTabChange inline (style AccountGrid, pas de fonction nommée) ─
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setSelectedStatus(
+            tab === 'inactive' ? 'inactif' :
+            tab === 'archive'  ? 'archive' :
+            'actif'
+          ); // les valeurs sont identiques : "active" / "inactive" / "archive"
+        }}
       />
 
       {/* ── Modal CRÉATION ── */}
@@ -341,20 +343,21 @@ const BranchesGrid: React.FC = () => {
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
           onSuccess={handleSuccess}
-          mode={editSubMode} // "edit" | "activate"
+          mode={editSubMode}
           openingHours={openingHours}
-          holidays={holidays} 
+          holidays={holidays}
           branch={selectedBranch}
         />
       )}
 
-      {/* ── Modal SUPPRESSION ── */}
+      {/* ── Modal SUPPRESSION (en réalité : archivage / soft delete) ── */}
       {showDeleteModal && selectedBranch && (
         <DeleteBranchModal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
           onSuccess={handleSuccess}
-          branch={selectedBranch}        />
+          branch={selectedBranch}
+        />
       )}
 
       {/* ── Modal DÉTAILS ── */}
@@ -364,7 +367,6 @@ const BranchesGrid: React.FC = () => {
           onClose={() => setShowDetailsModal(false)}
           branch={selectedBranch}
           onEdit={(_branch, mode) => {
-            // Le BranchDetailsModal peut demander "edit" ou "activate"
             setEditSubMode(mode);
             setShowDetailsModal(false);
             setShowEditModal(true);

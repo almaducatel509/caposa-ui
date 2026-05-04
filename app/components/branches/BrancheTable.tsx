@@ -13,33 +13,47 @@ import {
 import { BranchData } from "./validations";
 import BranchBulkActionDropdown, { BranchBulkAction } from "./BranchBulkActionDropdown";
 import BranchBulkActionModal from "./modals/BranchBulkActionModal";
-// AJOUTE ces 2 imports en haut du fichier (avec les autres imports lucide)
 import { useRouter } from 'next/navigation';
-// (Eye, Pencil, etc. sont déjà importés)
-/* ─── Types ──────────────────────────────────────────────────────────────── */
+import { getEffectiveStatus } from "@/app/utils/branchStatus";
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+{/* <AccountTable
+        accounts={filteredAccounts}
+        isLoading={loading}
+        onView={handleView}
+        onSuspend={handleSuspend}
+        onClose={handleClose}
+        onDelete={handleDelete}
+        onViewTransactions={handleViewTransactions}
+        onBulkAction={handleBulkAction}
+        activeTab={activeAccountTab}
+        // ← onglet → dropdown : clés alignées avec AccountFilterBar
+        onTabChange={(tab) => {
+          setActiveAccountTab(tab);
+          setSelectedStatus(
+            tab === 'gelé'       ? 'suspendu' :
+            tab === 'fermé'      ? 'ferme'    :
+            tab === 'en_attente' ? 'en_attente': 'ouvert'
+          );
+        }}
+      /> */}
+      
+
+      // <AccountFilterBar
+      //   filterValue={search}
+      //   selectedType={selectedType}
+      //   selectedStatus={selectedStatus}
+      //   totalCount={filteredAccounts.length}
+      //   onSearchChange={setSearch}
+      //   onClear={() => setSearch('')}
+      //   onTypeChange={setSelectedType}
+      //   onStatusChange={handleStatusChange}
+      //   onImport={() => console.log('Import')}
+      //   onAdd={handleAdd}
+      // />
 type BranchStatus = "active" | "inactive" | "archive";
 type TabId = "active" | "inactive" | "archive";
 
-function getEffectiveStatus(b: BranchData): BranchStatus {
-  //unifie les différentes sources possibles Une fois l'API stable, ce code peut être nettoyé.
-  const s = (b as any).statusBranch ?? b.statusBranche;
-  const normalized = typeof s === 'string' ? s.toLowerCase() : s;
-
-  if (
-    normalized === 'inactive' || normalized === 'désactivé' ||
-    normalized === 'desactive' || normalized === 'disabled' ||
-    normalized === false
-  ) return 'inactive';
-
-  if (
-    normalized === 'archive' || normalized === 'archived' ||
-    normalized === 'suspendu' || normalized === 'suspended'
-  ) return 'archive';
-
-  // ⚠️ Par défaut "active" : couvre le cas où l'API ne renvoie pas statusBranche
-  return 'active';
-}
 
 export interface BranchTableProps {
   branches:    BranchData[];
@@ -49,6 +63,10 @@ export interface BranchTableProps {
   onActivate:  (b: BranchData) => void;
   onDelete:    (b: BranchData) => void;
   onBulkAction?: (action: BranchBulkAction, ids: string[]) => Promise<void>;
+  /** Onglet contrôlé par le parent. Si absent, le tableau gère son propre onglet. */
+  activeTab?:    'active' | 'inactive' | 'archive';
+  /** Notifie le parent quand l'onglet change (synchro avec dropdown statut). */
+  onTabChange?:  (tab: 'active' | 'inactive' | 'archive') => void;
 }
 
 
@@ -62,20 +80,22 @@ const STATUS_CFG: Record<BranchStatus, {
     label: "Active",
   },
   inactive: {
-    bg:    "bg-teal-50",
-    text:  "text-teal-700",
-    dot:   "bg-teal-500",
-    label: "À activer",
-  },
-  archive: {
     bg:    "bg-amber-50",
     text:  "text-amber-700",
     dot:   "bg-amber-400",
-    label: "Archive",
+    label: "À activer",
+  },
+  archive: {
+    bg:    "bg-gray-100",
+    text:  "text-gray-500",
+    dot:   "bg-gray-400",
+    label: "Archivée",
   },
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
+
+
 
 function SortIcon({
   field,
@@ -131,59 +151,50 @@ const BranchTable: React.FC<BranchTableProps> = ({
   onActivate,
   onDelete,
   onBulkAction,
+  activeTab: controlledTab,
+  onTabChange,
 }) => {
-  
+
   /* ── État local ── */
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabId>('active');
-  const [sortField,    setSortField]    = useState<keyof BranchData>("branch_name");
+  const [localTab, setLocalTab] = useState<TabId>('active');
+  const activeTab = controlledTab ?? localTab;
+  const [sortField,    setSortField]    = useState("branch_name");
   const [sortDir,      setSortDir]      = useState<"asc" | "desc">("asc");
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<BranchBulkAction | null>(null);
 
-  // 📝 REMPLACER les useMemo "counts" et "tabBranches" par ceci :
-
-// ✅ Compteurs utilisent maintenant getEffectiveStatus pour gérer l'undefined
+  /* ── Compteurs (utilisent getEffectiveStatus pour gérer l'undefined) ── */
   const counts = useMemo(() => ({
     active:   branches.filter(b => getEffectiveStatus(b) === "active").length,
     inactive: branches.filter(b => getEffectiveStatus(b) === "inactive").length,
     archive:  branches.filter(b => getEffectiveStatus(b) === "archive").length,
   }), [branches]);
 
-  // ✅ Filtre par onglet — version simplifiée
+  /* ── Filtre par onglet ── */
   const tabBranches = useMemo(
     () => branches.filter(b => getEffectiveStatus(b) === activeTab),
     [branches, activeTab]
   );
 
   /* ── Tri ── */
-  const toggleSort = (field: keyof BranchData) => {
-    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("asc"); }
+  const toggleSort = (field: string) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
   };
 
-  const sorted = useMemo(() =>
-    [...tabBranches].sort((a, b) => {
-      const raw_a = a[sortField] ?? "";
-      const raw_b = b[sortField] ?? "";
+  const sorted = useMemo(() => [...tabBranches].sort((a, b) => {
+    let va: any = (a as any)[sortField] ?? "";
+    let vb: any = (b as any)[sortField] ?? "";
 
-      const va: string | number =
-        typeof raw_a === "number" ? raw_a
-        : typeof raw_a === "string" ? raw_a.toLowerCase()
-        : String(raw_a).toLowerCase();
+    if (typeof va === "string") va = va.toLowerCase();
+    if (typeof vb === "string") vb = vb.toLowerCase();
 
-      const vb: string | number =
-        typeof raw_b === "number" ? raw_b
-        : typeof raw_b === "string" ? raw_b.toLowerCase()
-        : String(raw_b).toLowerCase();
-
-      if (va < vb) return sortDir === "asc" ? -1 :  1;
-      if (va > vb) return sortDir === "asc" ?  1 : -1;
-      return 0;
-    }),
-    [tabBranches, sortField, sortDir]
-  );
+    return sortDir === "asc"
+      ? (va < vb ? -1 : va > vb ? 1 : 0)
+      : (va > vb ? -1 : va < vb ? 1 : 0);
+  }), [tabBranches, sortField, sortDir]);
 
   /* ── Sélection ── */
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
@@ -199,9 +210,14 @@ const BranchTable: React.FC<BranchTableProps> = ({
   };
 
   const handleTabChange = (tab: TabId) => {
-    setActiveTab(tab);
+    setLocalTab(tab);
+    onTabChange?.(tab);
     setSelected(new Set());
   };
+
+  /* ── Aiguillage onglets (pour les bannières contextuelles) ── */
+  const isArchiveTab  = activeTab === 'archive';
+  const isInactiveTab = activeTab === 'inactive';
 
   /* ── Branches sélectionnées ── */
   const selectedBranches = useMemo(
@@ -215,10 +231,8 @@ const BranchTable: React.FC<BranchTableProps> = ({
     { label: "Personnel",   field: "number_of_posts"  },
     { label: "Contact",     field: "branch_address"   },
     { label: "Ouverture",   field: "opening_date"     },
-    { label: "Statut",      field: "statusBranche"           },
+    { label: "Statut",      field: "statusBranche"    },
   ];
-  // helper
-
 
   /* ── Export CSV interne ── */
   const handleExportCSV = (branchesToExport: BranchData[]) => {
@@ -284,67 +298,109 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
   /* ── Render ── */
   return (
-<div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
 
       {/* ── Onglets ── */}
-    <div className="flex items-center px-2 border-b border-gray-100 bg-white">
-      {([
-        {
-          id: 'active' as TabId,
-          label: 'Active',
-          icon: Wallet,
-          active: 'border-[#2E7D32] text-[#1B5E20]',
-          badge: 'bg-[#DDEAD5] text-[#1B5E20]',
-          count: counts.active ?? 0,
-        },
-        {
-          id: 'inactive' as TabId,
-          label: 'Inactive',
-          icon: ShieldOff,
-          active: 'border-[#355C7D] text-[#355C7D]',
-          badge: 'bg-blue-100 text-[#355C7D]',
-          count: counts.inactive ?? 0,
-        },
-        {
-          id: 'archive' as TabId,
-          label: 'Archive',
-          icon: Archive,
-          active: 'border-amber-500 text-amber-700',
-          badge: 'bg-yellow-100 text-amber-700',
-          count: counts.archive ?? 0,
-        },
-      ]).map((tab) => {
-        const Icon = tab.icon;
-        const isCurrent = activeTab === tab.id;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => handleTabChange(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 ${
-              isCurrent
-                ? `${tab.active} font-semibold`
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5 shrink-0" />
+      <div className="flex items-center px-2 border-b border-gray-100 bg-white">
+        {([
+          {
+            id: 'active' as TabId,
+            label: 'Active',
+            icon: Wallet,
+            active: 'border-[#2E7D32] text-[#1B5E20]',
+            badge: 'bg-[#DDEAD5] text-[#1B5E20]',
+            count: counts.active ?? 0,
+          },
+          {
+            id: 'inactive' as TabId,
+            label: 'Inactive',
+            icon: ShieldOff,
+            active: 'border-amber-500 text-amber-700',
+            badge: 'bg-amber-100 text-amber-700',
+            count: counts.inactive ?? 0,
+          },
+          {
+            id: 'archive' as TabId,
+            label: 'Archive',
+            icon: Archive,
+            active: 'border-gray-400 text-gray-600',
+            badge: 'bg-gray-100 text-gray-600',
+            count: counts.archive ?? 0,
+          },
+        ]).map((tab) => {
+          const Icon = tab.icon;
+          const isCurrent = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 ${
+                isCurrent
+                  ? `${tab.active} font-semibold`
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              {tab.label}
+              {tab.count > 0 && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
+                    isCurrent
+                      ? tab.badge
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-            {tab.label}
+      {/* ─── Bannières contextuelles selon l'onglet ────────────────────────── */}
+      {/* ─── NOUVEAU : déplacé du footer vers ICI (juste après les onglets) ── */}
+      {/*               aligné sur le pattern AccountTable ────────────────── */}
 
-            {tab.count > 0 && (
-              <span
-                className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
-                  isCurrent
-                    ? tab.badge
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
+      {/* Bannière onglet ARCHIVE : info "lecture seule" */}
+      {isArchiveTab && (
+        <div className="flex items-start gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200">
+          <Archive className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-gray-600">
+              Branches archivées — Lecture seule
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Ces branches ne sont plus actives. Elles peuvent être restaurées si besoin.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Bannière onglet INACTIVE : "à compléter pour activer" */}
+      {isInactiveTab && counts.inactive > 0 && (
+        <div className="flex items-start gap-3 px-5 py-3 bg-amber-50 border-b border-amber-100">
+          <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-amber-800">
+              {counts.inactive} branche{counts.inactive > 1 ? 's' : ''} en attente d'activation
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Configurez l'horaire et les jours fériés pour les activer automatiquement.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Bannière "alerte douce" : on n'est PAS sur archive/inactive mais y'a des inactives à compléter */}
+      {!isArchiveTab && !isInactiveTab && counts.inactive > 0 && (
+        <div className="flex items-start gap-3 px-5 py-3 bg-amber-50/60 border-b border-amber-100">
+          <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-800">
+            <strong>{counts.inactive}</strong> branche{counts.inactive > 1 ? 's' : ''} inactive{counts.inactive > 1 ? 's' : ''} à compléter pour activation
+          </p>
+        </div>
+      )}
 
       {/* ── Barre sélection multiple ── */}
       {selected.size > 0 && (
@@ -356,12 +412,17 @@ const BranchTable: React.FC<BranchTableProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <BranchBulkActionDropdown
-              selectedCount={selected.size}
-              isOpen={dropdownOpen}
-              onToggle={() => setDropdownOpen(o => !o)}
-              onAction={(action) => setActiveAction(action)}
-            />
+
+            {/* En onglet Archive : pas d'actions groupées (read-only) */}
+            {!isArchiveTab && (
+              <BranchBulkActionDropdown
+                selectedCount={selected.size}
+                isOpen={dropdownOpen}
+                onToggle={() => setDropdownOpen(o => !o)}
+                onAction={(action) => setActiveAction(action)}
+              />
+            )}
+
             <button onClick={() => setSelected(new Set())}
               className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
               <X className="w-3.5 h-3.5" />
@@ -369,45 +430,28 @@ const BranchTable: React.FC<BranchTableProps> = ({
           </div>
         </div>
       )}
-            {/* ── En-tête colonnes ── */}
-      {/* {(isLoading || sorted.length > 0) && ( */}
-        <div
-          className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
-          style={{ display: "grid", gridTemplateColumns: "40px 1.6fr 1.2fr 1.4fr 1fr 1fr 130px" }}
-        >
-          {/* Checkbox tout sélectionner */}
-          <div className="flex items-center justify-center">
-            <button
-              onClick={toggleAll}
-              className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
-                allSelected || someSelected
-                  ? "bg-[#2E7D32] border-[#2E7D32]"
-                  : "bg-white border-gray-300 hover:border-[#2E7D32]"
-              }`}
-            >
-              {(allSelected || someSelected) && (
-                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-              )}
-            </button>
-          </div>
 
-          {/* Colonnes triables (on garde SORTABLE_COLS) */}
-          {/* {SORTABLE_COLS.map(({ label, field }) => (
-            <button
-              key={field}
-              onClick={() => toggleSort(field)}
-              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-left transition-colors text-gray-600 hover:text-[#1B5E20]"
-            >
-              {label}
-              <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
-            </button>
-          ))}
+      {/* ── En-tête colonnes ── */}
+      <div
+        className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
+        style={{ display: "grid", gridTemplateColumns: "40px 1.6fr 1.2fr 1.4fr 1fr 1fr 130px" }}
+      >
+        {/* Checkbox tout sélectionner */}
+        <div className="flex items-center justify-center">
+          <button
+            onClick={toggleAll}
+            className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+              allSelected || someSelected
+                ? "bg-[#2E7D32] border-[#2E7D32]"
+                : "bg-white border-gray-300 hover:border-[#2E7D32]"
+            }`}
+          >
+            {(allSelected || someSelected) && (
+              <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+            )}
+          </button>
+        </div>
 
-          {/* Actions */}
-          {/* <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 text-center">
-            Actions
-          </span>
-        </div> */} 
         {SORTABLE_COLS.map(col => (
           <button key={col.label} onClick={() => col.field && toggleSort(col.field)}
             className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-left transition-colors ${
@@ -418,8 +462,8 @@ const BranchTable: React.FC<BranchTableProps> = ({
           </button>
         ))}
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 text-center">Actions</span>
-
       </div>
+
       {/* ── Lignes ── */}
       <div className="divide-y divide-gray-50">
 
@@ -427,20 +471,26 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
         {!isLoading && sorted.length === 0 && (
           <div className="flex flex-col items-center justify-center py-14 text-center">
-            <p className="text-sm text-gray-400 font-medium">
-              Aucune branche {activeTab === "active" ? "active" : "inactive"}
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${
+              isArchiveTab ? 'bg-gray-100' : 'bg-[#DDEAD5]'
+            }`}>
+              <Wallet className={`w-7 h-7 ${isArchiveTab ? 'text-gray-400' : 'text-[#2E7D32]'}`} />
+            </div>
+            <p className="text-sm font-semibold text-gray-900 mb-1">
+              Aucune branche trouvée
             </p>
-            <p className="text-xs text-gray-400">Modifiez vos critères de recherche</p>
-
+            <p className="text-xs text-gray-400">
+              Modifiez vos critères de recherche
+            </p>
           </div>
         )}
 
-        {!isLoading && sorted.map((branch) => {
+        {!isLoading && sorted.map((branch, i) => {
           const total =
             branch.number_of_tellers +
             branch.number_of_clerks +
             branch.number_of_credit_officers;
-          const status     = getEffectiveStatus(branch);
+          const status = getEffectiveStatus(branch);
           const cfg = STATUS_CFG[status] ?? STATUS_CFG['active'];
 
           const category =
@@ -455,9 +505,11 @@ const BranchTable: React.FC<BranchTableProps> = ({
               key={branch.id}
               className={[
                 "grid items-center px-5 py-3 transition-colors cursor-default",
+                // En onglet Archive : opacité réduite (visuel "désactivé")
+                isArchiveTab ? 'opacity-65' : '',
                 isSelected
                   ? "bg-[#DDEAD5]/50 border-l-2 border-[#2E7D32]"
-                  : "hover:bg-[#DDEAD5]/10",
+                  : i % 2 === 0 ? 'bg-white hover:bg-[#DDEAD5]/10' : 'bg-gray-50/40 hover:bg-[#DDEAD5]/10',
               ].join(" ")}
               style={{ gridTemplateColumns: "40px 1.6fr 1.2fr 1.4fr 1fr 1fr 130px" }}
             >
@@ -474,7 +526,9 @@ const BranchTable: React.FC<BranchTableProps> = ({
               {/* Branche + code */}
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-gray-800 truncate">
+                  <p className={`text-sm font-semibold truncate ${
+                    isArchiveTab ? 'text-gray-400' : 'text-gray-800'
+                  }`}>
                     {branch.branch_name}
                   </p>
                   <span
@@ -520,81 +574,96 @@ const BranchTable: React.FC<BranchTableProps> = ({
               {/* Actions */}
               <div className="flex items-center gap-1">
 
-              {/* Voir */}
-              <button
-                onClick={() => onView(branch)}
-                title="Voir les détails"
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-
-              {/* Modifier */}
-              <button
-                onClick={() => onEdit(branch)}
-                title="Modifier"
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#1B5E20] transition-colors"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-
-              {/* Activer — seulement si inactive */}
-              {branch.statusBranche === "inactive" && (
+                {/* Voir — toujours dispo */}
                 <button
-                  onClick={() => onActivate(branch)}
-                  title="Activer la branche"
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                  onClick={() => onView(branch)}
+                  title="Voir les détails"
+                  className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#1B5E20] transition-colors"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
+                  <Eye className="w-4 h-4" />
                 </button>
-              )}
 
-              {/* ⏰ Bouton "Configurer horaires" — visible si pas d'horaire */}
-              {!branch.opening_hour && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/dashboard/opening-hours?branch=${branch.id}`);
-                  }}
-                  title="Configurer les horaires"
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                >
-                  <Clock className="w-4 h-4" />
-                </button>
-              )}
+                {/* Modifier — caché en archive (lecture seule) */}
+                {!isArchiveTab && (
+                  <button
+                    onClick={() => onEdit(branch)}
+                    title="Modifier"
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#1B5E20] transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
 
-              {/* 📅 Bouton "Configurer fériés" — visible si pas de fériés */}
-              {(!branch.holidays || branch.holidays.length === 0) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/dashboard/holidays?branch=${branch.id}`);
-                  }}
-                  title="Configurer les jours fériés"
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                >
-                  <Calendar className="w-4 h-4" />
-                </button>
-              )}
-              {/* Supprimer */}
-              <button
-                onClick={() => onDelete(branch)}
-                title="Supprimer"
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                {/* Activer — seulement si inactive */}
+                {!isArchiveTab && status === "inactive" && (
+                  <button
+                    onClick={() => onActivate(branch)}
+                    title="Activer la branche"
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#1B5E20] transition-colors"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                )}
 
+                {/* ⏰ Configurer horaires — visible si pas d'horaire et pas archivée */}
+                {!isArchiveTab && !branch.opening_hour && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/opening-hours?branch=${branch.id}`);
+                    }}
+                    title="Configurer les horaires"
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                  >
+                    <Clock className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* 📅 Configurer fériés — visible si pas de fériés et pas archivée */}
+                {!isArchiveTab && (!branch.holidays || branch.holidays.length === 0) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/holidays?branch=${branch.id}`);
+                    }}
+                    title="Configurer les jours fériés"
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Archiver — caché si déjà en archive */}
+                {!isArchiveTab && (
+                  <button
+                    onClick={() => onDelete(branch)}
+                    title="Archiver"
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Indicateur "Archivée" en lecture seule */}
+                {isArchiveTab && (
+                  <span className="px-2 py-1 text-xs text-gray-400 bg-gray-50 rounded-lg">
+                    Archivée
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── Footer — nombre sélectionnés ── */}
+      {/* ── Footer — compteurs (PLUS DE BANNIÈRE ICI) ── */}
+      {/* ─── Ancienne version (commentée pour référence) ───────────────────────
+           La bannière isArchived était collée ici dans le footer.
+           Elle a été déplacée juste après les onglets pour être bien visible.
+      */}
       {!isLoading && branches.length > 0 && (
         <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-          
+
           <p className="text-xs text-gray-400">
             <span className="font-semibold text-gray-600">{sorted.length}</span>{" "}
             résultat{sorted.length !== 1 ? "s" : ""} sur cet onglet
@@ -608,10 +677,10 @@ const BranchTable: React.FC<BranchTableProps> = ({
               {counts.active} Active{counts.active !== 1 ? "s" : ""}
             </span>
 
-            {/* Inactive */}
+            {/* Inactive — couleurs ambre cohérentes avec STATUS_CFG */}
             {counts.inactive > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#355C7D]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#355C7D]" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                 {counts.inactive} Inactive{counts.inactive !== 1 ? "s" : ""}
               </span>
             )}
@@ -627,6 +696,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
           </div>
         </div>
       )}
+
       {/* ── Modal d'action groupée ── */}
       <BranchBulkActionModal
         action={activeAction}

@@ -8,22 +8,36 @@ import {
   Plus,
 } from 'lucide-react';
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFICATIONS apportées à ce fichier :
+//
+// STATUS_OPTIONS aligné avec le modèle métier (3 valeurs + 'all') :
+//   Avant : 'all' | 'ouvert' | 'en_attente' | 'suspendu' | 'ferme'
+//   Après : 'all' | 'ouvert' | 'gelé'        | 'fermé'
+//
+// → Plus aucun mapping bizarre côté AccountGrid. Les clés ici sont
+//   exactement celles qu'on stocke dans `statusAccount`.
+// selectedStatus: StatusFilter;
+// onStatusChange: (v: StatusFilter) => void;
+// ─────────────────────────────────────────────────────────────────────────────
+import type { StatusFilter } from './AccountGrid'; // adapte le chemin
+
 interface AccountFilterBarProps {
   filterValue:    string;
   selectedType:   string;
-  selectedStatus: string;
+  selectedStatus: StatusFilter;
   totalCount:     number;
   onSearchChange: (v: string) => void;
   onClear:        () => void;
   onTypeChange:   (v: string) => void;
-  onStatusChange: (v: string) => void;
+  // onStatusChange: (v: string) => void;
+  onStatusChange: (v: StatusFilter) => void;
   onImport?:      () => void;
   importLoading?: boolean;
   onAdd:          () => void;
 }
 
-// ─── Dropdown ──────────────────────────────────────────────────────────────────
+// ─── Dropdown ────────────────────────────────────────────────────────────────
 function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -48,7 +62,7 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
   );
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────────
+// ─── Main ────────────────────────────────────────────────────────────────────
 const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
   filterValue, selectedType, selectedStatus, totalCount,
   onSearchChange, onClear, onTypeChange, onStatusChange, onAdd,
@@ -62,14 +76,14 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
     { key: 'terme',   label: 'Terme',          icon: Clock      },
   ];
 
-  // ← clés alignées avec handleStatusChange et matchStatus dans AccountGrid
+  // 3 statuts (+ 'all'). Mêmes clés que `statusAccount` côté donnée.
   const STATUS_OPTIONS = [
-  { key: 'all',        label: 'Tous les statuts' },
-  { key: 'ouvert',     label: 'Ouverts'          },
-  { key: 'en_attente', label: 'En attente'       },  // ← ajout
-  { key: 'suspendu',   label: 'Gelés'            },
-  { key: 'ferme',      label: 'Fermés'           },
-];
+    { key: 'all',    label: 'Tous les statuts' },
+    { key: 'ouvert', label: 'Ouverts'          },
+    { key: 'gelé',   label: 'Gelés'            },
+    { key: 'fermé',  label: 'Archive'          },
+  ];
+
   const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Tous les types';
   const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
   const activeCount = [selectedType !== 'all', selectedStatus !== 'all'].filter(Boolean).length;
@@ -190,7 +204,7 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
 
         {/* Réinitialiser */}
         {activeCount > 0 && (
-          <>
+          <div className="flex items-center gap-2">
             <div className="h-5 w-px bg-gray-200" />
             <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
               {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
@@ -201,7 +215,7 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
             >
               <X className="w-3 h-3" /> Effacer
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>
