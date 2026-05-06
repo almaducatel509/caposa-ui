@@ -143,26 +143,22 @@ const AccountGrid: React.FC = () => {
   };
 
   // Couplage onglet ↔ filtre : trivial (mêmes clés des 2 côtés)
-  const handleStatusChange = (status: StatusFilter) => {
-    setSelectedStatus(status);
-    if (status !== 'all') setActiveAccountTab(status);
-  };
-  // const handleStatusChange = (status: 'ouvert' | 'gelé' | 'fermé') => {
+  // const handleStatusChange = (status: StatusFilter) => {
   //   setSelectedStatus(status);
-
-  //   if (status === 'fermé') {
-  //     // Un compte fermé va toujours dans Archive
-  //     setActiveTab('archive');
-  //   }
-  //   else if (status === 'gelé') {
-  //     // Un compte gelé va dans l’onglet Inactive
-  //     setActiveTab('inactive');
-  //   }
-  //   else {
-  //     // 'ouvert' → onglet Active
-  //     setActiveTab('active');
-  //   }
+  //   if (status !== 'all') setActiveAccountTab(status);
   // };
+  const handleStatusChange = (status: StatusFilter) => {
+  setSelectedStatus(status);
+
+  if (status === 'all') {
+    // Quand on enlève le filtre → retour à l’onglet "ouvert"
+    setActiveAccountTab('ouvert');
+  } else {
+    // Sinon l’onglet suit le statut
+    setActiveAccountTab(status);
+  }
+};
+
 
   // ── Bulk action ────────────────────────────────────────────────────────────
   // Filtre les comptes fermés AVANT de déclencher l'action métier.

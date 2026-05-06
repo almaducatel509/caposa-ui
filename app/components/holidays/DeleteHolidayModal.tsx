@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Modal } from "@/app/components/ui/Modal";
 import { X, Calendar, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { HolidayData } from "./validations";
-import { deleteHoliday } from "@/app/lib/api/holiday";
+import { deleteHoliday } from "@/app/lib/api/holidays";
 
 interface DeleteHolidayModalProps {
   isOpen: boolean;

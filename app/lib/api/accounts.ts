@@ -24,13 +24,23 @@ import { enrichAccountData } from "@/app/components/accounts/mockAccountData";
 //    - reactivateAccount : 'gelé'   → 'ouvert'
 //    - closeAccount      : 'ouvert' | 'gelé' → 'fermé' (terminal, irréversible)
 //
+// 5. AJOUTÉ : checkMemberEligibility (pré-cycle d'ouverture).
+//    Soft check appelé avant l'étape 2 du wizard. Le hard check reste
+//    obligatoire côté backend dans POST /accounts/.
+//
 // ⚠ Le backend Django doit avoir un champ `status` à 3 choix
 //   ('ouvert' | 'gelé' | 'fermé') sur le modèle Account.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
+  // 404 → endpoint pas encore implémenté côté backend
+  if (error?.response?.status === 404) {
+    return "Endpoint indisponible (route backend manquante).";
+  }
   if (error?.response?.data?.message) return error.response.data.message;
-  if (error?.response?.data) {
+  // Ne stringify QUE si c'est un objet JSON — sinon on récupère du HTML
+  // (pages d'erreur Django en mode DEBUG=True) qui pollue l'UI.
+  if (error?.response?.data && typeof error.response.data === 'object') {
     try { return JSON.stringify(error.response.data); } catch {}
   }
   return fallback;
@@ -76,6 +86,44 @@ export const fetchAccountsForMember = async (memberId: string): Promise<AccountD
       console.error("Erreur fetchAccountsForMember (fallback):", e);
       return [];
     }
+  }
+};
+
+// ─── Pré-cycle : éligibilité ─────────────────────────────────────────────────
+//
+// Soft check appelé à la sélection du membre dans le wizard d'ouverture.
+// Le HARD check reste obligatoire côté backend dans POST /accounts/.
+//
+// Endpoint backend attendu :
+//   GET /members/{id}/eligibility/?account_type=epargne|cheques|terme
+//   → { eligible: boolean, reasons: string[] }
+//
+// ⚠ FEATURE FLAG : tant que le backend n'a pas livré l'endpoint,
+//   on bypasse le check pour ne pas bloquer le développement du wizard.
+//   Passer ELIGIBILITY_CHECK_ENABLED à `true` une fois l'endpoint dispo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ELIGIBILITY_CHECK_ENABLED = false;
+
+export const checkMemberEligibility = async (
+  memberId: string,
+  accountType?: 'epargne' | 'cheques' | 'terme'
+): Promise<{ eligible: boolean; reasons: string[] }> => {
+  // Bypass temporaire — endpoint backend pas encore livré
+  if (!ELIGIBILITY_CHECK_ENABLED) {
+    console.warn("[checkMemberEligibility] bypass actif — endpoint backend non disponible");
+    return { eligible: true, reasons: [] };
+  }
+
+  try {
+    const { data } = await AxiosInstance.get(
+      `/members/${memberId}/eligibility/`,
+      { params: accountType ? { account_type: accountType } : {} }
+    );
+    return data;
+  } catch (e: any) {
+    console.error("Erreur checkMemberEligibility:", e);
+    throw new Error(parseApiError(e, "Impossible de vérifier l'éligibilité."));
   }
 };
 

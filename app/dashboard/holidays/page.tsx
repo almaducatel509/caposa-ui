@@ -2,7 +2,7 @@
 // import React, { useEffect, useState } from "react";
 import { HolidayData } from "@/app/components/holidays/validations";
 import HolidayCalendar from "@/app/components/holidays/HolidayCalendar";
-import { fetchHolidays } from "@/app/lib/api/holiday";
+import { fetchHolidays } from "@/app/lib/api/holidays";
 
 export default function HolidaysDashboard() {
   // const [holidays, setHolidays] = useState<HolidayData[]>([]);

@@ -80,9 +80,12 @@ const BranchesGrid: React.FC = () => {
       const normalized = typeof raw === "string" ? raw.toLowerCase() : raw;
       const effective = getEffectiveStatus(b);
 
+      // ─── MODIF : `b.name` → `b.branch_name` ────────────────────────────
+      // Le champ `name: any` a été supprimé de l'interface Branch
+      // (redondant avec `branch_name`, et `any` désactivait TypeScript).
       console.log(`Branch #${i + 1}`, {
         id: b.id,
-        name: b.name,
+        name: b.branch_name,
         rawStatus: raw,
         normalizedStatus: normalized,
         effectiveStatus: effective,

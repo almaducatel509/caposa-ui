@@ -457,7 +457,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   <>
                     <button title="Débloquer" onClick={() => onSuspend(acc)}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-                      <ShieldCheck className="w-3 h-3" /> Débloquer
+                      <ShieldCheck className="w-3 h-3" /> 
                     </button>
                     <button title="Fermer" onClick={() => onClose(acc)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">

@@ -77,12 +77,19 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
   ];
 
   // 3 statuts (+ 'all'). Mêmes clés que `statusAccount` côté donnée.
-  const STATUS_OPTIONS = [
-    { key: 'all',    label: 'Tous les statuts' },
-    { key: 'ouvert', label: 'Ouverts'          },
-    { key: 'gelé',   label: 'Gelés'            },
-    { key: 'fermé',  label: 'Archive'          },
-  ];
+  // const STATUS_OPTIONS = [
+  //   { key: 'all',    label: 'Tous les statuts' },
+  //   { key: 'ouvert', label: 'Ouverts'          },
+  //   { key: 'gelé',   label: 'Gelés'            },
+  //   { key: 'fermé',  label: 'Archive'          },
+  // ];
+
+const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
+  { key: 'all',    label: 'Tous les statuts' },
+  { key: 'ouvert', label: 'Ouverts'          },
+  { key: 'gelé',   label: 'Gelés'            },
+  { key: 'fermé',  label: 'Archive'          },
+];
 
   const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Tous les types';
   const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';

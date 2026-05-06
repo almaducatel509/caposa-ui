@@ -12,8 +12,7 @@ import {
 import {
   updateHoliday,
   createHoliday,
-  getHolidayById,
-} from "@/app/lib/api/holiday";
+} from "@/app/lib/api/holidays";
 import HolidayFormFields from "./HolidayFormFields";
 
 interface EditHolidayModalProps {
@@ -55,39 +54,7 @@ export default function EditHolidayModal({
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const load = async () => {
-      setIsLoading(true);
-      setApiError(null);
-      setErrors({});
-      setSuccessMessage(null);
-      try {
-        if (isEditMode && holiday) {
-          try {
-            await getHolidayById(holiday.id);
-          } catch {}
-          setFormData({
-            id: holiday.id,
-            date: holiday.date,
-            description: holiday.description,
-            type: holiday.type,
-            scope: holiday.scope,
-            branch_code: holiday.branch_code ?? "",
-            comment: holiday.comment ?? "",
-            pending_assignment: holiday.pending_assignment ?? false,
-          });
-        } else {
-          setFormData(EMPTY_FORM);
-        }
-      } catch {
-        setApiError("Impossible de charger les données du jour férié.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [isOpen, isEditMode, holiday]);
+ 
 
   const validate = (): boolean => {
     const result = holidaySchema.safeParse(formData);

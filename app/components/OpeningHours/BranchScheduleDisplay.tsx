@@ -2,8 +2,9 @@
 
 import React from "react";
 import { MapPin, Phone, Mail, Clock, Printer, CheckCircle } from "lucide-react";
-import { BranchData, DAYS, OpeningHourDetail } from "./validations";
+import {  DAYS, OpeningHourDetail } from "./validations";
 import { HAITI_DEPARTMENTS } from "@/app/data/haitiLocations";
+import type { BranchData } from "@/app/components/branches/validations";
 
 interface BranchScheduleDisplayProps {
   branch: BranchData;
@@ -26,11 +27,11 @@ export default function BranchScheduleDisplay({ branch }: BranchScheduleDisplayP
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold
-            ${branch.status === "active" ? "bg-white/20 text-white" : "bg-white/10 text-green-300"}`}>
+            ${branch.statusBranche  === "active" ? "bg-white/20 text-white" : "bg-white/10 text-green-300"}`}>
             <span className={`w-1.5 h-1.5 rounded-full
-              ${branch.status === "active" ? "bg-[#81C784]" : "bg-gray-300"}`}
+              ${branch.statusBranche  === "active" ? "bg-[#81C784]" : "bg-gray-300"}`}
             />
-            {branch.status === "active" ? "OUVERT" : "FERMÉ"}
+            {branch.statusBranche  === "active" ? "OUVERT" : "FERMÉ"}
           </span>
           <button
             onClick={() => window.print()}

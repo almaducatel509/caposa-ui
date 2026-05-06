@@ -1,13 +1,27 @@
 import { z } from "zod";
 
-// ─── Zod schema OpeningHours────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFICATIONS apportées à ce fichier :
+//
+// 1. SUPPRIMÉ : interface `BranchData` (doublon obsolète)
+//    Une autre version de `BranchData` existe dans
+//    `app/components/branches/validations.ts` qui étend `Branch` (+ champs
+//    calculés `total_staff` et `full_address`). C'est la version officielle.
+//    Avoir deux interfaces du même nom dans deux fichiers créait des bugs
+//    silencieux selon l'import utilisé.
+//
+//    → Si un fichier importait `BranchData` depuis ici, il doit maintenant
+//      importer depuis `@/app/components/branches/validations`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Zod schema OpeningHours ─────────────────────────────────────────────────
 const TIME_RANGE = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
- 
+
 const requiredDay = z
   .string()
   .min(1, "Ce champ est obligatoire")
   .regex(TIME_RANGE, "Format invalide, utilisez HH:mm-HH:mm");
- 
+
 const optionalDay = z
   .string()
   .refine(
@@ -15,7 +29,7 @@ const optionalDay = z
     "Format invalide, utilisez HH:mm-HH:mm"
   )
   .optional();
- 
+
 export const openingHoursSchema = z.object({
   monday:    requiredDay,
   tuesday:   requiredDay,
@@ -25,11 +39,11 @@ export const openingHoursSchema = z.object({
   saturday:  optionalDay,
   sunday:    optionalDay,
 });
- 
+
 export type OpeningHours = z.infer<typeof openingHoursSchema>;
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
-// ─── Domain types ──────────────────────────────────────────────────────────────
+// ─── Domain types ────────────────────────────────────────────────────────────
 export type DepartmentCode =
   | "OUEST" | "NORD" | "SUD" | "ARTIBONITE" | "CENTRE"
   | "GRAND_ANSE" | "NIPPES" | "NORDEST" | "NORD_OUEST" | "SUDEST";
@@ -45,21 +59,7 @@ export interface OpeningHourDetail {
   sunday?: string | null;
 }
 
-export interface BranchData {
-  id: string;
-  branch_code: string;
-  branch_name: string;
-  branch_address: string;
-  branch_phone_number: string;
-  branch_email: string;
-  status: "active" | "inactive";
-  department_code: DepartmentCode;
-  city: string;
-  opening_hour?: string;
-  opening_hour_details?: OpeningHourDetail;
-}
-
-// ─── Opening hours domain type ─────────────────────────────────────────────────
+// ─── Opening hours domain type ───────────────────────────────────────────────
 export type OpeningHoursStatus = "active" | "paused" | "vacation";
 
 export interface OpeningHrs {
@@ -83,7 +83,7 @@ export interface OpeningHoursStats {
   vacation: number;
 }
 
-// ─── API → domain mapper ───────────────────────────────────────────────────────
+// ─── API → domain mapper ─────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const convertToOpeningHours = (apiData: any): OpeningHrs => ({
   id: apiData.id,
@@ -99,7 +99,7 @@ export const convertToOpeningHours = (apiData: any): OpeningHrs => ({
   status: apiData.status ?? "active",
 });
 
-// ─── Stats calculator ──────────────────────────────────────────────────────────
+// ─── Stats calculator ────────────────────────────────────────────────────────
 export const computeStats = (hours: OpeningHrs[]): OpeningHoursStats => ({
   total:    hours.length,
   active:   hours.filter(h => h.status === "active").length,
@@ -107,7 +107,7 @@ export const computeStats = (hours: OpeningHrs[]): OpeningHoursStats => ({
   vacation: hours.filter(h => h.status === "vacation").length,
 });
 
-// ─── Days of the week ──────────────────────────────────────────────────────────
+// ─── Days of the week ────────────────────────────────────────────────────────
 export const DAYS = [
   { key: "monday",    label: "Lundi" },
   { key: "tuesday",   label: "Mardi" },

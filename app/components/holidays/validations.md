@@ -1,24 +1,5 @@
 import { z } from "zod";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODIFICATIONS apportées à ce fichier :
-//
-// DETTE TECHNIQUE RÉSOLUE : champ `branch_code` surchargé
-//
-// AVANT : un seul champ `branch_code` portait deux sens selon `scope` :
-//   - scope='regional' → contenait un code département (OUEST, NORD...)
-//   - scope='branch'   → contenait un vrai code de branche (PETV-001...)
-//   Le nom mentait, aucune validation de type, source de bugs.
-//
-// APRÈS : deux champs distincts, chacun avec son sens :
-//   - department_code : rempli SSI scope === 'regional'
-//   - branch_code     : rempli SSI scope === 'branch' | 'autre'
-//
-// ⚠ Le backend doit migrer les données existantes :
-//   Pour tous les Holiday avec scope='regional', déplacer la valeur de
-//   `branch_code` vers `department_code` puis vider `branch_code`.
-// ─────────────────────────────────────────────────────────────────────────────
-
 // ================= TYPES UNION (source unique) =================
 export type HolidayType =
   | "ferie"
@@ -54,10 +35,6 @@ export const baseHolidaySchema = z.object({
     .enum(["national", "regional", "branch", "autre"])
     .default("national"),
 
-  // ── Deux champs distincts au lieu du `branch_code` polymorphe ──
-  /** Code département (OUEST, NORD...) — rempli si scope === 'regional' */
-  department_code: z.string().optional(),
-  /** Code de branche réel — rempli si scope === 'branch' | 'autre' */
   branch_code: z.string().optional(),
 
   comment: z
@@ -79,23 +56,14 @@ export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // ================= SCHEMA AVEC VALIDATION CONDITIONNELLE =================
 export const holidaySchema = baseHolidaySchema.superRefine((data, ctx) => {
-  // Brouillon → aucune validation de scope_code requise
-  if (data.pending_assignment) return;
-
-  // scope='regional' exige department_code
-  if (data.scope === "regional" && !data.department_code) {
+  if (
+    !data.pending_assignment &&
+    data.scope === "branch" &&
+    !data.branch_code
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Le code département est requis quand la portée est 'Régional'",
-      path: ["department_code"],
-    });
-  }
-
-  // scope='branch' ou 'autre' exige branch_code
-  if ((data.scope === "branch" || data.scope === "autre") && !data.branch_code) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Le code de branche est requis quand la portée est 'Succursale' ou 'Autre'",
+      message: "Le code de branche est requis quand la portée est 'Succursale'",
       path: ["branch_code"],
     });
   }
@@ -113,9 +81,6 @@ export interface HolidayData {
   description: string;
   type: HolidayType;
   scope: HolidayScope;
-  /** Rempli si scope === 'regional' */
-  department_code?: string;
-  /** Rempli si scope === 'branch' | 'autre' */
   branch_code?: string;
   comment?: string;
   modified_by?: string;
@@ -126,7 +91,8 @@ export interface HolidayData {
 
 /**
  * Alias `Holiday = HolidayData`.
- * Permet aux anciens fichiers qui importent `Holiday` de continuer à fonctionner.
+ * Permet aux anciens fichiers qui importent `Holiday` de continuer à fonctionner
+ * tant que tout n'a pas été migré.
  */
 export type Holiday = HolidayData;
 
@@ -136,7 +102,6 @@ export interface HolidayFormData {
   description: string;
   type: HolidayType;
   scope: HolidayScope;
-  department_code?: string;
   branch_code?: string;
   comment?: string;
   pending_assignment?: boolean;
@@ -166,18 +131,12 @@ export const isPendingAssignment = (
   holiday: HolidayData | HolidayFormData
 ): boolean => holiday.pending_assignment === true;
 
-/**
- * Indique quel champ de localisation est requis selon le scope.
- * Renvoie 'department_code' | 'branch_code' | null.
- */
-export const getRequiredScopeCodeField = (
-  scope: HolidayScope,
+export const isBranchCodeRequired = (
+  scope: string,
   pendingAssignment: boolean
-): "department_code" | "branch_code" | null => {
-  if (pendingAssignment) return null;
-  if (scope === "regional") return "department_code";
-  if (scope === "branch" || scope === "autre") return "branch_code";
-  return null;
+): boolean => {
+  if (pendingAssignment) return false;
+  return scope === "branch";
 };
 
 export const isCommentRequired = (

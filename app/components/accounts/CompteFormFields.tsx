@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Wallet, CheckCircle } from 'lucide-react';
+import { User, Wallet, CheckCircle, Loader2 } from 'lucide-react';
 import CompteAutocomplete from './CompteAutocomplete';
 import { BANK_RULES, getRulesForAccountType } from '@/app/lib/bankRules';
+import { checkMemberEligibility } from '@/app/lib/api/accounts';
 
 // ============= TYPES =============
 interface CompteFormData {
@@ -116,6 +117,7 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
 }) => {
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [eligibilityChecking, setEligibilityChecking] = useState(false);
   const isCreateMode = mode === 'create';
 
   const clearError = (field: string) => {
@@ -132,6 +134,54 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
     });
     clearError('typeCompte');
     setCurrentStep(3);
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRÉ-CYCLE D'OUVERTURE — Vérification d'éligibilité du membre
+  //
+  // Avant de laisser passer le wizard à l'étape 2 (choix du type de compte),
+  // on demande au backend si ce membre a le droit d'ouvrir un compte
+  // (statut KYC, ancienneté, blocages, limite de comptes, etc.).
+  //
+  // Pourquoi ici et pas ailleurs ?
+  //   - Pas dans l'UI / les validations Zod : ce sont des règles métier
+  //     côté serveur, le front ne doit pas les connaître.
+  //   - Pas dans createAccount : trop tard, l'utilisateur aurait déjà
+  //     rempli tout le wizard pour rien.
+  //
+  // ⚠ Ceci est un SOFT CHECK. Le HARD CHECK reste obligatoire côté backend
+  //   dans POST /accounts/ (on ne fait jamais confiance au front).
+  //
+  // Endpoint attendu : GET /members/{id}/eligibility/
+  //   → { eligible: boolean, reasons: string[] }
+  //
+  // ⚠ Tant que le backend n'a pas livré l'endpoint, checkMemberEligibility
+  //   bypasse le check (feature flag ELIGIBILITY_CHECK_ENABLED dans accounts.ts).
+  // ─────────────────────────────────────────────────────────────────────────
+  const handleMemberSelection = async (id: string) => {
+    setFormData({ id_membre: id });
+    clearError('id_membre');
+    if (!id) return;
+
+    setEligibilityChecking(true);
+    try {
+      const { eligible, reasons } = await checkMemberEligibility(id);
+      if (eligible) {
+        setCurrentStep(2);
+      } else {
+        setErrors?.(prev => ({
+          ...prev,
+          id_membre: reasons.join('. ') || "Membre non éligible à l'ouverture d'un compte.",
+        }));
+      }
+    } catch (e: any) {
+      setErrors?.(prev => ({
+        ...prev,
+        id_membre: e?.message || "Vérification d'éligibilité échouée.",
+      }));
+    } finally {
+      setEligibilityChecking(false);
+    }
   };
 
   // ── Mode edit non supporté ──
@@ -156,19 +206,25 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
           <FieldLabel label="Membre titulaire" required />
           <CompteAutocomplete
             selectedKey={formData.id_membre}
-            onSelectionChange={(id: string) => {
-              setFormData({ id_membre: id });
-              clearError('id_membre');
-              if (id) setCurrentStep(2);
-            }}
+            onSelectionChange={handleMemberSelection}
             errorMessage={errors.id_membre}
             isRequired
             placeholder="Rechercher par nom ou numéro…"
           />
-          {errors.id_membre && (
+
+          {/* Indicateur de vérification d'éligibilité en cours */}
+          {eligibilityChecking && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2E7D32]" />
+              <span>Vérification de l'éligibilité…</span>
+            </div>
+          )}
+
+          {errors.id_membre && !eligibilityChecking && (
             <p className="text-xs text-red-500 mt-1">{errors.id_membre}</p>
           )}
-          {formData.id_membre && (
+
+          {formData.id_membre && !eligibilityChecking && !errors.id_membre && (
             <div className="mt-3 p-3 bg-[#DDEAD5]/50 border border-[#2E7D32]/20 rounded-xl">
               <p className="text-xs font-semibold text-[#1B5E20]">Membre sélectionné</p>
               <p className="text-xs text-[#2E7D32] mt-0.5 font-mono">{formData.id_membre.slice(0, 16)}…</p>

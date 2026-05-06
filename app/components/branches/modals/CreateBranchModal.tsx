@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Building2, X } from 'lucide-react';
-import { FaCalendarAlt } from 'react-icons/fa';
-import { ExternalLink, ShieldAlert } from 'lucide-react';
+import { Building2, X, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 import BranchFormFields from '../BranchFormFields';
 import {
@@ -12,10 +11,32 @@ import {
   ErrorMessages,
 } from '../validations';
 import { fetchBranches, createBranch } from '@/app/lib/api/branche';
-import type { Holiday, OpeningHour } from '@/types/branche';
+import type { OpeningHour } from '@/types/branche';
 import { Modal } from '../../ui/Modal';
+import { Holiday } from '@/app/components/holidays/validations';
 
-// ============= TYPES =============
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFICATIONS apportées à ce fichier :
+//
+// 1. SUPPRIMÉ : la grosse section "Jours fériés" en bas du modal.
+//    Elle ressemblait à une étape du formulaire mais on ne pouvait
+//    rien sélectionner depuis ici (impossible d'assigner des fériés à
+//    une branche qui n'existe pas encore). C'était de la friction
+//    visuelle pour rien.
+//
+// 2. AJOUTÉ : un avertissement clair en haut du modal qui dit ce qui
+//    se passe APRÈS la création.
+//
+// 3. AJOUTÉ : un écran de succès post-création qui redirige vers la
+//    page /dashboard/holidays existante (plutôt qu'une page d'assignation
+//    dédiée par branche qui n'existe pas).
+//
+// 4. PHILOSOPHIE UX : on RESPONSABILISE l'admin plutôt que de pré-cocher
+//    automatiquement. C'est lui qui doit décider, pour chaque férié de
+//    la liste, s'il s'applique à sa nouvelle branche. Cette friction
+//    est volontaire — bloquer une session caissier par erreur est
+//    bien pire que de devoir cocher quelques cases.
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface CreateBranchModalProps {
   isOpen: boolean;
@@ -24,7 +45,7 @@ interface CreateBranchModalProps {
   onSuccess: (created: any) => void;
   /** Horaires disponibles (avec un éventuel is_default: true) */
   openingHours?: OpeningHour[];
-  /** Tous les fériés (pour le teaser informatif) */
+  /** Tous les fériés (gardé pour le compteur informatif uniquement) */
   holidays?: Holiday[];
 }
 
@@ -57,14 +78,14 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
 }) => {
 
   // ── State ──
-  const [formData,     setFormData]     = useState<BranchFormData>(INITIAL_FORM);
-  const [errors,       setErrors]       = useState<ErrorMessages<BranchFormData>>({});
-  const [branches,     setBranches]     = useState<any[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError,     setApiError]     = useState<string | null>(null);
+  const [formData,      setFormData]      = useState<BranchFormData>(INITIAL_FORM);
+  const [errors,        setErrors]        = useState<ErrorMessages<BranchFormData>>({});
+  const [branches,      setBranches]      = useState<any[]>([]);
+  const [isSubmitting,  setIsSubmitting]  = useState(false);
+  const [apiError,      setApiError]      = useState<string | null>(null);
+  const [createdBranch, setCreatedBranch] = useState<any | null>(null);
 
-  // ── Init au montage : charger la liste (pour détection doublons)
-  //    + pré-sélectionner l'horaire par défaut s'il existe
+  // ── Init au montage ──
   useEffect(() => {
     if (!isOpen) return;
 
@@ -73,7 +94,6 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
         const existing = await fetchBranches();
         setBranches(existing);
 
-        // Pré-sélection de l'horaire par défaut
         const defaultHour = openingHours.find((h: any) => h.is_default);
         setFormData({
           ...INITIAL_FORM,
@@ -81,6 +101,7 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
         });
         setErrors({});
         setApiError(null);
+        setCreatedBranch(null);
       } catch (err) {
         console.error(err);
         setApiError('Impossible de charger les données.');
@@ -89,13 +110,13 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
     loadData();
   }, [isOpen, openingHours]);
 
-  // ── Handler partiel (style compte) ──
+  // ── Handlers ──
   const handleFormDataChange = (updates: Partial<BranchFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
     setApiError(null);
   };
 
-  // ── Auto total postes ──
+  // Auto total postes
   useEffect(() => {
     const total =
       (formData.number_of_tellers || 0) +
@@ -110,7 +131,6 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
     formData.number_of_credit_officers,
   ]);
 
-  // ── Détection doublons ──
   const findDuplicate = (): string | null => {
     const found = branches.find((b: any) =>
       b.branch_name === formData.branch_name ||
@@ -120,14 +140,12 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
     return found ? "Une autre branche utilise déjà ce nom, cet email ou ce numéro." : null;
   };
 
-  // ── Submit ──
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setErrors({});
     setApiError(null);
 
     try {
-      // Validation Zod
       const validation = branchBaseSchema.safeParse(formData);
       if (!validation.success) {
         const zodErrors: ErrorMessages<BranchFormData> = {};
@@ -138,26 +156,19 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
         return;
       }
 
-      // Détection doublons
       const dup = findDuplicate();
       if (dup) {
         setApiError(dup);
         return;
       }
 
-      // Statut calculé : si on a horaire + au moins 1 férié → active, sinon inactive
-      const hasHours    = Boolean(formData.opening_hour);
-      const hasHolidays = Array.isArray(formData.holidays) && formData.holidays.length > 0;
-      const computedStatus = hasHours && hasHolidays ? 'active' : 'inactive';
-
-      // Payload aligné sur les noms API
       const payload = {
         ...validation.data,
-        statusBranche: computedStatus,
+        statusBranche: 'inactive' as const,
       };
 
       const created = await createBranch(payload);
-      onSuccess(created);
+      setCreatedBranch(created);
 
     } catch (error: any) {
       console.error('❌ Erreur création:', error);
@@ -169,19 +180,90 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
 
   const handleClose = () => { if (!isSubmitting) onClose(); };
 
-  // Indicateur du statut prévu (pour le bandeau d'info)
-  const willBeActive =
-    Boolean(formData.opening_hour) &&
-    Array.isArray(formData.holidays) && formData.holidays.length > 0;
-  const missing: string[] = [];
-  if (!formData.opening_hour) missing.push('horaires');
-  if (!formData.holidays?.length) missing.push('jours fériés');
+  // ─── Redirection vers la page Jours fériés EXISTANTE ─────────────────────
+  // L'admin verra la liste de tous les fériés et choisira lui-même lesquels
+  // s'appliquent à sa nouvelle branche (responsabilisation volontaire).
+  const handleGoToHolidaysPage = () => {
+    window.location.href = `/dashboard/holidays`;
+  };
 
-  // ── Render ──
+  const handleFinishLater = () => {
+    onSuccess(createdBranch);
+  };
+
+  // ============= ÉCRAN DE SUCCÈS =============
+  if (createdBranch) {
+    return (
+      <Modal isOpen={isOpen} onClose={handleFinishLater} size="2xl">
+        <div className="px-8 py-10">
+
+          {/* Icône + titre */}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto rounded-full bg-[#DDEAD5] flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              Branche créée avec succès
+            </h2>
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-700">{createdBranch.branch_name}</span> a été enregistrée.
+            </p>
+          </div>
+
+          {/* Encart statut */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <p className="text-sm font-semibold text-amber-900 mb-1">
+              Statut actuel : Inactive
+            </p>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Tant qu'aucun jour férié ne lui est assigné, les caissiers de cette branche peuvent ouvrir une session
+              <strong> tous les jours</strong> — y compris les jours qui devraient être fermés.
+            </p>
+          </div>
+
+          {/* Encart responsabilisation */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <p className="text-sm font-semibold text-[#1B4D6B] mb-2 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4" />
+              Prochaine étape : assigner les jours fériés
+            </p>
+            <p className="text-xs text-[#355C7D] leading-relaxed mb-2">
+              Sur la page <strong>Jours fériés</strong>, parcourez la liste et, pour chaque férié,
+              cliquez sur <strong>« Gérer »</strong> pour ajouter <strong>{createdBranch.branch_name}</strong> aux branches concernées.
+            </p>
+            <p className="text-xs text-[#355C7D] leading-relaxed">
+              ⚠ <strong>C'est à vous de déterminer</strong> lesquels s'appliquent à cette branche
+              (fériés nationaux, fêtes locales, élections, maintenance, etc.).
+              Le système ne pré-coche rien automatiquement pour éviter les erreurs.
+            </p>
+          </div>
+
+          {/* Boutons */}
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleGoToHolidaysPage}
+              className="w-full px-5 py-3 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              Aller à la page Jours fériés
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleFinishLater}
+              className="w-full px-5 py-3 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all"
+            >
+              Plus tard
+            </button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
+  // ============= FORMULAIRE DE CRÉATION =============
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="4xl">
 
-      {/* ── Header CAPOSA ── */}
+      {/* Header */}
       <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
@@ -200,7 +282,7 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
         </button>
       </div>
 
-      {/* ── Body ── */}
+      {/* Body */}
       <div className="p-6 max-h-[70vh] overflow-y-auto bg-gray-50 space-y-4">
 
         {apiError && (
@@ -210,22 +292,20 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
           </div>
         )}
 
-        {/* Indicateur statut prévu */}
-        <div className={`p-3 rounded-xl border-2 flex items-center gap-3 text-sm ${
-          willBeActive
-            ? 'bg-[#DDEAD5]/50 border-[#2E7D32]/30 text-[#1B5E20]'
-            : 'bg-amber-50 border-amber-200 text-amber-800'
-        }`}>
-          <p className="text-xs leading-relaxed">
-            {willBeActive ? (
-              <><strong>Statut prévu : Active</strong> — la branche aura horaires et jours fériés.</>
-            ) : (
-              <><strong>Statut prévu : Inactive à la création</strong> — il faudra ajouter <strong>{missing.join(' et ')}</strong> pour qu'elle soit active.</>
-            )}
-          </p>
+        {/* Avertissement post-création */}
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
+          <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
+          <div className="text-xs text-[#355C7D] leading-relaxed">
+            <p className="font-semibold mb-0.5">Création en deux temps</p>
+            <p>
+              Cette branche sera créée avec le statut <strong>Inactive</strong>.
+              Une fois créée, vous devrez vous-même aller sur la page <strong>Jours fériés</strong> pour
+              déterminer quels fériés s'appliquent à elle ({holidays.length} disponible{holidays.length !== 1 ? 's' : ''} dans le système).
+            </p>
+          </div>
         </div>
 
-        {/* Champs principaux */}
+        {/* Champs du formulaire */}
         <BranchFormFields
           formData={formData}
           setFormData={handleFormDataChange}
@@ -236,47 +316,9 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
           openingHours={openingHours}
         />
 
-        {/* Section Jours fériés (teaser en mode create) */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-3 flex items-center gap-2">
-            <FaCalendarAlt className="text-[#2E7D32]" />
-            Jours fériés
-            <span className="ml-1 px-2.5 py-0.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold">
-              À configurer après
-            </span>
-          </p>
-
-          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
-            <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
-            <p className="text-xs text-[#355C7D] leading-relaxed">
-              Les jours fériés bloquent l'ouverture de session des caissiers. Vous pourrez les assigner après la création.
-            </p>
-          </div>
-
-          <div className="py-5 px-4 bg-gray-50 rounded-xl text-center mb-3">
-            <FaCalendarAlt className="text-gray-300 text-3xl mx-auto mb-2" />
-            <p className="text-sm text-gray-500">
-              {holidays.length} jour{holidays.length !== 1 ? 's' : ''} férié{holidays.length !== 1 ? 's' : ''} disponible{holidays.length !== 1 ? 's' : ''} dans le système
-            </p>
-          </div>
-          <a
-          
-            href="/dashboard/holidays"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between p-3 bg-[#DDEAD5]/40 hover:bg-[#DDEAD5]/70 border border-[#2E7D32]/20 rounded-xl transition-colors group"
-          >
-            <div className="flex items-center gap-2">
-              <FaCalendarAlt className="text-[#2E7D32]" />
-              <span className="text-sm font-semibold text-[#1B5E20]">Voir la page Jours fériés</span>
-            </div>
-            <ExternalLink className="w-4 h-4 text-[#2E7D32] group-hover:translate-x-0.5 transition-transform" />
-          </a>
-        </div>
-
       </div>
 
-      {/* ── Footer CAPOSA ── */}
+      {/* Footer */}
       <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
         <p className="text-xs text-gray-400">
           Tous les champs marqués <span className="text-red-500">*</span> sont obligatoires

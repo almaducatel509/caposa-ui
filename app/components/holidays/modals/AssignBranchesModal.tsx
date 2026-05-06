@@ -22,21 +22,50 @@ import {
 } from "@/types/holidayHelpers";
 import { GroupedHoliday } from "@/types/holidayHelpers";
 import {
-  HolidayData, HOLIDAY_TYPE_LABELS, HOLIDAY_SCOPE_LABELS,
+  HolidayData,
+  HolidayType,
+  HOLIDAY_TYPE_LABELS,
+  HOLIDAY_SCOPE_LABELS,
 } from "../validations";
+import { fetchBranches } from "@/app/lib/api/branche";
+import { assignHolidayToBranches } from "@/app/lib/api/holidays";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFICATIONS apportées à ce fichier :
+//
+// 1. SUPPRIMÉ : le faux setTimeout(800) qui simulait l'assignation.
+//    Avant, le bouton "Confirmer l'assignation" attendait 800ms et
+//    affichait un message de succès SANS rien envoyer au backend.
+//    Aucune donnée n'était persistée.
+//
+// 2. AJOUTÉ : vrai appel `assignHolidayToBranches()` (PATCH /holidays/{id}/)
+//    qui envoie le payload exact attendu par le backend :
+//      { scope, department_code?, branch_ids, pending_assignment: false, comment }
+//
+// 3. AJOUTÉ : fetch interne des branches via fetchBranches() (TEMPORAIRE,
+//    le parent passe encore des mocks dans la prop allBranches).
+//
+// 4. AJOUTÉ : log console au submit pour vérifier le payload envoyé.
+//
+// 🔧 TODO : QUAND LE PARENT SERA CORRIGÉ
+//   → Supprimer apiBranches/isLoadingBranches/le useEffect de fetch
+//   → Supprimer l'import fetchBranches
+//   → Remplacer `branchesToUse` par `allBranches`
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface AssignBranchesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   group: GroupedHoliday;
+  /** ⚠ Actuellement ignoré : on fetch les vraies branches en interne. */
   allBranches: Branch[];
   onEditType?: (group: GroupedHoliday) => void;
 }
- 
+
 type AssignmentScope = "national" | "regional" | "branch" | "autre";
- 
-const TYPE_COLORS: Record<HolidayData["type"], { bg: string; text: string }> = {
+
+const TYPE_COLORS: Record<HolidayType, { bg: string; text: string }> = {
   ferie:       { bg: "#E6F1FB", text: "#042C53" },
   local:       { bg: "#FBEAF0", text: "#4B1528" },
   interne:     { bg: "#E1F5EE", text: "#04342C" },
@@ -44,63 +73,88 @@ const TYPE_COLORS: Record<HolidayData["type"], { bg: string; text: string }> = {
   maintenance: { bg: "#FAEEDA", text: "#412402" },
   autre:       { bg: "#F1EFE8", text: "#2C2C2A" },
 };
- 
+
 const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
   isOpen, onClose, onSuccess, group, allBranches, onEditType,
 }) => {
-  const holidayType = group.type;
+
+  // ─── TEMPORAIRE : fetch des vraies branches API ──────────────────────────
+  const [apiBranches, setApiBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const loadRealBranches = async () => {
+      setIsLoadingBranches(true);
+      try {
+        const data = await fetchBranches();
+        setApiBranches(data);
+      } catch (e) {
+        console.error("❌ Erreur chargement branches API:", e);
+        setApiBranches([]);
+      } finally {
+        setIsLoadingBranches(false);
+      }
+    };
+    loadRealBranches();
+  }, [isOpen]);
+
+  const branchesToUse = apiBranches;
+
+  const holidayType: HolidayType = group.type;
   const typeColor = TYPE_COLORS[holidayType];
- 
+
   const initialScope: AssignmentScope =
     group.effectiveScope === "national" ? "national"
     : group.effectiveScope === "regional" ? "regional"
     : group.effectiveScope === "branch" ? "branch"
     : "autre";
- 
+
   const [scope, setScope] = useState<AssignmentScope>(initialScope);
-  const [selectedBranches, setSelectedBranches] = useState<Set<string>>(
-    new Set(getBranchesForGroup(group, allBranches).map((b) => b.branch_code))
-  );
+  const [selectedBranches, setSelectedBranches] = useState<Set<string>>(new Set());
   const [selectedDepartment, setSelectedDepartment] = useState<string>(
-    group.records[0]?.scope === "regional" ? group.records[0]?.branch_code ?? "" : ""
+    group.records[0]?.scope === "regional"
+      ? (group.records[0]?.department_code ?? group.records[0]?.branch_code ?? "")
+      : ""
   );
   const [search, setSearch] = useState("");
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
- 
+
   useEffect(() => {
     if (!isOpen) return;
     setScope(initialScope);
+    // selectedBranches stocke des branch_code (pour l'UI checkbox)
     setSelectedBranches(
-      new Set(getBranchesForGroup(group, allBranches).map((b) => b.branch_code))
+      new Set(getBranchesForGroup(group, branchesToUse).map((b) => b.branch_code))
     );
     setSearch(""); setReason(""); setApiError(null); setSuccessMessage(null);
-  }, [isOpen, group, allBranches]);
- 
+  }, [isOpen, group, branchesToUse]);
+
   const departments = useMemo(() => {
     const set = new Set<string>();
-    allBranches.forEach((b) => b.department_code && set.add(b.department_code));
+    branchesToUse.forEach((b) => b.department_code && set.add(b.department_code));
     return Array.from(set).sort();
-  }, [allBranches]);
- 
+  }, [branchesToUse]);
+
   const filteredBranches = useMemo(() => {
-    if (!search.trim()) return allBranches;
+    if (!search.trim()) return branchesToUse;
     const q = search.toLowerCase();
-    return allBranches.filter(
+    return branchesToUse.filter(
       (b) =>
         b.branch_name.toLowerCase().includes(q) ||
         b.branch_code.toLowerCase().includes(q) ||
         b.city?.toLowerCase().includes(q)
     );
-  }, [allBranches, search]);
- 
+  }, [branchesToUse, search]);
+
   const branchesInDepartment = useMemo(() => {
     if (!selectedDepartment) return [];
-    return allBranches.filter((b) => b.department_code === selectedDepartment);
-  }, [allBranches, selectedDepartment]);
- 
+    return branchesToUse.filter((b) => b.department_code === selectedDepartment);
+  }, [branchesToUse, selectedDepartment]);
+
   const toggleBranch = (code: string) => {
     setSelectedBranches((prev) => {
       const next = new Set(prev);
@@ -108,41 +162,82 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
       return next;
     });
   };
- 
-  const selectAll = () => setSelectedBranches(new Set(allBranches.map((b) => b.branch_code)));
+
+  const selectAll = () => setSelectedBranches(new Set(branchesToUse.map((b) => b.branch_code)));
   const deselectAll = () => setSelectedBranches(new Set());
- 
+
   const finalCount =
-    scope === "national" ? allBranches.length
+    scope === "national" ? branchesToUse.length
     : scope === "regional" ? branchesInDepartment.length
     : selectedBranches.size;
- 
+
   const canSubmit = (() => {
-    if (isSubmitting) return false;
-    if (scope === "national") return true;
+    if (isSubmitting || isLoadingBranches) return false;
+    if (scope === "national") return branchesToUse.length > 0;
     if (scope === "regional") return selectedDepartment !== "";
     return selectedBranches.size > 0;
   })();
- 
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // SUBMIT — vrai appel backend
+  // ═════════════════════════════════════════════════════════════════════════
   const handleSubmit = async () => {
-    setIsSubmitting(true); setApiError(null); setSuccessMessage(null);
+    setIsSubmitting(true);
+    setApiError(null);
+    setSuccessMessage(null);
+
     try {
-      // Backend: delete + recreate + pending_assignment=false + audit_log
-      await new Promise((r) => setTimeout(r, 800));
+      // Calculer les branch_ids (UUIDs) selon le scope
+      // - national : toutes les branches (le backend ignore mais on envoie)
+      // - regional : branches du département (le backend ignore mais on envoie)
+      // - branch/autre : branches cochées (converties code → id)
+      let targetBranches: Branch[] = [];
+      if (scope === "national") {
+        targetBranches = branchesToUse;
+      } else if (scope === "regional") {
+        targetBranches = branchesInDepartment;
+      } else {
+        targetBranches = branchesToUse.filter((b) =>
+          selectedBranches.has(b.branch_code)
+        );
+      }
+
+      const branch_ids = targetBranches.map((b) => b.id);
+
+      const payload = {
+        scope,
+        department_code: scope === "regional" ? selectedDepartment : undefined,
+        branch_ids,
+        comment: reason || undefined,
+      };
+
+      console.group("🟢 [AssignBranchesModal] Soumission");
+      console.log("Holiday ID:", group.id);
+      console.log("Scope:", scope);
+      console.log("Branches ciblées:", targetBranches.length);
+      console.log("Payload envoyé:", payload);
+      console.groupEnd();
+
+      // ⚠ group.id correspond au PREMIER record du groupe.
+      //    Avec le modèle M2M, un groupe = un seul Holiday, donc c'est OK.
+      //    Si plus tard on a plusieurs records par groupe, il faudra revoir.
+      await assignHolidayToBranches(group.id, payload);
+
       const summary =
-        scope === "national" ? `Férié appliqué à toutes les branches (${allBranches.length})`
+        scope === "national" ? `Férié appliqué à toutes les branches (${branchesToUse.length})`
         : scope === "regional" ? `Férié appliqué aux ${branchesInDepartment.length} branche${branchesInDepartment.length > 1 ? "s" : ""} du département ${selectedDepartment}`
         : `Férié appliqué à ${selectedBranches.size} branche${selectedBranches.size > 1 ? "s" : ""}`;
       setSuccessMessage(summary);
-      setTimeout(() => { onSuccess(); onClose(); }, 1500);
-    } catch (err) {
-      console.error(err);
-      setApiError("Une erreur est survenue lors de l'assignation.");
+      setTimeout(() => { onSuccess(); onClose(); }, 1200);
+
+    } catch (err: any) {
+      console.error("❌ Erreur assignation:", err);
+      setApiError(err?.message || "Une erreur est survenue lors de l'assignation.");
     } finally {
       setIsSubmitting(false);
     }
   };
- 
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="3xl"
       title={
@@ -160,6 +255,14 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
       }
     >
       <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+
+        {isLoadingBranches && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl text-xs text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin text-[#2E7D32]" />
+            Chargement des branches…
+          </div>
+        )}
+
         {apiError && (
           <div className="flex items-start gap-3 px-4 py-3 bg-red-50 rounded-xl border border-red-100">
             <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -172,7 +275,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             <p className="text-sm font-semibold text-[#1B5E20]">{successMessage}</p>
           </div>
         )}
- 
+
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
           <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
           <p className="text-xs text-[#355C7D] leading-relaxed">
@@ -180,8 +283,8 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             <strong>{formatHolidayDate(group.date)}</strong>. Toute modification est tracée dans le journal d'audit.
           </p>
         </div>
- 
-        {/* Type + Portée côte à côte */}
+
+        {/* Type + Portée */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
             <div className="flex items-center justify-between mb-2">
@@ -206,7 +309,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
               Lecture seule — modifiez via le formulaire d'édition.
             </p>
           </div>
- 
+
           <div className="p-4 bg-[#DDEAD5]/30 border border-[#2E7D32]/30 rounded-xl">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-bold uppercase tracking-widest text-[#1B5E20] flex items-center gap-1.5">
@@ -225,8 +328,8 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             <p className="text-[11px] text-[#1B5E20]/60 mt-2 leading-relaxed">Modifiable ci-dessous.</p>
           </div>
         </div>
- 
-        {/* Sélecteur portée 4 cards */}
+
+        {/* Sélecteur portée */}
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
             Choisir la portée
@@ -242,14 +345,14 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
               description="Cas spécial" isSelected={scope === "autre"} onClick={() => setScope("autre")} />
           </div>
         </div>
- 
+
         {scope === "national" && (
           <div className="p-4 bg-[#DDEAD5]/40 border border-[#2E7D32]/20 rounded-xl">
             <div className="flex items-center gap-3">
               <Globe className="w-5 h-5 text-[#2E7D32]" />
               <div>
                 <p className="text-sm font-semibold text-[#1B5E20]">
-                  Application à toutes les {allBranches.length} branches
+                  Application à toutes les {branchesToUse.length} branches
                 </p>
                 <p className="text-xs text-[#1B5E20]/70 mt-0.5">
                   Tous les caissiers du réseau seront concernés
@@ -258,7 +361,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             </div>
           </div>
         )}
- 
+
         {scope === "regional" && (
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Département</p>
@@ -283,14 +386,14 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             )}
           </div>
         )}
- 
+
         {(scope === "branch" || scope === "autre") && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
                 {scope === "autre" ? "Cas spécial — sélection libre" : "Sélectionner les branches"}{" "}
                 <span className="ml-1 px-2 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded text-[10px]">
-                  {selectedBranches.size} / {allBranches.length}
+                  {selectedBranches.size} / {branchesToUse.length}
                 </span>
               </p>
               <div className="flex gap-2">
@@ -325,13 +428,13 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
                 })
               ) : (
                 <div className="py-6 text-center text-xs text-gray-400">
-                  Aucune branche ne correspond à votre recherche
+                  {isLoadingBranches ? "Chargement…" : "Aucune branche ne correspond à votre recherche"}
                 </div>
               )}
             </div>
           </div>
         )}
- 
+
         <div>
           <label className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 block">
             Raison du changement <span className="text-gray-400 font-normal normal-case">(optionnel mais recommandé)</span>
@@ -343,7 +446,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             Sera enregistré dans le journal d'audit avec votre identifiant.
           </p>
         </div>
- 
+
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
           <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-1">Résumé</p>
           <p className="text-sm text-amber-900">
@@ -353,7 +456,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
           </p>
         </div>
       </div>
- 
+
       <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
         <button onClick={onClose} disabled={isSubmitting}
           className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-100 transition-all disabled:opacity-50">
@@ -371,7 +474,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
     </Modal>
   );
 };
- 
+
 interface ScopeCardProps {
   icon: React.ReactNode;
   title: string;
@@ -379,7 +482,7 @@ interface ScopeCardProps {
   isSelected: boolean;
   onClick: () => void;
 }
- 
+
 const ScopeCard: React.FC<ScopeCardProps> = ({ icon, title, description, isSelected, onClick }) => (
   <button type="button" onClick={onClick}
     className={`text-left p-3 rounded-xl border-2 transition-all ${
@@ -390,7 +493,7 @@ const ScopeCard: React.FC<ScopeCardProps> = ({ icon, title, description, isSelec
     <p className="text-[11px] text-gray-500 mt-0.5">{description}</p>
   </button>
 );
- 
+
 const Tooltip: React.FC<{ text: string }> = ({ text }) => (
   <div className="group relative">
     <HelpCircle className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help" />
@@ -399,5 +502,5 @@ const Tooltip: React.FC<{ text: string }> = ({ text }) => (
     </div>
   </div>
 );
- 
+
 export default AssignBranchesModal;

@@ -15,16 +15,16 @@
 
 // ── Ré-exports des types depuis la source unique ────────────────────────
 // Permet aux anciens imports `import { Holiday } from "@/.../mock"` de fonctionner.
-export type {
-  Holiday,
-  HolidayData,
-  HolidayType,
-  HolidayScope,
-} from "@/app/components/holidays/validations";
+// export type {
+//   Holiday,
+//   HolidayData,
+//   HolidayType,
+//   HolidayScope,
+// } from "@/app/components/holidays/validations";
 
 // ── Import LOCAL pour typer MOCK_HOLIDAYS ───────────────────────────────
 // 🎯 IMPORTANT : ce import doit pointer vers holidays/, PAS branches/
-import type { Holiday } from "@/app/components/holidays/validations";
+// import type { Holiday } from "@/app/components/holidays/validations";
 
 // ── Mock branches ───────────────────────────────────────────────────────
 export interface MockBranch {
@@ -104,6 +104,7 @@ export const MOCK_HOLIDAYS: Holiday[] = [
   },
 ];
 
+import { Holiday } from "../holidays/validations";
 import { OpeningHours } from "./validations";
 
 export const MOCK_OPENING_HOURS: OpeningHours[] = [

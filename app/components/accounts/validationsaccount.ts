@@ -22,7 +22,7 @@ export interface AccountData {
   id_membre?: string;             // ← Alias pour "member"
   typeCompte?: 'epargne' | 'cheques' | 'terme';  // ← Mappé depuis "account_type"
   soldeActuel?: number;           // ← Mappé depuis "balance"
-  statusAccount: 'ouvert' | 'fermé' | 'gelé' | 'en_attente' | 'archive'
+  statusAccount: 'ouvert' | 'fermé' | 'gelé' ;
 // ouvert     → transactions autorisées
 // fermé      → compte clôturé définitivement archive
 // gelé       → transactions bloquées temporairement (saisie, litige)

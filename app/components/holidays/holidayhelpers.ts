@@ -1,20 +1,22 @@
 /**
- * holidayHelpers.ts — v2 avec gestion pending_assignment
+ * holidayHelpers.ts — v3
  *
  * ─────────────────────────────────────────────────────────────────────────
  * MODIFICATIONS apportées à ce fichier :
  *
- * 1. CORRIGÉ : import de `HolidayScope`
- *    AVANT : import depuis "@/app/components/OpeningHours/mock"
- *      → mauvais fichier source, fragile (un nettoyage du mock cassait tout
- *        ce fichier sans raison).
- *    APRÈS : import depuis "@/app/components/holidays/validations"
- *      → source officielle du type, cohérent avec `Holiday`.
+ * 1. ADAPTÉ : `branch_code` polymorphe → `department_code` + `branch_code`
+ *    Le scope='regional' utilise maintenant `holiday.department_code`
+ *    au lieu de `holiday.branch_code`. Plus clair et plus sûr.
+ *
+ * 2. AJOUTÉ : `getApplicableHolidaysForBranch`
+ *    Filtre la liste complète des fériés pour ne garder que ceux qui
+ *    s'appliquent à une branche donnée (selon scope + dept + branch).
+ *    Utilisé dans la future page d'assignation des fériés à une branche.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import { Holiday, HolidayScope } from "@/app/components/holidays/validations";
 import type { Branch } from "@/types/branche";
+import type { HolidayScope, Holiday } from "@/app/components/holidays/validations";
 
 export function isHolidayAppliedToBranch(
   holiday: Holiday,
@@ -27,7 +29,8 @@ export function isHolidayAppliedToBranch(
     case "national":
       return true;
     case "regional":
-      return branch.department_code === holiday.branch_code;
+      // ─── MODIF : utilise department_code (anciennement branch_code surchargé)
+      return branch.department_code === holiday.department_code;
     case "branch":
       return branch.branch_code === holiday.branch_code;
     case "autre":
@@ -45,6 +48,31 @@ export function getApplicableBranches(
 
 export function isPendingAssignment(holiday: Holiday): boolean {
   return holiday.pending_assignment === true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// NOUVEAU : Filtre des fériés applicables à une branche donnée
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Filtre les fériés applicables à une branche donnée.
+ *
+ * Logique :
+ *   - National  : toujours applicable (toutes branches)
+ *   - Regional  : applicable si holiday.department_code === branch.department_code
+ *   - Branch    : applicable si holiday.branch_code === branch.branch_code
+ *   - Autre     : par défaut, traité comme branch-level
+ *
+ * Ignore les fériés en pending_assignment (brouillons).
+ *
+ * Utilisé dans la page d'assignation des fériés à une branche : on ne
+ * propose à l'admin que les fériés qui ont du sens pour CETTE branche.
+ */
+export function getApplicableHolidaysForBranch(
+  allHolidays: Holiday[],
+  branch: Branch
+): Holiday[] {
+  return allHolidays.filter((h) => isHolidayAppliedToBranch(h, branch));
 }
 
 export interface GroupedHoliday {

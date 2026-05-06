@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { HAITI_DEPARTMENTS, DepartmentCode } from "@/app/data/haitiLocations";
-import { Holiday } from "../holidays/validations";
 // ─── NOUVEAU : on importe Branch (Cesar) pour étendre ────────────────────
 import type { Branch } from "@/types/branche";
 
