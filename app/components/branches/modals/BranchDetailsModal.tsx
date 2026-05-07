@@ -437,63 +437,7 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* ── Jours fériés ────────────────────────────────────────────── */}
-          {/* ─── Ancienne version (commentée) : bg-blue-50, border-l-[#355C7D] ─── */}
-
-          {/* ─── Nouvelle version : neutre + accents vert/or pour les "à venir" ─── */}
-          <div className="bg-white border-2 border-[#DDEAD5] rounded-2xl p-5">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-4 flex items-center gap-2">
-              <FaCalendarAlt className="text-[#2E7D32]" />
-              Jours fériés
-              <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">
-                {displayHolidays.length} jour{displayHolidays.length !== 1 ? "s" : ""}
-              </span>
-            </p>
-            {displayHolidays.length > 0 ? (
-              <div className="space-y-2">
-                {displayHolidays
-                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                  .map((holiday, i) => {
-                    const isUpcoming = new Date(holiday.date) > new Date();
-                    return (
-                      <div
-                        key={i}
-                        className={`flex items-center justify-between p-3 rounded-xl border-l-4 ${
-                          isUpcoming
-                            ? "bg-[#DDEAD5]/40 border-l-[#2E7D32]"  // ← vert CAPOSA pour à venir
-                            : "bg-gray-50 border-l-gray-300"
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{formatDate(holiday.date)}</p>
-                          {holiday.description && <p className="text-xs text-gray-500 mt-0.5">{holiday.description}</p>}
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded-lg font-medium ${
-                          isUpcoming
-                            ? "bg-[#DDEAD5] text-[#1B5E20]"
-                            : "bg-gray-100 text-gray-500"
-                        }`}>
-                          {isUpcoming ? "À venir" : "Passé"}
-                        </span>
-                      </div>
-                    );
-                  })}
-              </div>
-            ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-xl">
-                <FaCalendarAlt className="text-gray-300 text-4xl mx-auto mb-3" />
-                <p className="text-sm text-gray-500 font-medium">Aucun jour férié configuré</p>
-                {onEdit && (
-                  <button
-                    onClick={() => { onEdit(branch, "activate"); onClose(); }}
-                    className="mt-3 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold transition-colors"
-                  >
-                    Ajouter des jours fériés
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {/* ── Jours fériés ────────────────────────────────────────────── */}       
         </div>
 
         {/* ── Footer ── */}

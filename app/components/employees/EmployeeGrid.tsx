@@ -140,11 +140,18 @@ const [posts, setPosts] = useState<PostData[]>([]);
       );
     }
 
+    // if (selectedBranch !== 'all')
+    //   list = list.filter(e => e.branch === selectedBranch);
+
+    // if (selectedStatus !== 'all')
+    //   list = list.filter(e => (e.statutEmploye ?? 'actif') === selectedStatus);
     if (selectedBranch !== 'all')
       list = list.filter(e => e.branch === selectedBranch);
 
-    if (selectedStatus !== 'all')
-      list = list.filter(e => (e.statutEmploye ?? 'actif') === selectedStatus);
+      // ⭐ Nouveau : filtre basé sur l’onglet
+      list = list.filter(e =>
+        (e.statutEmploye ?? 'actif') === activeEmplTab
+    );
 
     const now = new Date();
     if (selectedFilter === 'recent') {
@@ -166,7 +173,7 @@ const [posts, setPosts] = useState<PostData[]>([]);
     return list.sort((a, b) =>
       new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
     );
-  }, [employees, debouncedValue, selectedBranch, selectedStatus, selectedFilter]);
+  }, [employees, debouncedValue, selectedBranch, activeEmplTab, selectedFilter]);
 
   const hydratedEmployees = useMemo(
     () => filteredEmployees.map(hydrateEmployee),

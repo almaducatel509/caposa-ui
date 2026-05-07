@@ -51,8 +51,7 @@ const BranchesGrid: React.FC = () => {
 
   /* ── Modals ── */
   const [showCreateModal,  setShowCreateModal]  = useState(false);
-  const [showEditModal,    setShowEditModal]    = useState(false);
-  const [editSubMode,      setEditSubMode]      = useState<"edit" | "activate">("edit");
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal,  setShowDeleteModal]  = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -163,10 +162,22 @@ const BranchesGrid: React.FC = () => {
     }
 
     // Filtre par statut effectif
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter((b) => getEffectiveStatus(b) === selectedStatus);
-    }
+    // if (selectedStatus !== "all") {
+    //   filtered = filtered.filter((b) => getEffectiveStatus(b) === selectedStatus);
+    // }
 
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter((b) => {
+        const eff = getEffectiveStatus(b);
+        console.log('[Filter]', {
+          branchName: b.branch_name,
+          effectiveStatus: eff,
+          selectedStatus: selectedStatus,
+          match: eff === selectedStatus
+        });
+        return eff === selectedStatus;
+      });
+    }
     return filtered.sort((a, b) => a.branch_name.localeCompare(b.branch_name));
   }, [branches, debouncedSearch, selectedSize, selectedStatus]);
 
@@ -181,11 +192,14 @@ const BranchesGrid: React.FC = () => {
   //
   // ❌ Bug : on calculait filteredBranches mais on passait hydratedBranches
   //         au tableau → le filtre n'avait aucun effet visible.
-
-  // ─── Nouvelle version : hydrate seulement les survivants des filtres ──
   const hydratedFilteredBranches = useMemo(
     () => filteredBranches.map(hydrateBranch),
     [filteredBranches, hydrateBranch]
+  );
+
+  const hydratedAllBranches = useMemo(
+    () => branches.map(hydrateBranch),
+    [branches, hydrateBranch]
   );
 
   /* ─── Synchro filtre statut → onglet (aligné sur AccountGrid) ─────────
@@ -238,9 +252,9 @@ const BranchesGrid: React.FC = () => {
     setShowCreateModal(true);
   };
 
-  const handleEdit = (branch: BranchData) => {
+    const handleEdit = (branch: BranchData) => {
     setSelectedBranch(branch);
-    setEditSubMode("edit");
+    // setEditSubMode("edit");  ← optionnel
     setShowEditModal(true);
   };
 
@@ -248,12 +262,7 @@ const BranchesGrid: React.FC = () => {
    * "Activer" depuis la liste = ouvrir le modal d'édition en mode "activate"
    * (pré-sélectionne l'horaire par défaut + highlight la section qui manque)
    */
-  const handleActivate = (branch: BranchData) => {
-    setSelectedBranch(branch);
-    setEditSubMode("activate");
-    setShowEditModal(true);
-  };
-
+  
   const handleDelete = (branch: BranchData) => {
     setSelectedBranch(branch);
     setShowDeleteModal(true);
@@ -306,26 +315,18 @@ const BranchesGrid: React.FC = () => {
         onAdd={handleAdd}
     />
 
-      <BrancheTable
-        // ─── Branches FILTRÉES + hydratées (cohérent avec le compteur) ─
+     <BrancheTable
         branches={hydratedFilteredBranches}
-
+        allBranches={hydratedAllBranches}    // ← nouvelle prop
         isLoading={isLoading}
         onView={handleView}
         onEdit={handleEdit}
-        onActivate={handleActivate}
         onDelete={handleDelete}
-
-        // ─── Onglet contrôlé par le parent (comme AccountGrid) ──────────
+        // onActivate retiré
         activeTab={activeTab}
-        // ─── onTabChange inline (style AccountGrid, pas de fonction nommée) ─
         onTabChange={(tab) => {
           setActiveTab(tab);
-          setSelectedStatus(
-            tab === 'inactive' ? 'inactif' :
-            tab === 'archive'  ? 'archive' :
-            'actif'
-          ); // les valeurs sont identiques : "active" / "inactive" / "archive"
+          setSelectedStatus(tab);
         }}
       />
 
@@ -346,7 +347,6 @@ const BranchesGrid: React.FC = () => {
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
           onSuccess={handleSuccess}
-          mode={editSubMode}
           openingHours={openingHours}
           holidays={holidays}
           branch={selectedBranch}
@@ -370,7 +370,6 @@ const BranchesGrid: React.FC = () => {
           onClose={() => setShowDetailsModal(false)}
           branch={selectedBranch}
           onEdit={(_branch, mode) => {
-            setEditSubMode(mode);
             setShowDetailsModal(false);
             setShowEditModal(true);
           }}

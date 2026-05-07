@@ -124,3 +124,5 @@ export const MOCK_OPENING_HOURS: OpeningHours[] = [
     // samedi/dimanche optionnels → tu peux les omettre
   }
 ];
+
+export type { Holiday };

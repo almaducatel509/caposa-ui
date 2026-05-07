@@ -66,4 +66,60 @@ Si POST /accounts/ reste nécessaire, accepter au moins member_id et retourner l
 
 - Ajouter auto-génération du branch_code dans Branch. 
 
- 
+9. Enregistrement automatique des actions
+    Chaque action importante doit générer une entrée d’audit, incluant notamment :
+
+- action effectuée
+
+- entité concernée (type + ID)
+
+- avant/après (JSON)
+
+- utilisateur (ID + rôle)
+
+- contexte (IP, device)
+
+- horodatage
+
+L’objectif : pouvoir reconstruire l’historique complet de n’importe quel élément.
+
+10. Structure de données attendue
+    Une table dédiée doit centraliser toutes les entrées d’audit :
+
+- action
+
+- entity_type
+
+- entity_id
+
+- before_data
+
+- after_data
+
+- user_id
+
+- ip_address
+
+- device
+
+- created_at
+
+Le format doit rester simple, lisible, et facile à filtrer.
+
+11. Accès filtré par entité
+    Le backend doit permettre de récupérer l’historique :
+
+- globalement (toutes les actions)
+
+- par entité (entity_type + entity_id)
+
+- Cela permet d’afficher l’audit dans chaque page de détail côté frontend.
+
+12. Immutabilité
+    Les entrées d’audit doivent être :
+
+- non modifiables
+
+- non supprimables
+
+- Pour garantir une traçabilité conforme aux standards bancaires.

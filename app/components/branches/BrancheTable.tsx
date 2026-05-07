@@ -8,67 +8,32 @@ import {
   Archive,
   ShieldOff,
   Wallet,
-  Calendar,
 } from "lucide-react";
 import { BranchData } from "./validations";
 import BranchBulkActionDropdown, { BranchBulkAction } from "./BranchBulkActionDropdown";
 import BranchBulkActionModal from "./modals/BranchBulkActionModal";
-import { useRouter } from 'next/navigation';
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-{/* <AccountTable
-        accounts={filteredAccounts}
-        isLoading={loading}
-        onView={handleView}
-        onSuspend={handleSuspend}
-        onClose={handleClose}
-        onDelete={handleDelete}
-        onViewTransactions={handleViewTransactions}
-        onBulkAction={handleBulkAction}
-        activeTab={activeAccountTab}
-        // ← onglet → dropdown : clés alignées avec AccountFilterBar
-        onTabChange={(tab) => {
-          setActiveAccountTab(tab);
-          setSelectedStatus(
-            tab === 'gelé'       ? 'suspendu' :
-            tab === 'fermé'      ? 'ferme'    :
-            tab === 'en_attente' ? 'en_attente': 'ouvert'
-          );
-        }}
-      /> */}
-      
 
-      // <AccountFilterBar
-      //   filterValue={search}
-      //   selectedType={selectedType}
-      //   selectedStatus={selectedStatus}
-      //   totalCount={filteredAccounts.length}
-      //   onSearchChange={setSearch}
-      //   onClear={() => setSearch('')}
-      //   onTypeChange={setSelectedType}
-      //   onStatusChange={handleStatusChange}
-      //   onImport={() => console.log('Import')}
-      //   onAdd={handleAdd}
-      // />
 type BranchStatus = "active" | "inactive" | "archive";
 type TabId = "active" | "inactive" | "archive";
 
-
 export interface BranchTableProps {
-  branches:    BranchData[];
-  isLoading:   boolean;
-  onView:      (b: BranchData) => void;
-  onEdit:      (b: BranchData) => void;
-  onActivate:  (b: BranchData) => void;
-  onDelete:    (b: BranchData) => void;
+  /** Branches déjà filtrées par le parent (search/size/status) → ce qu'on AFFICHE */
+  branches:     BranchData[];
+  /** Liste complète non filtrée → pour les COMPTEURS (onglets + footer) */
+  allBranches?: BranchData[];
+  isLoading:    boolean;
+  onView:       (b: BranchData) => void;
+  onEdit:       (b: BranchData) => void;
+  onDelete:     (b: BranchData) => void;
   onBulkAction?: (action: BranchBulkAction, ids: string[]) => Promise<void>;
   /** Onglet contrôlé par le parent. Si absent, le tableau gère son propre onglet. */
   activeTab?:    'active' | 'inactive' | 'archive';
   /** Notifie le parent quand l'onglet change (synchro avec dropdown statut). */
   onTabChange?:  (tab: 'active' | 'inactive' | 'archive') => void;
 }
-
 
 const STATUS_CFG: Record<BranchStatus, {
   bg: string; text: string; dot: string; label: string;
@@ -94,8 +59,6 @@ const STATUS_CFG: Record<BranchStatus, {
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
-
-
 
 function SortIcon({
   field,
@@ -133,7 +96,7 @@ function SkeletonRow() {
       <div className="h-3 w-20 bg-gray-100 animate-pulse rounded" />
       <div className="h-5 w-24 bg-gray-100 animate-pulse rounded-full" />
       <div className="flex justify-center gap-1">
-        {[...Array(4)].map((_, i) => (
+        {[...Array(3)].map((_, i) => (
           <div key={i} className="w-7 h-7 rounded-lg bg-gray-100 animate-pulse" />
         ))}
       </div>
@@ -145,10 +108,10 @@ function SkeletonRow() {
 
 const BranchTable: React.FC<BranchTableProps> = ({
   branches,
+  allBranches,
   isLoading,
   onView,
   onEdit,
-  onActivate,
   onDelete,
   onBulkAction,
   activeTab: controlledTab,
@@ -156,7 +119,6 @@ const BranchTable: React.FC<BranchTableProps> = ({
 }) => {
 
   /* ── État local ── */
-  const router = useRouter();
   const [localTab, setLocalTab] = useState<TabId>('active');
   const activeTab = controlledTab ?? localTab;
   const [sortField,    setSortField]    = useState("branch_name");
@@ -165,14 +127,18 @@ const BranchTable: React.FC<BranchTableProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<BranchBulkAction | null>(null);
 
-  /* ── Compteurs (utilisent getEffectiveStatus pour gérer l'undefined) ── */
-  const counts = useMemo(() => ({
-    active:   branches.filter(b => getEffectiveStatus(b) === "active").length,
-    inactive: branches.filter(b => getEffectiveStatus(b) === "inactive").length,
-    archive:  branches.filter(b => getEffectiveStatus(b) === "archive").length,
-  }), [branches]);
+  /* ── Compteurs basés sur la liste COMPLÈTE (pas filtrée) ──
+     Comme ça les onglets et le footer affichent toujours les vrais totaux,
+     peu importe ce que l'utilisateur a filtré dans la barre de recherche. */
+  const sourceForCounts = allBranches ?? branches;
 
-  /* ── Filtre par onglet ── */
+  const counts = useMemo(() => ({
+    active:   sourceForCounts.filter(b => getEffectiveStatus(b) === "active").length,
+    inactive: sourceForCounts.filter(b => getEffectiveStatus(b) === "inactive").length,
+    archive:  sourceForCounts.filter(b => getEffectiveStatus(b) === "archive").length,
+  }), [sourceForCounts]);
+
+  /* ── Filtre par onglet (sur les branches déjà filtrées par le parent) ── */
   const tabBranches = useMemo(
     () => branches.filter(b => getEffectiveStatus(b) === activeTab),
     [branches, activeTab]
@@ -358,9 +324,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
         })}
       </div>
 
-      {/* ─── Bannières contextuelles selon l'onglet ────────────────────────── */}
-      {/* ─── NOUVEAU : déplacé du footer vers ICI (juste après les onglets) ── */}
-      {/*               aligné sur le pattern AccountTable ────────────────── */}
+      {/* ─── Bannières contextuelles selon l'onglet ─── */}
 
       {/* Bannière onglet ARCHIVE : info "lecture seule" */}
       {isArchiveTab && (
@@ -386,7 +350,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
               {counts.inactive} branche{counts.inactive > 1 ? 's' : ''} en attente d'activation
             </p>
             <p className="text-xs text-amber-700 mt-0.5">
-              Configurez l'horaire et les jours fériés pour les activer automatiquement.
+              Cliquez sur l'icône modifier pour configurer l'horaire et les jours fériés.
             </p>
           </div>
         </div>
@@ -571,7 +535,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
                 {cfg.label}
               </span>
 
-              {/* Actions */}
+              {/* Actions — 3 icônes seulement : Voir, Modifier, Archiver */}
               <div className="flex items-center gap-1">
 
                 {/* Voir — toujours dispo */}
@@ -583,53 +547,15 @@ const BranchTable: React.FC<BranchTableProps> = ({
                   <Eye className="w-4 h-4" />
                 </button>
 
-                {/* Modifier — caché en archive (lecture seule) */}
+                {/* Modifier — gère aussi l'activation : si la branche est inactive,
+                    le modal d'édition guide vers les sections manquantes (horaires/fériés). */}
                 {!isArchiveTab && (
                   <button
                     onClick={() => onEdit(branch)}
-                    title="Modifier"
+                    title={status === "inactive" ? "Compléter pour activer" : "Modifier"}
                     className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#1B5E20] transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
-                  </button>
-                )}
-
-                {/* Activer — seulement si inactive */}
-                {!isArchiveTab && status === "inactive" && (
-                  <button
-                    onClick={() => onActivate(branch)}
-                    title="Activer la branche"
-                    className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#1B5E20] transition-colors"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                )}
-
-                {/* ⏰ Configurer horaires — visible si pas d'horaire et pas archivée */}
-                {!isArchiveTab && !branch.opening_hour && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/opening-hours?branch=${branch.id}`);
-                    }}
-                    title="Configurer les horaires"
-                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                  >
-                    <Clock className="w-4 h-4" />
-                  </button>
-                )}
-
-                {/* 📅 Configurer fériés — visible si pas de fériés et pas archivée */}
-                {!isArchiveTab && (!branch.holidays || branch.holidays.length === 0) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/holidays?branch=${branch.id}`);
-                    }}
-                    title="Configurer les jours fériés"
-                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                  >
-                    <Calendar className="w-4 h-4" />
                   </button>
                 )}
 
@@ -656,12 +582,8 @@ const BranchTable: React.FC<BranchTableProps> = ({
         })}
       </div>
 
-      {/* ── Footer — compteurs (PLUS DE BANNIÈRE ICI) ── */}
-      {/* ─── Ancienne version (commentée pour référence) ───────────────────────
-           La bannière isArchived était collée ici dans le footer.
-           Elle a été déplacée juste après les onglets pour être bien visible.
-      */}
-      {!isLoading && branches.length > 0 && (
+      {/* ── Footer — compteurs (basés sur la liste COMPLÈTE) ── */}
+      {!isLoading && sourceForCounts.length > 0 && (
         <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
 
           <p className="text-xs text-gray-400">

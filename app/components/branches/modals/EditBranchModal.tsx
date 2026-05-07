@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Building2, X, Sparkles, ExternalLink, ShieldAlert, CheckCircle2, Loader2 } from 'lucide-react';
-import { FaCalendarAlt } from 'react-icons/fa';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Building2, X, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
 
 import BranchFormFields from '../BranchFormFields';
 import {
@@ -21,14 +20,36 @@ import { Holiday } from '../../holidays/validations';
 interface EditBranchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Reçoit la branche mise à jour (objet complet renvoyé par l'API) */
   onSuccess: (updated: any) => void;
-  /** La branche à modifier (passée par le parent qui détient l'ID) */
   branch: Branch | null;
-  /** Mode UX : "edit" pour modifs routinières, "activate" pour compléter une branche inactive */
   mode?: 'edit' | 'activate';
   openingHours?: OpeningHour[];
+  /** Conservé pour compat API parent — plus utilisé dans ce modal. */
   holidays?: Holiday[];
+}
+
+// ============= HELPER : calcule le diff entre 2 objets =============
+
+/**
+ * Compare deux objets et retourne uniquement les champs qui ont changé.
+ * Utilisé pour debug : voir EXACTEMENT ce qui est différent avant/après.
+ */
+function computeDiff(before: any, after: any): Record<string, { before: any; after: any }> {
+  const diff: Record<string, { before: any; after: any }> = {};
+  if (!before || !after) return diff;
+
+  const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
+
+  allKeys.forEach(key => {
+    const b = before[key];
+    const a = after[key];
+    // Comparaison stringifiée (gère arrays et objets imbriqués simplement)
+    if (JSON.stringify(b) !== JSON.stringify(a)) {
+      diff[key] = { before: b, after: a };
+    }
+  });
+
+  return diff;
 }
 
 // ============= COMPONENT =============
@@ -40,7 +61,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   branch,
   mode = 'edit',
   openingHours = [],
-  holidays = [],
 }) => {
 
   // ── State ──
@@ -52,7 +72,12 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   const [apiError,     setApiError]       = useState<string | null>(null);
   const [successMsg,   setSuccessMsg]     = useState<string | null>(null);
 
-  // ── Snapshot du statut initial (avant édition) pour message de succès ──
+  // ─── Snapshot AVANT modification ──────────────────────────────────────
+  // useRef pour stocker la version fraîche de l'API au chargement,
+  // sans déclencher de re-render. Utilisé pour le DIFF après update.
+  const beforeSnapshot = useRef<any>(null);
+
+  // ── Snapshot du statut initial pour message de succès ──
   const wasActiveBefore = useMemo(() => {
     if (!branch) return false;
     const hadHours = Boolean(branch.opening_hour);
@@ -60,7 +85,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     return branch.statusBranche !== 'archive' && hadHours && hadHolidays;
   }, [branch]);
 
-  // ── Chargement initial : getBranchById pour la version fraîche ──
+  // ── Chargement initial ──
   useEffect(() => {
     if (!isOpen || !branch?.id) return;
 
@@ -69,13 +94,12 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       setApiError(null);
       setSuccessMsg(null);
       setErrors({});
+      beforeSnapshot.current = null;
 
       try {
-        // Liste pour détection doublons (exclura b.id !== branch.id)
         const existing = await fetchBranches();
         setBranches(existing);
 
-        // Version fraîche depuis l'API
         const data = await getBranchById(branch.id);
         if (!data) {
           setApiError("Cette branche est introuvable.");
@@ -83,12 +107,27 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           return;
         }
 
-        // Normaliser holidays en tableau d'IDs (l'API peut renvoyer des objets Holiday)
+        // ═══════════════════════════════════════════════════════════════
+        // ─── SNAPSHOT AVANT ────────────────────────────────────────────
+        // On stocke la réponse BRUTE de l'API pour comparer plus tard.
+        // ═══════════════════════════════════════════════════════════════
+        beforeSnapshot.current = data;
+
+        console.group('📥 [EditBranchModal] Données AVANT modification (API)');
+        console.log('🔹 Branch ID    :', branch.id);
+        console.log('🔹 Endpoint     : getBranchById');
+        console.log('🔹 Statut actuel:', data.statusBranche);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📦 Réponse brute API :', data);
+        console.log('📦 JSON formaté      :');
+        console.log(JSON.stringify(data, null, 2));
+        console.groupEnd();
+        // ═══════════════════════════════════════════════════════════════
+
         const holidayIds = Array.isArray(data.holidays)
           ? data.holidays.map((h: any) => (typeof h === 'object' ? h.id : h))
           : [];
 
-        // En mode "activate" sans horaire : pré-sélectionner l'horaire par défaut
         let openingHourId = data.opening_hour;
         if (mode === 'activate' && !openingHourId && openingHours.length > 0) {
           const defaultHour = openingHours.find((h: any) => h.is_default) ?? openingHours[0];
@@ -115,7 +154,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           status:                    data.statusBranche ?? 'inactive',
         });
       } catch (err: any) {
-        console.error(err);
+        console.error('❌ Erreur chargement:', err);
         setApiError(err?.message || 'Impossible de charger les données.');
       } finally {
         setIsLoading(false);
@@ -124,7 +163,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     loadData();
   }, [isOpen, branch, mode, openingHours]);
 
-  // ── Handler partiel (style compte) ──
+  // ── Handler partiel ──
   const handleFormDataChange = (updates: Partial<BranchFormData>) => {
     setFormData(prev => prev ? { ...prev, ...updates } : prev);
     setApiError(null);
@@ -146,7 +185,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     formData?.number_of_credit_officers,
   ]);
 
-  // ── Détection doublons (en excluant la branche en cours d'édition) ──
+  // ── Détection doublons ──
   const findDuplicate = (): string | null => {
     if (!formData) return null;
     const found = branches.find((b: any) =>
@@ -169,9 +208,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     setSuccessMsg(null);
 
     try {
-      // Choisir le schéma selon le mode :
-      //   - "activate" → schéma strict (exige opening_hour + ≥1 férié)
-      //   - "edit"     → schéma update partiel (tout optionnel)
       const schema = mode === 'activate' ? branchActivationSchema : branchUpdateSchema;
       const validation = schema.safeParse(formData);
 
@@ -181,18 +217,21 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           if (e.path[0]) zodErrors[e.path[0] as keyof BranchFormData] = e.message;
         });
         setErrors(zodErrors);
+
+        console.group('⚠️ [EditBranchModal] Validation échouée');
+        console.log('Mode:', mode);
+        console.log('FormData:', formData);
+        console.log('Erreurs Zod:', zodErrors);
+        console.groupEnd();
         return;
       }
 
-      // Détection doublons
       const dup = findDuplicate();
       if (dup) {
         setApiError(dup);
         return;
       }
 
-      // Statut calculé automatiquement (jamais "archive" depuis ce modal —
-      // l'archivage passe par DeleteBranchModal / archiveBranch)
       const hasHours    = Boolean(formData.opening_hour);
       const hasHolidays = Array.isArray(formData.holidays) && formData.holidays.length > 0;
       const computedStatus = hasHours && hasHolidays ? 'active' : 'inactive';
@@ -202,9 +241,62 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
         statusBranche: computedStatus,
       };
 
+      // ═══════════════════════════════════════════════════════════════
+      // ─── PAYLOAD ENVOYÉ ────────────────────────────────────────────
+      // ═══════════════════════════════════════════════════════════════
+      console.group('🚀 [EditBranchModal] Soumission API');
+      console.log('🔹 Mode             :', mode);
+      console.log('🔹 Branch ID        :', branch.id);
+      console.log('🔹 Endpoint         : updateBranch');
+      console.log('🔹 Statut calculé   :', computedStatus);
+      console.log('🔹 hasHours         :', hasHours);
+      console.log('🔹 hasHolidays      :', hasHolidays, '(', (formData.holidays || []).length, 'sélectionné(s) )');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📦 PAYLOAD envoyé   :', payload);
+      console.log('📦 JSON formaté     :');
+      console.log(JSON.stringify(payload, null, 2));
+      console.groupEnd();
+      // ═══════════════════════════════════════════════════════════════
+
       const updated = await updateBranch(branch.id, payload);
 
-      // Message de succès personnalisé : a-t-on activé la branche ?
+      // ═══════════════════════════════════════════════════════════════
+      // ─── SNAPSHOT APRÈS ────────────────────────────────────────────
+      // ═══════════════════════════════════════════════════════════════
+      console.group('✅ [EditBranchModal] Données APRÈS modification (API)');
+      console.log('🔹 Endpoint     : updateBranch');
+      console.log('🔹 Statut final :', updated?.statusBranche);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📦 Réponse brute API :', updated);
+      console.log('📦 JSON formaté      :');
+      console.log(JSON.stringify(updated, null, 2));
+      console.groupEnd();
+
+      // ─── DIFF : qu'est-ce qui a changé ? ───────────────────────────
+      console.group('🔄 [EditBranchModal] DIFF avant ↔ après');
+      const before = beforeSnapshot.current;
+      const diff = computeDiff(before, updated);
+      const changedKeys = Object.keys(diff);
+
+      if (changedKeys.length === 0) {
+        console.log('ℹ️ Aucun champ n\'a changé entre l\'avant et l\'après.');
+        console.log('   (L\'API n\'a peut-être pas appliqué les modifs, ou tu n\'as rien changé.)');
+      } else {
+        console.log(`📊 ${changedKeys.length} champ(s) modifié(s) :`, changedKeys);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // Affichage en table : très lisible dans la DevTools
+        console.table(
+          changedKeys.map(key => ({
+            champ:  key,
+            avant:  JSON.stringify(diff[key].before),
+            après:  JSON.stringify(diff[key].after),
+          }))
+        );
+        console.log('📦 Diff complet :', diff);
+      }
+      console.groupEnd();
+      // ═══════════════════════════════════════════════════════════════
+
       const isNowActive = computedStatus === 'active';
       const justActivated = !wasActiveBefore && isNowActive;
       setSuccessMsg(
@@ -213,13 +305,16 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           : 'Branche modifiée avec succès !'
       );
 
-      // Petit délai pour laisser voir le message, puis on remonte la branche au parent
       setTimeout(() => {
         onSuccess(updated);
       }, 1200);
 
     } catch (error: any) {
-      console.error('❌ Erreur édition:', error);
+      console.group('❌ [EditBranchModal] Erreur API');
+      console.error('Error object:', error);
+      console.error('Message:', error?.message);
+      console.error('Response:', error?.response);
+      console.groupEnd();
       setApiError(error.message || 'Erreur lors de la sauvegarde.');
     } finally {
       setIsSubmitting(false);
@@ -242,7 +337,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
 
   if (!isOpen || !formData) return null;
 
-  // Indicateurs pour l'UI
   const hasHours    = Boolean(formData.opening_hour);
   const hasHolidays = Array.isArray(formData.holidays) && formData.holidays.length > 0;
   const willBeActive = hasHours && hasHolidays;
@@ -256,13 +350,12 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       ? `Ajoutez ${missing.join(' et ')} pour l'activer automatiquement`
       : `Modification de ${branch?.branch_name ?? 'la branche'}`;
 
-  // Texte du bouton selon le mode
   const submitButtonText = mode === 'activate' ? 'Activer la branche' : 'Enregistrer';
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="4xl">
 
-      {/* ── Header CAPOSA ── */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
@@ -298,7 +391,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           </div>
         )}
 
-        {/* Indicateur statut prévu */}
         {!successMsg && (
           <div className={`p-3 rounded-xl border-2 flex items-center gap-3 text-sm ${
             willBeActive
@@ -316,7 +408,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           </div>
         )}
 
-        {/* Champs principaux */}
         <BranchFormFields
           formData={formData}
           setFormData={handleFormDataChange}
@@ -327,16 +418,11 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           openingHours={openingHours}
         />
 
-        {/* Section Jours fériés appliqués (read-only en édition) */}
-        <HolidaysReadOnlySection
-          selectedHolidayIds={formData.holidays || []}
-          allHolidays={holidays}
-          isHighlighted={mode === 'activate' && !hasHolidays}
-        />
+        {/* Section Jours fériés retirée — gestion dans /dashboard/holidays. */}
 
       </div>
 
-      {/* ── Footer CAPOSA ── */}
+      {/* ── Footer ── */}
       <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
         <p className="text-xs text-gray-400">
           Tous les champs marqués <span className="text-red-500">*</span> sont obligatoires
@@ -370,103 +456,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       </div>
 
     </Modal>
-  );
-};
-
-/* =====================================================
-   Section Jours fériés (lecture seule en édition)
-===================================================== */
-
-interface HolidaysReadOnlySectionProps {
-  selectedHolidayIds: string[];
-  allHolidays: Holiday[];
-  isHighlighted: boolean;
-}
-
-const HolidaysReadOnlySection: React.FC<HolidaysReadOnlySectionProps> = ({
-  selectedHolidayIds,
-  allHolidays,
-  isHighlighted,
-}) => {
-  const selectedHolidays = useMemo(
-    () => allHolidays.filter(h => selectedHolidayIds.includes(h.id)),
-    [selectedHolidayIds, allHolidays]
-  );
-
-  const formatDate = (d: string) => {
-    try {
-      const date = d.includes('T') ? new Date(d) : new Date(d + 'T12:00:00');
-      return date.toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });
-    } catch {
-      return d;
-    }
-  };
-
-  return (
-    <div className={`bg-white border rounded-xl p-5 transition-colors ${
-      isHighlighted ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-100'
-    }`}>
-      <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-3 flex items-center gap-2">
-        <FaCalendarAlt className="text-[#2E7D32]" />
-        Jours fériés appliqués
-        <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">
-          {selectedHolidays.length} jour{selectedHolidays.length !== 1 ? 's' : ''}
-        </span>
-      </p>
-
-      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
-        <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
-        <p className="text-xs text-[#355C7D] leading-relaxed">
-          Les jours fériés bloquent l'ouverture de session des caissiers. Seuls le Directeur ou la Maintenance peuvent les modifier, et chaque changement est enregistré dans le journal d'audit.
-        </p>
-      </div>
-
-      {selectedHolidays.length > 0 ? (
-        <div className="space-y-1.5 max-h-48 overflow-y-auto mb-3">
-          {selectedHolidays
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(h => {
-              const isUpcoming = new Date(h.date) > new Date();
-              return (
-                <div key={h.id} className={`flex items-center justify-between p-2.5 rounded-lg text-sm ${
-                  isUpcoming ? 'bg-blue-50' : 'bg-gray-50'
-                }`}>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate">{formatDate(h.date)}</p>
-                    {h.description && <p className="text-xs text-gray-500 truncate">{h.description}</p>}
-                  </div>
-                  <span className={`text-xs px-2 py-0.5 rounded ml-2 shrink-0 ${
-                    isUpcoming ? 'bg-blue-100 text-[#355C7D]' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {isUpcoming ? 'À venir' : 'Passé'}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
-      ) : (
-        <div className="mb-3 py-6 px-4 bg-gray-50 rounded-xl text-center">
-          <FaCalendarAlt className="text-gray-300 text-3xl mx-auto mb-2" />
-          <p className="text-sm text-gray-500 font-medium">Aucun jour férié assigné</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Cette branche restera inactive sans au moins un jour férié.
-          </p>
-        </div>
-      )}
-      <a
-      
-        href="/dashboard/holidays"
-        className="flex items-center justify-between p-3 bg-[#DDEAD5]/40 hover:bg-[#DDEAD5]/70 border border-[#2E7D32]/20 rounded-xl transition-colors group"
-      >
-        <div className="flex items-center gap-2">
-          <FaCalendarAlt className="text-[#2E7D32]" />
-          <span className="text-sm font-semibold text-[#1B5E20]">
-            {selectedHolidays.length === 0 ? 'Configurer les jours fériés' : 'Modifier les jours fériés'}
-          </span>
-        </div>
-        <ExternalLink className="w-4 h-4 text-[#2E7D32] group-hover:translate-x-0.5 transition-transform" />
-      </a>
-    </div>
   );
 };
 

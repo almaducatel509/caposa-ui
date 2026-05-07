@@ -14,11 +14,12 @@ import HolidayInvertedView from "./HolidayInvertedView";
 // 🔌 Source unique de données — remplacer par fetchHolidays() / fetchBranches() quand l'API est prête
 import {
   MOCK_HOLIDAYS, MOCK_BRANCHES,
-  Holiday, HolidayType, HolidayScope,
+  Holiday
 } from "../OpeningHours/mock";
 import type { Branch } from "@/types/branche";
 import { GroupedHoliday } from "@/types/holidayHelpers";
 import AssignBranchesModal from "./modals/AssignBranchesModal";
+import{HolidayType, HolidayScope,} from "./validations"
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const TYPE_LABELS: Record<HolidayType, string> = {

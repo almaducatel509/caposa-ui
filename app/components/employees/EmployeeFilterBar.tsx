@@ -82,16 +82,16 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   ];
   
   // ← clés alignées avec handleStatusChange et matchStatus dans AccountGrid
-  const statusOptions = [
-  { key: 'all',       label: 'Tous les statuts' },
-  { key: 'actif',     label: 'Actifs'           },  // 'active' → 'actif'
-  { key: 'inactif',   label: 'Inactifs'         },  // 'inactive' → 'inactif'
-  { key: 'suspended', label: 'Suspendus'        },  // ok
-];
+//   const statusOptions = [
+//   { key: 'all',       label: 'Tous les statuts' },
+//   { key: 'actif',     label: 'Actifs'           },  // 'active' → 'actif'
+//   { key: 'inactif',   label: 'Inactifs'         },  // 'inactive' → 'inactif'
+//   { key: 'suspended', label: 'Suspendus'        },  // ok
+// ];
 
   const getFilterLabel  = () => filterOptions.find(o => o.key === selectedFilter)?.label  ?? 'Période';
   const getBranchLabel  = () => branches.find(b => b.id === selectedBranch)?.branch_name   ?? 'Toutes les branches';
-  const getStatusLabel  = () => statusOptions.find(o => o.key === selectedStatus)?.label   ?? 'Tous les statuts';
+  // const getStatusLabel  = () => statusOptions.find(o => o.key === selectedStatus)?.label   ?? 'Tous les statuts';
 
   const activeCount = [
     selectedFilter !== 'all',
@@ -224,7 +224,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
         </CustomDropdown>
 
         {/* Filtre statut */}
-        <CustomDropdown
+        {/* <CustomDropdown
           trigger={
             <button className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
               selectedStatus !== 'all'
@@ -249,10 +249,10 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
               {o.label}
             </button>
           ))}
-        </CustomDropdown>
+        </CustomDropdown> */}
 
         {/* Badge filtres actifs + reset */}
-        {activeCount > 0 && (
+        {/* {activeCount > 0 && (
           <>
             <div className="h-6 w-px bg-gray-200 hidden sm:block" />
             <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-lg text-xs font-semibold">
@@ -265,7 +265,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
               <X className="w-3 h-3" /> Réinitialiser
             </button>
           </>
-        )}
+        )} */}
       </div>
     </div>
   );
