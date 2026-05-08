@@ -5,6 +5,7 @@ import {
   Search, Plus, Upload, Download, Filter,
   Calendar, MapPin, CheckCircle, X, ChevronDown
 } from 'lucide-react';
+import { Employee } from '@/types/data';
 
 interface EmployeeFilterBarProps {
   filterValue: string;
@@ -21,6 +22,10 @@ interface EmployeeFilterBarProps {
   onImport: () => void;
   totalCount: number;
   importLoading?: boolean;
+  onExport: () => void;   
+  exportLoading?: boolean;
+  employees: Employee[];
+
 }
 
 // ─── Custom Dropdown ───────────────────────────────────────────────────────────
@@ -62,11 +67,12 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   onClear,
   onFilterChange,
   onBranchChange,
-  onStatusChange,
+  onExport,
   onAdd,
   onImport,
   totalCount,
   importLoading = false,
+  exportLoading
 }) => {
 
   const filterOptions = [
@@ -125,7 +131,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
           )}
         </div>
 
-        {/* Boutons d'action */}
+       {/* Boutons d'action */}
         <div className="flex gap-2 w-full lg:w-auto">
           <button
             onClick={onAdd}
@@ -151,6 +157,25 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
               </>
             )}
           </button>
+          <button
+            onClick={onExport}
+            disabled={exportLoading}
+            title="Exporter tous les employés"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exportLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
+                Export…
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Exporter
+              </>
+            )}
+          </button>
+
         </div>
       </div>
 
@@ -223,49 +248,7 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
           ))}
         </CustomDropdown>
 
-        {/* Filtre statut */}
-        {/* <CustomDropdown
-          trigger={
-            <button className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
-              selectedStatus !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-semibold'
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-              <CheckCircle className="w-3.5 h-3.5" />
-              {getStatusLabel()}
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          }
-        >
-          {statusOptions.map(o => (
-            <button
-              key={o.key}
-              onClick={() => onStatusChange(o.key)}
-              className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-[#DDEAD5]/40 transition-colors ${
-                selectedStatus === o.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-semibold' : 'text-gray-700'
-              }`}
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-[#2E7D32]" />
-              {o.label}
-            </button>
-          ))}
-        </CustomDropdown> */}
-
-        {/* Badge filtres actifs + reset */}
-        {/* {activeCount > 0 && (
-          <>
-            <div className="h-6 w-px bg-gray-200 hidden sm:block" />
-            <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-lg text-xs font-semibold">
-              {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
-            </span>
-            <button
-              onClick={() => { onFilterChange('all'); onBranchChange('all'); onStatusChange('all'); }}
-              className="flex items-center gap-1 text-xs text-red-600 font-medium px-3 py-1 hover:bg-red-50 rounded-xl transition-colors"
-            >
-              <X className="w-3 h-3" /> Réinitialiser
-            </button>
-          </>
-        )} */}
+        
       </div>
     </div>
   );

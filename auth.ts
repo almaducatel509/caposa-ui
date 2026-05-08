@@ -4,10 +4,22 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { authConfig } from "./auth.config";
 // petit helper pour décoder le JWT sans dépendance externe
-function decodeJwt<T = any>(token: string): T {
+// pour décoder un JWT dans un environnement moderne (NextAuth v5, Next.js 16, Edge Runtime).
+export function decodeJwt<T = any>(token: string): T {
   const [, payload] = token.split(".");
-  return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+
+  // Base64URL → Base64 + padding correct
+  const base64 = payload
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(payload.length + (4 - (payload.length % 4)) % 4, "=");
+
+  const binary = atob(base64);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
+
 export const { auth, signIn, signOut, handlers } = NextAuth({
   ...authConfig,
   session: {
@@ -42,16 +54,47 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         //    (SimpleJWT met typiquement user_id et/ou username selon ta config)
         const payload = decodeJwt<{ user_id?: number; username?: string }>(access);
 
-        // 4) Retourner l'objet user attendu par NextAuth
+        // 4) Retourner l'objet user attendu par NextAuth username: YT1; passwd: 123456 et securepassword123 Aluser
+      //   return {
+      //    id: (payload.user_id ?? payload.username ?? username).toString(), // identifiant unique
+      //    username: payload.username ?? username, // nom d'utilisateur
+      //   //  email: payload.email,                   // email s'il existe
+      //   //  roles: payload.roles || [],             // rôles éventuels
+      //  };
+      
+       const ADMIN_USERNAMES = ["YT1", "Karimc"]; // 👈 mets tes admins ici
         return {
-         id: (payload.user_id ?? payload.username ?? username).toString(), // identifiant unique
-         username: payload.username ?? username, // nom d'utilisateur
-        //  email: payload.email,                   // email s'il existe
-        //  roles: payload.roles || [],             // rôles éventuels
-       };
+          id: (payload.user_id ?? payload.username ?? username).toString(),
+          username: payload.username ?? username,
+          isAdmin: ADMIN_USERNAMES.includes(payload.username ?? username), // 👈 ajout
+        };
       },
     }),
-  ],
+  ],callbacks: {
+  // async jwt({ token, user }) {
+  //   if (user) {
+  //     token.username = (user as any).username;
+  //     token.isAdmin = (user as any).isAdmin;
+  //   }
+  //   return token;
+  // },
+  async jwt({ token, user }) {
+    if (user) {
+      token.name = (user as any).name;
+      token.email = (user as any).email;
+      token.username = (user as any).username;
+      token.isAdmin = (user as any).isAdmin;
+    }
+    return token;
+  },
+  async session({ session, token }) {
+    if (session.user) {
+      (session.user as any).username = token.username;
+      (session.user as any).isAdmin = token.isAdmin;
+    }
+    return session;
+  },
+},
 });
 
-//  
+//  C:\Users\alma2\Documents\Final Project\caposa-ui\auth.ts

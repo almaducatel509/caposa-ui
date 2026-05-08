@@ -188,7 +188,7 @@ const [posts, setPosts] = useState<PostData[]>([]);
   const handleViewTransactions = (e: EmployeeData) => { setSelectedEmployee(e); setShowTransactionModal(true); };
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
   const onClear                = useCallback(() => setFilterValue(''), []);
-
+  const [exportLoading, setExportLoading] = useState(false);
   // ── Sync filtre statut ↔ tab ───────────────────────────────────────────────
   const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
@@ -197,6 +197,14 @@ const [posts, setPosts] = useState<PostData[]>([]);
     else    setActiveEmplTab('actif');
   };
 
+  const handleExportAll = async () => {
+    setExportLoading(true);
+    try {
+      await exportEmployees(employees); // tous, pas filteredEmployees
+    } finally {
+      setExportLoading(false);
+    }
+  };
   // ── Bulk action ────────────────────────────────────────────────────────────
   // Export géré directement dans EmployeeTable — ici on traite uniquement les
   // actions métier qui nécessitent un appel API.
@@ -298,6 +306,8 @@ const [posts, setPosts] = useState<PostData[]>([]);
         onAdd={handleAdd}
         onImport={() => console.log('Import')}
         totalCount={filteredEmployees.length}
+        onExport={handleExportAll}      // ← nouveau
+
       />
 
       {error && (

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { GiReceiveMoney } from 'react-icons/gi';
 import { LogOut } from 'lucide-react';
 import NavLinks from '@/app/components/dashboard/Navlink';
-import { signOut } from 'next-auth/react';
+import { useSession, signOut } from "next-auth/react";
 
 export default function SideNav() {
   const router = useRouter();
@@ -14,21 +14,42 @@ export default function SideNav() {
     await signOut({ redirect: false });
     router.push('/login');
   };
+  const { data: session, status } = useSession();
+
+// 🔍 DEBUG : voir ce que contient la session
+console.log("=== SESSION DEBUG ===");
+console.log("Status:", status);
+console.log("Session complète:", session);
+console.log("User:", session?.user);
+console.log("Name:", session?.user?.name);
+console.log("Email:", session?.user?.email);
 
   /* TODO: remplacer par les vraies données de session NextAuth */
-  const currentUser = {
-    name:   "Jean Dupont",
-    email:  "jean@caisse.com",
-    role:   "Caissier",
-  };
+  // const currentUser = {
+  //   name:   "Jean Dupont",
+  //   email:  "jean@caisse.com",
+  //   role:   "Caissier",
+  // };
 
-  /* Initiales pour l'avatar */
-  const initials = currentUser.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  // /* Initiales pour l'avatar */
+  // const initials = currentUser.name
+  //   .split(' ')
+  //   .map(n => n[0])
+  //   .join('')
+  //   .toUpperCase()
+  //   .slice(0, 2);
+  const currentUser = {
+      name:  session?.user?.name  ?? "Utilisateur",
+      email: session?.user?.email ?? "—",
+      role:  (session?.user as any)?.role ?? "Caissier",
+    };
+
+    const initials = currentUser.name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
 
   return (
     <div className="flex h-full flex-col bg-white border-r border-gray-100 shadow-sm">

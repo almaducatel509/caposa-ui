@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+
 import {
   TrendingUp, Clock, AlertTriangle, CheckCircle,
   ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package,
@@ -18,6 +19,8 @@ import DepositForm    from '@/app/components/transactions/deposits/DepositForm';
 import WithdrawalForm from '@/app/components/transactions/withdrawals/WithdrawalForm';
 import TransferForm   from '@/app/components/transactions/transfers/TransferForm';
 import { Modal } from '../../ui/Modal';
+
+import { useSession } from "next-auth/react";
 
 
 function formatHTG(v: number) {
@@ -194,7 +197,9 @@ export default function DashboardCaissier() {
   const activeSession = sessions.find(s => s.statut === 'ouverte') ?? null;
   const greeting      = getGreeting();
   const GreetIcon     = greeting.icon;
+  const { data: session, status } = useSession();
 
+ 
   useEffect(() => {
     const t = setInterval(() => {
       setTime(getNow());
@@ -245,6 +250,21 @@ export default function DashboardCaissier() {
       setCaisseStatus('fermée');
       setShowCloseModal(false);
     };
+    const currentUser = {
+      name:  session?.user?.name  ?? "Utilisateur",
+      email: session?.user?.email ?? "",
+      role:  (session?.user as any)?.role ?? "Caissier",
+    };
+
+    // 3️⃣ Early returns SEULEMENT à la fin
+    // if (status === "loading" || isLoading) {
+    //   return (
+    //     <div className="flex items-center justify-center min-h-screen">
+    //       <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
+    //     </div>
+    //   );
+    // }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -264,7 +284,9 @@ export default function DashboardCaissier() {
         <div>
           <div className="flex items-center gap-2 text-[#2E7D32] mb-1">
             <GreetIcon className="w-5 h-5" />
-            <span className="text-sm font-medium">{greeting.text}, Jean Dupont</span>
+              <span className="text-sm font-medium">
+                {greeting.text}, {currentUser.name}
+              </span>         
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard Caissier</h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">{getDate()} · {time}</p>
@@ -278,11 +300,11 @@ export default function DashboardCaissier() {
               </span>
             </div>
           )}
-          <button onClick={handleRefresh} disabled={isRefreshing}
+          {/* <button onClick={handleRefresh} disabled={isRefreshing}
             className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-60"
             title="Actualiser">
             <RefreshCw className={`w-4 h-4 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          </button> */}
         </div>
       </div>
 

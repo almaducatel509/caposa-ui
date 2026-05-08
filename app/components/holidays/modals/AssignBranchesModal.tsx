@@ -28,6 +28,7 @@ import {
   HOLIDAY_SCOPE_LABELS,
 } from "../validations";
 import { assignHolidayToBranches } from "@/app/lib/api/holidays";
+import { useSession } from "next-auth/react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier (v2) :
@@ -57,7 +58,7 @@ interface AssignBranchesModalProps {
   onSuccess: () => void;
   group: GroupedHoliday;
   allBranches: Branch[];
-  onEditType?: (group: GroupedHoliday) => void;
+  // onEditType?: (group: GroupedHoliday) => void;
 }
 
 type AssignmentScope = "national" | "regional" | "branch" | "autre";
@@ -99,7 +100,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
   onSuccess,
   group,
   allBranches,
-  onEditType,
+  // onEditType,
 }) => {
   // ─── Source de données : la prop du parent, point. ───────────────────────
   const branchesToUse = allBranches;
@@ -116,7 +117,13 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
       ? "branch"
       : "autre";
 
+  const [editedType, setEditedType] = useState<HolidayType>(group.type);
+  // 🔐 Permission : adapter selon ton système d'auth
   const [scope, setScope] = useState<AssignmentScope>(initialScope);
+  const { data: session } = useSession();
+  const canEditType = (session?.user as any)?.isAdmin === true;
+
+
   const [selectedBranches, setSelectedBranches] = useState<Set<string>>(
     new Set()
   );
@@ -249,14 +256,20 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
 
       const branch_ids = targetBranches.map((b) => b.id);
 
+      // const payload = {
+      //   scope,
+      //   department_code:
+      //     scope === "regional" ? selectedDepartment : undefined,
+      //   branch_ids,
+      //   comment: reason || undefined,
+      // };
       const payload = {
         scope,
-        department_code:
-          scope === "regional" ? selectedDepartment : undefined,
+        department_code: scope === "regional" ? selectedDepartment : undefined,
         branch_ids,
         comment: reason || undefined,
+        ...(canEditType && editedType !== group.type && { type: editedType }),
       };
-
       // ═════════════════════════════════════════════════════════════════
       // ─── PAYLOAD ENVOYÉ ──────────────────────────────────────────────
       // ═════════════════════════════════════════════════════════════════
@@ -406,62 +419,54 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
         </div>
 
         {/* Type + Portée */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
-                <Tag className="w-3 h-3" />
-                Type du jour
-              </p>
-              <Tooltip text="Le type décrit la nature du jour. Il se modifie depuis le formulaire d'édition." />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold"
-                style={{
-                  backgroundColor: typeColor.bg,
-                  color: typeColor.text,
-                }}
-              >
-                {HOLIDAY_TYPE_LABELS[holidayType]}
-              </span>
-              {onEditType && (
-                <button
-                  onClick={() => onEditType(group)}
-                  className="text-xs font-semibold text-[#2E7D32] hover:underline flex items-center gap-1"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  Modifier
-                </button>
-              )}
-            </div>
-            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-              Lecture seule — modifiez via le formulaire d'édition.
-            </p>
-          </div>
-
-          <div className="p-4 bg-[#DDEAD5]/30 border border-[#2E7D32]/30 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#1B5E20] flex items-center gap-1.5">
-                <Globe className="w-3 h-3" />
-                Portée
-              </p>
-              <Tooltip text="La portée définit qui est concerné. C'est ici que vous décidez quelles branches seront affectées." />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-[#1B5E20] border border-[#2E7D32]/20">
-                {HOLIDAY_SCOPE_LABELS[scope]}
-              </span>
-              <span className="text-xs text-[#1B5E20]/70">
-                → {finalCount} branche{finalCount > 1 ? "s" : ""}
-              </span>
-            </div>
-            <p className="text-[11px] text-[#1B5E20]/60 mt-2 leading-relaxed">
-              Modifiable ci-dessous.
-            </p>
-          </div>
+      <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+            <Tag className="w-3 h-3" />
+            Jour classé comme 
+         </p>
+          <Tooltip
+            text={
+              canEditType
+                ? "Vous pouvez modifier le type. Tous les changements sont audités."
+                : "Le type est un attribut administratif. Contactez un admin pour le modifier."
+            }
+          />
         </div>
 
+        {canEditType ? (
+          // 🔓 Autorisé → select inline (même UX que la portée)
+          <select
+            value={editedType}
+            onChange={(e) => setEditedType(e.target.value as HolidayType)}
+            className="w-full px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 cursor-pointer"
+            style={{
+              backgroundColor: TYPE_COLORS[editedType].bg,
+              color: TYPE_COLORS[editedType].text,
+            }}
+          >
+            {(Object.keys(HOLIDAY_TYPE_LABELS) as HolidayType[]).map((k) => (
+              <option key={k} value={k} style={{ backgroundColor: "white", color: "#111" }}>
+                {HOLIDAY_TYPE_LABELS[k]}
+              </option>
+            ))}
+          </select>
+        ) : (
+          // 🔒 Non autorisé → lecture seule
+          <span
+            className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold"
+            style={{ backgroundColor: typeColor.bg, color: typeColor.text }}
+          >
+            {HOLIDAY_TYPE_LABELS[holidayType]}
+          </span>
+        )}
+
+        <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+          {canEditType
+            ? "Modification administrative — vos changements seront audités."
+            : "Lecture seule — votre rôle ne permet pas de modifier le type."}
+        </p>
+      </div>
         {/* Sélecteur portée */}
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
@@ -656,7 +661,8 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
             Résumé
           </p>
           <p className="text-sm text-amber-900">
-            <strong>{HOLIDAY_TYPE_LABELS[holidayType]}</strong> de portée{" "}
+            {/* <strong>{HOLIDAY_TYPE_LABELS[holidayType]}</strong> de portée{" "} */}
+            <strong>{HOLIDAY_TYPE_LABELS[canEditType ? editedType : holidayType]}</strong>
             <strong>{HOLIDAY_SCOPE_LABELS[scope].toLowerCase()}</strong> →{" "}
             <strong>{finalCount}</strong> branche{finalCount > 1 ? "s" : ""}{" "}
             concernée{finalCount > 1 ? "s" : ""}.

@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────────────────────────────────────
  * app/lib/auth.ts — Rôles et routes CAPOSA
- *
+ 
  * Utilise NextAuth — le rôle vient du JWT Django décodé dans auth.ts (NextAuth).
  * ───────────────────────────────────────────────────────────────────────────── */
 

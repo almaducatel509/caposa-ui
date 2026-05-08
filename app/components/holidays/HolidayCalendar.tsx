@@ -476,13 +476,6 @@ export default function HolidayCalendar() {
           onSuccess={handleSuccess}
           group={selectedGroup}
           allBranches={allBranches}
-          onEditType={(group) => {
-            // Bascule vers le form d'édition du premier record du groupe
-            setShowAssignModal(false);
-            setSelectedHoliday(group.records[0]);
-            setIsEditMode(true);
-            setShowEditModal(true);
-          }}
         />
       )}
     </div>

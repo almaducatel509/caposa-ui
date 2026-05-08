@@ -73,15 +73,41 @@ export interface Account extends Base {
   balance: number;
   member_id: string;
 }
+
+// export interface Employee extends Base {
+//   employeeId: string;
+//   firstName: string;
+//   lastName: string;
+//   dateOfBirth: Date;
+//   phoneNumber: string;
+//   address: string;
+//   transactionType: string;
+//   paymentRef: string;
+// }
+export type EmployeeStatus = 'active' | 'inactive' | 'archive';
+
 export interface Employee extends Base {
-  employeeId: string;
+  // Identité
+  employeeId: string;          // matricule métier (ex: EMP-001)
   firstName: string;
   lastName: string;
-  dateOfBirth: Date;
+  email: string;
   phoneNumber: string;
+  dateOfBirth: Date;
   address: string;
-  transactionType: string;
-  paymentRef: string;
+  avatarUrl?: string;          // optionnel
+
+  // Organisation
+  position: string;            // ou positionId si relation
+  branchId: string;            // FK vers Branch
+  branchName?: string;         // dénormalisé pour affichage
+
+  // Statut
+  status: EmployeeStatus;
+  hireDate: Date;              // "depuis" dans ton UI
+  
+  // Méta
+  archivedAt?: Date;           // pour l'onglet Archive
 }
 export interface Payment extends Base {
     payment_id: string;
