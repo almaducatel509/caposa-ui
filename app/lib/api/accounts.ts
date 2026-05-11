@@ -7,31 +7,6 @@ import {
 import type { AccountData } from "@/app/components/accounts/validationsaccount";
 import { enrichAccountData } from "@/app/components/accounts/mockAccountData";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODIFICATIONS apportées à ce fichier :
-//
-// 1. Toutes les lectures passent par `enrichAccountData()` (cohérence du state).
-//
-// 2. Les mutations de statut envoient le bon champ (`statusAccount`) avec les
-//    BONNES valeurs métier ('ouvert' | 'gelé' | 'fermé').
-//
-// 3. SUPPRIMÉS (par rapport à la version précédente) :
-//    - archiveAccount  : redondant avec closeAccount (un compte fermé EST archivé)
-//    - activateAccount : pas d'état 'en_attente' → pas de transition à gérer
-//
-// 4. RESTANT (3 transitions seulement) :
-//    - suspendAccount    : 'ouvert' → 'gelé'
-//    - reactivateAccount : 'gelé'   → 'ouvert'
-//    - closeAccount      : 'ouvert' | 'gelé' → 'fermé' (terminal, irréversible)
-//
-// 5. AJOUTÉ : checkMemberEligibility (pré-cycle d'ouverture).
-//    Soft check appelé avant l'étape 2 du wizard. Le hard check reste
-//    obligatoire côté backend dans POST /accounts/.
-//
-// ⚠ Le backend Django doit avoir un champ `status` à 3 choix
-//   ('ouvert' | 'gelé' | 'fermé') sur le modèle Account.
-// ─────────────────────────────────────────────────────────────────────────────
-
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
   // 404 → endpoint pas encore implémenté côté backend
   if (error?.response?.status === 404) {
@@ -103,6 +78,7 @@ export const fetchAccountsForMember = async (memberId: string): Promise<AccountD
 //   Passer ELIGIBILITY_CHECK_ENABLED à `true` une fois l'endpoint dispo.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// TODO: passer à true quand l'endpoint GET /members/{id}/eligibility/ sera livré côté backend
 const ELIGIBILITY_CHECK_ENABLED = false;
 
 export const checkMemberEligibility = async (
@@ -176,7 +152,7 @@ export const suspendAccount = async (
 ): Promise<AccountData> => {
   try {
     const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
-      statusAccount: 'gelé',
+      account_status: 'gele',         // bon champ + sans accent
       suspension_reason: payload.reason,
     });
     return enrichOne(data);
@@ -193,7 +169,7 @@ export const reactivateAccount = async (
 ): Promise<AccountData> => {
   try {
     const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
-      statusAccount: 'ouvert',
+      account_status: 'actif',        // 'ouvert' → 'actif'
       reactivation_reason: payload.reason ?? '',
     });
     return enrichOne(data);
@@ -210,10 +186,11 @@ export const closeAccount = async (
 ): Promise<AccountData> => {
   try {
     const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
-      statusAccount: 'fermé',
+      account_status: 'ferme',        // sans accent
       closure_reason: payload.reason,
       dateFermeture: new Date().toISOString().split('T')[0],
     });
+
     return enrichOne(data);
   } catch (e: any) {
     console.error("Erreur closeAccount:", e);

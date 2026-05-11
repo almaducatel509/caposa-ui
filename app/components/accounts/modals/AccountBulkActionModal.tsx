@@ -105,7 +105,7 @@ function checkEligibility(
 
   for (const acc of accounts) {
     const reasons: string[] = [];
-    const status  = normalizeStatus((acc as any).statusAccount ?? acc.statutCompte);
+    const status  = normalizeStatus((acc as any).statusAccount ?? acc.account_status);
     const solde   = acc.soldeActuel ?? parseFloat(acc.balance ?? '0');
 
     // ── Fermeture ──────────────────────────────────────────────────────────────

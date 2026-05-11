@@ -8,7 +8,7 @@ import {
   Wallet, ShieldAlert, TrendingUp, TrendingDown, Minus,
   ShieldOff, ShieldCheck,
 } from 'lucide-react';
-import { AccountData } from './validationsaccount';
+import { AccountData, AccountStatus } from './validationsaccount';
 import AccountBulkActionDropdown, { AccountBulkAction } from './AccountBulkActionDropdown';
 import AccountBulkActionModal from './modals/AccountBulkActionModal';
 import UserAvatar from '../core/UserAvatar';
@@ -33,8 +33,7 @@ import UserAvatar from '../core/UserAvatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AccountStatus = 'ouvert' | 'gelé' | 'fermé';
-type TabId         = AccountStatus;
+type TabId = 'ouvert' | 'gele' | 'archive';
 
 interface AccountTableProps {
   accounts:           AccountData[];
@@ -50,11 +49,17 @@ interface AccountTableProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_CFG: Record<AccountStatus, { bg: string; text: string; dot: string; label: string }> = {
-  ouvert: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Ouvert' },
-  gelé:   { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Gelé'   },
-  fermé:  { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Fermé'  },
+const STATUS_CFG: Record<TabId, { bg: string; text: string; dot: string; label: string }> = {
+  ouvert:  { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Ouvert' },
+  gele:    { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Gelé'   },
+  archive: { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Archive' },
 };
+// Mapping enum → onglet
+function getTab(status: AccountStatus): TabId {
+  if (status === 'gele') return 'gele';
+  if (status === 'archive' || status === 'ferme') return 'archive';
+  return 'ouvert'; // actif + en_attente
+}
 
 const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
   epargne: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', label: 'Épargne' },
@@ -67,7 +72,7 @@ const COLS = [
   { label: 'Type',            field: 'typeCompte'     },
   { label: 'Solde',           field: 'solde'          },
   { label: 'Depuis',          field: 'created_at'     },
-  { label: 'Statut',          field: 'statusAccount'  },
+  { label: 'Statut',          field: 'account_status' },  // ⬅️ était 'statusAccount'
 ];
 
 const GRID = '40px 2.5fr 1fr 1.2fr 1fr 1fr 130px';
@@ -75,14 +80,10 @@ const GRID = '40px 2.5fr 1fr 1.2fr 1fr 1fr 130px';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // Lit directement `statusAccount`. Fallback minimal sur le booléen API.
+// ✅ NOUVEAU — simple et propre, account_status EST déjà l'enum
 function getEffectiveStatus(a: AccountData): AccountStatus {
-  if (a.statusAccount === 'gelé')  return 'gelé';
-  if (a.statusAccount === 'fermé') return 'fermé';
-  if (a.statusAccount === 'ouvert') return 'ouvert';
-  // Fallback : si statusAccount est vide, on déduit du booléen API
-  return a.account_status ? 'ouvert' : 'fermé';
+  return a.account_status;
 }
-
 function formatHTG(n?: number | null) {
   if (n == null) return '0 HTG';
   return new Intl.NumberFormat('fr-HT', {
@@ -137,8 +138,9 @@ const AccountTable: React.FC<AccountTableProps> = ({
   activeTab: externalTab,
   onTabChange,
 }) => {
-  const [localTab,     setLocalTab]     = useState<TabId>('ouvert');
-  const activeTab = externalTab ?? localTab;
+  const [localTab, setLocalTab] = useState<TabId>('ouvert');
+const activeTab = externalTab ?? localTab;
+const isArchiveTab = activeTab === 'archive';  // ✅ AJOUTE ICI
 
   const [sortField,    setSortField]    = useState('account_number');
   const [sortDir,      setSortDir]      = useState<'asc' | 'desc'>('asc');
@@ -147,18 +149,18 @@ const AccountTable: React.FC<AccountTableProps> = ({
   const [activeAction, setActiveAction] = useState<AccountBulkAction | null>(null);
 
   // ── Counts (3 statuts seulement) ──────────────────────────────────────────
-  const counts = useMemo(() => ({
-    ouvert: accounts.filter(a => getEffectiveStatus(a) === 'ouvert').length,
-    gelé:   accounts.filter(a => getEffectiveStatus(a) === 'gelé').length,
-    fermé:  accounts.filter(a => getEffectiveStatus(a) === 'fermé').length,
-  }), [accounts]);
-
+  
+// Comptes par onglet
+  const counts = {
+    ouvert:  accounts.filter(a => getTab(a.account_status) === 'ouvert').length,
+    gele:    accounts.filter(a => getTab(a.account_status) === 'gele').length,
+    archive: accounts.filter(a => getTab(a.account_status) === 'archive').length,
+  };
   // ── Tab filter ────────────────────────────────────────────────────────────
   const tabAccounts = useMemo(
-    () => accounts.filter(a => getEffectiveStatus(a) === activeTab),
+    () => accounts.filter(a => getTab(a.account_status) === activeTab),
     [accounts, activeTab],
   );
-
   // ── Sort ──────────────────────────────────────────────────────────────────
   const toggleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -198,17 +200,15 @@ const AccountTable: React.FC<AccountTableProps> = ({
     setSelected(new Set());
   };
 
-  const isFermeTab = activeTab === 'fermé';
-
-  return (
+return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
       {/* ── Onglets (3 seulement) ── */}
       <div className="flex items-center px-2 border-b border-gray-100 bg-white">
         {([
-          { id: 'ouvert' as TabId, label: 'Ouverts', icon: Wallet,    active: 'border-[#2E7D32] text-[#1B5E20]', badge: 'bg-[#DDEAD5] text-[#1B5E20]', count: counts.ouvert },
-          { id: 'gelé'   as TabId, label: 'Gelés',   icon: ShieldOff, active: 'border-[#355C7D] text-[#355C7D]', badge: 'bg-blue-100 text-[#355C7D]',  count: counts.gelé   },
-          { id: 'fermé'  as TabId, label: 'Archive', icon: Archive,   active: 'border-gray-400 text-gray-600',   badge: 'bg-gray-100 text-gray-600',   count: counts.fermé  },
+          { id: 'ouvert'  as TabId, label: 'Ouverts', icon: Wallet,    active: 'border-[#2E7D32] text-[#1B5E20]', badge: 'bg-[#DDEAD5] text-[#1B5E20]', count: counts.ouvert  },
+          { id: 'gele'    as TabId, label: 'Gelés',   icon: ShieldOff, active: 'border-[#355C7D] text-[#355C7D]', badge: 'bg-blue-100 text-[#355C7D]',  count: counts.gele    },
+          { id: 'archive' as TabId, label: 'Archive', icon: Archive,   active: 'border-gray-400 text-gray-600',   badge: 'bg-gray-100 text-gray-600',   count: counts.archive },
         ]).map(tab => {
           const Icon      = tab.icon;
           const isCurrent = activeTab === tab.id;
@@ -235,11 +235,11 @@ const AccountTable: React.FC<AccountTableProps> = ({
       </div>
 
       {/* ── Bannières ── */}
-      {isFermeTab && (
+      {isArchiveTab && (
         <div className="flex items-start gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200">
           <Archive className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-semibold text-gray-600">Comptes fermés — Lecture seule</p>
+            <p className="text-xs font-semibold text-gray-600">Comptes fermés / archivés — Lecture seule</p>
             <p className="text-xs text-gray-400 mt-0.5">
               Ces comptes ne peuvent plus recevoir ni émettre de transactions.
             </p>
@@ -247,11 +247,11 @@ const AccountTable: React.FC<AccountTableProps> = ({
         </div>
       )}
 
-      {!isFermeTab && counts.gelé > 0 && (
+      {!isArchiveTab && counts.gele > 0 && (
         <div className="flex items-start gap-3 px-5 py-3 bg-blue-50 border-b border-blue-100">
           <ShieldAlert className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
           <p className="text-xs text-[#355C7D]">
-            <strong>{counts.gelé}</strong> compte{counts.gelé > 1 ? 's' : ''} gelé{counts.gelé > 1 ? 's' : ''} nécessite{counts.gelé > 1 ? 'nt' : ''} une action
+            <strong>{counts.gele}</strong> compte{counts.gele > 1 ? 's' : ''} gelé{counts.gele > 1 ? 's' : ''} nécessite{counts.gele > 1 ? 'nt' : ''} une action
           </p>
         </div>
       )}
@@ -266,7 +266,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            {!isFermeTab && (
+            {!isArchiveTab && (
               <AccountBulkActionDropdown
                 selectedCount={selected.size}
                 isOpen={dropdownOpen}
@@ -316,8 +316,8 @@ const AccountTable: React.FC<AccountTableProps> = ({
 
         {!isLoading && sorted.length === 0 && (
           <div className="flex flex-col items-center justify-center py-14 text-center">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${isFermeTab ? 'bg-gray-100' : 'bg-[#DDEAD5]'}`}>
-              <Wallet className={`w-7 h-7 ${isFermeTab ? 'text-gray-400' : 'text-[#2E7D32]'}`} />
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${isArchiveTab ? 'bg-gray-100' : 'bg-[#DDEAD5]'}`}>
+              <Wallet className={`w-7 h-7 ${isArchiveTab ? 'text-gray-400' : 'text-[#2E7D32]'}`} />
             </div>
             <p className="text-sm font-semibold text-gray-900 mb-1">Aucun compte trouvé</p>
             <p className="text-xs text-gray-400">Modifiez vos critères de recherche</p>
@@ -325,18 +325,20 @@ const AccountTable: React.FC<AccountTableProps> = ({
         )}
 
         {!isLoading && sorted.map((acc, i) => {
-          const status     = getEffectiveStatus(acc);
-          const statusCfg  = STATUS_CFG[status];
-          const typeCfg    = acc.typeCompte
+          const status      = acc.account_status;
+          const tab         = getTab(status);
+          const statusCfg   = STATUS_CFG[tab];
+          const isPending   = status === 'en_attente';
+          const typeCfg     = acc.typeCompte
             ? (TYPE_CFG[acc.typeCompte] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: acc.typeCompte })
             : { bg: 'bg-gray-100', text: 'text-gray-500', label: '—' };
-          const isSelected = selected.has(acc.id as string);
-          const solde      = acc.soldeActuel ?? 0;
+          const isSelected  = selected.has(acc.id as string);
+          const solde       = acc.soldeActuel ?? 0;
 
           return (
             <div key={acc.id}
               className={`cursor-default grid items-center px-5 py-3.5 transition-all duration-150 ${
-                isFermeTab ? 'opacity-65' : ''
+                isArchiveTab ? 'opacity-65' : ''
               } ${
                 isSelected
                   ? 'bg-[#DDEAD5]/50 border-l-2 border-[#2E7D32]'
@@ -356,7 +358,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
 
               {/* Compte + Membre */}
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`relative shrink-0 ${isFermeTab ? 'opacity-50 grayscale' : ''}`}>
+                <div className={`relative shrink-0 ${isArchiveTab ? 'opacity-50 grayscale' : ''}`}>
                   <UserAvatar
                     user={{
                       first_name:   acc.member_details?.first_name ?? '',
@@ -367,9 +369,17 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   />
                 </div>
                 <div className="min-w-0">
-                  <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isFermeTab ? 'text-gray-400' : 'text-gray-900'}`}>
-                    {acc.account_number}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isArchiveTab ? 'text-gray-400' : 'text-gray-900'}`}>
+                      {acc.account_number}
+                    </p>
+                    {isPending && (
+                      <span
+                        title="En attente d'activation"
+                        className="w-2 h-2 rounded-full bg-amber-500 shrink-0"
+                      />
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 truncate">
                     {acc.member_details?.full_name ?? acc.id_membre ?? '—'}
                   </p>
@@ -403,9 +413,9 @@ const AccountTable: React.FC<AccountTableProps> = ({
                     ? <TrendingDown className="w-3.5 h-3.5 text-red-400 shrink-0" />
                     : <Minus        className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
                 <span className={`text-sm font-bold ${
-                  isFermeTab ? 'text-gray-400' :
-                  solde > 0  ? 'text-[#2E7D32]' :
-                  solde < 0  ? 'text-red-500'   : 'text-gray-400'
+                  isArchiveTab ? 'text-gray-400' :
+                  solde > 0    ? 'text-[#2E7D32]' :
+                  solde < 0    ? 'text-red-500'   : 'text-gray-400'
                 }`}>
                   {formatHTG(solde)}
                 </span>
@@ -440,7 +450,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
 
-                {status === 'ouvert' && (
+                {(status === 'actif' || status === 'en_attente') && (
                   <>
                     <button title="Geler" onClick={() => onSuspend(acc)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-blue-50 hover:text-[#355C7D]">
@@ -453,11 +463,11 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   </>
                 )}
 
-                {status === 'gelé' && (
+                {status === 'gele' && (
                   <>
                     <button title="Débloquer" onClick={() => onSuspend(acc)}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-                      <ShieldCheck className="w-3 h-3" /> 
+                      <ShieldCheck className="w-3 h-3" />
                     </button>
                     <button title="Fermer" onClick={() => onClose(acc)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
@@ -466,7 +476,7 @@ const AccountTable: React.FC<AccountTableProps> = ({
                   </>
                 )}
 
-                {status === 'fermé' && (
+                {(status === 'ferme' || status === 'archive') && (
                   <span className="px-2 py-1 text-xs text-gray-400 bg-gray-50 rounded-lg">Archivé</span>
                 )}
               </div>
@@ -477,22 +487,33 @@ const AccountTable: React.FC<AccountTableProps> = ({
 
       {/* ── Footer ── */}
       {!isLoading && accounts.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
-          </p>
+        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-gray-400">
+              <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
+            </p>
+
+            {/* Légende pastille en_attente */}
+            {accounts.some(a => a.account_status === 'en_attente') && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>En attente d'activation</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {counts.ouvert} Ouvert{counts.ouvert !== 1 ? 's' : ''}
             </span>
-            {counts.gelé > 0 && (
+            {counts.gele > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#355C7D]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#355C7D]" /> {counts.gelé} Gelé{counts.gelé !== 1 ? 's' : ''}
+                <span className="w-1.5 h-1.5 rounded-full bg-[#355C7D]" /> {counts.gele} Gelé{counts.gele !== 1 ? 's' : ''}
               </span>
             )}
-            {counts.fermé > 0 && (
+            {counts.archive > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.fermé} Fermé{counts.fermé !== 1 ? 's' : ''}
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.archive} Archive
               </span>
             )}
           </div>

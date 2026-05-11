@@ -92,6 +92,12 @@ export const fetchOpeningHours = async () => {
 export const fetchBranches = async () => {
   try {
     const response = await AxiosInstance.get('/branches/');
+    // 🔍 DEBUG
+    console.group('🌐 API /branches/');
+    console.log('1ère branche:', response.data?.[0] ?? response.data?.results?.[0]);
+    console.log('Clés:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
+    console.groupEnd();
+    
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des branches:', error);

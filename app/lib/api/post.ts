@@ -8,6 +8,12 @@ import AxiosInstance from "../axiosInstance";
 export const fetchPosts = async () => {
   try {
     const response = await AxiosInstance.get('/posts/');
+      // 🔍 DEBUG
+    console.group('🌐 API /posts/');
+    console.log('1er poste:', response.data?.[0] ?? response.data?.results?.[0]);
+    console.log('Clés:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
+    console.groupEnd();
+    
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la récupération des postes:", error);

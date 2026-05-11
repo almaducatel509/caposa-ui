@@ -30,15 +30,13 @@ interface MemberOption {
   id_number:     string;
   phone_number?: string;
 }
-
 interface AccountOption {
-  id:             string;
+  id: string;
   account_number: string;
-  typeCompte:     'epargne' | 'cheques' | 'terme';
-  soldeActuel:    number;
-  statutCompte:   'actif' | 'suspendu' | 'ferme';
+  typeCompte: 'epargne' | 'cheques' | 'terme';
+  soldeActuel: number;
+  statutCompte: 'actif' | 'suspendu' | 'fermé';
 }
-
 export interface LoanFormProps {
   members?:   MemberOption[];
   onSubmit?:  (data: LoanFormData) => Promise<void>;
@@ -103,9 +101,9 @@ const MOCK_MEMBERS: MemberOption[] = [
 ];
 
 const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
-  dcb21971: [
-    { id: 'acc-001', account_number: 'ACC1001', typeCompte: 'epargne', soldeActuel: 45000, statutCompte: 'actif'    },
-    { id: 'acc-002', account_number: 'ACC1002', typeCompte: 'cheques', soldeActuel: 12000, statutCompte: 'actif'    },
+dcb21971: [
+    { id: 'acc-001', account_number: 'ACC1001', typeCompte: 'epargne', soldeActuel: 45000, statutCompte: 'actif' }, 
+    { id: 'acc-002', account_number: 'ACC1002', typeCompte: 'terme',   soldeActuel: 12000, statutCompte: 'actif' },                                                                                
   ],
   a1b2c3d4: [
     { id: 'acc-003', account_number: 'ACC1003', typeCompte: 'epargne', soldeActuel: 78000, statutCompte: 'actif'    },
@@ -208,6 +206,37 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
       setAccountsLoading(false);
     }, 400);
   };
+//   const handleSelectMember = async (m: MemberOption) => {
+//   // ...
+//   setAccountsLoading(true);
+  
+//   try {
+//     const apiAccounts = await fetchMemberAccounts(m.id); 
+//     // apiAccounts en format anglais : { account_type, balance, account_status }
+    
+//     // Mapping vers le format français local
+//     const mapped: AccountOption[] = apiAccounts.map(acc => ({
+//       id: acc.id,
+//       account_number: acc.account_number,
+//       typeCompte: mapAccountType(acc.account_type),       // 'savings' → 'epargne'
+//       soldeActuel: typeof acc.balance === 'string' ? parseFloat(acc.balance) : acc.balance ?? 0,
+//       statutCompte: acc.account_status ? 'actif' : 'ferme',
+//     }));
+    
+//     setAccounts(mapped);
+//   } finally {
+//     setAccountsLoading(false);
+//   }
+// };
+
+function mapAccountType(apiType: string): AccountOption['typeCompte'] {
+  switch (apiType) {
+    case 'savings':  return 'epargne';
+    case 'checking': return 'cheques';
+    case 'term':     return 'terme';
+    default:         return 'epargne';
+  }
+}
 
   const clearMember = () => {
     setSelectedMember(null);

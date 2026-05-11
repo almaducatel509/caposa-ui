@@ -5,14 +5,16 @@ import {
   Search, Plus, Upload, Download, Filter,
   Calendar, MapPin, CheckCircle, X, ChevronDown
 } from 'lucide-react';
-import { Employee } from '@/types/data';
+import { ExportAllButton } from '@/app/ExportAllButton';
+import { EmployeeData } from './validations';
+import { BranchData } from '../branches/validations';
+import { PostData } from '../postes/validations';
 
 interface EmployeeFilterBarProps {
   filterValue: string;
   selectedFilter: string;
   selectedBranch: string;
-  selectedStatus: string;
-  branches: Array<{ id: string; branch_name: string }>;
+  // branches: Array<{ id: string; branch_name: string }>;
   onSearchChange: (value?: string) => void;
   onClear: () => void;
   onFilterChange: (key: string) => void;
@@ -22,10 +24,9 @@ interface EmployeeFilterBarProps {
   onImport: () => void;
   totalCount: number;
   importLoading?: boolean;
-  onExport: () => void;   
-  exportLoading?: boolean;
-  employees: Employee[];
-
+  employees: EmployeeData[];  
+  branches: BranchData[];
+  posts: PostData[];          
 }
 
 // ─── Custom Dropdown ───────────────────────────────────────────────────────────
@@ -61,18 +62,17 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
   filterValue,
   selectedFilter,
   selectedBranch,
-  selectedStatus,
   branches,
   onSearchChange,
   onClear,
   onFilterChange,
   onBranchChange,
-  onExport,
   onAdd,
   onImport,
   totalCount,
   importLoading = false,
-  exportLoading
+  employees,
+  posts,
 }) => {
 
   const filterOptions = [
@@ -87,24 +87,38 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
     ...branches.map(b => ({ key: b.id, label: b.branch_name })),
   ];
   
-  // ← clés alignées avec handleStatusChange et matchStatus dans AccountGrid
-//   const statusOptions = [
-//   { key: 'all',       label: 'Tous les statuts' },
-//   { key: 'actif',     label: 'Actifs'           },  // 'active' → 'actif'
-//   { key: 'inactif',   label: 'Inactifs'         },  // 'inactive' → 'inactif'
-//   { key: 'suspended', label: 'Suspendus'        },  // ok
-// ];
-
   const getFilterLabel  = () => filterOptions.find(o => o.key === selectedFilter)?.label  ?? 'Période';
   const getBranchLabel  = () => branches.find(b => b.id === selectedBranch)?.branch_name   ?? 'Toutes les branches';
-  // const getStatusLabel  = () => statusOptions.find(o => o.key === selectedStatus)?.label   ?? 'Tous les statuts';
 
-  const activeCount = [
-    selectedFilter !== 'all',
-    selectedBranch !== 'all',
-    selectedStatus !== 'all',
-  ].filter(Boolean).length;
-
+  const employeesForExport = employees.map(e => {
+    // Mapping branch (UUID → nom)
+    const branchName = 
+      branches.find(b => b.id === e.branch)?.branch_name 
+      ?? '—';
+    
+    // Mapping posts (UUIDs → noms concaténés)
+    const positionNames = e.posts
+      ?.map(postId => posts.find(p => p.id === postId)?.name)
+      .filter(Boolean)
+      .join(', ') 
+      || '—';
+    
+      return {
+        first_name: e.first_name,
+        last_name: e.last_name,
+        email: e.user?.email ?? '—',
+        phone_number: e.phone_number,
+        address: e.address ?? '—',
+        branch: branchName,
+        position: positionNames,
+        gender: e.gender ?? '—',
+        date_of_birth: e.date_of_birth ?? '—',
+        payment_ref: e.payment_ref,
+      };
+    });
+  console.log('📊 Données pour export :', employeesForExport);
+  console.table(employeesForExport);  // ← bonus : vue tableau dans la console
+  
   return (
     <div className="flex flex-col gap-4 ">
 
@@ -157,25 +171,22 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
               </>
             )}
           </button>
-          <button
-            onClick={onExport}
-            disabled={exportLoading}
-            title="Exporter tous les employés"
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {exportLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
-                Export…
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Exporter
-              </>
-            )}
-          </button>
-
+          <ExportAllButton
+            data={employeesForExport}
+            filename="employes"
+            columns={['first_name', 'last_name', 'email', 'phone_number', 'address', 'branch', 'position', ]}
+            headerLabels={{
+              first_name: 'Prénom',
+              last_name: 'Nom',
+              email: 'E-mail',
+              phone_number: 'Téléphone',
+              address: 'Adresse',
+              branch: 'Succursale',
+              position: 'Poste(s)',
+              // statut: 'Statut', a ajouter apres l'update de l'api ajouter dans columns aussi en haut
+            }}
+            separator=";"
+          />
         </div>
       </div>
 

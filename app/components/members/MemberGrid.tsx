@@ -175,6 +175,7 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
       />
 
       <MemberFilterBar
+        members={members}
         filterValue={search}
         selectedStatus={selectedStatus}
         onSearchChange={setSearch}

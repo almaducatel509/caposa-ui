@@ -66,17 +66,6 @@ export interface MemberData {
   signature: string;
 }
 
-export interface BranchDetails {
-  id_branch:    string;
-  branch_name:  string;
-  branch_code?: string;
-}
-
-export interface PostDetails {
-  id_post:   string;
-  name:      string;
-  post_name?: string;
-}
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 

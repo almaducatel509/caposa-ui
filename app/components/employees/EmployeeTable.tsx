@@ -11,7 +11,7 @@ import { EmployeeData } from '@/app/components/employees/validations';
 
 import UserAvatar                                               from '@/app/components/core/UserAvatar';
 import BulkActionDropdown, {  EmployeeBulkAction }     from './BulkActionDropdown';
-import { BranchData, Post }                                     from '@/app/components/employees/validations';
+import { BranchData, }                                     from '@/app/components/employees/validations';
 import BulkActionModal                                          from './modals/BulkActionModal';
 import { PostData } from './validations';
 
@@ -380,7 +380,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
               {/* Poste(s) */}
               <div className="flex flex-wrap gap-1">
-                {(emp.posts_details?.length ?? 0) > 0 ? (
+                {(emp.posts?.length ?? 0) > 0 ? (
                   <>
                     {emp.posts_details!.slice(0, 2).map(post => (
                       <span key={String(post.id)}

@@ -84,31 +84,31 @@ export interface Account extends Base {
 //   transactionType: string;
 //   paymentRef: string;
 // }
-export type EmployeeStatus = 'active' | 'inactive' | 'archive';
+// export type EmployeeStatus = 'active' | 'inactive' | 'archive';
 
-export interface Employee extends Base {
-  // Identité
-  employeeId: string;          // matricule métier (ex: EMP-001)
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  dateOfBirth: Date;
-  address: string;
-  avatarUrl?: string;          // optionnel
+// export interface Employee extends Base {
+//   // Identité
+//   employeeId: string;          // matricule métier (ex: EMP-001)
+//   firstName: string;
+//   lastName: string;
+//   email: string;
+//   phoneNumber: string;
+//   dateOfBirth: Date;
+//   address: string;
+//   avatarUrl?: string;          // optionnel
 
-  // Organisation
-  position: string;            // ou positionId si relation
-  branchId: string;            // FK vers Branch
-  branchName?: string;         // dénormalisé pour affichage
+//   // Organisation
+//   position: string;            // ou positionId si relation
+//   branchId: string;            // FK vers Branch
+//   branchName?: string;         // dénormalisé pour affichage
 
-  // Statut
-  status: EmployeeStatus;
-  hireDate: Date;              // "depuis" dans ton UI
+//   // Statut
+//   status: EmployeeStatus;
+//   hireDate: Date;              // "depuis" dans ton UI
   
-  // Méta
-  archivedAt?: Date;           // pour l'onglet Archive
-}
+//   // Méta
+//   archivedAt?: Date;           // pour l'onglet Archive
+// }
 export interface Payment extends Base {
     payment_id: string;
     payment_ref: string;
@@ -134,6 +134,7 @@ export interface Holiday {
     description: string; // Exemple: "Jour de l'Indépendance"
 }
 
+// interface branch dans C:\Users\alma2\Documents\Final Project\caposa-ui\types\data.d.ts
 export interface Branch {
     branch_id: string;
     branch_name: string;

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Wallet } from 'lucide-react';
-import { AccountData } from './validationsaccount';
+import { AccountData, AccountStatus } from './validationsaccount';
 import { mockAccounts } from './mockAccountData';
 import { AccountBulkAction } from './AccountBulkActionDropdown';
 
@@ -21,32 +21,30 @@ import CreateAccountModal  from './modals/EditAccountModal';
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
-// 1. Statuts ramenés à 3 valeurs : 'ouvert' | 'gelé' | 'fermé'.
-//    → Onglet et filtre partagent le MÊME type. Plus aucun mapping.
+// 1. Statuts alignés sur l'enum officiel : 'actif' | 'gele' | 'ferme' |
+//    'en_attente' | 'archive' (5 valeurs, plus de boolean).
 //
-// 2. Onglets UI : "Ouverts" / "Gelés" / "Archive" (le label "Archive" est
-//    purement cosmétique, l'état métier est 'fermé').
+// 2. Le filtre statut est SUPPRIMÉ. Les onglets du tableau s'en occupent.
+//    → AccountFilterBar reçoit uniquement recherche + type.
 //
-// 3. Garde-fous : un compte 'fermé' ne peut PAS être :
-//    - geler (handleSuspend bloqué)
-//    - fermer une 2e fois (handleClose bloqué)
-//    - dégeler (les bulk actions 'activate' et 'suspend' filtrent les fermés)
-//    - supprimé via UI (handleDelete bloqué)
-//    Seules les actions de LECTURE restent autorisées (view, history, export).
+// 3. Onglets UI = 3 (Ouverts / Gelés / Archive) :
+//    - 'ouvert'  → actif + en_attente
+//    - 'gele'    → gele
+//    - 'archive' → ferme + archive
 //
-// 4. Le helper `canActOn()` centralise la règle "compte vivant uniquement"
-//    pour rester cohérent partout (UI ET bulk actions).
+// 4. Garde-fous : un compte fermé/archivé ne peut PAS être :
+//    - gelé (handleSuspend bloqué)
+//    - fermé une 2e fois (handleClose bloqué)
+//    Le helper `canActOn()` centralise la règle "compte vivant".
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 3 vraies valeurs métier (alignées avec le futur modèle Django)
-// type AccountStatus = 'ouvert' | 'gelé' | 'fermé';
-// type StatusFilter  = AccountStatus | 'all';
-export type AccountStatus = 'ouvert' | 'gelé' | 'fermé';
-export type StatusFilter  = AccountStatus | 'all';
+// Type d'onglet (3 valeurs UI)
+type TabId = 'ouvert' | 'gele' | 'archive';
 
-// Garde-fou : un compte 'fermé' est en lecture seule, aucune action métier
-const canActOn = (acc: AccountData | null): boolean =>
-  !!acc && acc.statusAccount !== 'fermé';
+// Helper : un compte est "vivant" si on peut encore agir dessus
+function canActOn(a: AccountData): boolean {
+  return a.account_status !== 'ferme' && a.account_status !== 'archive';
+}
 
 const AccountGrid: React.FC = () => {
 
@@ -55,11 +53,13 @@ const AccountGrid: React.FC = () => {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
 
-  // ── Filters ──
+  // ── Filters (recherche + type uniquement) ──
   const [search,          setSearch]          = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedType,    setSelectedType]    = useState('all');
-  const [selectedStatus,  setSelectedStatus]  = useState<StatusFilter>('all');
+
+  // ── Tab actif (géré par AccountTable) ──
+  const [activeAccountTab, setActiveAccountTab] = useState<TabId>('ouvert');
 
   // ── Modals ──
   const [selectedAccount, setSelectedAccount] = useState<AccountData | null>(null);
@@ -68,9 +68,6 @@ const AccountGrid: React.FC = () => {
   const [showSuspend,     setShowSuspend]     = useState(false);
   const [showHistory,     setShowHistory]     = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // ── Tab : MÊME type que le filtre (3 valeurs) ──
-  const [activeAccountTab, setActiveAccountTab] = useState<AccountStatus>('ouvert');
 
   // ── Load ───────────────────────────────────────────────────────────────────
   const loadAccounts = async () => {
@@ -94,7 +91,7 @@ const AccountGrid: React.FC = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  // ──── Filtrage : comparaison directe, plus aucun mapping ──────────────────
+  // ── Filtrage : recherche + type seulement (le statut = onglets du tableau)
   const filteredAccounts = useMemo(() => {
     return accounts.filter(acc => {
       const matchSearch =
@@ -106,12 +103,9 @@ const AccountGrid: React.FC = () => {
       const matchType =
         selectedType === 'all' || acc.typeCompte === selectedType;
 
-      const matchStatus =
-        selectedStatus === 'all' || acc.statusAccount === selectedStatus;
-
-      return matchSearch && matchType && matchStatus;
+      return matchSearch && matchType;
     });
-  }, [accounts, debouncedSearch, selectedType, selectedStatus]);
+  }, [accounts, debouncedSearch, selectedType]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdd = () => {
@@ -123,10 +117,10 @@ const AccountGrid: React.FC = () => {
   const handleView             = (a: AccountData) => { setSelectedAccount(a); setShowDetail(true); };
   const handleViewTransactions = (a: AccountData) => { setSelectedAccount(a); setShowHistory(true); };
 
-  // Actions métier : bloquées si compte fermé
+  // Actions métier : bloquées si compte fermé/archivé
   const handleSuspend = (a: AccountData) => {
     if (!canActOn(a)) {
-      console.warn('Action ignorée : un compte fermé ne peut pas être gelé.');
+      console.warn('Action ignorée : un compte fermé/archivé ne peut pas être gelé.');
       return;
     }
     setSelectedAccount(a);
@@ -135,48 +129,29 @@ const AccountGrid: React.FC = () => {
 
   const handleClose = (a: AccountData) => {
     if (!canActOn(a)) {
-      console.warn('Action ignorée : ce compte est déjà fermé.');
+      console.warn('Action ignorée : un compte fermé/archivé ne peut pas être refermé.');
       return;
     }
     setSelectedAccount(a);
     setShowClose(true);
   };
 
-  // Couplage onglet ↔ filtre : trivial (mêmes clés des 2 côtés)
-  // const handleStatusChange = (status: StatusFilter) => {
-  //   setSelectedStatus(status);
-  //   if (status !== 'all') setActiveAccountTab(status);
-  // };
-  const handleStatusChange = (status: StatusFilter) => {
-  setSelectedStatus(status);
-
-  if (status === 'all') {
-    // Quand on enlève le filtre → retour à l’onglet "ouvert"
-    setActiveAccountTab('ouvert');
-  } else {
-    // Sinon l’onglet suit le statut
-    setActiveAccountTab(status);
-  }
-};
-
-
   // ── Bulk action ────────────────────────────────────────────────────────────
-  // Filtre les comptes fermés AVANT de déclencher l'action métier.
   const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
-    // Pour l'export, on autorise tous les comptes (y compris fermés)
+    // Export : autorisé pour tous les comptes
     if (action === 'export') {
       exportToCSV(ids);
       return;
     }
 
-    // Pour les autres actions : on retire les comptes fermés
+    // Autres actions : retirer les comptes fermés/archivés
     const actionableIds = accounts
       .filter(a => ids.includes(a.id) && canActOn(a))
       .map(a => a.id);
 
     const skipped = ids.length - actionableIds.length;
     if (skipped > 0) {
-      console.warn(`${skipped} compte(s) fermé(s) ignoré(s) pour l'action "${action}".`);
+      console.warn(`${skipped} compte(s) fermé(s)/archivé(s) ignoré(s) pour l'action "${action}".`);
     }
 
     switch (action) {
@@ -198,7 +173,7 @@ const AccountGrid: React.FC = () => {
       a.member_details?.email ?? '',
       a.typeCompte ?? '',
       a.soldeActuel ?? '',
-      a.statusAccount ?? '',
+      a.account_status ?? '',
       a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '',
     ]);
     const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
@@ -211,6 +186,15 @@ const AccountGrid: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  // ── Liste des membres (extraite des comptes pour l'export) ────────────────
+  const members = useMemo(() => {
+    const map = new Map();
+    accounts.forEach(a => {
+      if (a.member_details) map.set(a.member_details.id, a.member_details);
+    });
+    return Array.from(map.values());
+  }, [accounts]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
@@ -221,18 +205,17 @@ const AccountGrid: React.FC = () => {
         icon={<Wallet className="w-6 h-6 text-[#2E7D32]" />}
         className="mb-0"
       />
-
-      <AccountFilterBar
+     <AccountFilterBar
         filterValue={search}
         selectedType={selectedType}
-        selectedStatus={selectedStatus}
         totalCount={filteredAccounts.length}
         onSearchChange={setSearch}
         onClear={() => setSearch('')}
         onTypeChange={setSelectedType}
-        onStatusChange={handleStatusChange}
         onImport={() => console.log('Import')}
         onAdd={handleAdd}
+        members={members}
+        accounts={accounts}
       />
 
       {error && (
@@ -249,7 +232,7 @@ const AccountGrid: React.FC = () => {
         </div>
       )}
 
-      <AccountTable
+      <AccountTable                          
         accounts={filteredAccounts}
         isLoading={loading}
         onView={handleView}
@@ -258,12 +241,8 @@ const AccountGrid: React.FC = () => {
         onViewTransactions={handleViewTransactions}
         onBulkAction={handleBulkAction}
         activeTab={activeAccountTab}
-        onTabChange={(tab: AccountStatus) => {
-          setActiveAccountTab(tab);
-          setSelectedStatus(tab);
-        }}
+        onTabChange={setActiveAccountTab}
       />
-
       <CreateAccountModal
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); setSelectedAccount(null); }}
@@ -274,16 +253,19 @@ const AccountGrid: React.FC = () => {
           setSelectedAccount(null);
         }}
       />
+
       <AccountDetailModal
         isOpen={showDetail}
         account={selectedAccount}
         onClose={() => setShowDetail(false)}
       />
+
       <AccountHistoryModal
         isOpen={showHistory}
         account={selectedAccount}
         onClose={() => { setShowHistory(false); setSelectedAccount(null); }}
       />
+
       <SuspendAccountModal
         isOpen={showSuspend}
         onClose={() => { setShowSuspend(false); setSelectedAccount(null); }}
@@ -294,13 +276,14 @@ const AccountGrid: React.FC = () => {
           setSelectedAccount(null);
         }}
       />
+
       <CloseAccountModal
         isOpen={showClose}
         account={selectedAccount}
         onClose={() => setShowClose(false)}
         onSuccess={(closed) => {
-          // ← Le compte n'est PAS retiré du state : il devient juste 'fermé'
-          //   et reste visible dans l'onglet "Archive" (lecture seule).
+          // Le compte n'est PAS retiré : il passe en 'ferme' / 'archive'
+          // et reste visible dans l'onglet "Archive" (lecture seule).
           setAccounts(prev => prev.map(a => a.id === closed.id ? closed : a));
           setShowClose(false);
           setSelectedAccount(null);

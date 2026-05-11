@@ -5,6 +5,14 @@ import { EmployeeFormData } from '@/app/components/employees/validations';
 export const fetchEmployees = async () => {
   try {
     const response = await AxiosInstance.get('/employees/');
+     console.group('🌐 API /employees/');
+    console.log('Statut:', response.status);
+    console.log('Type de data:', Array.isArray(response.data) ? 'Array' : 'Object');
+    console.log('Nombre:', response.data?.length ?? response.data?.results?.length);
+    console.log('1er employé:', response.data?.[0] ?? response.data?.results?.[0]);
+    console.log('Clés disponibles:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
+    console.log('Réponse complète:', response.data);
+    console.groupEnd();
     return response.data;
   } catch (error) {
     console.error("Erreur lors de la récupération des employés:", error);

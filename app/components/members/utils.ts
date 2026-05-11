@@ -77,3 +77,79 @@ export function tierLabel(t: Tier) {
 export function tierColor(t: Tier) {
   return t === "senior" ? "success" : t === "standard" ? "primary" : "default";
 }
+/**
+ * Calcule le solde total d'un membre à partir de ses comptes.
+ * Ignore les comptes fermés (account_status === false).
+ */
+export function computeMemberBalance(accounts?: MemberData["accounts"]) {
+  if (!accounts?.length) {
+    return { totalBalance: 0, accountsCount: 0 };
+  }
+
+  let totalBalance = 0;
+  let accountsCount = 0;
+
+  for (const acc of accounts) {
+    if (acc.account_status === false) continue;
+
+    const balance = typeof acc.balance === "string" 
+      ? parseFloat(acc.balance) 
+      : acc.balance ?? 0;
+    if (Number.isNaN(balance)) continue;
+
+    totalBalance += balance;
+    accountsCount++;
+  }
+
+  return { totalBalance, accountsCount };
+}
+/**
+ * Détermine si un type de compte est un passif (dette du membre).
+ */
+export const isLiabilityAccount = (accountType?: string): boolean => {
+  return accountType === "loan";
+};
+
+/**
+ * Calcule le bilan financier d'un membre à partir de ses comptes.
+ * Sépare actif (épargne, chèques, investissement) et passif (prêts).
+ * Ignore les comptes fermés (account_status === false).
+ *
+ * NOTE : Tant que le backend renvoie un account_type non normalisé
+ * (ex: "Default Account Type"), tout sera classé en actif.
+ * La séparation s'activera automatiquement quand le backend
+ * renverra "loan" pour les prêts.
+ */
+export function computeMemberFinancials(accounts?: MemberData["accounts"]) {
+  if (!accounts?.length) {
+    return { totalAssets: 0, totalLiabilities: 0, netBalance: 0, activeAccountsCount: 0 };
+  }
+
+  let totalAssets = 0;
+  let totalLiabilities = 0;
+  let activeAccountsCount = 0;
+
+  for (const acc of accounts) {
+    if (acc.account_status === false) continue;
+
+    const balance = typeof acc.balance === "string" 
+      ? parseFloat(acc.balance) 
+      : acc.balance ?? 0;
+    if (Number.isNaN(balance)) continue;
+
+    activeAccountsCount++;
+
+    if (isLiabilityAccount(acc.account_type)) {
+      totalLiabilities += Math.abs(balance);
+    } else {
+      totalAssets += balance;
+    }
+  }
+
+  return {
+    totalAssets,
+    totalLiabilities,
+    netBalance: totalAssets - totalLiabilities,
+    activeAccountsCount,
+  };
+}

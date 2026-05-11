@@ -25,7 +25,12 @@ function mapApiMember(m: any): MemberData {
 
 export const fetchMembers = async (): Promise<MemberData[]> => {
   try {
-    const response = await AxiosInstance.get("/members/");
+    const response = await AxiosInstance.get("/members/");   
+    // 🔍 DEBUG
+    console.group('🌐 API /members/');
+    console.log('1er poste:', response.data?.[0] ?? response.data?.results?.[0]);
+    console.log('Clés:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
+    console.groupEnd();
     return (response.data as any[]).map(mapApiMember);
   } catch (e) {
     console.error("Erreur récupération membres:", e);

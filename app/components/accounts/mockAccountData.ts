@@ -1,4 +1,3 @@
-import { AccountData } from './validationsaccount';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
@@ -22,216 +21,349 @@ import { AccountData } from './validationsaccount';
 //
 // 4. enrichAccountData : fallback simplifié — true → 'ouvert', false → 'fermé'.
 // ─────────────────────────────────────────────────────────────────────────────
+import { AccountData } from './validationsaccount';
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * MOCK ACCOUNTS — Référence pour le backend
+ *
+ * Ce mock sert d'EXEMPLE de référence pour le backend Django.
+ * Toute réponse de l'API /accounts/ DOIT respecter cette structure.
+ *
+ * Couverture :
+ *   • 2 comptes ACTIF      → onglet "Ouverts"
+ *   • 1 compte EN_ATTENTE  → onglet "Ouverts" (avec pastille 🟠)
+ *   • 1 compte GELE        → onglet "Gelés"
+ *   • 1 compte FERME       → onglet "Archive"
+ *   • 1 compte ARCHIVE     → onglet "Archive" (état terminal)
+ *
+ * Types de comptes couverts : epargne, cheques, terme
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 
 export const mockAccounts: AccountData[] = [
 
-  // ── Ouverts ───────────────────────────────────────────────────────────────
+  /* ──────────────────────────────────────────────────────────────────────────
+   * ACTIF — Compte épargne classique
+   * ─────────────────────────────────────────────────────────────────────── */
   {
-    id: "acc-open-001",
+    // API
+    id:             "acc-001",
     account_number: "636-922-093-4469",
-    member: "mem-001",
-    account_type: "Savings Account",
-    balance: "15000.00",
-    account_status: true,
-    created_by: "admin-001",
-    created_at: "2025-11-10T22:20:12.478093Z",
-    updated_at: "2025-11-10T22:20:12.478093Z",
+    member:         "mem-001",
+    account_type:   "Savings Account",
+    balance:        "15000.00",
+    account_status: "actif",
+    created_by:     "admin-001",
+    created_at:     "2025-11-10T22:20:12.478093Z",
+    updated_at:     "2025-11-10T22:20:12.478093Z",
 
-    id_membre: "mem-001",
-    typeCompte: "epargne",
-    soldeActuel: 15000,
-    statusAccount: "ouvert",
+    // Enrichi front
+    id_membre:    "mem-001",
+    typeCompte:   "epargne",
+    soldeActuel:  15000,
 
-    dateOuverture: "2025-11-10",
-    tauxInteret: 2.5,
+    // Métier
+    dateOuverture:       "2025-11-10",
+    dateFermeture:       null,
+    tauxInteret:         2.5,
+    limiteTrait:         null,
+    limiteCredit:        null,
     fraisServiceMensuel: 0,
-    limiteCredit: null,
 
+    // Relations
     member_details: {
-      id: "mem-001",
-      first_name: "Hudson",
-      last_name: "Joseph",
-      full_name: "Hudson Joseph",
-      id_number: "555555",
-      phone_number: "1248666",
-      email: null,
-      address: "44 Bis Rue Tozin",
-      city: "Limonade",
-      department: "Nord",
+      id:               "mem-001",
+      first_name:       "Hudson",
+      last_name:        "Joseph",
+      full_name:        "Hudson Joseph",
+      id_number:        "555555",
+      email:            null,
+      phone_number:     "1248666",
+      address:          "44 Bis Rue Tozin",
+      city:             "Limonade",
+      department:       "Nord",
       date_of_birthday: "1999-06-08",
-      gender: "M",
-      status: true,
-      created_at: "2025-11-10T22:20:12.446948Z",
-      updated_at: "2025-11-10T22:20:12.446948Z",
+      gender:           "M",
+      photo_profil:     null,
+      created_at:       "2025-11-10T22:20:12.446948Z",
+      updated_at:       "2025-11-10T22:20:12.446948Z",
     },
 
-    total_transactions: 5,
-    total_deposits: 20000,
-    total_withdrawals: 5000,
+    // Stats
+    total_transactions:    5,
+    total_deposits:        20000,
+    total_withdrawals:     5000,
     last_transaction_date: "2025-12-10",
   },
 
+  /* ──────────────────────────────────────────────────────────────────────────
+   * ACTIF — Compte chèques
+   * ─────────────────────────────────────────────────────────────────────── */
   {
-    id: "acc-open-002",
+    id:             "acc-002",
     account_number: "789-123-456-7890",
-    member: "mem-001",
-    account_type: "Checking Account",
-    balance: "5500.50",
-    account_status: true,
-    created_by: "admin-001",
-    created_at: "2025-10-15T14:30:00.000000Z",
-    updated_at: "2025-12-01T10:15:00.000000Z",
+    member:         "mem-001",
+    account_type:   "Checking Account",
+    balance:        "5500.50",
+    account_status: "actif",
+    created_by:     "admin-001",
+    created_at:     "2025-10-15T14:30:00.000000Z",
+    updated_at:     "2025-12-01T10:15:00.000000Z",
 
-    id_membre: "mem-001",
-    typeCompte: "cheques",
-    soldeActuel: 5500.50,
-    statusAccount: "ouvert",
+    id_membre:    "mem-001",
+    typeCompte:   "cheques",
+    soldeActuel:  5500.50,
 
-    dateOuverture: "2025-10-15",
-    limiteTrait: 10000,
+    dateOuverture:       "2025-10-15",
+    dateFermeture:       null,
+    tauxInteret:         null,
+    limiteTrait:         10000,
+    limiteCredit:        null,
     fraisServiceMensuel: 50,
-    limiteCredit: null,
 
     member_details: {
-      id: "mem-001",
-      first_name: "Hudson",
-      last_name: "Joseph",
-      full_name: "Hudson Joseph",
-      id_number: "555555",
-      phone_number: "1248666",
-      email: null,
-      address: "44 Bis Rue Tozin",
-      city: "Limonade",
-      department: "Nord",
+      id:               "mem-001",
+      first_name:       "Hudson",
+      last_name:        "Joseph",
+      full_name:        "Hudson Joseph",
+      id_number:        "555555",
+      email:            null,
+      phone_number:     "1248666",
+      address:          "44 Bis Rue Tozin",
+      city:             "Limonade",
+      department:       "Nord",
       date_of_birthday: "1999-06-08",
-      gender: "M",
-      status: true,
+      gender:           "M",
+      photo_profil:     null,
     },
 
-    total_transactions: 12,
-    total_deposits: 8000,
-    total_withdrawals: 2500,
+    total_transactions:    12,
+    total_deposits:        8000,
+    total_withdrawals:     2500,
     last_transaction_date: "2025-12-08",
   },
 
-  // ── Gelés ─────────────────────────────────────────────────────────────────
+  /* ──────────────────────────────────────────────────────────────────────────
+   * EN_ATTENTE — KYC en cours, pas encore activé
+   * ─────────────────────────────────────────────────────────────────────── */
   {
-    id: "acc-frozen-001",
-    account_number: "321-654-987-0123",
-    member: "mem-002",
-    account_type: "Term Deposit Account",
-    balance: "50000.00",
-    account_status: true,
-    created_by: "admin-001",
-    created_at: "2025-01-01T00:00:00.000000Z",
-    updated_at: "2025-12-11T08:00:00.000000Z",
+    id:             "acc-003",
+    account_number: "111-222-333-4444",
+    member:         "mem-003",
+    account_type:   "Savings Account",
+    balance:        "0.00",
+    account_status: "en_attente",
+    created_by:     "admin-001",
+    created_at:     "2026-05-01T10:00:00.000000Z",
+    updated_at:     "2026-05-01T10:00:00.000000Z",
 
-    id_membre: "mem-002",
-    typeCompte: "terme",
-    soldeActuel: 50000,
-    statusAccount: "gelé",
+    id_membre:    "mem-003",
+    typeCompte:   "epargne",
+    soldeActuel:  0,
 
-    dateOuverture: "2025-01-01",
-    tauxInteret: 5.5,
+    dateOuverture:       "2026-05-01",
+    dateFermeture:       null,
+    tauxInteret:         2.0,
+    limiteTrait:         null,
+    limiteCredit:        null,
     fraisServiceMensuel: 0,
-    limiteCredit: null,
 
     member_details: {
-      id: "mem-002",
-      first_name: "Marie",
-      last_name: "Dupont",
-      full_name: "Marie Dupont",
-      id_number: "987654",
-      phone_number: "3456789",
-      email: "marie.dupont@example.com",
-      address: "123 Rue Principale",
-      city: "Port-au-Prince",
-      department: "Ouest",
-      date_of_birthday: "1985-03-15",
-      gender: "F",
-      status: true,
+      id:               "mem-003",
+      first_name:       "Jean-Pierre",
+      last_name:        "Antoine",
+      full_name:        "Jean-Pierre Antoine",
+      id_number:        "112233",
+      email:            "jp.antoine@example.com",
+      phone_number:     "5556677",
+      address:          "12 Rue Capois",
+      city:             "Port-au-Prince",
+      department:       "Ouest",
+      date_of_birthday: "1990-04-22",
+      gender:           "M",
+      photo_profil:     null,
     },
 
-    total_transactions: 2,
-    total_deposits: 50000,
-    total_withdrawals: 0,
+    total_transactions:    0,
+    total_deposits:        0,
+    total_withdrawals:     0,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * GELE — Compte à terme bloqué (litige)
+   * ─────────────────────────────────────────────────────────────────────── */
+  {
+    id:             "acc-004",
+    account_number: "321-654-987-0123",
+    member:         "mem-002",
+    account_type:   "Term Deposit Account",
+    balance:        "50000.00",
+    account_status: "gele",
+    created_by:     "admin-001",
+    created_at:     "2025-01-01T00:00:00.000000Z",
+    updated_at:     "2025-12-11T08:00:00.000000Z",
+
+    id_membre:    "mem-002",
+    typeCompte:   "terme",
+    soldeActuel:  50000,
+
+    dateOuverture:       "2025-01-01",
+    dateFermeture:       null,
+    tauxInteret:         5.5,
+    limiteTrait:         null,
+    limiteCredit:        null,
+    fraisServiceMensuel: 0,
+
+    // Spécifique terme
+    date_echeance:             "2026-01-01",
+    duree_terme_mois:          12,
+    maturite_atteinte:         false,
+    penalite_retrait_anticipe: 2.5,
+
+    member_details: {
+      id:               "mem-002",
+      first_name:       "Marie",
+      last_name:        "Dupont",
+      full_name:        "Marie Dupont",
+      id_number:        "987654",
+      email:            "marie.dupont@example.com",
+      phone_number:     "3456789",
+      address:          "123 Rue Principale",
+      city:             "Port-au-Prince",
+      department:       "Ouest",
+      date_of_birthday: "1985-03-15",
+      gender:           "F",
+      photo_profil:     null,
+    },
+
+    total_transactions:    2,
+    total_deposits:        50000,
+    total_withdrawals:     0,
     last_transaction_date: "2025-01-01",
   },
 
-  // ── Fermés (= archivés) ───────────────────────────────────────────────────
-  // Avant : statusAccount: "archive" → renommé "fermé" (un seul état terminal)
+  /* ──────────────────────────────────────────────────────────────────────────
+   * FERME — Compte fermé récemment (avant archivage)
+   * ─────────────────────────────────────────────────────────────────────── */
   {
-    id: "acc-arch-001",
+    id:             "acc-005",
     account_number: "000-111-222-3333",
-    member: "mem-002",
-    account_type: "Savings Account",
-    balance: "0.00",
-    account_status: false,
-    created_by: "admin-001",
-    created_at: "2023-01-01T00:00:00.000000Z",
-    updated_at: "2025-06-30T00:00:00.000000Z",
+    member:         "mem-002",
+    account_type:   "Savings Account",
+    balance:        "0.00",
+    account_status: "ferme",
+    created_by:     "admin-001",
+    created_at:     "2023-01-01T00:00:00.000000Z",
+    updated_at:     "2025-06-30T00:00:00.000000Z",
 
-    id_membre: "mem-002",
-    typeCompte: "epargne",
-    soldeActuel: 0,
-    statusAccount: "fermé",
+    id_membre:    "mem-002",
+    typeCompte:   "epargne",
+    soldeActuel:  0,
 
-    dateOuverture: "2023-01-01",
-    dateFermeture: "2025-06-30",
-    tauxInteret: 2.0,
+    dateOuverture:       "2023-01-01",
+    dateFermeture:       "2025-06-30",
+    tauxInteret:         2.0,
+    limiteTrait:         null,
+    limiteCredit:        null,
     fraisServiceMensuel: 0,
-    limiteCredit: null,
 
     member_details: {
-      id: "mem-002",
-      first_name: "Marie",
-      last_name: "Dupont",
-      full_name: "Marie Dupont",
-      id_number: "987654",
-      phone_number: "3456789",
-      email: "marie.dupont@example.com",
-      city: "Port-au-Prince",
-      department: "Ouest",
-      gender: "F",
-      status: true,
+      id:               "mem-002",
+      first_name:       "Marie",
+      last_name:        "Dupont",
+      full_name:        "Marie Dupont",
+      id_number:        "987654",
+      email:            "marie.dupont@example.com",
+      phone_number:     "3456789",
+      address:          "123 Rue Principale",
+      city:             "Port-au-Prince",
+      department:       "Ouest",
+      date_of_birthday: "1985-03-15",
+      gender:           "F",
+      photo_profil:     null,
     },
 
-    total_transactions: 45,
-    total_deposits: 80000,
-    total_withdrawals: 80000,
+    total_transactions:    45,
+    total_deposits:        80000,
+    total_withdrawals:     80000,
     last_transaction_date: "2025-06-28",
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * ARCHIVE — État terminal, conservé pour audit
+   * ─────────────────────────────────────────────────────────────────────── */
+  {
+    id:             "acc-006",
+    account_number: "999-888-777-6666",
+    member:         "mem-004",
+    account_type:   "Savings Account",
+    balance:        "0.00",
+    account_status: "archive",
+    created_by:     "admin-001",
+    created_at:     "2020-01-01T00:00:00.000000Z",
+    updated_at:     "2022-12-31T00:00:00.000000Z",
+
+    id_membre:    "mem-004",
+    typeCompte:   "epargne",
+    soldeActuel:  0,
+
+    dateOuverture:       "2020-01-01",
+    dateFermeture:       "2022-12-31",
+    tauxInteret:         1.5,
+    limiteTrait:         null,
+    limiteCredit:        null,
+    fraisServiceMensuel: 0,
+
+    member_details: {
+      id:               "mem-004",
+      first_name:       "Paul",
+      last_name:        "Léger",
+      full_name:        "Paul Léger",
+      id_number:        "445566",
+      email:            "paul.leger@example.com",
+      phone_number:     "9887766",
+      address:          "55 Rue des Cèdres",
+      city:             "Cap-Haïtien",
+      department:       "Nord",
+      date_of_birthday: "1970-09-10",
+      gender:           "M",
+      photo_profil:     null,
+    },
+
+    total_transactions:    120,
+    total_deposits:        150000,
+    total_withdrawals:     150000,
+    last_transaction_date: "2022-12-30",
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// enrichAccountData
-//
-// MODIFICATIONS :
-// - Le type de retour `statusAccount` est désormais 'ouvert' | 'gelé' | 'fermé'.
-// - Si l'API renvoie déjà `statusAccount` → on le garde tel quel.
-// - Sinon fallback minimal sur `account_status` (booléen) :
-//     true  → 'ouvert'
-//     false → 'fermé'
-// ─────────────────────────────────────────────────────────────────────────────
-export function enrichAccountData(apiAccount: any): AccountData {
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * enrichAccountData
+ *
+ * Transforme une réponse brute de l'API en AccountData enrichi pour le front.
+ * Le backend renvoie déjà `account_status` comme enum string.
+ * Cette fonction ajoute uniquement les champs CALCULÉS côté front :
+ *   • id_membre    : alias de member
+ *   • typeCompte   : enum FR mappé depuis account_type
+ *   • soldeActuel  : parseFloat de balance
+ *   • dateOuverture: extraite de created_at
+ * ─────────────────────────────────────────────────────────────────────────────
+ */export function enrichAccountData(apiAccount: AccountData): AccountData {
   const typeMap: Record<string, 'epargne' | 'cheques' | 'terme'> = {
-    'Savings Account': 'epargne',
-    'Checking Account': 'cheques',
+    'Savings Account':      'epargne',
+    'Checking Account':     'cheques',
     'Term Deposit Account': 'terme',
   };
 
-  const status: AccountData['statusAccount'] =
-    apiAccount.statusAccount
-    ?? (apiAccount.account_status ? 'ouvert' : 'fermé');
-
   return {
     ...apiAccount,
-    id_membre: apiAccount.member,
-    typeCompte: typeMap[apiAccount.account_type] || 'epargne',
-    soldeActuel: parseFloat(apiAccount.balance || '0'),
-    statusAccount: status,
-    dateOuverture: apiAccount.created_at?.split('T')[0]
-                || new Date().toISOString().split('T')[0],
-    limiteCredit: apiAccount.limiteCredit ?? null,
+    id_membre:     apiAccount.member,
+    typeCompte:    typeMap[apiAccount.account_type] ?? 'epargne',
+    soldeActuel:   parseFloat(apiAccount.balance || '0'),
+    dateOuverture: apiAccount.dateOuverture
+                ?? apiAccount.created_at?.split('T')[0]
+                ?? new Date().toISOString().split('T')[0],
   };
 }

@@ -4,37 +4,25 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Search, Upload, X,
   ChevronDown,
-  Wallet, PiggyBank, CreditCard, Clock, CheckCircle,
+  Wallet, PiggyBank, CreditCard, Clock,
   Plus,
 } from 'lucide-react';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODIFICATIONS apportées à ce fichier :
-//
-// STATUS_OPTIONS aligné avec le modèle métier (3 valeurs + 'all') :
-//   Avant : 'all' | 'ouvert' | 'en_attente' | 'suspendu' | 'ferme'
-//   Après : 'all' | 'ouvert' | 'gelé'        | 'fermé'
-//
-// → Plus aucun mapping bizarre côté AccountGrid. Les clés ici sont
-//   exactement celles qu'on stocke dans `statusAccount`.
-// selectedStatus: StatusFilter;
-// onStatusChange: (v: StatusFilter) => void;
-// ─────────────────────────────────────────────────────────────────────────────
-import type { StatusFilter } from './AccountGrid'; // adapte le chemin
+import { ExportAllButton } from '@/app/ExportAllButton';
+import { MemberData } from '../members/validations';
+import { AccountData } from './validationsaccount';
 
 interface AccountFilterBarProps {
   filterValue:    string;
   selectedType:   string;
-  selectedStatus: StatusFilter;
   totalCount:     number;
   onSearchChange: (v: string) => void;
   onClear:        () => void;
   onTypeChange:   (v: string) => void;
-  // onStatusChange: (v: string) => void;
-  onStatusChange: (v: StatusFilter) => void;
   onImport?:      () => void;
   importLoading?: boolean;
   onAdd:          () => void;
+  members:        MemberData[];
+  accounts:       AccountData[];
 }
 
 // ─── Dropdown ────────────────────────────────────────────────────────────────
@@ -64,9 +52,9 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
-  filterValue, selectedType, selectedStatus, totalCount,
-  onSearchChange, onClear, onTypeChange, onStatusChange, onAdd,
-  onImport, importLoading = false,
+  filterValue, selectedType, totalCount,
+  onSearchChange, onClear, onTypeChange, onAdd,
+  onImport, importLoading = false, members, accounts,
 }) => {
 
   const TYPE_OPTIONS = [
@@ -76,24 +64,36 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
     { key: 'terme',   label: 'Terme',          icon: Clock      },
   ];
 
-  // 3 statuts (+ 'all'). Mêmes clés que `statusAccount` côté donnée.
-  // const STATUS_OPTIONS = [
-  //   { key: 'all',    label: 'Tous les statuts' },
-  //   { key: 'ouvert', label: 'Ouverts'          },
-  //   { key: 'gelé',   label: 'Gelés'            },
-  //   { key: 'fermé',  label: 'Archive'          },
-  // ];
+  const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label ?? 'Tous les types';
+  const activeCount = selectedType !== 'all' ? 1 : 0;
 
-const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
-  { key: 'all',    label: 'Tous les statuts' },
-  { key: 'ouvert', label: 'Ouverts'          },
-  { key: 'gelé',   label: 'Gelés'            },
-  { key: 'fermé',  label: 'Archive'          },
-];
+  // ── Export : transforme les comptes en lignes prêtes pour CSV ──
+  const accountsForExport = accounts.map(acc => {
+    const member = members.find(m => m.id === acc.member);
+    const memberName = member ? `${member.first_name} ${member.last_name}` : '—';
 
-  const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Tous les types';
-  const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
-  const activeCount = [selectedType !== 'all', selectedStatus !== 'all'].filter(Boolean).length;
+    const typeLabel =
+      acc.typeCompte === 'epargne' ? 'Épargne' :
+      acc.typeCompte === 'cheques' ? 'Chèques' :
+      acc.typeCompte === 'terme'   ? 'Terme'   : '—';
+
+    const statutLabel =
+      acc.account_status === 'actif'      ? 'Actif'      :
+      acc.account_status === 'gele'       ? 'Gelé'       :
+      acc.account_status === 'ferme'      ? 'Fermé'      :
+      acc.account_status === 'en_attente' ? 'En attente' :
+      acc.account_status === 'archive'    ? 'Archivé'    : '—';
+
+    return {
+      numero_compte: acc.account_number,
+      membre:        memberName,
+      email:         member?.email ?? '—',
+      type:          typeLabel,
+      solde:         acc.soldeActuel ?? parseFloat(acc.balance ?? '0'),
+      statut:        statutLabel,
+      depuis:        acc.dateOuverture ?? acc.created_at?.split('T')[0] ?? '—',
+    };
+  });
 
   return (
     <div className="space-y-3">
@@ -123,7 +123,7 @@ const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onAdd}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
             <Plus className="w-4 h-4" />
             Ajouter
@@ -135,10 +135,25 @@ const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
           >
             <Upload className="w-4 h-4" /> {importLoading ? 'Import…' : 'Importer'}
           </button>
+          <ExportAllButton
+            data={accountsForExport}
+            filename="comptes"
+            columns={['numero_compte', 'membre', 'email', 'type', 'solde', 'statut', 'depuis']}
+            headerLabels={{
+              numero_compte: 'Numéro de compte',
+              membre:        'Membre',
+              email:         'E-mail',
+              type:          'Type',
+              solde:         'Solde (HTG)',
+              statut:        'Statut',
+              depuis:        'Depuis',
+            }}
+            separator=";"
+          />
         </div>
       </div>
 
-      {/* ── Ligne 2 : filtres ── */}
+      {/* ── Ligne 2 : filtres (recherche + type uniquement) ── */}
       <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
 
         <div className="flex items-center gap-2">
@@ -181,43 +196,15 @@ const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
           })}
         </Dropdown>
 
-        {/* Filtre statut */}
-        <Dropdown
-          trigger={
-            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
-              selectedStatus !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium'
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-              <CheckCircle className="w-3.5 h-3.5" />
-              {statusLabel}
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          }
-        >
-          {STATUS_OPTIONS.map(opt => (
-            <button
-              key={opt.key}
-              onClick={() => onStatusChange(opt.key)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
-                selectedStatus === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
-              }`}
-            >
-              <CheckCircle className="w-4 h-4 text-[#2E7D32]" />
-              {opt.label}
-            </button>
-          ))}
-        </Dropdown>
-
         {/* Réinitialiser */}
         {activeCount > 0 && (
           <div className="flex items-center gap-2">
             <div className="h-5 w-px bg-gray-200" />
             <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
-              {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
+              Filtre actif
             </span>
             <button
-              onClick={() => { onTypeChange('all'); onStatusChange('all'); }}
+              onClick={() => { onTypeChange('all'); }}
               className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all"
             >
               <X className="w-3 h-3" /> Effacer

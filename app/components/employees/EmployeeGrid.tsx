@@ -19,7 +19,7 @@ import DeleteEmployeeModal      from '@/app/components/employees/modals/DeleteEm
 import EmployeeTransactionModal from '@/app/components/employees/modals/EmployeeTransactionModal';
 
 // Types
-import { EmployeeData, BranchData, PostData } from '@/app/components/employees/validations';
+import { EmployeeData, PostData, BranchData } from '@/app/components/employees/validations';
 import EmployeeTable  from './EmployeeTable';
 import { EmployeeBulkAction } from './BulkActionDropdown';
 
@@ -28,9 +28,9 @@ const EmployeeGrid: React.FC = () => {
 
   // ── Data ──
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
-  const [branches,  setBranches]  = useState<BranchData[]>([]);
-  // const [posts,     setPosts]     = useState<Post[]>([]);
-const [posts, setPosts] = useState<PostData[]>([]);
+  const [branches, setBranches] = useState<BranchData[]>([]);
+    // const [posts,     setPosts]     = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostData[]>([]);
 
   // ── UI ──
   const [isLoading, setIsLoading] = useState(true);
@@ -98,34 +98,33 @@ const [posts, setPosts] = useState<PostData[]>([]);
   // }, [filterValue]);
 
   // ── Hydration ──────────────────────────────────────────────────────────────
-  const hydrateEmployee = useCallback((e: EmployeeData): EmployeeData => {
-    const branch = branches.find(b => b.id === e.branch);
+  // const hydrateEmployee = useCallback((e: EmployeeData): EmployeeData => {
+  //   const branch = branches.find(b => b.id === e.branch);
 
-    const withBranch = e.branch_details ? e : {
-      ...e,
-      branch_details: branch
-        ? { id: branch.id, branch_name: branch.branch_name, branch_code: branch.branch_code }
-        : undefined,
-    };
+  //   const withBranch = e.branch_details ? e : {
+  //     ...e,
+  //     branch_details: branch
+  //       ? { id: branch.id, branch_name: branch.branch_name, branch_code: branch.branch_code }
+  //       : undefined,
+  //   };
 
-    const withPosts = withBranch.posts_details ? withBranch : {
-      ...withBranch,
-      posts_details: Array.isArray(withBranch.posts)
-        ? withBranch.posts
-            .map(pid => posts.find(p => p.id === pid))
-            .filter(Boolean)
-            .map(p => ({
-              id:        p!.id,
-              name:      p!.name || p!.post_name || 'Poste non defini',
-              post_name: p!.post_name,
-            }))
-        : [],
-    };
+  //   const withPosts = withBranch.posts_details ? withBranch : {
+  //     ...withBranch,
+  //     posts_details: Array.isArray(withBranch.posts)
+  //       ? withBranch.posts
+  //           .map(pid => posts.find(p => p.id === pid))
+  //           .filter(Boolean)
+  //           .map(p => ({
+  //             id:        p!.id,
+  //             name:      p!.name || p!.post_name || 'Poste non defini',
+  //             post_name: p!.post_name,
+  //           }))
+  //       : [],
+  //   };
 
-    return withPosts;
-  }, [branches, posts]);
-
-  // ── Filter + sort ──────────────────────────────────────────────────────────
+  //   return withPosts;
+  // }, [branches, posts]);
+// ── 1. Filter + sort sur les données BRUTES ───────────────────────────────
   const filteredEmployees = useMemo(() => {
     let list = [...employees];
 
@@ -140,17 +139,11 @@ const [posts, setPosts] = useState<PostData[]>([]);
       );
     }
 
-    // if (selectedBranch !== 'all')
-    //   list = list.filter(e => e.branch === selectedBranch);
-
-    // if (selectedStatus !== 'all')
-    //   list = list.filter(e => (e.statutEmploye ?? 'actif') === selectedStatus);
     if (selectedBranch !== 'all')
       list = list.filter(e => e.branch === selectedBranch);
 
-      // ⭐ Nouveau : filtre basé sur l’onglet
-      list = list.filter(e =>
-        (e.statutEmploye ?? 'actif') === activeEmplTab
+    list = list.filter(e =>
+      (e.statutEmploye ?? 'actif') === activeEmplTab
     );
 
     const now = new Date();
@@ -175,10 +168,21 @@ const [posts, setPosts] = useState<PostData[]>([]);
     );
   }, [employees, debouncedValue, selectedBranch, activeEmplTab, selectedFilter]);
 
-  const hydratedEmployees = useMemo(
-    () => filteredEmployees.map(hydrateEmployee),
-    [filteredEmployees, hydrateEmployee],
-  );
+
+  // ── 2. Hydrater UNIQUEMENT la liste filtrée ───────────────────────────────
+  const hydratedEmployees = useMemo<EmployeeData[]>(() => {
+    const branchesById = new Map(branches.map(b => [b.id, b]));
+    const postsById = new Map(posts.map(p => [p.id, p]));
+
+    return filteredEmployees.map(emp => ({
+      ...emp,
+      branch_details: branchesById.get(emp.branch),
+      posts_details: (emp.posts ?? [])
+        .map(id => postsById.get(id))
+        .filter((p): p is PostData => p !== undefined),
+      nomComplet: `${emp.first_name ?? ''} ${emp.last_name ?? ''}`.trim(),
+    }));
+  }, [filteredEmployees, branches, posts]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdd              = () => { setSelectedEmployee(null); setShowEditModal(true); };
@@ -188,7 +192,6 @@ const [posts, setPosts] = useState<PostData[]>([]);
   const handleViewTransactions = (e: EmployeeData) => { setSelectedEmployee(e); setShowTransactionModal(true); };
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
   const onClear                = useCallback(() => setFilterValue(''), []);
-  const [exportLoading, setExportLoading] = useState(false);
   // ── Sync filtre statut ↔ tab ───────────────────────────────────────────────
   const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
@@ -197,14 +200,6 @@ const [posts, setPosts] = useState<PostData[]>([]);
     else    setActiveEmplTab('actif');
   };
 
-  const handleExportAll = async () => {
-    setExportLoading(true);
-    try {
-      await exportEmployees(employees); // tous, pas filteredEmployees
-    } finally {
-      setExportLoading(false);
-    }
-  };
   // ── Bulk action ────────────────────────────────────────────────────────────
   // Export géré directement dans EmployeeTable — ici on traite uniquement les
   // actions métier qui nécessitent un appel API.
@@ -296,8 +291,8 @@ const [posts, setPosts] = useState<PostData[]>([]);
         filterValue={filterValue}
         selectedFilter={selectedFilter}
         selectedBranch={selectedBranch}
-        selectedStatus={selectedStatus}
         branches={branches}
+        employees={employees} // ← AJOUTER (les données complètes)
         onSearchChange={onSearchChange}
         onClear={onClear}
         onFilterChange={setSelectedFilter}
@@ -305,9 +300,8 @@ const [posts, setPosts] = useState<PostData[]>([]);
         onStatusChange={handleStatusChange}
         onAdd={handleAdd}
         onImport={() => console.log('Import')}
-        totalCount={filteredEmployees.length}
-        onExport={handleExportAll}      // ← nouveau
-
+        totalCount={filteredEmployees.length} 
+        posts={posts}                      
       />
 
       {error && (

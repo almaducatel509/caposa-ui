@@ -6,6 +6,11 @@ import {
   ChevronDown, CheckCircle,
   Calendar, Filter, Plus, Wallet,
 } from 'lucide-react';
+import { MemberData } from './validations';
+import { ExportAllButton } from '@/app/ExportAllButton';
+
+import { computeMemberFinancials } from './utils';
+import { accountTypeLabel, formatMemberName } from './validations';
 
 interface MemberFilterBarProps {
   filterValue:    string;
@@ -19,6 +24,7 @@ interface MemberFilterBarProps {
   onImport?:      () => void;
   onAdd:          () => void;
   importLoading?: boolean;
+  members:MemberData[];
 }
 
 // ─── Custom Dropdown ───────────────────────────────────────────────────────────
@@ -50,7 +56,7 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
   filterValue, selectedType, selectedStatus, totalCount,
   onSearchChange, onClear, onTypeChange, onStatusChange, onAdd,
-  onImport, importLoading = false,
+  onImport, importLoading = false, members,
 }) => {
 
   const TYPE_OPTIONS = [
@@ -60,18 +66,47 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
     { key: 'thisYear',  label: 'Cette année',   icon: Calendar },
   ];
 
-  // ← clés alignées avec handleStatusChange et matchStatus dans MemberGrid
-  const STATUS_OPTIONS = [
-    { key: 'all',       label: 'Tous les statuts' },
-    { key: 'actif',     label: 'Actifs'           },
-    { key: 'inactif',   label: 'Inactifs'         },
-    { key: 'suspended', label: 'Suspendus'        },
-  ];
-
+  
   const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Période';
-  const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Statut';
+  // const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Statut';
   const activeCount = [selectedType !== 'all', selectedStatus !== 'all'].filter(Boolean).length;
+ 
+const membersForExport = members.map((m) => {
+  const hasAccounts = (m.accounts?.length ?? 0) > 0;
 
+  const { totalAssets, totalLiabilities, netBalance, activeAccountsCount } = 
+    computeMemberFinancials(m.accounts);
+
+  // Types de comptes uniques (pour éviter "Épargne, Épargne, Chèques")
+  const accountTypes = hasAccounts
+    ? Array.from(new Set(
+        m.accounts!
+          .filter(acc => acc.account_status !== false)
+          .map(acc => accountTypeLabel(acc.account_type))
+      )).join(', ') || '—'
+    : '—';
+
+  return {
+    member_id: m.member_number ?? '—',
+    name: formatMemberName(m),
+    first_name: m.first_name ?? '—',
+    last_name: m.last_name ?? '—',
+    email: m.email ?? '—',
+    phone_number: m.phone_number ?? '—',
+    city: m.city ?? '—',
+    department: m.department ?? '—',
+    status: m.status ?? '—',
+    accounts_count: hasAccounts ? activeAccountsCount : '—',
+    account_types: accountTypes,
+    total_assets: hasAccounts ? totalAssets : '—',
+    total_liabilities: hasAccounts ? totalLiabilities : '—',
+    net_balance: hasAccounts ? netBalance : '—',
+  };
+});
+  
+  console.log('📊 Données pour export :', membersForExport);
+  console.table(membersForExport);  // ← bonus : vue tableau dans la console
+  
   return (
     <div className="flex flex-col gap-4">
 
@@ -112,6 +147,31 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           >
             <Upload className="w-4 h-4" /> {importLoading ? 'Import…' : 'Importer'}
           </button>
+          <ExportAllButton
+            data={membersForExport}
+            filename="membres"
+            columns={[
+              'first_name',
+              'last_name',
+              'email',
+              'phone_number',
+              'city',
+              'department',
+              'status',
+              // 'balance',
+            ]}
+            headerLabels={{
+              first_name: 'Prénom',
+              last_name: 'Nom',
+              email: 'E-mail',
+              phone_number: 'Téléphone',
+              city: 'Ville',
+              department: 'Département',
+              status: 'Statut',
+              // balance: 'Solde',
+            }}
+            separator=";"
+          />
         </div>
       </div>
 
@@ -158,33 +218,6 @@ const MemberFilterBar: React.FC<MemberFilterBarProps> = ({
           })}
         </Dropdown>
 
-        {/* Filtre statut */}
-        <Dropdown
-          trigger={
-            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
-              selectedStatus !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium'
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-              <CheckCircle className="w-3.5 h-3.5" />
-              {statusLabel}
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          }
-        >
-          {STATUS_OPTIONS.map(opt => (
-            <button
-              key={opt.key}
-              onClick={() => onStatusChange(opt.key)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
-                selectedStatus === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
-              }`}
-            >
-              <CheckCircle className="w-4 h-4 text-[#2E7D32]" />
-              {opt.label}
-            </button>
-          ))}
-        </Dropdown>
 
         {/* Réinitialiser */}
         {activeCount > 0 && (

@@ -5,7 +5,7 @@ import {
   X, AlertTriangle, CheckCircle2, XCircle,
   MapPin, Briefcase, Archive, Loader2, CheckCheck,
 } from 'lucide-react';
-import { BranchData, Post, EmployeeData } from '@/app/components/employees/validations';
+import { EmployeeData, PostData, BranchData } from '@/app/components/employees/validations';
 import { EmployeeBulkAction } from '../BulkActionDropdown';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ interface BulkActionModalProps {
   action:    EmployeeBulkAction | null;
   employees: EmployeeData[];
   branches:  BranchData[];
-  posts:     Post[];
+  posts: PostData[];
   onClose:   () => void;
   onConfirm: (action: EmployeeBulkAction,eligibleIds: string[], payload?: string, ) => Promise<void>;
 }

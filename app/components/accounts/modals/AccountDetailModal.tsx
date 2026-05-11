@@ -72,7 +72,7 @@ export default function AccountDetailModal({ isOpen, onClose, account }: Account
 
   if (!isOpen || !account) return null;
 
-  const status  = account.statutCompte ?? 'actif';
+  const status  = account.account_status ?? 'actif';
   const sCfg    = STATUS_CFG[status]  ?? STATUS_CFG['actif'];
   const tCfg    = TYPE_CFG[account.typeCompte ?? ''] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: account.typeCompte ?? '—' };
   const solde   = account.soldeActuel ?? parseFloat(account.balance ?? '0');

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 
-interface ExportAllButtonProps<T extends Record<string, unknown>> {
+interface ExportAllButtonProps<T extends object> {
   /** Données à exporter */
   data: T[];
   /** Nom du fichier (sans extension, sans date) */
@@ -54,7 +54,7 @@ const escapeCSVValue = (val: unknown): string => {
   return `"${str.replace(/"/g, '""')}"`;
 };
 
-export const ExportAllButton = <T extends Record<string, unknown>>({
+export const ExportAllButton = <T extends object>({
   data,
   filename = "export",
   label = "Exporter tout",
@@ -88,10 +88,13 @@ export const ExportAllButton = <T extends Record<string, unknown>>({
       const csv = [headerRow, ...dataRows].join("\r\n");
 
       // 5. BOM UTF-8 pour qu'Excel lise correctement les accents
-      const blob = new Blob(["\uFEFF" + csv], {
-        type: "text/csv;charset=utf-8;",
+      // const blob = new Blob(["\uFEFF" + csv], {
+      //   type: "text/csv;charset=utf-8;",
+      // });
+      const sepHint = `sep=${separator}\r\n`;
+      const blob = new Blob(["\uFEFF" + sepHint + csv], { 
+        type: "text/csv;charset=utf-8;" 
       });
-
       // 6. Téléchargement
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

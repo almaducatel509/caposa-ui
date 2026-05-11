@@ -3,9 +3,7 @@
 // ============================================
 'use client';
 import AccountGrid from '@/app/components/accounts/AccountGrid';
-import PageHeader from '@/app/components/header';
-import { FaWallet } from 'react-icons/fa';
-import { Button } from '@heroui/react';
+
 
 export default function Accounts() {
   const handleExportReport = () => {

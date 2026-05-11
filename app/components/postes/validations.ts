@@ -1,25 +1,25 @@
 import { z } from 'zod';
 
-// Define the schema based on the API structure
 export const postSchema = z.object({
-  id: z.string().optional(), // ← AJOUTEZ ça
+  id: z.string().optional(),
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
   deposit: z.boolean(),
   withdrawal: z.boolean(),
-  transfer: z.boolean(),
+  transfer: z.boolean(),  // ← anglais (cohérent avec l'API)
 });
-export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
-// Define the type for the Post interface
+export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 export type PostDataBase = z.infer<typeof postSchema>;
 
-export interface PostData{
-  post_name?: string | undefined;  // ← CHANGER : string → string | undefined (ajouter le ?)
-  id:string;
-  name:string;
-  description:string;
-  deposit:boolean;
-  withdrawal:boolean;
-  transfert:boolean;
+export interface PostData {
+  id: string;
+  name: string;
+  description: string;
+  deposit: boolean;
+  withdrawal: boolean;
+  transfer: boolean;          // ← corrigé : transfer (pas transfert)
+  post_name?: string;         // optionnel pour rétrocompatibilité
+  created_at?: string;
+  updated_at?: string;
 }
