@@ -4,13 +4,14 @@
  * Utilise NextAuth — le rôle vient du JWT Django décodé dans auth.ts (NextAuth).
  * ───────────────────────────────────────────────────────────────────────────── */
 
-export type UserRole = 'caissier' | 'directeur' | 'superviseur' | 'tresorier';
+export type UserRole = 'caissier' | 'directeur' | 'superviseur' | 'tresorier' | 'agent_credit';
 
 export const ROLE_ROUTES: Record<UserRole, string> = {
-  caissier:    '/dashboard/cashier',
-  directeur:   '/dashboard/director',
+  caissier: '/dashboard/cashier',
+  directeur: '/dashboard/director',
   superviseur: '/dashboard/supervisor',
-  tresorier:   '/dashboard/tresorier',
+  tresorier: '/dashboard/tresorier',
+  agent_credit: ""
 };
 
 /* ─── Temporaire — hardcodé pour tester sans API ─────────────────────────── */

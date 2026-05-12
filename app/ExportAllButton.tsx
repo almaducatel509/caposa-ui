@@ -18,6 +18,8 @@ interface ExportAllButtonProps<T extends object> {
   onSuccess?: (count: number) => void;
   /** Callback en cas d'erreur */
   onError?: (error: Error) => void;
+    /** Ajoute "sep=" pour Excel. À désactiver pour Google Sheets/LibreOffice. Défaut: true */
+  excelSepHint?: boolean;   // ← TU AJOUTES ICI
 }
 
 /**
@@ -63,6 +65,7 @@ export const ExportAllButton = <T extends object>({
   separator = ",",
   onSuccess,
   onError,
+  excelSepHint = true,        // ← TU AJOUTES ICI
 }: ExportAllButtonProps<T>) => {
   const [loading, setLoading] = useState(false);
 
@@ -87,13 +90,9 @@ export const ExportAllButton = <T extends object>({
       // 4. Assemblage avec CRLF (RFC 4180, meilleure compat Windows/Excel)
       const csv = [headerRow, ...dataRows].join("\r\n");
 
-      // 5. BOM UTF-8 pour qu'Excel lise correctement les accents
-      // const blob = new Blob(["\uFEFF" + csv], {
-      //   type: "text/csv;charset=utf-8;",
-      // });
-      const sepHint = `sep=${separator}\r\n`;
-      const blob = new Blob(["\uFEFF" + sepHint + csv], { 
-        type: "text/csv;charset=utf-8;" 
+      const sepHint = excelSepHint ? `sep=${separator}\r\n` : "";
+      const blob = new Blob(["\uFEFF" + sepHint + csv], {
+        type: "text/csv;charset=utf-8;",
       });
       // 6. Téléchargement
       const url = URL.createObjectURL(blob);

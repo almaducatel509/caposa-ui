@@ -186,6 +186,8 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
               // statut: 'Statut', a ajouter apres l'update de l'api ajouter dans columns aussi en haut
             }}
             separator=";"
+            excelSepHint={false}   // ← AJOUTE ÇA pour les accents
+
           />
         </div>
       </div>

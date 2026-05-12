@@ -14,9 +14,33 @@ import LoanBulkActionModal, { LoanForBulk } from './modals/LoanBulkActionModal';
 import LoanFilterBar, {
   LoanFilterPeriod, LoanFilterType, LoanFilterRange,
 } from './LoanFilterBar';
-import EditLoanModal, { LoanForEdit, EmployeeOption } from './modals/EditLoanModal';
+// ⚠️ Renommé : EditLoanModal → ReviewLoanModal (le composant fait du "review" pas de l'édition libre)
+import ReviewLoanModal, { LoanForEdit, EmployeeOption, } from './modals/ReviewLoanModal';
 import type { LoanFormData } from '../transactions/validation/loanSchema';
 import NewLoanModal from './modals/NewLoanModal';
+import { UserRole } from '@/app/lib/auth';
+
+// ─── useAuth temporaire ───────────────────────────────────────────────────────
+// ⚠️ MOCK : à remplacer par le vrai hook quand `@/app/lib/auth` exposera `useAuth()`.
+//    L'ancienne version `throw new Error(...)` cassait toute la page au montage.
+//    Cette version mock permet de tester l'UI en attendant le vrai backend.
+//
+// Pour tester différents rôles, change la valeur de MOCK_ROLE ci-dessous :
+//   - 'superviseur'  → voit "Approuver / Rejeter" sur les demandes
+//   - 'caissier'     → voit "Décaisser" sur les prêts approuvés
+//   - 'agent_credit' → ne voit que assignation + notes
+const MOCK_ROLE: UserRole = 'superviseur';
+
+function useAuth(): { user: { employee: { posts_details: { code: string }[] } } | null } {
+  // TODO: remplacer par le vrai useAuth depuis '@/app/lib/auth'
+  return {
+    user: {
+      employee: {
+        posts_details: [{ code: MOCK_ROLE }],
+      },
+    },
+  };
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LoanStatus  = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
@@ -84,6 +108,17 @@ const PURPOSE_LABELS: Record<LoanPurpose, string> = {
   plantation: 'Plantation', construction: 'Construction', scolarite: 'Scolarité',
   commerce:   'Commerce',   elevage: 'Élevage',           equipement: 'Équipement',
   autre:      'Autre',
+};
+
+// ─── Règles UX : qui peut agir sur quel statut ────────────────────────────────
+// ✅ Sert à griser l'icône Edit/Review quand l'utilisateur n'a rien à faire sur ce prêt.
+//    Le backend reste l'autorité finale, mais on évite à l'utilisateur de cliquer pour rien.
+const CAN_REVIEW: Record<UserRole, LoanStatus[]> = {
+  superviseur: ['en_attente'],
+  caissier: ['approuve', 'decaisse'],
+  agent_credit: ['en_attente', 'approuve', 'decaisse'],
+  directeur: [],
+  tresorier: []
 };
 
 // ─── Liste mock des employés (pour le champ Assigné à) ────────────────────────
@@ -205,6 +240,15 @@ function getEffectiveTab(l: LoanData): TabId {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function LoansTable() {
+  // ── Auth ──
+  const { user } = useAuth();
+
+  const userRole: UserRole =
+    user?.employee?.posts_details?.some(p => p.code === 'superviseur') ? 'superviseur'
+    : user?.employee?.posts_details?.some(p => p.code === 'caissier')   ? 'caissier'
+    : 'agent_credit';
+
+  // ── State général ──
   const [activeTab,      setActiveTab]      = useState<TabId>('demandes');
   const [sortField,      setSortField]      = useState('created_at');
   const [sortDir,        setSortDir]        = useState<'asc' | 'desc'>('desc');
@@ -219,11 +263,11 @@ export default function LoansTable() {
   const [activeAction,   setActiveAction]   = useState<LoanBulkAction | null>(null);
   const [detailTx,       setDetailTx]       = useState<TransactionDetail | null>(null);
 
-  // ── Modals ───────────────────────────────────────────────────────────────
+  // ── Modals ──
   const [newLoanOpen, setNewLoanOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<LoanData | null>(null);
 
-  // ── Données (state local pour refléter les modifs) ───────────────────────
+  // ── Données (state local pour refléter les modifs) ──
   const [loans, setLoans] = useState<LoanData[]>(() => generateLoans());
 
   const counts = useMemo(() => ({
@@ -245,8 +289,8 @@ export default function LoansTable() {
         || l.member_name.toLowerCase().includes(q)
         || l.member_id.toLowerCase().includes(q)
         || String(l.id).includes(q);
-      const matchType   = selectedType === 'all' || l.loan_details.loan_type === selectedType;
-      const matchRange_ = matchesRange(l.amount, selectedRange);
+      const matchType    = selectedType === 'all' || l.loan_details.loan_type === selectedType;
+      const matchRange_  = matchesRange(l.amount, selectedRange);
       const matchPeriod_ = matchesPeriod(l.created_at, selectedPeriod);
       return matchSearch && matchType && matchRange_ && matchPeriod_;
     });
@@ -305,7 +349,7 @@ export default function LoansTable() {
                         : isDemandesTab ? 'pending'
                         : 'active';
 
-  // ── Colonnes adaptatives ──────────────────────────────────────────────────
+  // ── Colonnes adaptatives ──
   const COLS = useMemo(() => [
     { label: 'Membre',      field: 'member_name' },
     { label: 'Type',        field: 'loan_type'   },
@@ -317,7 +361,7 @@ export default function LoansTable() {
     { label: 'Date',        field: 'created_at'  },
   ], [isDemandesTab]);
 
-  // ── Détail ────────────────────────────────────────────────────────────────
+  // ── Détail (vue read-only) ──
   const STATUS_MAP: Record<LoanStatus, TransactionDetail['status']> = {
     en_attente: 'en_attente', approuve: 'en_cours', decaisse: 'decaisse',
     rembourse:  'rembourse',  rejete: 'echoue',     annule: 'annule',
@@ -332,10 +376,10 @@ export default function LoansTable() {
     caisse_numero: l.caisse_numero, caisse_id: l.caisse_id, session_id: l.session_id,
   });
 
-  // ── Ouvrir le modal d'édition ─────────────────────────────────────────────
-  const handleEdit = (l: LoanData) => setEditingLoan(l);
+  // ── Ouvrir le modal d'examen ──
+  const handleReview = (l: LoanData) => setEditingLoan(l);
 
-  // ── Conversion LoanData → LoanForEdit pour le modal ───────────────────────
+  // ── Conversion LoanData → LoanForEdit pour le modal ──
   const loanForEdit = useMemo<LoanForEdit | null>(() => {
     if (!editingLoan) return null;
     return {
@@ -357,26 +401,85 @@ export default function LoansTable() {
     };
   }, [editingLoan]);
 
-  const handleEditConfirm = async (
+  // ⚠️ ANCIENNE VERSION — remplacée par handleReviewConfirm ci-dessous
+  // const handleEditConfirm = async (
+  //   loanId: string | number,
+  //   changes: { status?: LoanStatus; reason?: string; assigned_to?: string; notes?: string },
+  // ) => {
+  //   console.log('Édition prêt:', loanId, changes);
+  //   await new Promise(r => setTimeout(r, 400));
+  //   setLoans(prev => prev.map(l => { /* ... */ }));
+  // };
+
+  // ── Confirmation des actions du modal Review ──
+  const handleReviewConfirm = async (
     loanId: string | number,
-    changes: { status?: LoanStatus; reason?: string; assigned_to?: string; notes?: string },
+    changes: {
+      status?:      LoanStatus;
+      reason?:      string;
+      assigned_to?: string;
+      notes?:       string;
+      password?:    string;
+    },
   ) => {
-    // TODO: brancher l'API ici
-    console.log('Édition prêt:', loanId, changes);
-    await new Promise(r => setTimeout(r, 400));
-    // Mise à jour locale optimiste
-    setLoans(prev => prev.map(l => {
-      if (l.id !== loanId) return l;
-      return {
-        ...l,
-        status:      changes.status      ?? l.status,
-        assigned_to: changes.assigned_to !== undefined ? changes.assigned_to : l.assigned_to,
-        notes:       changes.notes       !== undefined ? changes.notes       : l.notes,
-      };
-    }));
+    try {
+      // ─── ACTION DE WORKFLOW (changement de statut) ───
+      // TODO: brancher les endpoints API quand loanService sera créé
+      if (changes.status === 'approuve') {
+        // await loanService.approve(loanId, {
+        //   password: changes.password!,
+        //   reason:   changes.reason,
+        // });
+        console.log('TODO API approve:', loanId, { password: '***', reason: changes.reason });
+      } else if (changes.status === 'rejete') {
+        // await loanService.reject(loanId, {
+        //   password: changes.password!,
+        //   reason:   changes.reason!,
+        // });
+        console.log('TODO API reject:', loanId, { password: '***', reason: changes.reason });
+      } else if (changes.status === 'decaisse') {
+        // await loanService.disburse(loanId, {
+        //   session: currentSessionId,  // viendra du contexte caisse
+        //   reason:  changes.reason,
+        // });
+        console.log('TODO API disburse:', loanId, { reason: changes.reason });
+      } else if (changes.status === 'rembourse') {
+        // await loanService.close(loanId, { reason: changes.reason });
+        console.log('TODO API close (rembourse):', loanId, { reason: changes.reason });
+      }
+
+      // ─── CHANGEMENTS NEUTRES (notes, assignation) — patch en complément ───
+      if (changes.assigned_to !== undefined || changes.notes !== undefined) {
+        // await loanService.patch(loanId, {
+        //   assigned_to: changes.assigned_to,
+        //   notes:       changes.notes,
+        // });
+        console.log('TODO API patch:', loanId, {
+          assigned_to: changes.assigned_to,
+          notes:       changes.notes,
+        });
+      }
+
+      // ─── Mise à jour locale optimiste (à retirer quand l'API renverra le prêt à jour) ───
+      setLoans(prev => prev.map(l => {
+        if (l.id !== loanId) return l;
+        return {
+          ...l,
+          status:      changes.status      ?? l.status,
+          assigned_to: changes.assigned_to !== undefined ? changes.assigned_to : l.assigned_to,
+          notes:       changes.notes       !== undefined ? changes.notes       : l.notes,
+        };
+      }));
+
+      // Quand l'API sera branchée :
+      // await refetchLoans();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du prêt:', error);
+      throw error;  // propage l'erreur pour que le modal puisse l'afficher
+    }
   };
 
-  // ── Bulk actions ──────────────────────────────────────────────────────────
+  // ── Bulk actions ──
   const bulkLoans: LoanForBulk[] = selectedLoans.map(l => ({
     id: l.id,
     member_name: l.member_name,
@@ -400,7 +503,7 @@ export default function LoansTable() {
     setActiveAction(null);
   };
 
-  // ── Nouveau prêt ──────────────────────────────────────────────────────────
+  // ── Nouveau prêt ──
   const handleNewLoanSubmit = async (data: LoanFormData): Promise<void> => {
     console.log('Nouveau prêt:', data);
     await new Promise<void>(r => setTimeout(r, 400));
@@ -509,7 +612,7 @@ export default function LoansTable() {
         )}
 
         {/* Header colonnes */}
-        <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
+        <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
           style={{ display: 'grid', gridTemplateColumns: GRID }}>
           <div className="flex items-center justify-center">
             <button onClick={toggleAll}
@@ -555,6 +658,9 @@ export default function LoansTable() {
             const progress    = Math.min(100, Math.max(0, Math.round(rawProgress)));
             const isLate      = loan.loan_details.late_days > 0;
             const isCritical  = loan.loan_details.late_days >= 30;
+
+            // ✅ Le bouton Edit/Review est actif seulement si le rôle peut agir sur ce statut
+            const canReview = !isArchiveTab && CAN_REVIEW[userRole].includes(loan.status);
 
             return (
               <div key={loan.id}
@@ -661,9 +767,19 @@ export default function LoansTable() {
                     <Eye className="w-3.5 h-3.5" />
                   </button>
 
+                  {/* ✅ Bouton Review : actif si le rôle peut agir, grisé sinon */}
                   {!isArchiveTab && (
-                    <button title="Modifier" onClick={() => handleEdit(loan)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32] transition-colors">
+                    <button
+                      title={canReview
+                        ? 'Examiner / agir sur ce prêt'
+                        : `En lecture seule pour votre rôle (${userRole}) à ce statut`}
+                      onClick={() => canReview && handleReview(loan)}
+                      disabled={!canReview}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        canReview
+                          ? 'text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32] cursor-pointer'
+                          : 'text-gray-200 cursor-not-allowed'
+                      }`}>
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -741,12 +857,14 @@ export default function LoansTable() {
         onSubmit={handleNewLoanSubmit}
       />
 
-      <EditLoanModal
+      <ReviewLoanModal
         isOpen={editingLoan !== null}
         loan={loanForEdit}
         employees={MOCK_EMPLOYEES}
+        //  {/* ✅ connecté à l'utilisateur authentifié */}
+        currentUserRole={userRole}   
         onClose={() => setEditingLoan(null)}
-        onConfirm={handleEditConfirm}
+        onConfirm={handleReviewConfirm}
       />
     </div>
   );

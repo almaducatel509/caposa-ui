@@ -58,7 +58,7 @@ export const links: MainLink[] = [
     icon: GrTransaction,
     hasSubmenu: true,
     subLinks: [
-      { name: 'Toutes', href: '/dashboard/transactions', icon: FaClipboardList },
+      // { name: 'Toutes', href: '/dashboard/transactions', icon: FaClipboardList },
       { name: 'Dépôts', href: '/dashboard/transactions/deposits', icon: GiReceiveMoney },
       { name: 'Retraits', href: '/dashboard/transactions/withdrawals', icon: GiPayMoney },
       { name: 'Transferts', href: '/dashboard/transactions/transfers', icon: FaExchangeAlt },
@@ -70,7 +70,7 @@ export const links: MainLink[] = [
     icon: FaHandHoldingUsd,
     hasSubmenu: true,
     subLinks: [
-      { name: 'Tous', href: '/dashboard/loans', icon: FaClipboardList },
+      // { name: 'Tous', href: '/dashboard/loans', icon: FaClipboardList },
       { name: 'Demandes', href: '/dashboard/loans/loanList', icon: FaMoneyCheckAlt },
     ],
   },

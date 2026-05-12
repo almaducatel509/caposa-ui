@@ -67,13 +67,6 @@ const inputCls = (err?: string) =>
       : 'border-gray-200 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20'
   }`;
 
-// ─── CloseSessionModal ────────────────────────────────────────────
-
-interface CloseModalProps {
-  session:   CaisseSession;
-  onClose:   () => void;
-  onSuccess: () => void;
-}
 
 // ─── Props ───────────────────────────────────────────────────────
 

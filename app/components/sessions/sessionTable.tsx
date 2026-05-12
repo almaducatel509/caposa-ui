@@ -12,6 +12,7 @@ import {
 import { CaisseSession } from '@/types/caisse';
 import SessionBulkActionModal from './modals/SessionBulkActionModal';
 import SessionBulkActionDropdown, { SessionBulkAction } from './SessionBulkActionDropdown';
+
 type TabId = 'toutes' | 'ouverte' | 'fermée';
 
 interface SessionTableProps {

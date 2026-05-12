@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   History, LogIn, LogOut,
   Banknote, Loader2, RefreshCw, Plus,
@@ -20,7 +20,11 @@ import SessionTable from './sessionTable';
 
 import { useRouter } from 'next/navigation';
 import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
-import { BranchData, Holiday, OpeningHour } from '../branches/validations';
+import { BranchData,   } from '../branches/validations';
+import { Holiday } from '../holidays/validations';
+//chemin douteux
+import { OpeningHour } from '@/types/branche';
+import { ExportAllButton } from '@/app/ExportAllButton';
 
 // ═══════════════════════════════════════════════════════════════
 // MOCK_SESSIONS — données réalistes pour développement UI
@@ -200,7 +204,24 @@ export default function SessionsComponent() {
       style: 'currency', currency: 'HTG', minimumFractionDigits: 0,
     }).format(v);
 
-  if (loading) {
+  
+  const exportData = useMemo(() => sessions.map(s => ({
+    date: s.ouverture_at ? new Date(s.ouverture_at).toLocaleDateString('fr-CA') : '',
+    branche: s.branch_name ?? s.branch ?? '',
+    caisse: s.numero_caisse ?? '',
+    ouvert_par: s.caissier_nom ?? s.username ?? '',
+    ferme_par: s.fermeture_at ? (s.forcee_par ?? s.superviseur ?? '') : '',
+    total_transactions: s.nb_transactions ?? 0,
+    total_entrees: s.total_entrees ?? 0,
+    total_sorties: s.total_sorties ?? 0,
+    montant_ouverture: s.montant_ouverture,
+    montant_fermeture: s.montant_fermeture ?? '',
+    ecart: s.montant_fermeture != null ? s.montant_fermeture - s.montant_ouverture : '',
+    statut: s.statut,
+    notes: s.notes_completes ?? '',
+  })), [sessions]);
+
+if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
@@ -210,7 +231,6 @@ export default function SessionsComponent() {
       </div>
     );
   }
-
   return (
     <>
       {/* Modal ouverture */}
@@ -287,6 +307,30 @@ export default function SessionsComponent() {
               <Plus className="w-4 h-4" />
               Démarrer une session
             </button>
+            <ExportAllButton
+              data={exportData}
+              filename="sessions"
+              label="Exporter"
+              separator=","
+              excelSepHint={false}   // ← AJOUTE ÇA pour les accents
+              headerLabels={{
+                date: 'Date',
+                branche: 'Branche',
+                caisse: 'Caisse',
+                ouvert_par: 'Ouvert par',
+                ferme_par: 'Fermé par',
+                total_transactions: 'Total transactions',
+                total_entrees: 'Total entrées',
+                total_sorties: 'Total sorties',
+                montant_ouverture: 'Montant ouverture',
+                montant_fermeture: 'Montant fermeture',
+                ecart: 'Écart',
+                statut: 'Statut',
+                notes: 'Notes',
+              }}
+            />
+            
+
             <button
               onClick={() => load(true)}
               disabled={refreshing}

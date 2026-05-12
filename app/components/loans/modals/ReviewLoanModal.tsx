@@ -4,10 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   X, Landmark, Lock, AlertTriangle, Loader2,
   User, CheckCircle2, XCircle, Banknote, Clock, Archive,
+  ShieldCheck,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type LoanStatus = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
+export type UserRole = 'caissier' | 'agent_credit' | 'superviseur';
 
 export interface LoanForEdit {
   id:              number | string;
@@ -34,36 +36,80 @@ export interface EmployeeOption {
   name: string;
 }
 
-interface EditLoanModalProps {
-  isOpen:     boolean;
-  loan:       LoanForEdit | null;
-  employees:  EmployeeOption[];
-  onClose:    () => void;
-  onConfirm:  (loanId: string | number, changes: {
+interface ReviewLoanModalProps {
+  isOpen:          boolean;
+  loan:            LoanForEdit | null;
+  employees:       EmployeeOption[];
+  currentUserRole: UserRole;
+  onClose:         () => void;
+  onConfirm: (loanId: string | number, changes: {
     status?:      LoanStatus;
     reason?:      string;
     assigned_to?: string;
     notes?:       string;
+    password?:    string;
   }) => Promise<void>;
 }
 
-// ─── Règles de transition de statut ───────────────────────────────────────────
-const STATUS_TRANSITIONS: Record<LoanStatus, LoanStatus[]> = {
-  en_attente: ['approuve', 'rejete'],
-  approuve:   ['decaisse', 'rejete'],
-  decaisse:   ['rembourse'],   // en général auto quand solde = 0, mais manuel possible
-  rembourse:  [],              // final
-  rejete:     [],              // final
-  annule:     [],              // final
+// ─── Règles de transition ─────────────────────────────────────────────────────
+// ⚠️ CODE MORT — remplacé par STATUS_TRANSITIONS_BY_ROLE ci-dessous.
+//    Conservé en commentaire pour référence pendant la transition.
+// const STATUS_TRANSITIONS: Record<LoanStatus, LoanStatus[]> = {
+//   en_attente: ['approuve', 'rejete'],
+//   approuve:   ['decaisse', 'rejete'],
+//   decaisse:   ['rembourse'],
+//   rembourse:  [],
+//   rejete:     [],
+//   annule:     [],
+// };
+
+const STATUS_TRANSITIONS_BY_ROLE: Record<UserRole, Record<LoanStatus, LoanStatus[]>> = {
+  superviseur: {
+    en_attente: ['approuve', 'rejete'],   // seul le superviseur valide
+    approuve:   [],                       // ne décaisse pas
+    decaisse:   [],
+    rembourse:  [],
+    rejete:     [],
+    annule:     [],
+  },
+  caissier: {
+    en_attente: [],                       // ne valide pas
+    approuve:   ['decaisse'],             // le caissier décaisse
+    decaisse:   ['rembourse'],            // peut clôturer un prêt soldé
+    rembourse:  [],
+    rejete:     [],
+    annule:     [],
+  },
+  agent_credit: {
+    en_attente: [],                       // peut juste assigner et noter
+    approuve:   [],
+    decaisse:   [],                       // suit le dossier, ne décaisse pas
+    rembourse:  [],
+    rejete:     [],
+    annule:     [],
+  },
 };
 
-const STATUS_META: Record<LoanStatus, { label: string; icon: React.ElementType; color: string; bg: string; text: string; dot: string }> = {
+const STATUS_META: Record<LoanStatus, {
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  bg: string;
+  text: string;
+  dot: string;
+}> = {
   en_attente: { label: 'En attente', icon: Clock,        color: '#F59E0B', bg: 'bg-[#FEF9EC]', text: 'text-[#B45309]', dot: 'bg-[#F59E0B]' },
   approuve:   { label: 'Approuvé',   icon: CheckCircle2, color: '#355C7D', bg: 'bg-[#EBF2F8]', text: 'text-[#355C7D]', dot: 'bg-[#355C7D]' },
   decaisse:   { label: 'Décaissé',   icon: Banknote,     color: '#2E7D32', bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]' },
   rembourse:  { label: 'Remboursé',  icon: CheckCircle2, color: '#22C55E', bg: 'bg-[#F0FDF4]', text: 'text-[#166534]', dot: 'bg-[#22C55E]' },
   rejete:     { label: 'Rejeté',     icon: XCircle,      color: '#EF4444', bg: 'bg-[#FEF2F2]', text: 'text-[#B91C1C]', dot: 'bg-[#EF4444]' },
   annule:     { label: 'Annulé',     icon: Archive,      color: '#9CA3AF', bg: 'bg-[#F3F4F6]', text: 'text-[#4B5563]', dot: 'bg-[#9CA3AF]' },
+};
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  caissier:     'caissier',
+  agent_credit: 'agent de crédit',
+  superviseur:  'superviseur',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -73,27 +119,33 @@ const formatHTG = (n: number) =>
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
-// Motif requis uniquement pour rejeter/annuler
+// Motif requis uniquement pour rejeter
 const REASON_REQUIRED: LoanStatus[] = ['rejete'];
 
+// Statuts qui nécessitent un step-up auth (mot de passe)
+const PASSWORD_REQUIRED: LoanStatus[] = ['approuve', 'rejete'];
+
 // ─── Component ────────────────────────────────────────────────────────────────
-const EditLoanModal: React.FC<EditLoanModalProps> = ({
-  isOpen, loan, employees, onClose, onConfirm,
+const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
+  isOpen, loan, employees, currentUserRole, onClose, onConfirm,
 }) => {
-  const [newStatus,   setNewStatus]   = useState<LoanStatus | ''>('');
-  const [reason,      setReason]      = useState('');
-  const [assignedTo,  setAssignedTo]  = useState('');
-  const [notes,       setNotes]       = useState('');
-  const [isLoading,   setIsLoading]   = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
+  // ── State : TOUS les hooks doivent être déclarés AVANT le early return ──
+  const [newStatus,  setNewStatus]  = useState<LoanStatus | ''>('');
+  const [reason,     setReason]     = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [notes,      setNotes]      = useState('');
+  const [password,   setPassword]   = useState('');   // ✅ déplacé ici (était après early return)
+  const [isLoading,  setIsLoading]  = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
   // Reset à chaque ouverture/changement de prêt
   useEffect(() => {
     if (loan) {
-      setNewStatus('');  // vide = pas de changement
+      setNewStatus('');
       setReason('');
       setAssignedTo(loan.assigned_to ?? '');
       setNotes(loan.notes ?? '');
+      setPassword('');            // ✅ reset du password aussi
     }
     setError(null);
     setIsLoading(false);
@@ -101,12 +153,13 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
 
   const availableTransitions = useMemo(() => {
     if (!loan) return [];
-    return STATUS_TRANSITIONS[loan.status] ?? [];
-  }, [loan]);
+    return STATUS_TRANSITIONS_BY_ROLE[currentUserRole][loan.status] ?? [];
+  }, [loan, currentUserRole]);
 
   const isFinal       = loan && availableTransitions.length === 0;
   const statusChanged = newStatus !== '' && newStatus !== loan?.status;
   const reasonNeeded  = statusChanged && newStatus && REASON_REQUIRED.includes(newStatus as LoanStatus);
+  const passwordNeeded = statusChanged && newStatus && PASSWORD_REQUIRED.includes(newStatus as LoanStatus);
   const assignChanged = assignedTo !== (loan?.assigned_to ?? '');
   const notesChanged  = notes      !== (loan?.notes      ?? '');
   const hasChanges    = statusChanged || assignChanged || notesChanged;
@@ -114,7 +167,8 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
   if (!isOpen || !loan) return null;
 
   const currentMeta = STATUS_META[loan.status];
-  const StatusIcon  = currentMeta.icon;
+  // ⚠️ Variable inutilisée — supprimée
+  // const StatusIcon = currentMeta.icon;
 
   const handleSubmit = async () => {
     if (!hasChanges) {
@@ -125,6 +179,10 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
       setError('Le motif est obligatoire pour cette action.');
       return;
     }
+    if (passwordNeeded && !password.trim()) {
+      setError('Votre mot de passe est requis pour confirmer cette action.');
+      return;
+    }
     try {
       setIsLoading(true);
       setError(null);
@@ -133,6 +191,7 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
         reason:      statusChanged && reason.trim() ? reason.trim() : undefined,
         assigned_to: assignChanged ? assignedTo : undefined,
         notes:       notesChanged  ? notes      : undefined,
+        password:    passwordNeeded ? password : undefined,
       });
       onClose();
     } catch (e: any) {
@@ -153,7 +212,8 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
               <Landmark className="w-5 h-5" style={{ color: currentMeta.color }} />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">Modifier le prêt #{loan.id}</p>
+              {/* ✅ Titre plus juste : on n'« édite » pas librement, on examine et on agit */}
+              <p className="text-sm font-bold text-gray-900 truncate">Examiner le prêt #{loan.id}</p>
               <p className="text-xs text-gray-600 mt-0.5 truncate">
                 {loan.member_name} · {loan.member_id}
               </p>
@@ -215,8 +275,12 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
                 {isFinal ? (
                   <div className="flex items-start gap-2.5 p-3 bg-gray-50 border border-gray-100 rounded-xl">
                     <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                    {/* ✅ Message plus clair selon la raison du blocage */}
                     <p className="text-xs text-gray-500">
-                      Ce prêt est dans un statut final. Aucune transition de statut n'est possible.
+                      {['rembourse', 'rejete', 'annule'].includes(loan.status)
+                        ? "Ce prêt est dans un statut final. Aucune transition n'est possible."
+                        : `Aucune action de statut disponible pour votre rôle (${ROLE_LABELS[currentUserRole]}) sur ce prêt. Vous pouvez tout de même modifier l'assignation et les notes.`
+                      }
                     </p>
                   </div>
                 ) : (
@@ -226,7 +290,7 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]"
                   >
                     <option value="">— Aucun changement —</option>
-                    {availableTransitions.map(s => (
+                    {availableTransitions.map((s: LoanStatus) => (
                       <option key={s} value={s}>
                         Passer à « {STATUS_META[s].label} »
                       </option>
@@ -258,8 +322,29 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
                 </div>
               )}
 
+              {/* Mot de passe — step-up auth pour approuve/rejete */}
+              {passwordNeeded && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    <ShieldCheck className="w-3 h-3 inline mr-1" />
+                    Confirmez avec votre mot de passe <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setError(null); }}
+                    placeholder="Votre mot de passe"
+                    autoComplete="current-password"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Confirmez votre identité pour valider cette action sensible.
+                  </p>
+                </div>
+              )}
+
               {/* Assigné à */}
-              <div>
+              {/* <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                   <User className="w-3 h-3 inline mr-1" />
                   Assigné à (agent de crédit)
@@ -274,7 +359,7 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
                     <option key={e.id} value={e.id}>{e.name}</option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               {/* Notes */}
               <div>
@@ -336,7 +421,7 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
               className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                 newStatus === 'rejete'
                   ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] hover:shadow-md'
+                  : 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] hover:shadow-md'
               }`}>
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Enregistrer les modifications
@@ -356,4 +441,4 @@ const Field: React.FC<{ label: string; value: string }> = ({ label, value }) => 
   </div>
 );
 
-export default EditLoanModal;
+export default ReviewLoanModal;

@@ -97,10 +97,12 @@ export interface CaisseSession {
   forcee_par?:          string;        // username admin qui a forcé la fermeture
   raison_forcage?:      string;        // raison du forçage (sans accent dans la clé)
 
-  // ── Rapport fin de journée ────────────────────────────────────
   nb_transactions?:         number;    // snapshot figé à la fermeture
+  total_entrees?:           number;    // somme des transactions entrantes (dépôts, transferts reçus, prêts encaissés)
+  total_sorties?:           number;    // somme des transactions sortantes (retraits, transferts envoyés, prêts déboursés, frais)
   remise_effectuee:         boolean;
   reconciliation_effectuee: boolean;
+  notes_completes?:         string;    // agrégat backend : note_fermeture + raison_forcage + notes transactions
 }
 
 // ─── Transaction de caisse ───────────────────────────────────────

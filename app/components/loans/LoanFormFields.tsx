@@ -550,7 +550,7 @@ function mapAccountType(apiType: string): AccountOption['typeCompte'] {
             <FieldError msg={errors.dateDemande} />
           </div>
           <div>
-            <Label>Date de début <span className="text-gray-400 normal-case font-normal">optionnel</span></Label>
+            <Label>Date de début </Label>
             <input type="date"
               value={form.dateDebut ?? ''}
               onChange={e => setForm(f => ({ ...f, dateDebut: e.target.value }))}
@@ -622,21 +622,6 @@ function mapAccountType(apiType: string): AccountOption['typeCompte'] {
             <FieldError msg={errors.commentaire} />
             <p className="text-xs text-gray-400 ml-auto">{(form.commentaire ?? '').length}/500</p>
           </div>
-        </div>
-      </div>
-
-      {/* ── 6. AUTORISATION ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <SectionTitle icon={ShieldCheck} label="Autorisation superviseur" color="#D4AF37" />
-        <div>
-          <Label>Code d'autorisation</Label>
-          <input type="password"
-            value={(form as any).codeAutorisation ?? ''}
-            onChange={e => setForm(f => ({ ...f, codeAutorisation: e.target.value } as any))}
-            placeholder="••••••••"
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
-          />
-          <p className="text-xs text-gray-400 mt-1.5">Requis pour valider la demande de prêt.</p>
         </div>
       </div>
 
