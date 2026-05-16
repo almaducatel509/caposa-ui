@@ -1,5 +1,5 @@
-import LoanDashboard from "@/app/components/loans/LoanDashboard";
+import LoansTable from "@/app/components/loans/LoansTable";
 
-export default function LoansPage() {
-  return <LoanDashboard />;
+export default function LoanListPage() {
+  return <LoansTable />;
 }

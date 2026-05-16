@@ -6,21 +6,22 @@ import {
   Archive, Loader2, CheckCheck, Download, Trash2,
 } from 'lucide-react';
 import { LoanBulkAction } from '../LoanBulkActionDropdown';
+import { LoanStatus } from '../../transactions/validation/loanSchema';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-export type LoanStatus = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
-
 export interface LoanForBulk {
-  id:                number | string;
-  member_name:       string;
-  member_id:         string;
-  amount:            number;
-  status:            LoanStatus;
-  late_days?:        number;
-  remaining_balance?: number;
-  duration_months?:  number;
-  payments_made?:    number;
+  id_loan:           string;          // LoanData.id_loan
+  member_name:       string;          // LoanData.member_name
+  id_member:         string;          // LoanData.id_member
+  montantDemande:    number;          // LoanData.montantDemande
+  status:            LoanStatus;      // LoanData.status
+
+  // Champs optionnels existants dans LoanData
+  late_days?:        number;          // LoanData.loan_details.late_days
+  remaining_balance?: number;         // LoanData.loan_details.remaining_balance
+  duration_months?:  number;          // LoanData.loan_details.duration_months
+  payments_made?:    number;          // LoanData.loan_details.payments_made
 }
 
 interface LoanBulkActionModalProps {
@@ -284,7 +285,7 @@ const LoanBulkActionModal: React.FC<LoanBulkActionModalProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      await onConfirm(action, eligible.map(l => l.id), cfg.needsSelect ? selectedValue : undefined);
+      await onConfirm(action, eligible.map(l => l.id_loan), cfg.needsSelect ? selectedValue : undefined);
       onClose();
     } catch (e: any) {
       setError(e?.message ?? 'Une erreur est survenue.');
@@ -293,7 +294,7 @@ const LoanBulkActionModal: React.FC<LoanBulkActionModalProps> = ({
     }
   };
 
-  const totalAmount = eligible.reduce((s, l) => s + l.amount, 0);
+  const totalAmount = eligible.reduce((s, l) => s + l.montantDemande, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
@@ -360,15 +361,15 @@ const LoanBulkActionModal: React.FC<LoanBulkActionModalProps> = ({
               </div>
               <div className="divide-y divide-gray-50">
                 {eligible.slice(0, 5).map(loan => (
-                  <div key={String(loan.id)} className="flex items-center justify-between px-4 py-2.5">
+                  <div key={String(loan.id_loan)} className="flex items-center justify-between px-4 py-2.5">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-gray-800 truncate">
                         {loan.member_name}
                       </p>
-                      <p className="text-xs text-gray-400 font-mono">{loan.member_id}</p>
+                      <p className="text-xs text-gray-400 font-mono">{loan.id_member}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-gray-700">{formatHTG(loan.amount)}</span>
+                      <span className="text-xs font-bold text-gray-700">{formatHTG(loan.montantDemande)}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[loan.status]}`}>
                         {STATUS_LABELS[loan.status]}
                       </span>
@@ -396,13 +397,13 @@ const LoanBulkActionModal: React.FC<LoanBulkActionModalProps> = ({
               </div>
               <div className="divide-y divide-gray-50 max-h-60 overflow-y-auto">
                 {refused.map(({ loan, reasons }) => (
-                  <div key={String(loan.id)} className="px-4 py-2.5">
+                  <div key={String(loan.id_loan)} className="px-4 py-2.5">
                     <div className="flex items-center justify-between mb-1">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-gray-700 truncate">
                           {loan.member_name}
                         </p>
-                        <p className="text-xs text-gray-400 font-mono">{loan.member_id}</p>
+                        <p className="text-xs text-gray-400 font-mono">{loan.id_member}</p>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_BADGE[loan.status]}`}>
                         {STATUS_LABELS[loan.status]}

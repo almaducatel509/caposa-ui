@@ -13,6 +13,19 @@ Le backend est **la seule source de vérité** pour :
 
 Le frontend **n’affiche jamais de logique métier**, il consomme uniquement des données prêtes.
 
+class Loan(models.Model):
+   ```python
+    # Set automatically on creation
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Set when the loan is disbursed (caissier action)
+    start_date = models.DateField(null=True, blank=True)
+    disbursed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Computed when closed
+    end_date = models.DateField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+   ```
 ---
 
 # 🧱 1. MODULE LOAN — STRUCTURE BACKEND

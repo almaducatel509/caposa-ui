@@ -2,15 +2,15 @@ import { LoanData, LoanStatus, LoanType, LoanFormData, LoanFormErrors } from "./
 
 // 🧩 Fonctions métier (statuts, permissions, validations logiques)
 export function canEditLoan(status: LoanStatus): boolean {
-  return status === "pending" || status === "rejected";
+  return status === "en_attente" || status === "rejete";
 }
 
 export function canApproveLoan(status: LoanStatus): boolean {
-  return status === "pending";
+  return status === "en_attente";
 }
 
 export function canCancelLoan(status: LoanStatus): boolean {
-  const lockedStatuses: LoanStatus[] = ["paid", "cancelled"];
+  const lockedStatuses: LoanStatus[] = ["rembourse", "annule"];
   return !lockedStatuses.includes(status);
 }
 
@@ -27,26 +27,26 @@ export function validateLoanForm(data: LoanFormData): {
 
   // ⚙️ Correction de l’erreur TS2367 :
   // On ne compare plus avec "", on teste simplement la "falsiness"
-  if (!data.typePret) {
-    errors.typePret = "Le type de prêt est requis.";
+  if (!data.loan_type) {
+    errors.loan_type = "Le type de prêt est requis.";
   }
 
-  if (!data.montantDemande || data.montantDemande <= 0) {
-    errors.montantDemande = "Le montant demandé doit être supérieur à 0.";
+  if (!data.amount || data.amount <= 0) {
+    errors.amount = "Le montant demandé doit être supérieur à 0.";
   }
 
-  if (!data.dureeMois || data.dureeMois <= 0) {
-    errors.dureeMois = "La durée doit être positive.";
+  if (!data.duration_months || data.duration_months <= 0) {
+    errors.duration_months = "La durée doit être positive.";
   }
 
-  if (data.tauxInteret !== undefined && (data.tauxInteret < 0 || data.tauxInteret > 100)) {
-    errors.tauxInteret = "Le taux doit être entre 0 et 100%.";
+  if (data.interest_rate !== undefined && (data.interest_rate < 0 || data.interest_rate > 100)) {
+    errors.interest_rate = "Le taux doit être entre 0 et 100%.";
   }
 
-  if (data.dateDemande) {
+  if (data.created_at) {
     const today = new Date().toISOString().split("T")[0];
-    if (data.dateDemande > today) {
-      errors.dateDemande = "La date de demande ne peut pas être dans le futur.";
+    if (data.created_at > today) {
+      errors.created_at = "La date de demande ne peut pas être dans le futur.";
     }
   }
 

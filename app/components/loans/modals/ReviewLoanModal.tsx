@@ -6,30 +6,36 @@ import {
   User, CheckCircle2, XCircle, Banknote, Clock, Archive,
   ShieldCheck,
 } from 'lucide-react';
+import { LoanStatus } from '../../transactions/validation/loanSchema';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type LoanStatus = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
 export type UserRole = 'caissier' | 'agent_credit' | 'superviseur';
 
 export interface LoanForEdit {
-  id:              number | string;
-  member_name:     string;
-  member_id:       string;
-  amount:          number;
-  status:          LoanStatus;
+  // Identité
+  id_loan:       string;
+  id_member:     string;
+  member_name:   string;
+
+  // Montants & conditions
+  montantDemande: number;
+  status:         LoanStatus;
+
   // Champs verrouillés (affichés mais non modifiables)
-  loan_type:       string;
-  purpose?:        string;
-  duration_months: number;
-  interest_rate:   number;
-  monthly_payment: number;
-  created_at:      string;
-  processed_by:    string;
-  validated_by?:   string;
-  // Champs modifiables actuels
-  assigned_to?:    string;
-  notes?:          string;
+  loan_type:       string;  // dérivé de typePret → label
+  purpose?:        string;  // dérivé de but → label
+  duration_months: number;  // loan_details.duration_months
+  interest_rate:   number;  // loan_details.interest_rate
+  monthly_payment: number;  // loan_details.monthly_payment
+  created_at:      string;  // LoanData.created_at
+  processed_by:    string;  // LoanData.processed_by
+  validated_by?:   string;  // LoanData.validated_by
+
+  // Champs modifiables
+  assigned_to?: string;
+  notes?:       string;
 }
+
 
 export interface EmployeeOption {
   id:   string;
@@ -186,7 +192,7 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      await onConfirm(loan.id, {
+      await onConfirm(loan.id_loan, {
         status:      statusChanged ? (newStatus as LoanStatus) : undefined,
         reason:      statusChanged && reason.trim() ? reason.trim() : undefined,
         assigned_to: assignChanged ? assignedTo : undefined,
@@ -213,9 +219,9 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
             </div>
             <div className="min-w-0">
               {/* ✅ Titre plus juste : on n'« édite » pas librement, on examine et on agit */}
-              <p className="text-sm font-bold text-gray-900 truncate">Examiner le prêt #{loan.id}</p>
+              <p className="text-sm font-bold text-gray-900 truncate">Examiner le prêt #{loan.id_loan}</p>
               <p className="text-xs text-gray-600 mt-0.5 truncate">
-                {loan.member_name} · {loan.member_id}
+                {loan.member_name} · {loan.id_member}
               </p>
             </div>
           </div>
@@ -237,7 +243,7 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
               </h3>
             </div>
             <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 grid grid-cols-2 gap-x-6 gap-y-3">
-              <Field label="Montant"        value={formatHTG(loan.amount)} />
+              <Field label="Montant"        value={formatHTG(loan.montantDemande)} />
               <Field label="Type de prêt"   value={loan.loan_type} />
               <Field label="Durée"          value={`${loan.duration_months} mois`} />
               <Field label="Taux d'intérêt" value={`${loan.interest_rate}% / an`} />

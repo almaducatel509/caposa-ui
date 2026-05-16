@@ -68,11 +68,7 @@ export const links: MainLink[] = [
     name: 'Prêts',
     href: '/dashboard/loans',
     icon: FaHandHoldingUsd,
-    hasSubmenu: true,
-    subLinks: [
-      // { name: 'Tous', href: '/dashboard/loans', icon: FaClipboardList },
-      { name: 'Demandes', href: '/dashboard/loans/loanList', icon: FaMoneyCheckAlt },
-    ],
+  
   },
   {
     name: 'Trésorerie',
@@ -98,7 +94,7 @@ export const links: MainLink[] = [
   { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
   { name: 'Calendrier', href: '/dashboard/holidays', icon: AiOutlineSchedule  },
 
-  { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
+  // { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
   {
     name: 'Settings',
     href: '/dashboard/settings',

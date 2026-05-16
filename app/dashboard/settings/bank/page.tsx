@@ -32,8 +32,26 @@ export default function BankSettingsPage() {
               📖 MODE CONSULTATION - Lecture seule
             </p>
             <p className="text-sm text-blue-700 mt-1">
-              Ces règles sont définies dans <code className="bg-blue-200 px-2 py-0.5 rounded font-mono text-xs">lib/bankRules.ts</code> et appliquées automatiquement.
+              Ces règles sont définies dans <code className="bg-blue-200 px-2 py-0.5 rounded font-mono text-xs">lib/bankRules.ts </code> plus tard <code className="bg-blue-200 px-2 py-0.5 rounded font-mono text-xs">bank_policies (backend / DB) </code>et appliquées automatiquement.
             </p>
+            <code className="text-xs">
+              
+                savings_account: 
+                  min_deposit: 25,
+                  interest_rate: 0.025,
+                  monthly_fee: 0
+
+                checking_account: 
+                  min_deposit: 100,
+                  interest_rate: 0,
+                  monthly_fee: 15
+
+                term_account: 
+                  min_deposit: 500,
+                  interest_rate: 0.045,
+                  monthly_fee: 0
+               
+            </code>
           </div>
         </div>
 
