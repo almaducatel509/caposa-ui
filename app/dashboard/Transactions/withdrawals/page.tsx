@@ -1,7 +1,4 @@
-import PageHeader from "@/app/components/header";
-import Withdrawaldashboard from "@/app/components/transactions/withdrawals/Withdrawaldashboard";
-import TransactionHistory  from "@/app/components/transactions/withdrawals/Withdrawaldashboard"
-
+import Withdrawaldashboard from "@/app/components/transactions/withdrawals/WithdrawalGrid";
 
 export default function WithdrawalPage() {
  

@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeftRight, ArrowLeft, CreditCard, Banknote,
   Building2, Landmark, User, Mail, Phone, Hash,
   FileText, Calendar, Clock, ShieldCheck, CheckCircle2,
   AlertTriangle, Loader2, ChevronDown, X,
 } from 'lucide-react';
+import { MemberOption } from '../../members/MemberPicker';
+import { fetchMembers } from '@/app/lib/api/members';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type TransferType = 'internal' | 'supplier' | 'loan_payment';
@@ -149,6 +151,8 @@ export default function TransferForm({ onCancel }: { onCancel?: () => void }) {
   const [loanOpen,       setLoanOpen]       = useState(false);
   const [submitting,     setSubmitting]     = useState(false);
   const [errors,         setErrors]         = useState<Record<string, string>>({});
+  const [members,    setMembers]    = useState<MemberOption[]>([]);
+  const [beneficiary, setBeneficiary] = useState<MemberOption | null>(null);
 
   const [form, setForm] = useState({
     amount:           '',
@@ -158,6 +162,18 @@ export default function TransferForm({ onCancel }: { onCancel?: () => void }) {
     invoiceRef:       '',
     description:      '',
   });
+  useEffect(() => {
+    fetchMembers().then(setMembers).catch(console.error);
+  }, []);
+
+  // Quand le bénéficiaire change → fetch ses comptes
+  useEffect(() => {
+    if (!beneficiary) {
+      setBeneficiaryAccounts([]);
+      return;
+    }
+    // fetchMemberAccounts(beneficiary.id)...
+  }, [beneficiary]);
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>

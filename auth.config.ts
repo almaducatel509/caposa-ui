@@ -8,3 +8,4 @@ export const authConfig = {
   },
   providers: [], // Les providers seront ajoutés dans auth.ts
 } satisfies NextAuthConfig;
+// C:\Users\alma2\Documents\Final Project\caposa-ui\auth.config.ts

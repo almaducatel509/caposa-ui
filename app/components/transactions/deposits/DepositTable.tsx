@@ -5,8 +5,9 @@ import {
   Banknote, FileCheck, ArrowLeftRight, MoreHorizontal,
   CheckCircle2, XCircle, Pencil,
   Download,
+  Clock,
+  Loader2,
 } from 'lucide-react';
-import { STATUS_CFG } from '@/config/statusConfig';
 import DepositExportModal from './DepositExportModal';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ export interface DepositData {
   source:             string;
   description?:       string;
   holdPeriod:         number;
-  status:             'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
+  status:             'encaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
   created_at:         string;
   member_name:        string;
   processed_by:       string;
@@ -48,7 +49,13 @@ const C = {
   blue:      '#355C7D',
   gold:      '#D4AF37',
 };
-
+const STATUS_CFG: Record<DepositData['status'], { label: string; bg: string; text: string; dot: string; icon: any }> = {
+  encaisse:   { label: 'Encaissé',   bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', icon: CheckCircle2 },
+  en_attente: { label: 'En attente', bg: 'bg-[#FEF9EC]', text: 'text-[#B45309]', dot: 'bg-[#F59E0B]', icon: Clock        },
+  en_cours:   { label: 'En cours',   bg: 'bg-[#EBF2F8]', text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', icon: Loader2      },
+  echoue:     { label: 'Échoué',     bg: 'bg-[#FEF2F2]', text: 'text-[#B91C1C]', dot: 'bg-[#EF4444]', icon: XCircle      },
+  annule:     { label: 'Annulé',     bg: 'bg-[#F3F4F6]', text: 'text-[#4B5563]', dot: 'bg-[#9CA3AF]', icon: XCircle      },
+};  
 const SUBTYPE_CFG: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
   cash:     { icon: Banknote,       label: 'Espèces',  color: C.green, bg: C.greenPale },
   check:    { icon: FileCheck,      label: 'Chèque',   color: C.blue,  bg: '#EBF2F8'   },
@@ -131,38 +138,7 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
             {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Membre, compte…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-3 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] w-44"
-          />
-          <select
-            value={statusF}
-            onChange={e => setStatusF(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600"
-          >
-            <option value="all">Tous statuts</option>
-            <option value="decaisse">Complété</option>
-            <option value="en_attente">En attente</option>
-            <option value="en_cours">En cours</option>
-            <option value="echoue">Échoué</option>
-            <option value="annule">Annulé</option>
-          </select>
-          <select
-            value={subtypeF}
-            onChange={e => setSubtypeF(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600"
-          >
-            <option value="all">Tous types</option>
-            <option value="cash">Espèces</option>
-            <option value="check">Chèque</option>
-            <option value="transfer">Virement</option>
-            <option value="other">Autre</option>
-          </select>
-        </div>
+        
       </div>
 
       {/* ── Barre sélection ── */}
@@ -239,8 +215,9 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
           const subCfg  = SUBTYPE_CFG[dep.depositSubtype]  ?? SUBTYPE_CFG['other'];
           const SubIcon = subCfg.icon;
           const isSel   = selected.has(dep.id);
-          const canEdit = dep.session_statut === 'ouverte';
-
+          // const canEdit = dep.session_statut === 'ouverte';
+          const isLocked = dep.status === 'encaisse';
+          const canEdit  = dep.session_statut === 'ouverte' && !isLocked;
           return (
             <div
               key={dep.id}
@@ -321,7 +298,11 @@ export default function DepositTable({ deposits, loading, onView, onEdit, onExpo
                   </button>
                 ) : (
                   <button
-                    title="Session fermée — modification non autorisée"
+                    title={
+                      isLocked
+                        ? 'Dépôt encaissé — modification impossible'
+                        : 'Session fermée — modification non autorisée'
+                    }
                     disabled
                     className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed"
                   >

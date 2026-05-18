@@ -121,3 +121,7 @@ Superviseur/Admin → peuvent annuler mais pas modifier directement.
 Audit obligatoire pour chaque modification.
 
 Le backend doit toujours valider, même si le front désactive l’édition.
+```python
+const LOCKED_STATUSES = ['encaisse', 'annule', 'echoue'] as const;
+const isLocked = LOCKED_STATUSES.includes(deposit.status);
+```

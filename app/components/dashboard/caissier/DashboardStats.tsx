@@ -28,7 +28,7 @@ export interface TypePoint {
   color:  string;
   [key: string]: any; // ← requis par recharts PieChart
 }
-interface DepositStatsProps {
+interface DashboardStatsProps {
   // KPIs
   totalAmount:    number;
   depositCount:   number;
@@ -97,11 +97,11 @@ function KPICard({ icon: Icon, label, value, sub, accent }: {
 
 // ─── Main ────────────────────────────────────────────────────────
 
-export default function DepositStats({
+export default function DashboardStats({
   totalAmount, depositCount, completedCount, avgAmount,
   uniqueMembers, pendingCount, completionRate,
   volumeData, typeData,
-}: DepositStatsProps) {
+}: DashboardStatsProps) {
   return (
     <>
       {/* ── KPIs ── */}
@@ -125,7 +125,7 @@ export default function DepositStats({
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Dépôts']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v) || 0, 'Dépôts']} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
                   <Cell key={i} fill={i === volumeData.length - 1 ? C.green : C.greenPale} />
@@ -144,7 +144,7 @@ export default function DepositStats({
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false}
                 tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Montant']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) || 0), 'Montant']} />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
                   <Cell key={i} fill={i === volumeData.length - 1 ? C.blue : '#D4E3EF'} />
@@ -165,8 +165,8 @@ export default function DepositStats({
                   {typeData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle}
-                  formatter={(v: number | undefined, _: string | undefined, props: any) =>
-                    [`${v ?? 0} (${formatHTG(props?.payload?.amount ?? 0)})`, props?.payload?.name ?? '']} />
+                  formatter={(v, _, props: any) =>
+                    [`${Number(v) || 0} (${formatHTG(props?.payload?.amount ?? 0)})`, props?.payload?.name ?? '']} />
               </PieChart>
             </ResponsiveContainer>
             <div className="flex-1 flex flex-col gap-2.5">
@@ -199,7 +199,7 @@ export default function DepositStats({
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false}
                 tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Montant']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) || 0), 'Montant']}/>
               <Line type="monotone" dataKey="amount" stroke={C.green} strokeWidth={2.5}
                 dot={{ fill: C.green, r: 3 }} activeDot={{ r: 5 }} />
             </LineChart>

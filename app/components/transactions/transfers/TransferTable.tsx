@@ -1,32 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  ArrowLeftRight, Building2, Landmark, MoreHorizontal,
+  ArrowLeftRight, Building2,
   CheckCircle2, XCircle, AlertCircle, Download, Pencil,
 } from 'lucide-react';
-import { STATUS_CFG } from '@/config/statusConfig';
 import TransferExportModal from './TransferExportModal';
-
-// ─── Types ────────────────────────────────────────────────────────
-
-export interface TransferData {
-  id:                number;
-  compteSource:      string;
-  compteDestination: string;
-  montant:           number;
-  reference:         string;
-  type:              'internal' | 'supplier' | 'loan_payment';
-  description?:      string;
-  memberName:        string;
-  status:            'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
-  created_at:        string;
-  processed_by:      string;
-  validated_by:      string;
-  caisse_numero:     string;
-  caisse_id:         string;
-  session_id:        string;
-}
+import { TransferData, TransferStatus, TransferType } from '../validation/transfert';
+import { TransactionData } from '../types';
 
 interface TransferTableProps {
   transfers: TransferData[];
@@ -37,19 +18,45 @@ interface TransferTableProps {
 }
 
 // ─── Constantes ───────────────────────────────────────────────────
-
 const C = {
   green:     '#2E7D32',
+  greenDark: '#1B5E20',
   greenPale: '#DDEAD5',
   blue:      '#355C7D',
-  gold:      '#D4AF37',
 };
 
-const TYPE_CFG: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
-  internal:     { icon: ArrowLeftRight, label: 'Entre comptes', color: C.green,   bg: C.greenPale },
-  supplier:     { icon: Building2,      label: 'Fournisseur',   color: C.blue,    bg: '#EBF2F8'   },
-  loan_payment: { icon: Landmark,       label: 'Remb. prêt',    color: C.gold,    bg: '#FBF6E7'   },
-  other:        { icon: MoreHorizontal, label: 'Autre',         color: '#6E6E6E', bg: '#F3F3F3'   },
+const STATUS_CFG: Record<TransferStatus, { label: string; bg: string; text: string; dot: string }> = {
+  approuve:   { label: 'Approuvé',   bg: C.greenPale, text: C.greenDark, dot: C.green   },
+  en_attente: { label: 'En attente', bg: '#FEF9EC',   text: '#B45309',   dot: '#F59E0B' },
+  en_cours:   { label: 'En cours',   bg: '#EBF2F8',   text: C.blue,      dot: C.blue    },
+  echoue:     { label: 'Échoué',     bg: '#FEF2F2',   text: '#B91C1C',   dot: '#EF4444' },
+  annule:     { label: 'Annulé',     bg: '#F3F4F6',   text: '#6B7280',   dot: '#9CA3AF' },
+};
+
+
+
+// Config alignée sur les 2 types du schema : 'interne' | 'externe'
+const TYPE_CFG: Record<TransferType, { icon: React.ElementType; label: string; color: string; bg: string }> = {
+  interne: { icon: ArrowLeftRight, label: 'Interne', color: C.green, bg: C.greenPale },
+  externe: { icon: Building2, label: 'Externe', color: C.blue, bg: '#EBF2F8' },
+  internal: {
+    icon: 'symbol',
+    label: '',
+    color: '',
+    bg: ''
+  },
+  supplier: {
+    icon: 'symbol',
+    label: '',
+    color: '',
+    bg: ''
+  },
+  loan_payment: {
+    icon: 'symbol',
+    label: '',
+    color: '',
+    bg: ''
+  }
 };
 
 const COLS = '40px 1.4fr 1.2fr 1.2fr 1fr 1.2fr 1fr 90px';
@@ -60,7 +67,8 @@ function formatHTG(n: number) {
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
 }
 
-function formatDate(iso: string) {
+function formatDate(iso?: string) {
+  if (!iso) return '—';
   const d       = new Date(iso);
   const diffMs  = Date.now() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);
@@ -88,26 +96,59 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
   const [search,     setSearch]     = useState('');
   const [statusF,    setStatusF]    = useState('all');
   const [typeF,      setTypeF]      = useState('all');
-  const [selected,   setSelected]   = useState<Set<number>>(new Set());
-  const [exportOpen, setExportOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+// ── Tri ───────────────────────────────────────────────────────
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
 
-  const filtered = transfers.filter(t => {
-    const q = search.toLowerCase();
-    const matchSearch = !search ||
-      t.memberName.toLowerCase().includes(q) ||
-      t.reference.toLowerCase().includes(q)   ||
-      t.compteSource.toLowerCase().includes(q);
-    return matchSearch &&
-      (statusF === 'all' || t.status === statusF) &&
-      (typeF   === 'all' || t.type   === typeF);
-  });
+const sorted = useMemo(() => [...transfers].sort((a, b) => {
+  const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortField === 'montant')
+      return (a.montant - b.montant) * dir;
 
+    if (sortField === 'status')
+      return (a.status ?? '').localeCompare(b.status ?? '') * dir;
+
+    if (sortField === 'typeTransfert')
+      return a.typeTransfert.localeCompare(b.typeTransfert) * dir;
+
+    if (sortField === 'reference')
+      return (a.reference ?? '').localeCompare(b.reference ?? '') * dir;
+
+    if (sortField === 'description')
+      return (a.description ?? '').localeCompare(b.description ?? '') * dir;
+
+    if (sortField === 'caisse')
+      return (a.caisse_numero ?? '').localeCompare(b.caisse_numero ?? '') * dir;
+
+    if (sortField === 'created_at')
+      return (
+        new Date(a.created_at ?? 0).getTime() -
+        new Date(b.created_at ?? 0).getTime()
+      ) * dir;
+
+    if (sortField === 'dateTransfert')
+      return (
+        new Date(a.dateTransfert ?? 0).getTime() -
+        new Date(b.dateTransfert ?? 0).getTime()
+      ) * dir;
+
+    if (sortField === 'member_name')
+      return (a.member_name ?? '').localeCompare(b.member_name ?? '') * dir;
+
+    if (sortField === 'destination_name')
+      return (a.destination_name ?? '').localeCompare(b.destination_name ?? '') * dir;
+
+    // fallback
+    return (a.member_name ?? '').localeCompare(b.member_name ?? '') * dir;
+
+  }), [transfers, sortField, sortDir]);
+
+  const allSelected  = selected.size === sorted.length && sorted.length > 0;
   const pendingCount = transfers.filter(t => t.status === 'en_attente').length;
-  const allSel  = selected.size === filtered.length && filtered.length > 0;
-  const someSel = selected.size > 0 && !allSel;
+  const someSelected = selected.size > 0 && !allSelected;
 
-  const toggleAll = () =>
-    allSel ? setSelected(new Set()) : setSelected(new Set(filtered.map(t => t.id)));
+  const toggleAll    = () => allSelected ? setSelected(new Set()) : setSelected(new Set(sorted.map(w => w.id)));
 
   const toggleRow = (id: number) => {
     const s = new Set(selected);
@@ -118,57 +159,16 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-      {/* ── En-tête + filtres ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-4 border-b border-gray-100 gap-3">
-        <div>
-          <p className="text-sm font-semibold text-gray-800">Liste des virements</p>
-          <p className="text-xs text-gray-400">
-            {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Membre, référence…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-3 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] w-44"
-          />
-          <select
-            value={statusF}
-            onChange={e => setStatusF(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600"
-          >
-            <option value="all">Tous statuts</option>
-            <option value="decaisse">Complété</option>
-            <option value="en_attente">En attente</option>
-            <option value="en_cours">En cours</option>
-            <option value="echoue">Échoué</option>
-            <option value="annule">Annulé</option>
-          </select>
-          <select
-            value={typeF}
-            onChange={e => setTypeF(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] text-gray-600"
-          >
-            <option value="all">Tous types</option>
-            <option value="internal">Entre comptes</option>
-            <option value="supplier">Fournisseur</option>
-            <option value="loan_payment">Remb. prêt</option>
-          </select>
-        </div>
-      </div>
-
       {/* ── Barre sélection ── */}
       {selected.size > 0 && (
         <div className="px-5 py-2.5 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex items-center gap-4">
           <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
           <span className="text-sm font-semibold text-[#1B5E20]">
-            {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            {selected.size} transfert{selected.size > 1 ? 's' : ''}
           </span>
           <div className="ml-auto flex items-center gap-2">
             <button
-              onClick={() => setExportOpen(true)}
+              onClick={() => onExport([...selected])}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#355C7D] text-white rounded-xl hover:bg-[#2a4a65] transition-all"
             >
               <Download className="w-3.5 h-3.5" />
@@ -192,8 +192,8 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
         <div className="flex justify-center">
           <input
             type="checkbox"
-            checked={allSel}
-            ref={el => { if (el) el.indeterminate = someSel; }}
+            checked={someSelected}
+            ref={el => { if (el) el.indeterminate = someSelected; }}
             onChange={toggleAll}
             className="w-3.5 h-3.5 rounded accent-[#2E7D32] cursor-pointer"
           />
@@ -216,7 +216,7 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
           </div>
         ))}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && sorted.length === 0 && (
           <div className="flex flex-col items-center py-14 gap-3">
             <div className="w-12 h-12 rounded-2xl bg-[#F9F9F6] border border-gray-100 flex items-center justify-center">
               <AlertCircle className="w-5 h-5 text-gray-300" />
@@ -224,14 +224,15 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
             <p className="text-sm font-medium text-gray-500">Aucun virement trouvé</p>
           </div>
         )}
-
-        {!loading && filtered.map(t => {
-          const stCfg  = STATUS_CFG[t.status] ?? STATUS_CFG['en_attente'];
-          const tpCfg  = TYPE_CFG[t.type]     ?? TYPE_CFG['other'];
-          const TpIcon = tpCfg.icon;
-          const isSel  = selected.has(t.id);
-          const TERMINAL = ['decaisse', 'echoue', 'annule'];
-          const canEdit  = !TERMINAL.includes(t.status);
+        {!loading && sorted.map(t => {
+          const stCfg     = STATUS_CFG[t.status];
+          const tpCfg     = TYPE_CFG[t.typeTransfert];
+          const TpIcon    = tpCfg.icon;
+          const isSel     = selected.has(t.id);
+          const TERMINAL  = ['approuve', 'echoue', 'annule'];
+          const canEdit   = t.status ? !TERMINAL.includes(t.status) : true;
+          const memberLbl = t.member_name ?? t.id_member;
+          const initial   = memberLbl.charAt(0).toUpperCase() || '?';
 
           return (
             <div
@@ -256,23 +257,23 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
               {/* Membre */}
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-[#2E7D32]">{t.memberName[0]}</span>
+                  <span className="text-xs font-bold text-[#2E7D32]">{initial}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{t.memberName}</p>
-                  <p className="text-xs text-gray-400">{formatDate(t.created_at)}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{memberLbl}</p>
+                  <p className="text-xs text-gray-400">{formatDate(t.created_at ?? t.dateTransfert)}</p>
                 </div>
               </div>
 
               {/* Comptes */}
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-mono text-gray-600 truncate">{t.compteSource}</span>
+                <span className="text-xs font-mono text-gray-600 truncate">{t.account_source}</span>
                 <ArrowLeftRight className="w-3 h-3 text-gray-300 shrink-0" />
-                <span className="text-xs font-mono text-gray-600 truncate">{t.compteDestination}</span>
+                <span className="text-xs font-mono text-gray-600 truncate">{t.account_destination}</span>
               </div>
 
               {/* Référence */}
-              <p className="text-xs font-mono text-gray-500">{t.reference}</p>
+              <p className="text-xs font-mono text-gray-500">{t.reference ?? '—'}</p>
 
               {/* Type */}
               <span
@@ -327,11 +328,11 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
       </div>
 
       {/* ── Pied ── */}
-      {!loading && filtered.length > 0 && (
+      {!loading && sorted.length > 0 && (
         <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            <span className="font-semibold text-gray-600">{filtered.length}</span>{' '}
-            virement{filtered.length !== 1 ? 's' : ''}
+            <span className="font-semibold text-gray-600">{sorted.length}</span>{' '}
+            virement{sorted.length !== 1 ? 's' : ''}
           </p>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
@@ -339,17 +340,6 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
           </span>
         </div>
       )}
-
-      <TransferExportModal
-        open={exportOpen}
-        transfers={filtered.filter(t => selected.has(t.id))}
-        onClose={() => setExportOpen(false)}
-        onConfirm={async (ids) => {
-          await onExport(ids);
-          setSelected(new Set());
-          setExportOpen(false);
-        }}
-      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// Types pour les transactions
+// Types pour les transactions dans app\components\transactions\types.ts
 export interface TransactionData {
   id: number;
   type: 'deposit' | 'withdrawal' | 'transfer' | 'loan';

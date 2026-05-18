@@ -1,10 +1,10 @@
-import DepositDashboard from "@/app/components/transactions/deposits/Depositdashboard"
-
+import DepositGrid from "@/app/components/transactions/deposits/DepositGrid"
+  
 export default function DepotDasboard() {
     return(
     <main className="w-full min-h-screen ">
       <div className="">
-        <DepositDashboard />
+        <DepositGrid />
       </div>   
      </main>
     )

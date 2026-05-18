@@ -1,31 +1,55 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-
 import {
-  TrendingUp, Clock, AlertTriangle, CheckCircle,
-  ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package,
-  Calculator, Lock, Unlock, Sun, Sunset, ChevronRight,
-  Bell, RefreshCw, Banknote, FileText, XCircle,
-  History, LogIn, LogOut, Loader2, CheckCircle2,
+  TrendingUp, Lock, Unlock, Sun, Sunset, ChevronRight,
+  Bell, LogIn, LogOut, Loader2,
+  ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, HandCoins,
+  XCircle, AlertTriangle, CheckCircle,
 } from 'lucide-react';
-import { fetchDashboard, fetchTransactions, fetchAlerts, openSession, closeSession } from '@/app/lib/api/caisse';
-import { CaisseAlert, CaisseTransaction, CaisseSession, CaisseStatus, OpenSessionPayload } from '@/types/caisse';
+
+import { fetchDashboard, fetchTransactions, openSession, closeSession } from '@/app/lib/api/caisse';
+import type { TransactionData } from '@/app/components/transactions/types';
+import type {
+  CaisseAlert, CaisseSession, CaisseStatus, OpenSessionPayload,
+} from '@/types/caisse';
+
+// ✅ On réutilise le composant Stats de la page Dépôts
+
 import OpenSessionModal  from '../../sessions/modals/Opensessionmodal';
 import CloseSessionModal from '../../sessions/modals/Closesessionmodal';
-   // Remplace le quickModal générique actuel par tes vrais composants
+import DepositForm       from '@/app/components/transactions/deposits/DepositForm';
+import WithdrawalForm    from '@/app/components/transactions/withdrawals/WithdrawalForm';
+import TransferForm      from '@/app/components/transactions/transfers/TransferForm';
+import { Modal }         from '../../ui/Modal';
+import { useSession }    from 'next-auth/react';
+import DashboardStats, { TypePoint, VolumePoint } from './DashboardStats';
 
-import DepositForm    from '@/app/components/transactions/deposits/DepositForm';
-import WithdrawalForm from '@/app/components/transactions/withdrawals/WithdrawalForm';
-import TransferForm   from '@/app/components/transactions/transfers/TransferForm';
-import { Modal } from '../../ui/Modal';
+// ─── Constantes ──────────────────────────────────────────────────
 
-import { useSession } from "next-auth/react";
+const C = {
+  green:     '#2E7D32',
+  greenPale: '#DDEAD5',
+  blue:      '#355C7D',
+  gold:      '#D4AF37',
+  red:       '#DC2626',
+};
 
+// Configuration des types de transaction pour les graphiques.
+// Les clés correspondent à TransactionData['type'] et aux clés
+// ajoutées dans SUBTYPE_CFG de DepositStats.
+const TX_TYPE_META: Record<TransactionData['type'], { label: string; color: string }> = {
+  deposit:    { label: 'Dépôt',     color: C.green },
+  withdrawal: { label: 'Retrait',   color: C.red   },
+  transfer:   { label: 'Transfert', color: C.blue  },
+  loan:       { label: 'Prêt',      color: C.gold  },
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────
 
 function formatHTG(v: number) {
   return new Intl.NumberFormat('fr-CA', {
-    style: 'currency', currency: 'HTG', minimumFractionDigits: 2,
+    style: 'currency', currency: 'HTG', minimumFractionDigits: 0,
   }).format(v);
 }
 function getNow() {
@@ -40,53 +64,40 @@ function getGreeting() {
   const h = new Date().getHours();
   return h < 12 ? { text: 'Bonjour',        icon: Sun    }
        : h < 18 ? { text: 'Bon après-midi', icon: Sun    }
-       :           { text: 'Bonsoir',        icon: Sunset };
+       :          { text: 'Bonsoir',        icon: Sunset };
 }
 
-// ─── Modal générique ─────────────────────────────────────────────
-// utilise le composant modal
-// function Modal({ title, onClose, children, size = 'md' }: {
-//   title: React.ReactNode; onClose: () => void;
-//   children: React.ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';  // ← ajoute 'xl'
-// }) {
-//   const w = {
-//     sm: 'max-w-sm',
-//     md: 'max-w-md',
-//     lg: 'max-w-lg',
-//     xl: 'max-w-3xl',  // ← ajoute cette ligne
-//   }[size];
+// Config pour la liste des transactions (icônes, couleurs)
+const TX_ROW_CFG: Record<TransactionData['type'], {
+  icon: React.ElementType; color: string; bg: string; label: string;
+}> = {
+  deposit:    { icon: ArrowDownCircle, color: 'text-[#2E7D32]', bg: 'bg-[#DDEAD5]', label: 'Dépôt'     },
+  withdrawal: { icon: ArrowUpCircle,   color: 'text-red-600',   bg: 'bg-red-50',    label: 'Retrait'   },
+  transfer:   { icon: ArrowLeftRight,  color: 'text-[#355C7D]', bg: 'bg-blue-50',   label: 'Transfert' },
+  loan:       { icon: HandCoins,       color: 'text-[#D4AF37]', bg: 'bg-yellow-50', label: 'Prêt'      },
+};
 
-//   return (
-//     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-//       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-//       <div className={`relative w-full ${w} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}>
-//         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-//           {title}
-//           <button onClick={onClose}
-//             className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-//             <XCircle size={18} />
-//           </button>
-//         </div>
-//         <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-//       </div>
-//     </div>
-//   );
-// }
+// ─── Petits composants ───────────────────────────────────────────
 
-// ─── Petits composants ────────────────────────────────────────────
-
-function KPICard({ icon: Icon, label, value, sub, color, border }: {
-  icon: React.ElementType; label: string; value: string; sub?: string;
-  color: string; border: string;
-}) {
+function TxRow({ tx }: { tx: TransactionData }) {
+  const cfg  = TX_ROW_CFG[tx.type];
+  const Icon = cfg.icon;
+  const sign = tx.type === 'deposit' ? '+' : tx.type === 'withdrawal' ? '-' : '·';
   return (
-    <div className={`bg-white rounded-2xl p-5 shadow-sm border ${border} hover:shadow-md transition-shadow`}>
-      <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-3`}>
-        <Icon className="w-5 h-5 text-white" />
+    <div className="flex items-center gap-4 px-5 py-3 hover:bg-[#DDEAD5]/10 transition-colors">
+      <div className={`w-9 h-9 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0`}>
+        <Icon className={`w-4 h-4 ${cfg.color}`} />
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm text-gray-600 mt-0.5">{label}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{cfg.label}</p>
+        <p className="text-xs text-gray-400 truncate">{tx.description}</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className={`text-sm font-bold ${cfg.color}`}>{sign} {formatHTG(tx.amount)}</p>
+        <p className="text-xs text-gray-400">
+          {new Date(tx.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
     </div>
   );
 }
@@ -102,110 +113,89 @@ function AlertBadge({ severity, message, time }: CaisseAlert) {
       <s.Icon className={`w-4 h-4 mt-0.5 shrink-0 ${s.text}`} />
       <div>
         <p className={`text-sm font-medium ${s.text}`}>{message}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{time}</p>
+        {time && <p className="text-xs text-gray-400 mt-0.5">{time}</p>}
       </div>
     </div>
   );
 }
 
-const TX_CFG: Record<string, { icon: React.ElementType; color: string; bg: string; sign: string; label: string }> = {
-  deposit:    { icon: ArrowDownCircle, color: 'text-[#2E7D32]', bg: 'bg-[#DDEAD5]', sign: '+', label: 'Dépôt'     },
-  withdrawal: { icon: ArrowUpCircle,   color: 'text-red-600',   bg: 'bg-red-50',    sign: '-', label: 'Retrait'   },
-  transfer:   { icon: ArrowLeftRight,  color: 'text-[#355C7D]', bg: 'bg-blue-50',   sign: '→', label: 'Transfert' },
-  loan:       { icon: Banknote,        color: 'text-[#D4AF37]', bg: 'bg-yellow-50', sign: '+', label: 'Prêt'      },
-};
+function AlertsBell({ alerts }: { alerts: CaisseAlert[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-function TxRow({ tx }: { tx: CaisseTransaction }) {
-  const cfg  = TX_CFG[tx.type] ?? TX_CFG['transfer'];
-  const Icon = cfg.icon;
-  return (
-    <div className="flex items-center gap-4 px-5 py-3 hover:bg-[#DDEAD5]/10 transition-colors">
-      <div className={`w-9 h-9 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0`}>
-        <Icon className={`w-4 h-4 ${cfg.color}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900">{cfg.label}</p>
-        <p className="text-xs text-gray-400 truncate">{tx.note}</p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className={`text-sm font-bold ${cfg.color}`}>{cfg.sign} {formatHTG(tx.montant)}</p>
-        <p className="text-xs text-gray-400">{tx.timestamp}</p>
-      </div>
-    </div>
-  );
-}
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
 
-function SessionRow({ session }: { session: CaisseSession }) {
-  const open = session.statut === 'ouverte';
+  const count = alerts.length;
+
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#DDEAD5]/10 transition-colors">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${open ? 'bg-[#DDEAD5]' : 'bg-gray-100'}`}>
-        {open ? <LogIn className="w-4 h-4 text-[#2E7D32]" /> : <LogOut className="w-4 h-4 text-gray-500" />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-gray-900">{open ? 'Session ouverte' : 'Session fermée'}</p>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${open ? 'bg-[#DDEAD5] text-[#1B5E20]' : 'bg-gray-100 text-gray-500'}`}>
-            {session.numero_caisse}
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="relative p-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+        aria-label="Alertes"
+      >
+        <Bell className="w-5 h-5 text-gray-600" />
+        {count > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {count}
           </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900">Alertes & anomalies</h3>
+            {count > 0 && (
+              <span className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">
+                {count}
+              </span>
+            )}
+          </div>
+          <div className="p-3 max-h-96 overflow-y-auto flex flex-col gap-2">
+            {count === 0 ? (
+              <div className="flex flex-col items-center py-8">
+                <CheckCircle className="w-10 h-10 text-[#2E7D32] mb-2" />
+                <p className="text-sm font-medium text-gray-700">Aucune alerte active</p>
+              </div>
+            ) : (
+              alerts.map(a => <AlertBadge key={a.id} {...a} />)
+            )}
+          </div>
         </div>
-        <p className="text-xs text-gray-400 mt-0.5 truncate">
-          {session.caissier_nom} · Superviseur : {session.superviseur}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-bold text-[#2E7D32]">{formatHTG(session.montant_ouverture)}</p>
-        <p className="text-xs text-gray-400">
-          {session.ouverture_at}{session.fermeture_at ? ` → ${session.fermeture_at}` : ''}
-        </p>
-      </div>
+      )}
     </div>
   );
 }
 
-function QuickAction({ icon: Icon, label, color, onClick }: {
-  icon: React.ElementType; label: string; color: string; onClick: () => void;
-}) {
-  return (
-    <button onClick={onClick}
-      className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-md hover:border-[#2E7D32]/30 transition-all group">
-      <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <span className="text-xs font-medium text-gray-700">{label}</span>
-    </button>
-  );
-}
-
-// ─── Dashboard principal ──────────────────────────────────────────
+// ─── Dashboard principal ─────────────────────────────────────────
 
 export default function DashboardCaissier() {
-  const [sessions,      setSessions]     = useState<CaisseSession[]>([]);
-  const [transactions,  setTransactions] = useState<CaisseTransaction[]>([]);
-  const [alerts,        setAlerts]       = useState<CaisseAlert[]>([]);
-  const [montantCaisse, setMontantCaisse] = useState(0);
-  const [caisseStatus,  setCaisseStatus]  = useState<CaisseStatus>('fermée');
-  const [isLoading,     setIsLoading]    = useState(true);
-  const [isRefreshing,  setIsRefreshing] = useState(false);
-  const [activeTab,     setActiveTab]    = useState<'transactions' | 'sessions'>('transactions');
-  const [showOpenModal, setShowOpenModal]  = useState(false);
-  const [showCloseModal,setShowCloseModal] = useState(false);
-  const [quickModal,    setQuickModal]   = useState<string | null>(null);
-  const [time,          setTime]         = useState(getNow());
-  const [isEndOfDay,    setIsEndOfDay]   = useState(false);
+  const [sessions,       setSessions]      = useState<CaisseSession[]>([]);
+  const [transactions,   setTransactions]  = useState<TransactionData[]>([]);
+  const [alerts,         setAlerts]        = useState<CaisseAlert[]>([]);
+  const [montantCaisse,  setMontantCaisse] = useState(0);
+  const [caisseStatus,   setCaisseStatus]  = useState<CaisseStatus>('fermée');
+  const [isLoading,      setIsLoading]     = useState(true);
+  const [showOpenModal,  setShowOpenModal]  = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [quickModal,     setQuickModal]    = useState<string | null>(null);
+  const [time,           setTime]          = useState(getNow());
+  const [period,         setPeriod]        = useState<'day' | 'week' | 'month'>('week');
 
   const activeSession = sessions.find(s => s.statut === 'ouverte') ?? null;
-  const greeting      = getGreeting();
-  const GreetIcon     = greeting.icon;
-  const { data: session, status } = useSession();
+  const greeting  = getGreeting();
+  const GreetIcon = greeting.icon;
+  const { data: session } = useSession();
 
- 
   useEffect(() => {
-    const t = setInterval(() => {
-      setTime(getNow());
-      setIsEndOfDay(new Date().getHours() >= 15);
-    }, 60000);
-    setIsEndOfDay(new Date().getHours() >= 15);
+    const t = setInterval(() => setTime(getNow()), 60000);
     return () => clearInterval(t);
   }, []);
 
@@ -219,51 +209,116 @@ export default function DashboardCaissier() {
     }).finally(() => setIsLoading(false));
   }, []);
 
-  const handleRefresh = useCallback(async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      const [tx, al] = await Promise.all([fetchTransactions(), fetchAlerts()]);
-      setTransactions(tx);
-      setAlerts(al);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [isRefreshing]);
-
   const handleOpenSession = async (payload: OpenSessionPayload) => {
-    const session = await openSession(payload);
-    setSessions(prev => [...prev, session]);
+    const s = await openSession(payload);
+    setSessions(prev => [...prev, s]);
     setCaisseStatus('ouverte');
     setShowOpenModal(false);
   };
-// ✅ Nouvelle signature — correspond exactement au type attendu par CloseSessionModal
-    const handleCloseSession = async (payload: {
-      montant_fermeture:        number;
-      note_fermeture?:          string;
-      remise_effectuee:         boolean;
-      reconciliation_effectuee: boolean;
-    }) => {
-      if (!activeSession) return;
-      const closed = await closeSession(activeSession.id, payload);
-      setSessions(prev => prev.map(s => s.id === activeSession.id ? closed : s));
-      setCaisseStatus('fermée');
-      setShowCloseModal(false);
-    };
-    const currentUser = {
-      name:  session?.user?.name  ?? "Utilisateur",
-      email: session?.user?.email ?? "",
-      role:  (session?.user as any)?.role ?? "Caissier",
-    };
 
-    // 3️⃣ Early returns SEULEMENT à la fin
-    // if (status === "loading" || isLoading) {
-    //   return (
-    //     <div className="flex items-center justify-center min-h-screen">
-    //       <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
-    //     </div>
-    //   );
-    // }
+  const handleCloseSession = async (payload: {
+    montant_fermeture: number; note_fermeture?: string;
+    remise_effectuee: boolean; reconciliation_effectuee: boolean;
+  }) => {
+    if (!activeSession) return;
+    const closed = await closeSession(activeSession.id, payload);
+    setSessions(prev => prev.map(s => s.id === activeSession.id ? closed : s));
+    setCaisseStatus('fermée');
+    setShowCloseModal(false);
+  };
+
+  const currentUser = {
+    name: session?.user?.name ?? 'Utilisateur',
+    role: (session?.user as any)?.role ?? 'Caissier',
+  };
+
+  // ─── Filtre transactions selon période ─────────────────────────
+
+  const filteredTx = useMemo(() => {
+    const now      = new Date();
+    const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
+    const cutoff   = new Date(now);
+    cutoff.setDate(cutoff.getDate() - daysBack);
+    cutoff.setHours(0, 0, 0, 0);
+    return transactions.filter(tx => new Date(tx.created_at) >= cutoff);
+  }, [transactions, period]);
+
+  // ─── KPIs pour DepositStats ────────────────────────────────────
+
+  const completed       = filteredTx.filter(t => t.status === 'completed');
+  const totalAmount     = montantCaisse;                                                // Solde caisse (net)
+  const transactionCount = filteredTx.length;                                            // Nombre transactions
+  const completedCount  = completed.length;                                              // Pour le sub "X complétées"
+  const avgAmount       = completed.length
+    ? completed.reduce((s, t) => s + t.amount, 0) / completed.length
+    : 0;
+  const uniqueMembers   = new Set(filteredTx.map(t => t.member_name).filter(Boolean)).size;
+  const pendingCount    = filteredTx.filter(t => t.status === 'pending').length;
+  const completionRate  = filteredTx.length
+    ? (completedCount / filteredTx.length) * 100
+    : 0;
+
+  // ─── volumeData pour les graphes Volume + Tendance ─────────────
+
+  const volumeData = useMemo((): VolumePoint[] => {
+    const days: VolumePoint[] = [];
+
+    if (period === 'day') {
+      // Étalement par heure de 9h à 17h
+      for (let h = 9; h <= 17; h++) {
+        const d = new Date(); d.setHours(h, 0, 0, 0);
+        days.push({ label: `${h}h`, date: d.toISOString(), count: 0, amount: 0 });
+      }
+    } else {
+      // Jours ouvrés sur la période
+      const target = period === 'week' ? 5 : 22;
+      let back = 0;
+      while (days.length < target && back < 60) {
+        back++;
+        const d = new Date(); d.setDate(d.getDate() - back);
+        if (d.getDay() === 0 || d.getDay() === 6) continue;
+        days.unshift({
+          label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
+          date:  d.toISOString().split('T')[0],
+          count: 0,
+          amount: 0,
+        });
+      }
+    }
+
+    filteredTx.forEach(tx => {
+      if (tx.status !== 'completed') return;
+      const txDate = new Date(tx.created_at);
+      const idx = days.findIndex(item =>
+        period === 'day'
+          ? new Date(item.date).getHours() === txDate.getHours()
+          : item.date === tx.created_at.split('T')[0]
+      );
+      if (idx >= 0) {
+        days[idx].count++;
+        days[idx].amount += tx.amount;
+      }
+    });
+
+    return days;
+  }, [filteredTx, period]);
+
+  // ─── typeData pour le donut "Répartition par type" ─────────────
+
+  const typeData = useMemo((): TypePoint[] =>
+    (['deposit', 'withdrawal', 'transfer', 'loan'] as const).map(key => {
+      const items = filteredTx.filter(t => t.type === key);
+      return {
+        key,
+        name:   TX_TYPE_META[key].label,
+        value:  items.length,
+        amount: items.reduce((s, t) => s + t.amount, 0),
+        color:  TX_TYPE_META[key].color,
+      };
+    }).filter(t => t.value > 0),  // ← cache les types absents pour ne pas avoir des parts à 0
+  [filteredTx]);
+
+  // ─── Render ────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -277,39 +332,23 @@ export default function DashboardCaissier() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
 
       {/* ── Header ── */}
-      <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 text-[#2E7D32] mb-1">
             <GreetIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">
-                {greeting.text}, {currentUser.name}
-              </span>         
+            <span className="text-sm font-medium">{greeting.text}, {currentUser.name}</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard Caissier</h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">{getDate()} · {time}</p>
         </div>
-        <div className="flex items-center gap-3">
-          {alerts.length > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs font-semibold text-red-700">
-                {alerts.length} alerte{alerts.length > 1 ? 's' : ''}
-              </span>
-            </div>
-          )}
-          {/* <button onClick={handleRefresh} disabled={isRefreshing}
-            className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-60"
-            title="Actualiser">
-            <RefreshCw className={`w-4 h-4 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button> */}
-        </div>
+        <AlertsBell alerts={alerts} />
       </div>
 
       {/* ── Bannière caisse ── */}
-      <div className={`mb-6 rounded-2xl border-2 p-5 transition-all ${
+      <div className={`rounded-2xl border-2 p-5 transition-all ${
         caisseStatus === 'fermée' ? 'bg-orange-50 border-orange-200' : 'bg-[#DDEAD5] border-[#2E7D32]/40'
       }`}>
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -351,183 +390,81 @@ export default function DashboardCaissier() {
         </div>
       </div>
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KPICard icon={Banknote}   label="Montant en caisse"    value={formatHTG(montantCaisse)} sub="Solde actuel"
-          color="bg-linear-to-br from-[#2E7D32] to-[#1B5E20]" border="border-[#DDEAD5]" />
-        <KPICard icon={TrendingUp} label="Transactions du jour" value={transactions.length.toString()}
-          sub={`Total : ${formatHTG(transactions.reduce((s,t) => s + t.montant, 0))}`}
-          color="bg-linear-to-br from-[#355C7D] to-[#2A4A5E]" border="border-blue-100" />
-        <KPICard icon={Clock}      label="Dernière remise"      value="10h45" sub="Il y a 2h15"
-          color="bg-linear-to-br from-[#D4AF37] to-[#C9B27C]" border="border-yellow-100" />
-        <KPICard icon={History}    label="Sessions aujourd'hui" value={sessions.length.toString()}
-          sub={activeSession ? `En cours · ${activeSession.numero_caisse}` : 'Aucune session active'}
-          color={activeSession ? 'bg-linear-to-br from-[#81C784] to-[#66BB6A]' : 'bg-linear-to-br from-gray-400 to-gray-600'}
-          border="border-green-100" />
+      {/* ── Filtre période ── */}
+      <div className="flex gap-2">
+        {(['day', 'week', 'month'] as const).map(p => (
+          <button key={p} onClick={() => setPeriod(p)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              period === p ? 'bg-[#2E7D32] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            {p === 'day' ? "Aujourd'hui" : p === 'week' ? '7 jours' : '30 jours'}
+          </button>
+        ))}
       </div>
 
-      {/* ── Alertes + Actions rapides ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-gray-500" />
-              <h2 className="font-semibold text-gray-900">Alertes & Anomalies</h2>
-            </div>
-            {alerts.length > 0 && (
-              <span className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">
-                {alerts.length}
-              </span>
-            )}
-          </div>
-          <div className="p-4 flex flex-col gap-2">
-            {alerts.length === 0
-              ? <div className="flex flex-col items-center py-6">
-                  <CheckCircle className="w-10 h-10 text-[#2E7D32] mb-2" />
-                  <p className="text-sm font-medium text-gray-700">Aucune alerte active</p>
-                </div>
-              : alerts.map(a => <AlertBadge key={a.id} {...a} />)
-            }
-          </div>
-        </div>
+      {/* ── Stats (KPIs + Graphiques) — réutilise DepositStats ── */}
+      <DashboardStats
+        totalAmount={totalAmount}
+        depositCount={transactionCount}
+        completedCount={completedCount}
+        avgAmount={avgAmount}
+        uniqueMembers={uniqueMembers}
+        pendingCount={pendingCount}
+        completionRate={completionRate}
+        volumeData={volumeData}
+        typeData={typeData}
+      />
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-            <Calculator className="w-4 h-4 text-gray-500" />
-            <h2 className="font-semibold text-gray-900">Actions Rapides</h2>
-          </div>
-          <div className="p-4 grid grid-cols-3 gap-3">
-            <QuickAction icon={ArrowDownCircle} label="Dépôt"          color="bg-linear-to-br from-[#2E7D32] to-[#1B5E20]" onClick={() => setQuickModal('depot')} />
-            <QuickAction icon={ArrowUpCircle}   label="Retrait"        color="bg-linear-to-br from-red-500 to-red-700"       onClick={() => setQuickModal('retrait')} />
-            <QuickAction icon={ArrowLeftRight}  label="Transfert"      color="bg-linear-to-br from-[#355C7D] to-[#2A4A5E]"  onClick={() => setQuickModal('transfert')} />
-            <QuickAction icon={Package}         label="Remise"         color="bg-linear-to-br from-[#D4AF37] to-[#C9B27C]"  onClick={() => setQuickModal('remise')} />
-            <QuickAction icon={Calculator}      label="Réconciliation" color="bg-linear-to-br from-purple-500 to-purple-700" onClick={() => setQuickModal('recon')} />
-            <QuickAction icon={FileText}        label="Rapport"        color="bg-linear-to-br from-gray-500 to-gray-700"     onClick={() => setQuickModal('rapport')} />
+      {/* ── Dernières transactions ── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-gray-500" />
+            <h2 className="font-semibold text-gray-900">Dernières transactions</h2>
+            <span className="ml-2 px-2 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">
+              {transactions.length}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* ── Onglets Transactions | Sessions ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
-
-        {/* En-tête onglets — sans "Voir tout" */}
-        <div className="flex items-center gap-1 px-5 pt-4 pb-0 border-b border-gray-100">
-          {([
-            { key: 'transactions', label: 'Transactions', count: transactions.length, Icon: TrendingUp },
-            { key: 'sessions',     label: 'Sessions',     count: sessions.length,     Icon: History    },
-          ] as const).map(tab => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={[
-                'flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl transition-all border-b-2',
-                activeTab === tab.key
-                  ? 'border-[#2E7D32] text-[#1B5E20] bg-[#DDEAD5]/30'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50',
-              ].join(' ')}>
-              <tab.Icon className="w-3.5 h-3.5" />
-              {tab.label}
-              <span className={['px-2 py-0.5 rounded-lg text-xs font-bold',
-                activeTab === tab.key ? 'bg-[#2E7D32] text-white' : 'bg-gray-100 text-gray-500',
-              ].join(' ')}>{tab.count}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Corps du tableau */}
         <div className="divide-y divide-gray-50">
-          {activeTab === 'transactions'
-            ? transactions.length === 0
-              ? <p className="text-sm text-gray-400 text-center py-10">Aucune transaction aujourd'hui</p>
-              : transactions.map(tx => <TxRow key={tx.id} tx={tx} />)
-            : sessions.length === 0
-              ? <p className="text-sm text-gray-400 text-center py-10">Aucune session enregistrée</p>
-              : sessions.map(s => <SessionRow key={s.id} session={s} />)
+          {transactions.length === 0
+            ? <p className="text-sm text-gray-400 text-center py-10">Aucune transaction</p>
+            : transactions.slice(0, 8).map(tx => <TxRow key={tx.id} tx={tx} />)
           }
         </div>
 
-        {/* ── Pied de tableau : Voir tout (en bas) ── */}
         <div className="border-t border-gray-100 px-5 py-3">
           <Link
-            href={activeTab === 'transactions' ? '/dashboard/transactions' : '/dashboard/sessions'}
+            href="/dashboard/transactions"
             className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-semibold text-[#2E7D32] hover:bg-[#DDEAD5]/40 transition-colors"
           >
-            Voir toutes les {activeTab === 'transactions' ? 'transactions' : 'sessions'}
+            Voir toutes les transactions
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>
 
-      {/* ── Fin de journée ── */}
-      {isEndOfDay && (
-        <div className="bg-linear-to-r from-[#1B5E20] to-[#2E7D32] rounded-2xl p-5 text-white mb-6">
-          <p className="text-sm font-semibold text-[#DDEAD5] uppercase tracking-wide mb-1">Fin de journée</p>
-          <h3 className="text-lg font-bold mb-1">Rappels de clôture obligatoires</h3>
-          <p className="text-sm text-green-200 mb-4">Complétez ces étapes avant de quitter votre poste.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { Icon: Package,    label: 'Faire la remise',       done: false,                    action: () => setQuickModal('remise') },
-              { Icon: Calculator, label: 'Réconciliation finale',  done: false,                    action: () => setQuickModal('recon')  },
-              { Icon: Lock,       label: 'Fermer la caisse',       done: caisseStatus === 'fermée', action: () => caisseStatus === 'ouverte' && setShowCloseModal(true) },
-            ].map((item, i) => (
-              <button key={i} onClick={item.action} disabled={item.done}
-                className={[
-                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left w-full',
-                  item.done ? 'bg-white/20 opacity-80 cursor-default' : 'bg-white/10 hover:bg-white/20',
-                ].join(' ')}>
-                <item.Icon className="w-5 h-5 shrink-0 text-[#DDEAD5]" />
-                <span className={`text-sm font-medium flex-1 ${item.done ? 'line-through opacity-70' : ''}`}>
-                  {item.label}
-                </span>
-                {item.done
-                  ? <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                  : <ChevronRight className="w-4 h-4 text-green-300 shrink-0" />}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* ── Modals ── */}
+      {quickModal === 'depot' && (
+        <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
+          title={<h3 className="text-base font-bold text-gray-900">Faire un dépôt</h3>}>
+          <DepositForm
+            onSubmit={async () => {
+              setQuickModal(null);
+              const tx = await fetchTransactions();
+              setTransactions(tx);
+            }}
+            onCancel={() => setQuickModal(null)}
+          />
+        </Modal>
       )}
 
-      {/* ── Performance ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-          <TrendingUp className="w-4 h-4 text-gray-500" />
-          <h2 className="font-semibold text-gray-900">Ma performance aujourd'hui</h2>
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-gray-100">
-          {[
-            { label: 'Transactions',   value: transactions.length.toString(),                            sub: "aujourd'hui" },
-            { label: 'Volume total',   value: formatHTG(transactions.reduce((s,t) => s + t.montant, 0)), sub: 'traité'      },
-            { label: 'Taux de succès', value: '100%',                                                    sub: 'aucun écart' },
-          ].map(stat => (
-            <div key={stat.label} className="px-5 py-4 text-center">
-              <p className="text-xl font-bold text-[#2E7D32]">{stat.value}</p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
-              <p className="text-xs text-gray-400">{stat.sub}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Modals actions rapides ── */}
-          
-        {quickModal === 'depot' && (
-          <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
-            title={<h3 className="text-base font-bold text-gray-900">Faire un dépôt</h3>}>
-            <DepositForm
-              onSubmit={async (_data) => {
-                setQuickModal(null);
-                const tx = await fetchTransactions();   // rafraîchit la liste
-                setTransactions(tx);
-              }}
-              onCancel={() => setQuickModal(null)}
-            />
-          </Modal>
-        )}
-
-          {quickModal === 'retrait' && (
+      {quickModal === 'retrait' && (
         <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
           title={<h3 className="text-base font-bold text-gray-900">Faire un retrait</h3>}>
           <WithdrawalForm
-            onSubmit={async (_data) => {
+            onSubmit={async () => {
               setQuickModal(null);
               const tx = await fetchTransactions();
               setTransactions(tx);
@@ -543,12 +480,9 @@ export default function DashboardCaissier() {
           <TransferForm onCancel={() => setQuickModal(null)} />
         </Modal>
       )}
-      {/* ── Modal ouverture session ── */}
+
       {showOpenModal && (
-        <Modal 
-          isOpen 
-          size="3xl" 
-          onClose={() => setShowOpenModal(false)}
+        <Modal isOpen size="3xl" onClose={() => setShowOpenModal(false)}
           title={
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
@@ -560,17 +494,17 @@ export default function DashboardCaissier() {
               </div>
             </div>
           }>
-            <div className="p-6 max-h-[90vh] overflow-y-auto">
-              <OpenSessionModal
+          <div className="p-6 max-h-[90vh] overflow-y-auto">
+            <OpenSessionModal
               onClose={() => setShowOpenModal(false)}
-              onConfirm={handleOpenSession} branches={[]} openingHours={[]} holidays={[]} onRequireOverride={function (reason: string, details: string): void {
-                throw new Error('Function not implemented.');
-              } }              />
-            </div>
+              onConfirm={handleOpenSession}
+              branches={[]} openingHours={[]} holidays={[]}
+              onRequireOverride={() => { throw new Error('Function not implemented.'); }}
+            />
+          </div>
         </Modal>
       )}
 
-      {/* ── Modal fermeture session ── */}
       {showCloseModal && activeSession && (
         <Modal isOpen size="lg" onClose={() => setShowCloseModal(false)}
           title={
@@ -595,7 +529,6 @@ export default function DashboardCaissier() {
           </div>
         </Modal>
       )}
-
     </div>
   );
 }

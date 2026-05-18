@@ -3,14 +3,13 @@
  * ─────────────────────────────────────────────────────────────────
  * Source unique de vérité pour tous les appels API caisse.
  * Utilise exclusivement AxiosInstance (baseURL + JWT centralisés).
- * Pas de fetch natif, pas de API_BASE manuel.
  * ─────────────────────────────────────────────────────────────────
  */
 
 import AxiosInstance from '../axiosInstance';
 import { isAxiosError } from 'axios';
 import { SessionManager } from './Sessionmanager';
-import { OfflineQueue }   from './Offlinequeue';
+import { OfflineQueue } from './Offlinequeue';
 import { CreateDepositResponse } from '@/app/components/dashboard/caissier/validation';
 import {
   CaisseSession,
@@ -20,6 +19,10 @@ import {
 } from '@/types/caisse';
 import { CaisseFormValues } from '@/app/components/sessions/validation';
 
+// ✅ Source unique pour les transactions côté UI (dashboard, listes, etc.)
+import type { TransactionData } from '@/app/components/transactions/types';
+import { mockTransactions } from '@/app/components/transactions/mockTransactions';
+
 // ─── Helper interne ───────────────────────────────────────────────
 
 function isNetworkOrServerError(err: unknown): boolean {
@@ -28,22 +31,7 @@ function isNetworkOrServerError(err: unknown): boolean {
   return err.response.status >= 500;
 }
 
-// ─── Types ───────────────────────────────────────────────────────
-
-export interface Branch {
-  id:   string; // UUID
-  name: string;
-}
-
-// ─── Mocks ───────────────────────────────────────────────────────
-
-const MOCK_TRANSACTIONS: CaisseTransaction[] = [
-  { transactionId: 't1', type: 'deposit',    amount: 15000, note: 'Dépôt ouverture',    time: '08:00', sessionId: 'local_demo' },
-  { transactionId: 't2', type: 'withdrawal', amount:  2500, note: 'Retrait caissier',   time: '09:30', sessionId: 'local_demo' },
-  { transactionId: 't3', type: 'transfer',   amount:  8350, note: 'Virement C-01→C-02', time: '11:15', sessionId: 'local_demo' },
-  { transactionId: 't4', type: 'deposit',    amount: 30000, note: 'Remise superviseur', time: '14:00', sessionId: 'local_demo' },
-  { transactionId: 't5', type: 'withdrawal', amount:  5000, note: 'Fond de caisse',     time: '15:00', sessionId: 'local_demo' },
-];
+// ─── Mocks (uniquement ce qui n'a pas de source dédiée) ──────────
 
 const MOCK_ALERTS: CaisseAlert[] = [
   { id: 'a1', severity: 'warning', message: 'Remise de 14h non complétée',     time: '14:02' },
@@ -51,46 +39,13 @@ const MOCK_ALERTS: CaisseAlert[] = [
   { id: 'a3', severity: 'info',    message: "Audit prévu à 16h00 aujourd'hui", time: '09:00' },
 ];
 
-// Fallback branches si GET /branches/ échoue
-const MOCK_BRANCHES: Branch[] = [
-  { id: 'mock-uuid-1', name: 'Agence Port-au-Prince' },
-  { id: 'mock-uuid-2', name: 'Agence Pétion-Ville'   },
-  { id: 'mock-uuid-3', name: 'Agence Cap-Haïtien'    },
-];
-
-// ─── Branches ────────────────────────────────────────────────────
-
-/**
- * GET /branches/
- * Retourne la liste des agences pour le dropdown du formulaire caisse.
- * Fallback sur MOCK_BRANCHES si l'API est indisponible.
- */
-export async function fetchBranches(): Promise<Branch[]> {
-  try {
-    const { data } = await AxiosInstance.get<Branch[]>('/branches/');
-    return data;
-  } catch (err) {
-    console.warn('[caisse] fetchBranches → mock :', err);
-    return MOCK_BRANCHES;
-  }
-}
-
 // ─── Caisses ─────────────────────────────────────────────────────
 
-/**
- * POST /caisses/
- * Crée une nouvelle caisse.
- * Payload validé par CaisseSchema (Zod) avant l'appel.
- *
- * @throws {AxiosError} 4xx → erreur métier remontée à l'UI
- * @throws {AxiosError} 5xx / réseau → erreur remontée à l'UI
- *   (pas de fallback offline — une caisse doit être créée côté serveur)
- */
 export async function createCaisse(payload: CaisseFormValues): Promise<void> {
   await AxiosInstance.post('/caisses/', payload);
 }
 
-// ─── Dépôts ───────────────────────────────────────────────────────
+// ─── Dépôts ──────────────────────────────────────────────────────
 
 export async function createDeposit(
   payload: unknown,
@@ -107,11 +62,11 @@ export async function createDeposit(
   return data;
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────
+// ─── Dashboard ───────────────────────────────────────────────────
 
 export async function fetchDashboard(): Promise<{
   sessions:       CaisseSession[];
-  transactions:   CaisseTransaction[];
+  transactions:   TransactionData[];
   alerts:         CaisseAlert[];
   montant_caisse: number;
 }> {
@@ -131,26 +86,41 @@ export async function fetchDashboard(): Promise<{
     fetchAlerts(),
   ]);
 
-  const montant_caisse = transactions.reduce(
-    (sum, tx) => tx.type === 'deposit' ? sum + tx.amount : sum - tx.amount,
-    0
-  );
+  // Calcul du solde caisse :
+  // - dépôts complétés       → entrée
+  // - retraits complétés     → sortie
+  // - prêts déboursés        → sortie (loan_info.status === 'active' | 'approved')
+  // - transferts complétés   → neutre pour la caisse globale, on ignore
+  // - tout ce qui est pending/failed → ignoré
+  const montant_caisse = transactions.reduce((sum, tx) => {
+    if (tx.status !== 'completed') return sum;
+    if (tx.type === 'deposit')    return sum + tx.amount;
+    if (tx.type === 'withdrawal') return sum - tx.amount;
+    if (tx.type === 'loan') {
+      const ls = tx.loan_info?.status;
+      if (ls === 'active' || ls === 'approved') return sum - tx.amount;
+    }
+    return sum;
+  }, 0);
 
   return { sessions, transactions, alerts, montant_caisse };
 }
 
-// ─── Transactions ─────────────────────────────────────────────────
+// ─── Transactions ────────────────────────────────────────────────
 
-export async function fetchTransactions(): Promise<CaisseTransaction[]> {
+export async function fetchTransactions(): Promise<TransactionData[]> {
   try {
-    const { data } = await AxiosInstance.get<CaisseTransaction[]>('/transactions/');
+    const { data } = await AxiosInstance.get<TransactionData[]>('/transactions/');
     return data;
   } catch (err) {
     console.warn('[caisse] fetchTransactions → mock :', err);
-    return MOCK_TRANSACTIONS;
+    return mockTransactions;
   }
 }
 
+// (Fonction historique — toujours utilisée par d'autres modules pour
+//  filtrer les transactions de caisse par session. On la garde sur le type
+//  CaisseTransaction parce que c'est du journal de caisse interne.)
 export async function fetchTransactionsBySession(
   sessionId: string
 ): Promise<CaisseTransaction[]> {
@@ -160,8 +130,8 @@ export async function fetchTransactionsBySession(
     );
     return data;
   } catch (err) {
-    console.warn(`[caisse] fetchTransactionsBySession(${sessionId}) → mock :`, err);
-    return MOCK_TRANSACTIONS.filter(tx => tx.sessionId === sessionId);
+    console.warn(`[caisse] fetchTransactionsBySession(${sessionId}) → mock vide :`, err);
+    return [];
   }
 }
 
@@ -171,8 +141,7 @@ export async function createTransaction(payload: {
   description?: string;
   note?:        string;
   session?:     string;
-}): Promise<
-  CaisseTransaction |
+}): Promise <CaisseTransaction |
   { _offline: true; queued: ReturnType<typeof OfflineQueue.enqueue> }
 > {
   let sessionId = payload.session;

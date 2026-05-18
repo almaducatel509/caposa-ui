@@ -19,6 +19,7 @@ import {
   ChevronDown, Calendar, Percent, Banknote, Package,
   Leaf, Home, GraduationCap, Wrench, Zap, RefreshCw,
 } from 'lucide-react';
+import MemberPicker from "../members/MemberPicker";
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 interface MemberOption {
@@ -186,11 +187,13 @@ function RecapRow({ label, value, highlight }: { label: string; value?: string; 
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function LoanForm({ members: propMembers, onSubmit, onCancel, isLoading }: LoanFormProps) {
-  const members = propMembers ?? MOCK_MEMBERS;
+  // const members = propMembers ?? MOCK_MEMBERS;
 
   // ── Member state ──
   const [memberSearch,   setMemberSearch]   = useState('');
   const [memberOpen,     setMemberOpen]     = useState(false);
+  // State simplifié
+  const [members,        setMembers]        = useState<MemberOption[]>(propMembers ?? MOCK_MEMBERS);
   const [selectedMember, setSelectedMember] = useState<MemberOption | null>(null);
 
   // ── Account state ──
@@ -220,20 +223,36 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
   );
 
   // ── Member selection ──
-  const handleSelectMember = (m: MemberOption) => {
+  // const handleSelectMember = (m: MemberOption) => {
+  //   setSelectedMember(m);
+  //   setMemberOpen(false);
+  //   setMemberSearch('');
+  //   setSelectedAccount(null);
+  //   setForm(f => ({ ...f, id_member: m.id }));
+  //   // Load accounts
+  //   setAccountsLoading(true);
+  //   setTimeout(() => {
+  //     setAccounts(getMockAccounts(m.id));
+  //     setAccountsLoading(false);
+  //   }, 400);
+  // };
+  const handleSelectMember = (m: MemberOption | null) => {
     setSelectedMember(m);
-    setMemberOpen(false);
-    setMemberSearch('');
     setSelectedAccount(null);
+
+    if (!m) {
+      setAccounts([]);
+      setForm(f => ({ ...f, id_member: undefined }));
+      return;
+    }
+
     setForm(f => ({ ...f, id_member: m.id }));
-    // Load accounts
     setAccountsLoading(true);
     setTimeout(() => {
       setAccounts(getMockAccounts(m.id));
       setAccountsLoading(false);
     }, 400);
   };
-
   // When wired to API:
   // const handleSelectMember = async (m: MemberOption) => {
   //   setAccountsLoading(true);
@@ -355,54 +374,14 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionTitle icon={User} label="Membre" />
 
-        {!selectedMember ? (
-          <div className="relative ">
-            <Label>Rechercher un membre</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={memberSearch}
-                onChange={e => { setMemberSearch(e.target.value); setMemberOpen(true); }}
-                onFocus={() => setMemberOpen(true)}
-                placeholder="Nom ou numéro de membre…"
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]"
-              />
-            </div>
-            {memberOpen && filteredMembers.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
-                {filteredMembers.map(m => (
-                  <button key={m.id} onMouseDown={() => handleSelectMember(m)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F9F9F6] text-left border-b border-gray-50 last:border-0 transition-colors">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">{m.full_name}</p>
-                      <p className="text-xs text-gray-400">#{m.id_number}</p>
-                    </div>
-                    {m.phone_number && <p className="text-xs text-gray-400 shrink-0">{m.phone_number}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-            <FieldError msg={errors.id_member} />
-          </div>
-        ) : (
-          <div className="flex items-center justify-between p-3 bg-[#DDEAD5]/40 rounded-xl border border-[#DDEAD5]">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#2E7D32]/10 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-[#2E7D32]" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-800">{selectedMember.full_name}</p>
-                <p className="text-xs text-gray-500">#{selectedMember.id_number}
-                  {selectedMember.phone_number && ` · ${selectedMember.phone_number}`}
-                </p>
-              </div>
-            </div>
-            <button onClick={clearMember} className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-gray-600 transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
+       <MemberPicker
+          members={members}
+          selectedMember={selectedMember}
+          onSelect={handleSelectMember}
+          isRequired
+          errorMessage={errors.id_member}
+          label="Rechercher un membre"
+        />
         {/* Linked account */}
         {selectedMember && (
           <div className="mt-4">

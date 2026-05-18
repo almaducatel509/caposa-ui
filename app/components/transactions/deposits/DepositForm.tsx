@@ -36,8 +36,6 @@ interface DepositFormProps {
 const SUBTYPE_CFG = {
   cash:     { icon: Banknote,       label: 'Espèces',  desc: 'Dépôt en liquide',        hold: 0 },
   check:    { icon: FileCheck,      label: 'Chèque',   desc: 'Compensation 1–5 jours',  hold: 3 },
-  transfer: { icon: ArrowLeftRight, label: 'Virement', desc: 'Virement interne/externe', hold: 0 },
-  other:    { icon: MoreHorizontal, label: 'Autre',    desc: 'Autre mode de dépôt',     hold: 1 },
 } as const;
 
 const TYPE_LABEL: Record<string, { label: string; bg: string; text: string }> = {
@@ -136,24 +134,50 @@ export default function DepositForm({
   const [submitted,       setSubmitted]       = useState(false);
   const [submitting,      setSubmitting]      = useState(false);
   const [errors,          setErrors]          = useState<Record<string, string>>({});
-
   const [form, setForm] = useState({
-    idCompte:           '',
-    codeAutorisation:   '',
-    montantTransaction: '',
-    depositSubtype:     'cash' as DepositSubtype,
-    source:             '',
-    description:        '',
-    transferReference:  '',
-    senderName:         '',
-  });
+  idCompte: '',
+  codeAutorisation: '',
+  montantTransaction: '',
+  depositSubtype: 'cash',
+  source: '',
+  description: '',
+
+  // Champs chèque existants
+  checkNumber: '',
+  issuingBank: '',
+  checkIssuerName: '',
+  checkDate: '',
+
+  // Nouveaux champs MICR
+  micrSequence: '',
+  bankCode: '',
+  accountNumberMicr: '',
+  branchCode: '',
+  productCode: '',
+
+  // Champs supplémentaires
+  beneficiary: '',
+  amountWords: '',
+  issuePlace: '',
+});
+
 
   // Calculs automatiques
   const amount     = parseFloat(form.montantTransaction) || 0;
-  const hold       = form.depositSubtype === 'check' ? 3 : form.depositSubtype === 'other' ? 1 : 0;
+
+  // hold period : 3 jours pour chèque, 0 pour cash
+  const hold = form.depositSubtype === 'check' ? 3 : 0;
+
+  // vérification requise : chèque OU montant > 50 000
   const needsVerif = form.depositSubtype === 'check' || amount > 50000;
+
+  // montant disponible immédiatement : 30% si chèque, 100% si cash
   const availImm   = hold > 0 ? Math.floor(amount * 0.3) : amount;
-  const isBlocked  = selectedAccount !== null && selectedAccount.statutCompte !== 'actif';
+
+  // compte bloqué ?
+  const isBlocked  =
+    selectedAccount !== null &&
+    selectedAccount.statutCompte !== 'actif';
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -187,9 +211,11 @@ export default function DepositForm({
     setMemberAccounts([]);
     setForm(f => ({ ...f, idCompte: '' }));
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+
+    console.log("📤 Données brutes du formulaire :", form);
+
     const payload = {
       idCompte:             form.idCompte,
       typeTransaction:      'DEPOSIT' as const,
@@ -198,28 +224,56 @@ export default function DepositForm({
       depositSubtype:       form.depositSubtype,
       source:               form.source,
       description:          form.description || null,
-      transferReference:    form.transferReference || null,
-      senderName:           form.senderName || null,
+
+      // Champs chèque
+      checkNumber:          form.checkNumber || null,
+      issuingBank:          form.issuingBank || null,
+      checkIssuerName:      form.checkIssuerName || null,
+      checkDate:            form.checkDate || null,
+
+      // MICR
+      micrSequence:         form.micrSequence || null,
+      bankCode:             form.bankCode || null,
+      accountNumberMicr:    form.accountNumberMicr || null,
+      branchCode:           form.branchCode || null,
+      productCode:          form.productCode || null,
+
+      // Supplémentaires
+      beneficiary:          form.beneficiary || null,
+      amountWords:          form.amountWords || null,
+      issuePlace:           form.issuePlace || null,
+
+      // Système
       holdPeriod:           hold,
       requiresVerification: needsVerif,
       availableImmediately: availImm,
     };
 
+    console.log("📦 Payload avant validation :", payload);
+
     const result = depositSchema.safeParse(payload);
+
     if (!result.success) {
+      console.log("❌ Erreurs de validation :", result.error.format());
+
       const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((err: import('zod').ZodIssue) => {
+      result.error.errors.forEach((err) => {
         const key = String(err.path[0]);
         if (!fieldErrors[key]) fieldErrors[key] = err.message;
       });
+
       setErrors(fieldErrors);
       return;
     }
 
+    console.log("✅ Données validées envoyées au backend :", result.data);
+
     setErrors({});
     setSubmitting(true);
+
     try {
-      await onSubmit(result.data);
+      const response = await onSubmit(result.data);
+      console.log("📥 Réponse backend :", response);
       setSubmitted(true);
     } finally {
       setSubmitting(false);
@@ -229,9 +283,32 @@ export default function DepositForm({
   const handleReset = () => {
     setSubmitted(false);
     setForm({
-      idCompte: '', codeAutorisation: '', montantTransaction: '',
-      depositSubtype: 'cash', source: '', description: '', transferReference: '', senderName: '',
+      idCompte: '',
+      codeAutorisation: '',
+      montantTransaction: '',
+      depositSubtype: 'cash',
+      source: '',
+      description: '',
+
+      // Champs chèque existants
+      checkNumber: '',
+      issuingBank: '',
+      checkIssuerName: '',
+      checkDate: '',
+
+      // Nouveaux champs MICR
+      micrSequence: '',
+      bankCode: '',
+      accountNumberMicr: '',
+      branchCode: '',
+      productCode: '',
+
+      // Champs supplémentaires
+      beneficiary: '',
+      amountWords: '',
+      issuePlace: '',
     });
+
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
@@ -416,93 +493,159 @@ export default function DepositForm({
       </div>
 
       {/* ── 3. Détails ── */}
+      {/* ── 3. Détails ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={3} title="Détails" icon={FileText} />
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
+          {/* Source */}
           <Field label="Source" required error={errors.source}>
-            <Input placeholder="Ex: Salaire, Remboursement, Vente…"
-              hasError={!!errors.source} value={form.source} onChange={set('source')} />
+            <Input
+              placeholder="Ex: Salaire, Remboursement, Vente…"
+              hasError={!!errors.source}
+              value={form.source}
+              onChange={set('source')}
+            />
           </Field>
 
+          {/* Description */}
           <Field label="Description">
-            <Input placeholder="Notes optionnelles…" value={form.description} onChange={set('description')} />
+            <Input
+              placeholder="Notes optionnelles…"
+              value={form.description}
+              onChange={set('description')}
+            />
           </Field>
 
-          {form.depositSubtype === 'transfer' && (
+          {/* Champs spécifiques au chèque */}
+          {/* Champs spécifiques au chèque */}
+          {form.depositSubtype === 'check' && (
             <>
-              <Field label="Référence du virement" hint="N° de référence de la transaction source">
-                <div className="relative">
-                  <Hash className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <Input placeholder="REF-XXXXXX" className="pl-9 font-mono"
-                    value={form.transferReference} onChange={set('transferReference')} />
-                </div>
+              {/* Numéro du chèque (imprimé) */}
+              <Field label="Numéro du chèque (imprimé)" required error={errors.checkNumber}>
+                <Input
+                  placeholder="Ex: 001245"
+                  hasError={!!errors.checkNumber}
+                  value={form.checkNumber}
+                  onChange={set('checkNumber')}
+                />
               </Field>
-              <Field label="Nom de l'émetteur">
-                <div className="relative">
-                  <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <Input placeholder="Personne ou institution source" className="pl-9"
-                    value={form.senderName} onChange={set('senderName')} />
-                </div>
+
+              {/* Numéro séquentiel MICR */}
+              <Field label="Numéro séquentiel MICR" required error={errors.micrSequence}>
+                <Input
+                  placeholder="Ex: 907"
+                  hasError={!!errors.micrSequence}
+                  value={form.micrSequence}
+                  onChange={set('micrSequence')}
+                />
+              </Field>
+
+              {/* Code banque (MICR) */}
+              <Field label="Code banque (MICR)" required error={errors.bankCode}>
+                <Input
+                  placeholder="Ex: 121000031"
+                  hasError={!!errors.bankCode}
+                  value={form.bankCode}
+                  onChange={set('bankCode')}
+                />
+              </Field>
+
+              {/* Numéro de compte (MICR) */}
+              <Field label="Numéro de compte (MICR)" required error={errors.accountNumberMicr}>
+                <Input
+                  placeholder="Ex: 10100600000"
+                  hasError={!!errors.accountNumberMicr}
+                  value={form.accountNumberMicr}
+                  onChange={set('accountNumberMicr')}
+                />
+              </Field>
+
+              {/* Code succursale */}
+              <Field label="Code succursale" required error={errors.branchCode}>
+                <Input
+                  placeholder="Ex: SC #0102"
+                  hasError={!!errors.branchCode}
+                  value={form.branchCode}
+                  onChange={set('branchCode')}
+                />
+              </Field>
+
+              {/* Code produit */}
+              <Field label="Code produit" required error={errors.productCode}>
+                <Input
+                  placeholder="Ex: 031, 001…"
+                  hasError={!!errors.productCode}
+                  value={form.productCode}
+                  onChange={set('productCode')}
+                />
+              </Field>
+
+              {/* Banque émettrice */}
+              <Field label="Banque émettrice" required error={errors.issuingBank}>
+                <Input
+                  placeholder="Ex: Unibank, Sogebank…"
+                  hasError={!!errors.issuingBank}
+                  value={form.issuingBank}
+                  onChange={set('issuingBank')}
+                />
+              </Field>
+
+              {/* Nom de l'émetteur */}
+              <Field label="Nom de l'émetteur" required error={errors.checkIssuerName}>
+                <Input
+                  placeholder="Nom inscrit sur le chèque"
+                  hasError={!!errors.checkIssuerName}
+                  value={form.checkIssuerName}
+                  onChange={set('checkIssuerName')}
+                />
+              </Field>
+
+              {/* Bénéficiaire */}
+              <Field label="Bénéficiaire" required error={errors.beneficiary}>
+                <Input
+                  placeholder="Nom du bénéficiaire"
+                  hasError={!!errors.beneficiary}
+                  value={form.beneficiary}
+                  onChange={set('beneficiary')}
+                />
+              </Field>
+
+              {/* Montant en lettres */}
+              <Field label="Montant en lettres" required error={errors.amountWords}>
+                <Input
+                  placeholder="Ex: Dix mille gourdes"
+                  hasError={!!errors.amountWords}
+                  value={form.amountWords}
+                  onChange={set('amountWords')}
+                />
+              </Field>
+
+              {/* Lieu d'émission */}
+              <Field label="Lieu d'émission" required error={errors.issuePlace}>
+                <Input
+                  placeholder="Ex: Pétion-Ville"
+                  hasError={!!errors.issuePlace}
+                  value={form.issuePlace}
+                  onChange={set('issuePlace')}
+                />
+              </Field>
+
+              {/* Date du chèque */}
+              <Field label="Date du chèque">
+                <Input
+                  type="date"
+                  value={form.checkDate ?? ''}
+                  onChange={set('checkDate')}
+                />
               </Field>
             </>
           )}
 
+
         </div>
       </div>
-
-      {/* ── 4. Récapitulatif ── */}
-      {amount > 0 && (
-        <div className="bg-[#F9F9F6] rounded-2xl border border-gray-100 p-5">
-          <SectionHeader step={4} title="Récapitulatif" icon={ShieldCheck} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-
-            <div className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-              <p className="text-xs text-gray-400 mb-1">Disponible immédiatement</p>
-              <p className="text-base font-bold text-[#2E7D32]">{formatHTG(availImm)}</p>
-            </div>
-
-            <div className={`rounded-xl border px-4 py-3 ${hold > 0 ? 'bg-yellow-50 border-yellow-100' : 'bg-white border-gray-100'}`}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <Clock className={`w-3.5 h-3.5 ${hold > 0 ? 'text-yellow-600' : 'text-gray-400'}`} />
-                <p className="text-xs text-gray-400">Délai de compensation</p>
-              </div>
-              <p className={`text-base font-bold ${hold > 0 ? 'text-yellow-700' : 'text-gray-500'}`}>
-                {hold > 0 ? `${hold} jour${hold > 1 ? 's' : ''}` : 'Immédiat'}
-              </p>
-            </div>
-
-            <div className={`rounded-xl border px-4 py-3 ${needsVerif ? 'bg-blue-50 border-blue-100' : 'bg-white border-gray-100'}`}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <ShieldCheck className={`w-3.5 h-3.5 ${needsVerif ? 'text-[#355C7D]' : 'text-gray-400'}`} />
-                <p className="text-xs text-gray-400">Vérification</p>
-              </div>
-              <p className={`text-sm font-semibold ${needsVerif ? 'text-[#355C7D]' : 'text-gray-500'}`}>
-                {needsVerif ? 'Requise' : 'Non requise'}
-              </p>
-            </div>
-
-          </div>
-
-          {amount > 50000 && (
-            <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
-              <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-yellow-700 font-medium">
-                Montant &gt; 50 000 HTG — validation superviseur requise.
-              </p>
-            </div>
-          )}
-
-          {isBlocked && (
-            <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
-              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-600 font-medium">
-                Ce compte est suspendu — les dépôts ne sont pas autorisés.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Footer ── */}
       <div className="flex items-center justify-between gap-3 pt-1">

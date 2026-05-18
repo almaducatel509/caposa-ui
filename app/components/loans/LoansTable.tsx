@@ -147,6 +147,7 @@ function matchesRange(amount: number, range: LoanFilterRange): boolean {
 // Mirrors exactly the shape returned by Django's /api/loans/ endpoint.
 // When the backend is wired in, this function gets replaced by a fetch() call
 // returning Promise<LoanData[]> — no other change needed in the component.
+
 function generateLoans(): LoanData[] {
   const statuses: LoanStatus[] = [
     "decaisse", "decaisse", "decaisse",
@@ -634,6 +635,7 @@ export default function LoansTable() {
     setNewLoanOpen(false);
     // TODO: refetch list from API
   };
+  
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
@@ -659,7 +661,8 @@ export default function LoansTable() {
         onTypeChange={setSelectedType}
         onRangeChange={setSelectedRange}
         onAdd={() => setNewLoanOpen(true)}
-        totalCount={sorted.length}
+        totalCount={sorted.length} 
+        loans={filtered} 
       />
 
       {/* ── Table ── */}

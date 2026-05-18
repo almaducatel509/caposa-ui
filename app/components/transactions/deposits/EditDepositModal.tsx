@@ -157,7 +157,7 @@ export default function EditDepositModal({ deposit, onClose, onSuccess }: Props)
     try {
       const payload: DepositUpdateValidated = {
         montantTransaction:     newAmount,
-        depositSubtype:         form.depositSubtype,
+        // depositSubtype:         form.depositSubtype,
         source:                 form.source,
         description:            form.description || null,
         raison_de_modification: form.raison.trim(),

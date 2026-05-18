@@ -1,29 +1,13 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { TrendingDown, RefreshCw, Plus, X } from 'lucide-react';
+import { TrendingDown, X } from 'lucide-react';
 
 import WithdrawalTable, { WithdrawalData } from './WithdrawalTable';
-import WithdrawalStats, { VolumePoint, TypePoint } from './WithdrawalStats';
+import WithdrawalFilterBar from './WithdrawalFilterBar';
 import WithdrawalForm from './WithdrawalForm';
 import EditWithdrawalModal from './EditWithdrawalModal';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
-
-// ─── Constantes ───────────────────────────────────────────────────
-
-const C = {
-  green:     '#2E7D32',
-  greenPale: '#DDEAD5',
-  blue:      '#355C7D',
-  gold:      '#D4AF37',
-};
-
-const SUBTYPE_CFG: Record<string, { label: string; color: string }> = {
-  counter:           { label: 'Comptoir',          color: C.green },
-  check:             { label: 'Chèque',            color: C.blue  },
-  loan_disbursement: { label: 'Décaissement prêt', color: C.gold  },
-  other:             { label: 'Autre',             color: '#6E6E6E' },
-};
 
 // ─── Mock data ────────────────────────────────────────────────────
 
@@ -76,77 +60,41 @@ function generateMockWithdrawals(daysBack: number): WithdrawalData[] {
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function WithdrawalDashboard() {
-  const [period,      setPeriod]      = useState<'day' | 'week' | 'month'>('week');
-  const [loading,     setLoading]     = useState(false);
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [detailTx,    setDetailTx]    = useState<TransactionDetail | null>(null);
-  const [editTarget,  setEditTarget]  = useState<WithdrawalData | null>(null);
-  const [withdrawals, setWithdrawals] = useState<WithdrawalData[]>(() => generateMockWithdrawals(7));
+  const [period,       setPeriod]       = useState<'day' | 'week' | 'month'>('week');
+  const [loading,      setLoading]      = useState(false);
+  const [modalOpen,    setModalOpen]    = useState(false);
+  const [detailTx,     setDetailTx]     = useState<TransactionDetail | null>(null);
+  const [editTarget,   setEditTarget]   = useState<WithdrawalData | null>(null);
+
+  // ── Filtres ─────────────────────────────────────────────────
+  const [search,         setSearch]         = useState('');
+  const [selectedType,   setSelectedType]   = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   // Regénère les données quand la période change
   const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
   const data     = useMemo(() => generateMockWithdrawals(daysBack), [period]);
 
-  // ── KPIs ──────────────────────────────────────────────────────
-
-  const completed      = data.filter(w => w.status === 'decaisse');
-  const totalAmount    = completed.reduce((s, w) => s + w.montantTransaction, 0);
-  const avgAmount      = completed.length ? totalAmount / completed.length : 0;
-  const uniqueMembers  = new Set(completed.map(w => w.member_name)).size;
-  const pendingCount   = data.filter(w => w.status === 'en_attente').length;
-  const completionRate = data.length ? completed.length / data.length * 100 : 0;
-
-  // ── Volume data ───────────────────────────────────────────────
-
-  const volumeData = useMemo((): VolumePoint[] => {
-    const days: VolumePoint[] = [];
-    let back = 0;
-    while (days.length < (period === 'day' ? 9 : 5)) {
-      back++;
-      if (period === 'day') {
-        const h = 9 + days.length;
-        const d = new Date(); d.setHours(h, 0, 0, 0);
-        days.push({ label: `${h}h`, date: d.toISOString(), count: 0, amount: 0 });
-        if (days.length >= 9) break;
-      } else {
-        const d = new Date(); d.setDate(d.getDate() - back);
-        if (d.getDay() !== 0 && d.getDay() !== 6) {
-          days.unshift({
-            label:  d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
-            date:   d.toISOString().split('T')[0],
-            count:  0,
-            amount: 0,
-          });
-        }
+  // ── Filtrage ────────────────────────────────────────────────
+  const filteredWithdrawals = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data.filter(w => {
+      if (selectedType   !== 'all' && w.withdrawalSubtype !== selectedType)   return false;
+      if (selectedStatus !== 'all' && w.status            !== selectedStatus) return false;
+      if (q) {
+        const haystack = [
+          w.codeAutorisation,
+          w.idCompte,
+          w.member_name,
+          w.motif,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
-    }
-    data.forEach(w => {
-      const idx = days.findIndex(item =>
-        period === 'day'
-          ? new Date(item.date).getHours() === new Date(w.created_at).getHours()
-          : item.date === w.created_at.split('T')[0]
-      );
-      if (idx >= 0) { days[idx].count++; days[idx].amount += w.montantTransaction; }
+      return true;
     });
-    return days;
-  }, [data, period]);
-
-  // ── Type distribution ─────────────────────────────────────────
-
-  const typeData = useMemo((): TypePoint[] =>
-    Object.entries(SUBTYPE_CFG).map(([key, cfg]) => {
-      const items = data.filter(w => w.withdrawalSubtype === key);
-      return {
-        key,
-        name:   cfg.label,
-        value:  items.length,
-        amount: items.reduce((s, w) => s + w.montantTransaction, 0),
-        color:  cfg.color,
-      };
-    }), [data]);
+  }, [data, search, selectedType, selectedStatus]);
 
   // ── Handlers ──────────────────────────────────────────────────
-
   const handleView = (w: WithdrawalData) => {
     setDetailTx({
       id:                   w.id,
@@ -170,12 +118,18 @@ export default function WithdrawalDashboard() {
   };
 
   const handleEditSuccess = (updated: WithdrawalData) => {
-    setWithdrawals(prev => prev.map(w => w.id === updated.id ? updated : w));
+    // TODO API : rafraîchir la liste depuis le serveur
+    console.log('Retrait mis à jour :', updated);
   };
 
   const handleExport = async (ids: number[]) => {
     // TODO : appel API export CSV
     console.log('Exporter les IDs :', ids);
+  };
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 800);
   };
 
   return (
@@ -192,56 +146,29 @@ export default function WithdrawalDashboard() {
           </div>
           <p className="text-sm text-gray-500 ml-12">Gestion et suivi des retraits membres</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </button>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md transition-all"
-          >
-            <Plus className="w-4 h-4" /> Nouveau retrait
-          </button>
-        </div>
       </div>
 
-      {/* ── Filtre période ── */}
-      <div className="flex gap-2">
-        {(['day', 'week', 'month'] as const).map(p => (
-          <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              period === p
-                ? 'bg-[#2E7D32] text-white shadow-sm'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            {p === 'day' ? "Aujourd'hui" : p === 'week' ? '7 jours' : '30 jours'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Stats (KPIs + graphiques) ── */}
-      <WithdrawalStats
-        totalAmount={totalAmount}
-        withdrawalCount={data.length}
-        completedCount={completed.length}
-        avgAmount={avgAmount}
-        uniqueMembers={uniqueMembers}
-        pendingCount={pendingCount}
-        completionRate={completionRate}
-        volumeData={volumeData}
-        typeData={typeData}
+      {/* ── Barre de filtres ── */}
+      <WithdrawalFilterBar
+        filterValue={search}
+        selectedType={selectedType}
+        selectedStatus={selectedStatus}
+        selectedPeriod={period}
+        totalCount={filteredWithdrawals.length}
+        loading={loading}
+        onSearchChange={setSearch}
+        onClear={() => setSearch('')}
+        onTypeChange={setSelectedType}
+        onStatusChange={setSelectedStatus}
+        onPeriodChange={setPeriod}
+        onAdd={() => setModalOpen(true)}
+        onRefresh={handleRefresh}
+        withdrawals={filteredWithdrawals}
       />
 
       {/* ── Table ── */}
       <WithdrawalTable
-        withdrawals={data}
+        withdrawals={filteredWithdrawals}
         loading={loading}
         onView={handleView}
         onEdit={w => setEditTarget(w)}

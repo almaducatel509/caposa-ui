@@ -5,6 +5,7 @@ import {
   Search, Plus, Upload, Filter, Calendar, Tag,
   Banknote, X, ChevronDown, TrendingUp,
 } from 'lucide-react';
+import { LoanData } from '../transactions/validation/loanSchema';
 
 export type LoanFilterPeriod = 'all' | 'today' | 'week' | 'month' | 'year';
 export type LoanFilterType   = 'all' | 'agriculture' | 'commerce' | 'logement' | 'education' | 'sante'
@@ -28,6 +29,7 @@ interface LoanFilterBarProps {
 
   totalCount:    number;
   importLoading?: boolean;
+  loans: LoanData[];
 }
 
 // ─── Custom Dropdown ───────────────────────────────────────────────────────────
@@ -75,6 +77,7 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
   onImport,
   totalCount,
   importLoading = false,
+  loans,
 }) => {
 
   const periodOptions: { key: LoanFilterPeriod; label: string; icon: React.ElementType }[] = [
@@ -122,7 +125,64 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
     onTypeChange('all');
     onRangeChange('all');
   };
+// ── Export : transforme les prêts en lignes prêtes pour CSV ──
+  const TYPE_LABELS_EXPORT: Record<string, string> = {
+    agriculture: 'Agriculture',
+    commerce:    'Commerce',
+    logement:    'Logement',
+    elevage:     'Élevage',
+    equipement:  'Équipement',
+    scolaire:    'Scolaire',
+    personnel:   'Personnel',
+  };
 
+  const PURPOSE_LABELS_EXPORT: Record<string, string> = {
+    achat_marchandises: 'Achat de marchandises',
+    fonds_roulement:    'Fonds de roulement',
+    construction:       'Construction',
+    reparation_maison:  'Réparation maison',
+    plantation:         'Plantation',
+    elevage:            'Élevage',
+    scolarite:          'Scolarité',
+    urgence:            'Urgence',
+    equipement:         'Équipement',
+  };
+
+  const STATUS_LABELS_EXPORT: Record<string, string> = {
+    en_attente: 'En attente',
+    approuve:   'Approuvé',
+    decaisse:   'Décaissé',
+    rembourse:  'Remboursé',
+    rejete:     'Rejeté',
+    annule:     'Annulé',
+  };
+
+  const loansForExport = loans.map(loan => ({
+    id_loan:           loan.id_loan,
+    membre:            loan.member_name,
+    id_membre:         loan.id_member,
+    compte:            loan.account_number,
+    type:              TYPE_LABELS_EXPORT[loan.loan_type]    ?? loan.loan_type,
+    objet:             PURPOSE_LABELS_EXPORT[loan.purpose]   ?? loan.purpose,
+    montant:           loan.amount,
+    taux_interet:      `${loan.interest_rate}%`,
+    duree_mois:        loan.duration_months,
+    mensualite:        Math.round(loan.monthly_payment),
+    montant_total:     Math.round(loan.total_amount),
+    paiements_faits:   `${loan.payments_made}/${loan.duration_months}`,
+    total_paye:        Math.round(loan.total_paid ?? 0),
+    solde_restant:     Math.round(loan.remaining_balance),
+    progression:       `${loan.progress_pct}%`,
+    jours_retard:      loan.late_days,
+    statut:            STATUS_LABELS_EXPORT[loan.status]     ?? loan.status,
+    date_demande:      loan.created_at?.split('T')[0]        ?? '—',
+    date_approbation:  loan.approved_at?.split('T')[0]       ?? '—',
+    date_decaissement: loan.disbursed_at?.split('T')[0]      ?? '—',
+    date_cloture:      loan.closed_at?.split('T')[0]         ?? '—',
+    agent_credit:      loan.processed_by ?? '—',
+    superviseur:       loan.validated_by ?? '—',
+    caisse:            loan.caisse_numero,
+  }));
   return (
     <div className="flex flex-col gap-4">
 

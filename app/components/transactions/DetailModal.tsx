@@ -13,59 +13,87 @@ import { Modal } from '../ui/Modal';
 import { getDepositAudit } from '@/app/lib/api/deposit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 export type TransactionKind = 'deposit' | 'withdrawal' | 'transfer' | 'loan';
 
-export interface TransactionDetail {
-  // Commun
-  id:               string | number;
-  kind:             TransactionKind;
-  status:           'decaisse' | 'rembourse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
-  montant:          number;
-  created_at:       string;
+// ─── Base commune à toutes les transactions ──────────────────────────────────
+interface TransactionBase {
+  id:                string | number;
+  montant:           number;
+  created_at:        string;
   codeAutorisation?: string;
-  description?:     string;
-  reference?:       string;
+  description?:      string;
+  reference?:        string;
 
   // Membre / Compte
-  member_name?:     string;
-  member_id?:       string;
-  account_number?:  string;
-  idCompte?:        string;
-
-  // Dépôt
-  depositSubtype?:  'cash' | 'check' | 'transfer' | 'other';
-  source?:          string;
-  holdPeriod?:      number;
+  member_name?:    string;
+  member_id?:      string;
+  account_number?: string;
+  idCompte?:       string;
   requiresVerification?: boolean;
-  transferReference?: string;
-  senderName?:      string;
-
-  // Retrait
-  withdrawalSubtype?: 'counter' | 'check' | 'loan_disbursement' | 'other';
-  motif?:           string;
-
-  // Virement
-  transferType?:    'internal' | 'supplier' | 'loan_payment';
-  compteSource?:    string;
-  compteDestination?: string;
-  supplierName?:    string;
-  invoiceRef?:      string;
-  loanNumber?:      string;
-
-  // Prêt
-  loanPurpose?:     string;
-  monthlyPayment?:  number;
-  remainingBalance?: number;
 
   // Traçabilité
-  processed_by?:    string;   // nom de l'employé qui a effectué
-  processed_by_id?: string;   // id employé
-  validated_by?:    string;   // nom du superviseur/validateur
+  processed_by?:    string;
+  processed_by_id?: string;
+  validated_by?:    string;
   validated_by_id?: string;
-  caisse_numero?:   string;   // numéro de la caisse
+  caisse_numero?:   string;
   caisse_id?:       string;
   session_id?:      string;
 }
+
+// ─── Dépôt ───────────────────────────────────────────────────────────────────
+export interface DepositDetail extends TransactionBase {
+  kind:   'deposit';
+  status: 'encaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
+
+  depositSubtype?:       'cash' | 'check' | 'transfer' | 'other';
+  source?:               string;
+  holdPeriod?:           number;
+  requiresVerification?: boolean;
+  transferReference?:    string;
+  senderName?:           string;
+}
+
+// ─── Retrait ─────────────────────────────────────────────────────────────────
+export interface WithdrawalDetail extends TransactionBase {
+  kind:   'withdrawal';
+  status: 'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule' | 'rembourse';
+
+  withdrawalSubtype?:    'counter' | 'check' | 'loan_disbursement' | 'other';
+  motif?:                string;
+  requiresVerification?: boolean;
+}
+
+// ─── Virement ────────────────────────────────────────────────────────────────
+export interface TransferDetail extends TransactionBase {
+  kind:   'transfer';
+  status: 'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
+
+  transferType?:      'internal' | 'supplier' | 'loan_payment';
+  compteSource?:      string;
+  compteDestination?: string;
+  supplierName?:      string;
+  invoiceRef?:        string;
+  loanNumber?:        string;
+}
+
+// ─── Prêt ────────────────────────────────────────────────────────────────────
+export interface LoanDetail extends TransactionBase {
+  kind:   'loan';
+  status: 'decaisse' | 'rembourse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
+
+  loanPurpose?:     string;
+  monthlyPayment?:  number;
+  remainingBalance?: number;
+}
+
+// ─── Union discriminée ───────────────────────────────────────────────────────
+export type TransactionDetail =
+  | DepositDetail
+  | WithdrawalDetail
+  | TransferDetail
+  | LoanDetail;
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const KIND_CFG: Record<TransactionKind, { label: string; icon: React.ElementType; color: string; bg: string; gradient: string }> = {
@@ -183,7 +211,10 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
   const statusCfg = STATUS_CFG[transaction.status] ?? STATUS_CFG['en_attente'];
   const KindIcon  = kindCfg.icon;
 
-  const account = transaction.account_number ?? transaction.idCompte ?? transaction.compteSource;
+  const account =
+    transaction.account_number ??
+    transaction.idCompte ??
+    (transaction.kind === 'transfer' ? transaction.compteSource : undefined);
 
   const montantSign =
     transaction.kind === 'deposit'    ? '+' :

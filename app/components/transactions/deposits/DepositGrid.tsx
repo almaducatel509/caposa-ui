@@ -1,36 +1,19 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ArrowDownCircle, RefreshCw, Plus } from 'lucide-react';
+import { ArrowDownCircle } from 'lucide-react';
 import DepositForm from './DepositForm';
-import DepositStats, { VolumePoint, TypePoint } from './DepositStats';
+import DepositFilterBar from './DepositFilterBar';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 import { Modal } from '../../ui/Modal';
 import DepositTable, { DepositData } from './DepositTable';
 import EditDepositModal from './EditDepositModal';
 
-// ─── Constantes ───────────────────────────────────────────────────
-
-const C = {
-  green:     '#2E7D32',
-  greenDark: '#1B5E20',
-  greenPale: '#DDEAD5',
-  blue:      '#355C7D',
-  gold:      '#D4AF37',
-};
-
-const SUBTYPE_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  cash:     { label: 'Espèces',  color: C.green,   bg: C.greenPale },
-  check:    { label: 'Chèque',   color: C.blue,    bg: '#EBF2F8'   },
-  transfer: { label: 'Virement', color: C.gold,    bg: '#FBF6E7'   },
-  other:    { label: 'Autre',    color: '#6E6E6E', bg: '#F3F3F3'   },
-};
-
 // ─── Mock ────────────────────────────────────────────────────────
 
 function generateMockDeposits(daysBack: number): DepositData[] {
   const subtypes: DepositData['depositSubtype'][] = ['cash', 'check', 'transfer', 'other'];
-  const statuses: DepositData['status'][]         = ['decaisse', 'decaisse', 'decaisse', 'en_attente', 'en_cours', 'echoue'];
+  const statuses: DepositData['status'][]         = ['encaisse', 'encaisse', 'encaisse', 'en_attente', 'en_cours', 'echoue'];
   const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
   const sources  = ['Salaire', 'Remboursement', 'Épargne', 'Vente', 'Envoi diaspora', 'Dividendes'];
   const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
@@ -76,68 +59,38 @@ function generateMockDeposits(daysBack: number): DepositData[] {
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function DepositDashboard() {
-  const [period,      setPeriod]      = useState<'day' | 'week' | 'month'>('week');
-  const [loading,     setLoading]     = useState(false);
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [detailTx,    setDetailTx]    = useState<TransactionDetail | null>(null);
-  const [editDeposit, setEditDeposit] = useState<DepositData | null>(null);
+  const [period,       setPeriod]       = useState<'day' | 'week' | 'month'>('week');
+  const [loading,      setLoading]      = useState(false);
+  const [modalOpen,    setModalOpen]    = useState(false);
+  const [detailTx,     setDetailTx]     = useState<TransactionDetail | null>(null);
+  const [editDeposit,  setEditDeposit]  = useState<DepositData | null>(null);
+
+  // ── Filtres ─────────────────────────────────────────────────
+  const [search,         setSearch]         = useState('');
+  const [selectedType,   setSelectedType]   = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
-  const deposits  = useMemo(() => generateMockDeposits(daysBack), [period]);
+  const deposits = useMemo(() => generateMockDeposits(daysBack), [period]);
 
-  // ── KPIs ─────────────────────────────────────────────────────
-  const completed      = deposits.filter(d => d.status === 'decaisse');
-  const totalAmount    = completed.reduce((s, d) => s + d.montantTransaction, 0);
-  const avgAmount      = completed.length ? totalAmount / completed.length : 0;
-  const uniqueMembers  = new Set(completed.map(d => d.member_name)).size;
-  const pendingCount   = deposits.filter(d => d.status === 'en_attente').length;
-  const completionRate = deposits.length ? (completed.length / deposits.length * 100) : 0;
-
-  // ── Graphiques ───────────────────────────────────────────────
-  const volumeData = useMemo((): VolumePoint[] => {
-    const days: VolumePoint[] = [];
-    let back = 0;
-    while (days.length < (period === 'day' ? 9 : 5)) {
-      back++;
-      if (period === 'day') {
-        const h = 9 + days.length;
-        const d = new Date(); d.setHours(h, 0, 0, 0);
-        days.push({ label: `${h}h`, date: d.toISOString(), count: 0, amount: 0 });
-        if (days.length >= 9) break;
-      } else {
-        const d = new Date(); d.setDate(d.getDate() - back);
-        if (d.getDay() !== 0 && d.getDay() !== 6) {
-          days.unshift({
-            label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
-            date:  d.toISOString().split('T')[0],
-            count: 0,
-            amount: 0,
-          });
-        }
+  // ── Filtrage ────────────────────────────────────────────────
+  const filteredDeposits = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return deposits.filter(d => {
+      if (selectedType   !== 'all' && d.depositSubtype !== selectedType)   return false;
+      if (selectedStatus !== 'all' && d.status         !== selectedStatus) return false;
+      if (q) {
+        const haystack = [
+          d.codeAutorisation,
+          d.idCompte,
+          d.member_name,
+          d.source,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
-    }
-    deposits.forEach(d => {
-      const idx = days.findIndex(item =>
-        period === 'day'
-          ? new Date(item.date).getHours() === new Date(d.created_at).getHours()
-          : item.date === d.created_at.split('T')[0]
-      );
-      if (idx >= 0) { days[idx].count++; days[idx].amount += d.montantTransaction; }
+      return true;
     });
-    return days;
-  }, [deposits, period]);
-
-  const typeData = useMemo((): TypePoint[] =>
-    Object.entries(SUBTYPE_CFG).map(([key, cfg]) => {
-      const items = deposits.filter(d => d.depositSubtype === key);
-      return {
-        key,
-        name:   cfg.label,
-        value:  items.length,
-        amount: items.reduce((s, d) => s + d.montantTransaction, 0),
-        color:  cfg.color,
-      };
-    }), [deposits]);
+  }, [deposits, search, selectedType, selectedStatus]);
 
   // ── Handlers ────────────────────────────────────────────────
   const handleView = (dep: DepositData) => {
@@ -165,7 +118,14 @@ export default function DepositDashboard() {
 
   const handleEdit = (dep: DepositData) => {
     setEditDeposit(dep);
-    // TODO : ouvrir EditDepositModal
+  };
+  const handleExport = async (ids: number[]) => {
+      // TODO : appel API export CSV
+      console.log('Exporter les IDs :', ids);
+  };
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 800);
   };
 
   return (
@@ -182,53 +142,33 @@ export default function DepositDashboard() {
           </div>
           <p className="text-sm text-gray-500 ml-12">Gestion et suivi des dépôts membres</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualiser
-          </button>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md transition-all"
-          >
-            <Plus className="w-4 h-4" /> Nouveau dépôt
-          </button>
-        </div>
       </div>
 
-      {/* ── Filtre période ── */}
-      <div className="flex gap-2">
-        {(['day', 'week', 'month'] as const).map(p => (
-          <button key={p} onClick={() => setPeriod(p)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              period === p ? 'bg-[#2E7D32] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-            {p === 'day' ? "Aujourd'hui" : p === 'week' ? '7 jours' : '30 jours'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Stats (KPIs + Graphiques) ── */}
-      <DepositStats
-        totalAmount={totalAmount}
-        depositCount={deposits.length}
-        completedCount={completed.length}
-        avgAmount={avgAmount}
-        uniqueMembers={uniqueMembers}
-        pendingCount={pendingCount}
-        completionRate={completionRate}
-        volumeData={volumeData}
-        typeData={typeData}
+      {/* ── Barre de filtres ── */}
+      <DepositFilterBar
+        filterValue={search}
+        selectedType={selectedType}
+        selectedStatus={selectedStatus}
+        selectedPeriod={period}
+        totalCount={filteredDeposits.length}
+        loading={loading}
+        onSearchChange={setSearch}
+        onClear={() => setSearch('')}
+        onTypeChange={setSelectedType}
+        onStatusChange={setSelectedStatus}
+        onPeriodChange={setPeriod}
+        onAdd={() => setModalOpen(true)}
+        onRefresh={handleRefresh}
+        deposits={filteredDeposits}
       />
 
       {/* ── Tableau ── */}
       <DepositTable
-        deposits={deposits}
+        deposits={filteredDeposits}
         loading={loading}
         onView={handleView}
         onEdit={handleEdit}
+        onExport={handleExport}
       />
 
       {/* ── Modal nouveau dépôt ── */}
@@ -262,11 +202,12 @@ export default function DepositDashboard() {
       )}
 
       {/* ── Modal détail transaction ── */}
+      {detailTx && (
       <TransactionDetailModal
-        transaction={detailTx}
-        onClose={() => setDetailTx(null)}
-      />
-
+          transaction={detailTx}
+          onClose={() => setDetailTx(null)}
+        />
+      )}
 
       {editDeposit && (
         <EditDepositModal
@@ -274,7 +215,6 @@ export default function DepositDashboard() {
           onClose={() => setEditDeposit(null)}
           onSuccess={(updated) => {
             // TODO API : rafraîchir la liste depuis le serveur
-            // Pour l'instant met à jour localement
             setEditDeposit(null);
           }}
         />
