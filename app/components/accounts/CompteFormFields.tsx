@@ -5,31 +5,32 @@ import { User, Wallet, CheckCircle, Loader2 } from 'lucide-react';
 import CompteAutocomplete from './CompteAutocomplete';
 import { BANK_RULES, getRulesForAccountType } from '@/app/lib/bankRules';
 import { checkMemberEligibility } from '@/app/lib/api/accounts';
+import { AccountData } from './validationsaccount';
 
 // ============= TYPES =============
-interface CompteFormData {
-  id_membre: string;
-  typeCompte: 'epargne' | 'cheques' | 'terme' | '';
-  statutCompte: 'actif' | 'ferme' | 'suspendu';
-  dateOuverture: string;
-  tauxInteret: number | null;
-  limiteTrait: number | null;
-  fraisServiceMensuel: number | null;
-  member_details?: {
-    full_name?: string;
-    first_name: string;
-    last_name: string;
-    id_number: string;
-    phone_number: string;
-    email?: string;
-  };
-}
+// interface CompteFormData {
+//   id_membre: string;
+//   typeCompte: 'epargne' | 'cheques' | 'terme' | '';
+//   statutCompte: 'actif' | 'ferme' | 'suspendu';
+//   dateOuverture: string;
+//   tauxInteret: number | null;
+//   limiteTrait: number | null;
+//   fraisServiceMensuel: number | null;
+//   member_details?: {
+//     full_name?: string;
+//     first_name: string;
+//     last_name: string;
+//     id_number: string;
+//     phone_number: string;
+//     email?: string;
+//   };
+// }
 
 type FormMode = 'create' | 'edit' | 'view';
 
 interface CompteFormFieldsProps {
-  formData: CompteFormData;
-  setFormData: (data: Partial<CompteFormData>) => void;
+  formData: AccountData;
+  setFormData: (data: Partial<AccountData>) => void;
   errors: Record<string, string>;
   setErrors?: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   mode?: FormMode;
@@ -196,7 +197,7 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
 
   // ── Create mode ──
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5">
 
       <ProgressBar currentStep={currentStep} />
 
@@ -355,7 +356,7 @@ const CompteFormFields: React.FC<CompteFormFieldsProps> = ({
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Informations</p>
                 <div className="space-y-1 text-xs text-gray-600">
                   <p>Statut : <span className="font-semibold text-[#2E7D32]">Actif</span></p>
-                  <p>Date d'ouverture : <span className="font-semibold">{new Date(formData.dateOuverture).toLocaleDateString('fr-CA')}</span></p>
+                  <p>Date d'ouverture : <span className="font-semibold">{new Date(formData.created_at).toLocaleDateString('fr-CA')}</span></p>
                   <p>Numéro : <span className="font-semibold">Généré par le système</span></p>
                 </div>
               </div>

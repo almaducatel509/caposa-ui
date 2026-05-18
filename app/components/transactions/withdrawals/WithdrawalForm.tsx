@@ -7,16 +7,11 @@ import {
   CheckCircle2, AlertTriangle, Loader2, Search,
   X, ChevronDown, RefreshCw,
 } from 'lucide-react';
+import { MemberOption } from '../../members/validations';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type WithdrawalSubtype = 'counter' | 'check' | 'loan_disbursement' | 'other';
 
-interface MemberOption {
-  id:           string;
-  full_name:    string;
-  id_number:    string;
-  phone_number?: string;
-}
 
 interface AccountOption {
   id:             string;
@@ -51,12 +46,12 @@ const MOTIFS = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_MEMBERS: MemberOption[] = [
-  { id: 'dcb21971', full_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: 'a1b2c3d4', full_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-  { id: 'b3c4d5e6', full_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
-  { id: 'c4d5e6f7', full_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
-  { id: 'd5e6f7a8', full_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
-  { id: 'e6f7a8b9', full_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
+  { id: 'dcb21971', member_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
+  { id: 'a1b2c3d4', member_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
+  { id: 'b3c4d5e6', member_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
+  { id: 'c4d5e6f7', member_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
+  { id: 'd5e6f7a8', member_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
+  { id: 'e6f7a8b9', member_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
 ];
 
 const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
@@ -165,7 +160,7 @@ export default function WithdrawalForm({
   // Filtrage membres
   const filteredMembers = useMemo(() =>
     members.filter(m =>
-      m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      m.member_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
       m.id_number.includes(memberSearch)
     ), [members, memberSearch]);
 
@@ -281,7 +276,7 @@ export default function WithdrawalForm({
           </div>
           <div className="divide-y divide-gray-50">
             {[
-              ['Membre',  selectedMember?.full_name ?? '—'],
+              ['Membre',  selectedMember?.member_name ?? '—'],
               ['Compte',  selectedAccount?.account_number ?? '—'],
               ['Type',    subCfg.label],
               ['Montant', formatHTG(amount)],
@@ -333,7 +328,7 @@ export default function WithdrawalForm({
                   ${selectedMember ? 'border-[#2E7D32] bg-[#DDEAD5]/30' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <span className={`flex-1 truncate ${selectedMember ? 'font-medium text-gray-800' : 'text-gray-400'}`}>
-                  {selectedMember?.full_name ?? 'Rechercher un membre…'}
+                  {selectedMember?.member_name ?? 'Rechercher un membre…'}
                 </span>
                 {selectedMember
                   ? <button type="button" onClick={e => { e.stopPropagation(); handleClearMember(); }}
@@ -362,10 +357,10 @@ export default function WithdrawalForm({
                           <button key={m.id} type="button" onClick={() => handleMemberSelect(m)}
                             className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#DDEAD5]/30 transition-colors text-left">
                             <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                              <span className="text-xs font-bold text-[#2E7D32]">{m.full_name[0]}</span>
+                              <span className="text-xs font-bold text-[#2E7D32]">{m.member_name[0]}</span>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-800">{m.full_name}</p>
+                              <p className="text-sm font-medium text-gray-800">{m.member_name}</p>
                               <p className="text-xs text-gray-400">N° {m.id_number}</p>
                             </div>
                           </button>

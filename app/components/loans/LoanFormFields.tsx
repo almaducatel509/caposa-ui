@@ -1,41 +1,27 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
-  LoanType, LoanPurpose, CollateralType, RepaymentFrequency,
+  LoanType, CollateralType, RepaymentFrequency,
   LoanFormErrors,
   LoanFormData,
   validateLoanWithZod,
 } from "../transactions/validation/loanSchema";
 import {
-  calculateEffectiveRate,
   calculateMonthlyPayment,
-  calculateTotalInterest,
 } from "../transactions/validation/loanCalculations";
-import { validateLoanForm } from "../transactions/validation/loanLogic";
 
 import {
   Landmark, ArrowLeft, User, Hash, FileText, ShieldCheck,
-  CheckCircle2, AlertTriangle, Loader2, Search, X,
+  CheckCircle2, AlertTriangle, Loader2,
   ChevronDown, Calendar, Percent, Banknote, Package,
-  Leaf, Home, GraduationCap, Wrench, Zap, RefreshCw,
+  Leaf, Home, GraduationCap, Wrench, Zap,
+  Printer,
 } from 'lucide-react';
 import MemberPicker from "../members/MemberPicker";
+import { MemberOption } from "../members/validations";
+import { AccountOption } from "../accounts/validationsaccount";
 
 // ─── Local types ──────────────────────────────────────────────────────────────
-interface MemberOption {
-  id:            string;
-  full_name:     string;
-  id_number:     string;
-  phone_number?: string;
-}
-
-interface AccountOption {
-  id:             string;
-  account_number: string;
-  account_type:   'epargne' | 'cheques' | 'terme';
-  balance:        number;
-  account_status: 'actif' | 'suspendu' | 'ferme';
-}
 
 export interface LoanFormProps {
   members?:   MemberOption[];
@@ -53,18 +39,6 @@ const LOAN_TYPE_CFG: Record<LoanType, { icon: React.ElementType; label: string; 
   equipement:  { icon: Wrench,         label: 'Équipement',    desc: 'Outils, machines'            },
   scolaire:    { icon: GraduationCap,  label: 'Scolaire',      desc: 'Frais de scolarité'          },
   personnel:   { icon: User,           label: 'Personnel',     desc: 'Urgence, dépenses courantes' },
-};
-
-const PURPOSE_LABELS: Record<LoanPurpose, string> = {
-  achat_marchandises: 'Achat de marchandises',
-  fonds_roulement:    'Fonds de roulement',
-  construction:       'Construction',
-  reparation_maison:  'Réparation maison',
-  plantation:         'Plantation',
-  elevage:            'Élevage',
-  scolarite:          'Scolarité',
-  urgence:            'Urgence',
-  equipement:         'Équipement',
 };
 
 const COLLATERAL_LABELS: Record<CollateralType, string> = {
@@ -90,27 +64,27 @@ const TYPE_BADGE: Record<string, { label: string; bg: string; text: string }> = 
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_MEMBERS: MemberOption[] = [
-  { id: 'dcb21971', full_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: 'a1b2c3d4', full_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-  { id: 'b3c4d5e6', full_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
-  { id: 'c4d5e6f7', full_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
-  { id: 'd5e6f7a8', full_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
-  { id: 'e6f7a8b9', full_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
-  { id: 'f7a8b9c0', full_name: 'Nadège Thermidor',    id_number: '990011', phone_number: '8901234' },
-  { id: 'a8b9c0d1', full_name: 'Wilgens Désir',       id_number: '223344', phone_number: '9012345' },
+  { id: 'dcb21971', member_name: 'Hudson Joseph',       id_number: '555555' },
+  { id: 'a1b2c3d4', member_name: 'Marie Dupont',        id_number: '987654' },
+  { id: 'b3c4d5e6', member_name: 'Jean-Pierre Antoine', id_number: '112233' },
+  { id: 'c4d5e6f7', member_name: 'Roseline Pierre',     id_number: '334455' },
+  { id: 'd5e6f7a8', member_name: 'Claudette Moreau',    id_number: '556677' },
+  { id: 'e6f7a8b9', member_name: 'Réginald Beaumont',   id_number: '778899' },
+  { id: 'f7a8b9c0', member_name: 'Nadège Thermidor',    id_number: '990011' },
+  { id: 'a8b9c0d1', member_name: 'Wilgens Désir',       id_number: '223344' },
 ];
 
 const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
   dcb21971: [
-    { id: 'acc-001', account_number: 'ACC1001', account_type: 'epargne', balance: 45000, account_status: 'actif' },
-    { id: 'acc-002', account_number: 'ACC1002', account_type: 'terme',   balance: 12000, account_status: 'actif' },
+    { id: 'acc-001', account_number: 'ACC1001', typeCompte: 'epargne', balance: 45000, account_status: 'actif' },
+    { id: 'acc-002', account_number: 'ACC1002', typeCompte: 'terme',   balance: 12000, account_status: 'actif' },
   ],
   a1b2c3d4: [
-    { id: 'acc-003', account_number: 'ACC1003', account_type: 'epargne', balance: 78000, account_status: 'actif' },
+    { id: 'acc-003', account_number: 'ACC1003', typeCompte: 'epargne', balance: 78000, account_status: 'actif' },
   ],
   b3c4d5e6: [
-    { id: 'acc-004', account_number: 'ACC1004', account_type: 'epargne', balance: 15000, account_status: 'actif'    },
-    { id: 'acc-005', account_number: 'ACC1005', account_type: 'terme',   balance: 60000, account_status: 'suspendu' },
+    { id: 'acc-004', account_number: 'ACC1004', typeCompte: 'epargne', balance: 15000, account_status: 'actif' },
+    { id: 'acc-005', account_number: 'ACC1005', typeCompte: 'terme',   balance: 60000, account_status: 'gele'  },
   ],
 };
 
@@ -119,7 +93,7 @@ function getMockAccounts(memberId: string): AccountOption[] {
     {
       id: `acc-${memberId}-1`,
       account_number: `ACC${Math.floor(Math.random() * 9000) + 1000}`,
-      account_type: 'epargne',
+      typeCompte: 'epargne',
       balance: Math.floor(Math.random() * 50000) + 5000,
       account_status: 'actif',
     },
@@ -129,10 +103,6 @@ function getMockAccounts(memberId: string): AccountOption[] {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatHTG(n: number) {
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
-}
-
-function today() {
-  return new Date().toISOString().split('T')[0];
 }
 
 function addMonths(date: string, months: number): string {
@@ -163,37 +133,13 @@ function SectionTitle({ icon: Icon, label, color = '#2E7D32' }: { icon: React.El
   );
 }
 
-function RecapSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-widest text-[#1B5E20] mb-2">{title}</p>
-      <div className="bg-[#F9F9F6] rounded-xl border border-gray-100 p-3 space-y-1.5">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function RecapRow({ label, value, highlight }: { label: string; value?: string; highlight?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-1">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className={`text-xs text-right ${highlight ? 'font-bold text-[#1B5E20] text-sm' : 'font-semibold text-gray-700'}`}>
-        {value || '—'}
-      </span>
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function LoanForm({ members: propMembers, onSubmit, onCancel, isLoading }: LoanFormProps) {
-  // const members = propMembers ?? MOCK_MEMBERS;
+
+  const [step, setStep] = useState<'form' | 'confirm' | 'success'>('form');
 
   // ── Member state ──
-  const [memberSearch,   setMemberSearch]   = useState('');
-  const [memberOpen,     setMemberOpen]     = useState(false);
-  // State simplifié
-  const [members,        setMembers]        = useState<MemberOption[]>(propMembers ?? MOCK_MEMBERS);
+  const [members]                          = useState<MemberOption[]>(propMembers ?? MOCK_MEMBERS);
   const [selectedMember, setSelectedMember] = useState<MemberOption | null>(null);
 
   // ── Account state ──
@@ -203,39 +149,13 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
 
   // ── Form state ──
   const [form, setForm] = useState<LoanFormData>({
-    interest_rate:       1.5,
+    interest_rate: 1.5,
     repayment_frequency: 'mensuel',
   });
-  const [errors,     setErrors]     = useState<LoanFormErrors>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted,  setSubmitted]  = useState(false);
-  const [showRecap,  setShowRecap]  = useState(false);
-
-  // ── Member filtering ──
-  const filteredMembers = useMemo(() =>
-    memberSearch.trim().length === 0
-      ? members
-      : members.filter(m =>
-          m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
-          m.id_number.includes(memberSearch)
-        ),
-    [members, memberSearch]
-  );
-
-  // ── Member selection ──
-  // const handleSelectMember = (m: MemberOption) => {
-  //   setSelectedMember(m);
-  //   setMemberOpen(false);
-  //   setMemberSearch('');
-  //   setSelectedAccount(null);
-  //   setForm(f => ({ ...f, id_member: m.id }));
-  //   // Load accounts
-  //   setAccountsLoading(true);
-  //   setTimeout(() => {
-  //     setAccounts(getMockAccounts(m.id));
-  //     setAccountsLoading(false);
-  //   }, 400);
-  // };
+  const [errors,        setErrors]        = useState<LoanFormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedData, setSubmittedData] = useState<null | any>(null);   
+  const [submitting, setSubmitting] = useState(false);  // ── Member handler ──
   const handleSelectMember = (m: MemberOption | null) => {
     setSelectedMember(m);
     setSelectedAccount(null);
@@ -253,25 +173,6 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
       setAccountsLoading(false);
     }, 400);
   };
-  // When wired to API:
-  // const handleSelectMember = async (m: MemberOption) => {
-  //   setAccountsLoading(true);
-  //   try {
-  //     const apiAccounts = await fetchMemberAccounts(m.id);
-  //     // Django already returns english keys (account_type, balance, account_status)
-  //     // → no mapping needed, just setAccounts(apiAccounts)
-  //     setAccounts(apiAccounts);
-  //   } finally {
-  //     setAccountsLoading(false);
-  //   }
-  // };
-
-  const clearMember = () => {
-    setSelectedMember(null);
-    setSelectedAccount(null);
-    setAccounts([]);
-    setForm(f => ({ ...f, id_member: undefined }));
-  };
 
   // ── Financial calculations ──
   const monthly = useMemo(() => {
@@ -279,84 +180,289 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
     return calculateMonthlyPayment(form.amount, form.interest_rate, form.duration_months);
   }, [form.amount, form.interest_rate, form.duration_months]);
 
-  const totalInterest = useMemo(() => {
-    if (!form.duration_months) return 0;
-    return calculateTotalInterest(monthly, form.duration_months, form.amount ?? 0);
-  }, [monthly, form.duration_months, form.amount]);
-
-  const effectiveRate = useMemo(() => {
-    if (!form.interest_rate || !form.amount) return form.interest_rate ?? 0;
-    return calculateEffectiveRate(form.interest_rate, form.fees ?? 0, form.amount);
-  }, [form.interest_rate, form.fees, form.amount]);
-
+  
   const endDate = useMemo(() => {
     if (!form.start_date || !form.duration_months) return '';
     return addMonths(form.start_date, form.duration_months);
   }, [form.start_date, form.duration_months]);
 
-  const handleOpenRecap = () => {
-    // Validate first, only open recap if everything's OK
-    const business = validateLoanForm(form);
-    const zod      = validateLoanWithZod(form);
-    const combined = { ...zod.errors, ...business.errors };
+  const generateReference = () => `LOAN-${Date.now()}`;
+ 
+    // ── Submit form → confirm ──
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { isValid, errors: zodErrors } = validateLoanWithZod(form);
 
-    if (!business.isValid || !zod.isValid) {
-      setErrors(combined);
+    if (!isValid) {
+      console.warn("⛔ Validation échouée :", zodErrors);
+      setErrors(zodErrors);
       return;
     }
+    setIsSubmitting(true);
+    await new Promise((res) => setTimeout(res, 800));
 
-    setErrors({});
-    setShowRecap(true);
+    const reference = generateReference();
+
+    const loanReceiptPayload = {
+      date: new Date().toISOString(),
+      member: selectedMember,
+      account: selectedAccount,
+      reference,
+      loan_type: form.loan_type,
+      amount: form.amount,
+      duration_months: form.duration_months,
+      interest_rate: form.interest_rate,
+      repayment_frequency: form.repayment_frequency,
+      collateral: form.collateral,
+      comment: form.comment,
+    };
+    console.log("🚀 Loan SUBMITTED:", loanReceiptPayload);
+
+
+    console.log("✅ Formulaire valide :", form);
+    console.log("═══════════════════════════════════════");
+    console.log("🟢 [1] handleSubmit DÉCLENCHÉ");
+    console.log("═══════════════════════════════════════");
+
+    const formWithDate = { ...form, created_at: new Date().toISOString() };
+    console.log("📋 [2] Données du formulaire :", formWithDate);
+    console.log("👤 [3] Membre sélectionné :", selectedMember);
+    console.log("💳 [4] Compte sélectionné :", selectedAccount);
+
+    setSubmittedData(loanReceiptPayload);
+    setIsSubmitting(false);
+    setStep('success'); //👈 bascule vers l'écran/modal de succès
   };
-
-  // ── Submit ──
-  const handleSubmit = async () => {
+  // ── Confirm → success ──
+   const handleConfirm = async () => {
     setSubmitting(true);
-    try {
-      const payload = {
-        ...form,
-        
-      };
-
-      // ─── Log submission payload ───
-      console.group('📤 Loan request submission');
-      console.log('Member:', selectedMember);
-      console.log('Selected account:', selectedAccount);
-      console.log('Payload:', payload);
-      console.table(payload);
-      console.groupEnd();
-
-      await onSubmit?.(payload);
-      setShowRecap(false);
-      setSubmitted(true);
-    } catch {
-      setErrors({ comment: 'Erreur lors de la soumission. Veuillez réessayer.' });
-    } finally {
-      setSubmitting(false);
-    }
+    await new Promise(r => setTimeout(r, 1200));
+    setSubmitting(false);
+    setStep('success');
   };
-
-  // ── Success ──
-  if (submitted) {
+  // ── Écrans succès  ──
+  if (step === 'success') {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-4">
-        <div className="w-14 h-14 rounded-full bg-[#DDEAD5] flex items-center justify-center">
-          <CheckCircle2 className="w-7 h-7 text-[#2E7D32]" />
+      <>
+        <style>{`
+          @media print {
+            body * { visibility: hidden; }
+            #loan-receipt, #loan-receipt * { visibility: visible; }
+            #loan-receipt {
+              position: absolute;
+              left: 0; top: 0;
+              width: 100%;
+              padding: 40px;
+            }
+            .no-print { display: none !important; }
+          }
+        `}
+        </style>
+
+        <div className="flex flex-col items-center justify-center py-12 px-6 gap-5">
+          {/* Icône */}
+          <div className="no-print w-20 h-20 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+            <CheckCircle2 className="w-10 h-10 text-[#2E7D32]" />
+          </div>
+
+          {/* Titre */}
+          <div className="no-print text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              Demande de prêt enregistrée avec succès
+            </h2>
+          </div>
+
+          {/* Récap / Fiche imprimable */}
+          {submittedData && (
+            <div
+              id="loan-receipt"
+              className="w-full bg-[#F9F9F6] rounded-2xl border border-gray-100 p-5 mt-2"
+            >
+              {/* En-tête CAPOSA (visible uniquement à l'impression) */}
+              <div className="hidden print:block text-center pb-4 mb-4 border-b border-gray-300">
+                <h1 className="text-2xl font-bold tracking-wide text-gray-900" style={{ fontFamily: 'serif' }}>
+                  CAPOSA
+                </h1>
+                <p className="text-base font-bold text-gray-800 mt-3" style={{ fontFamily: 'serif' }}>
+                  Confirmation de demande de prêt
+                </p>
+              </div>
+
+              {/* Référence */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Référence</span>
+                <span className="text-sm font-mono font-bold text-gray-800">
+                  {submittedData.reference}
+                </span>
+              </div>
+
+              {/* Date + heure (uniquement à l'impression) */}
+              <div className="hidden print:flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Date</span>
+                <span className="text-sm text-gray-800">
+                  {new Date(submittedData.date).toLocaleDateString('fr-FR', {
+                    day: 'numeric', month: 'long', year: 'numeric',
+                  })}
+                </span>
+              </div>
+              <div className="hidden print:flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Heure</span>
+                <span className="text-sm text-gray-800">
+                  {new Date(submittedData.date).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit', minute: '2-digit',
+                  })}
+                </span>
+              </div>
+
+              {/* Membre */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Membre</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {submittedData.member?.member_name || submittedData.id_member}
+                </span>
+              </div>
+
+              {/* Type */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Type de prêt</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {submittedData.loan_type ? LOAN_TYPE_CFG[submittedData.loan_type as LoanType].label : '—'}
+                </span>
+              </div>
+
+              {/* Montant */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Montant</span>
+                <span className="text-sm font-bold text-[#2E7D32]">
+                  {formatHTG(submittedData.amount)}
+                </span>
+              </div>
+
+              {/* Durée */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Durée</span>
+                <span className="text-sm text-gray-800">{submittedData.duration_months} mois</span>
+              </div>
+
+              {/* Taux */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Taux d'intérêt</span>
+                <span className="text-sm text-gray-800">{submittedData.interest_rate} %</span>
+              </div>
+
+              {/* Fréquence */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Remboursement</span>
+                <span className="text-sm text-gray-800">
+                  {submittedData.repayment_frequency ? FREQ_LABELS[submittedData.repayment_frequency as RepaymentFrequency] : '—'}
+                </span>
+              </div>
+
+             
+
+              {/* Garantie (print only) */}
+              {submittedData.collateral && (
+                <div className="hidden print:flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-xs uppercase tracking-widest text-gray-500">Garantie</span>
+                  <span className="text-sm text-gray-800">
+                    {COLLATERAL_LABELS[submittedData.collateral as CollateralType]}
+                  </span>
+                </div>
+              )}
+
+              {/* Commentaire (print only) */}
+              {submittedData.comment && (
+                <div className="hidden print:flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-xs uppercase tracking-widest text-gray-500">Commentaire</span>
+                  <span className="text-sm text-gray-800">{submittedData.comment}</span>
+                </div>
+              )}
+
+              {/* Statut (print only) */}
+              <div className="hidden print:flex items-center justify-between py-2 border-t border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500">Statut</span>
+                <span className="text-sm font-bold text-[#2E7D32]">En attente</span>
+              </div>
+
+              {/* Pied de page (uniquement à l'impression) */}
+              <div className="hidden print:block mt-6 pt-4 border-t border-gray-300 text-center">
+                <p className="text-xs text-gray-500">
+                  Veuillez conserver cette confirmation pour vos dossiers.
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Pour toute question, veuillez contacter notre service à la clientèle.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Bouton Imprimer */}
+          <div className="no-print flex w-full mt-4">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-shadow"
+            >
+              <Printer className="w-4 h-4" />
+              Imprimer
+            </button>
+          </div>
         </div>
-        <div className="text-center">
-          <p className="text-sm font-bold text-gray-800">Demande de prêt enregistrée</p>
-          <p className="text-xs text-gray-500 mt-1">La demande est en attente de validation.</p>
+      </>
+    );
+  }
+
+  // confirm
+  if (step === 'confirm') {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-[#2E7D32]" />
+            </div>
+            <p className="text-sm font-bold text-gray-900">Confirmer la demande de prêt</p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {([
+              ['Membre',         selectedMember?.member_name],
+              ['Type de prêt',   form.loan_type ? LOAN_TYPE_CFG[form.loan_type].label : '—'],
+              ['Montant',        form.amount ? formatHTG(Number(form.amount)) : '—'],
+              ['Durée',          form.duration_months ? `${form.duration_months} mois` : '—'],
+              ['Taux d\'intérêt', form.interest_rate ? `${form.interest_rate} %` : '—'],
+              ['Fréquence',      form.repayment_frequency ? FREQ_LABELS[form.repayment_frequency] : '—'],
+              ['Garantie',       form.collateral ? COLLATERAL_LABELS[form.collateral] : '—'],
+              ['Mensualité',     formatHTG(Math.round(monthly))],
+              ['Description',    form.comment || '—'],
+            ] as [string, string | undefined][]).map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between py-2.5">
+                <span className="text-xs text-gray-500">{label}</span>
+                <span className={`text-sm font-semibold ${label === 'Montant' || label === 'Mensualité' ? 'text-[#2E7D32]' : 'text-gray-800'}`}>
+                  {value || '—'}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <button onClick={onCancel}
-          className="mt-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold">
-          Fermer
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => setStep('form')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+            <ArrowLeft className="w-4 h-4" /> Modifier
+          </button>
+          <button type="button" onClick={handleConfirm} disabled={submitting}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg disabled:opacity-50">
+            {submitting
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Traitement…</>
+              : <><CheckCircle2 className="w-4 h-4" /> Valider</>}
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Formulaire ──
   return (
-    <div className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       {/* ── Intro banner ─────────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 p-4 rounded-2xl bg-[#DDEAD5]/40 border border-[#DDEAD5]">
         <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0">
@@ -374,7 +480,7 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionTitle icon={User} label="Membre" />
 
-       <MemberPicker
+        <MemberPicker
           members={members}
           selectedMember={selectedMember}
           onSelect={handleSelectMember}
@@ -382,6 +488,7 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
           errorMessage={errors.id_member}
           label="Rechercher un membre"
         />
+
         {/* Linked account */}
         {selectedMember && (
           <div className="mt-4">
@@ -395,11 +502,12 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
             ) : (
               <div className="flex flex-col gap-2">
                 {accounts.map(acc => {
-                  const badge = TYPE_BADGE[acc.account_type];
+                  const badge = TYPE_BADGE[acc.typeCompte];
                   const isInactive = acc.account_status !== 'actif';
                   const isSelected = selectedAccount?.id === acc.id;
                   return (
                     <button key={acc.id}
+                      type="button"
                       onClick={() => !isInactive && setSelectedAccount(isSelected ? null : acc)}
                       disabled={isInactive}
                       className={`flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${
@@ -439,6 +547,7 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
             const selected = form.loan_type === key;
             return (
               <button key={key}
+                type="button"
                 onClick={() => setForm(f => ({ ...f, loan_type: key }))}
                 className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all ${
                   selected
@@ -504,16 +613,7 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
             <FieldError msg={errors.interest_rate} />
           </div>
 
-          {/* Fees */}
-          <div>
-            <Label>Frais de dossier (HTG) <span className="text-gray-400 normal-case font-normal">optionnel</span></Label>
-            <input type="number" min={0}
-              value={form.fees ?? ''}
-              onChange={e => setForm(f => ({ ...f, fees: parseFloat(e.target.value) || undefined }))}
-              placeholder="0"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]"
-            />
-          </div>
+          
 
           {/* Repayment frequency */}
           <div className="md:col-span-2">
@@ -521,6 +621,7 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
             <div className="flex gap-2">
               {(['mensuel', 'hebdomadaire', 'saisonnier'] as RepaymentFrequency[]).map(freq => (
                 <button key={freq}
+                  type="button"
                   onClick={() => setForm(f => ({ ...f, repayment_frequency: freq }))}
                   className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                     form.repayment_frequency === freq
@@ -534,27 +635,6 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
             <FieldError msg={errors.repayment_frequency} />
           </div>
         </div>
-
-        {/* Financial simulation */}
-        {monthly > 0 && (
-          <div className="mt-4 p-4 rounded-xl bg-[#355C7D]/6 border border-[#355C7D]/15">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#355C7D] mb-3">Simulation</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center">
-                <p className="text-lg font-bold text-[#355C7D]">{formatHTG(Math.round(monthly))}</p>
-                <p className="text-xs text-gray-500 mt-0.5">Mensualité</p>
-              </div>
-              <div className="text-center border-x border-[#355C7D]/15">
-                <p className="text-lg font-bold text-gray-700">{formatHTG(Math.round(totalInterest))}</p>
-                <p className="text-xs text-gray-500 mt-0.5">Intérêts totaux</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-gray-700">{effectiveRate.toFixed(1)}%</p>
-                <p className="text-xs text-gray-500 mt-0.5">Taux effectif</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── 4. DATES (read-only — defined by backend / workflow) ──────────────── */}
@@ -577,7 +657,9 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
             <Label>Date de fin estimée</Label>
             <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-400">
               <Calendar className="w-4 h-4 text-gray-300" />
-              Calculée après décaissement
+              {endDate
+                ? new Date(endDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+                : 'Calculée après décaissement'}
             </div>
             <p className="text-xs text-gray-400 mt-1">
               Basée sur la durée ({form.duration_months ?? '—'} mois) + date de décaissement
@@ -586,45 +668,25 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
         </div>
       </div>
 
-      {/* ── 5. PURPOSE & COLLATERAL ──────────────────────────────────────────── */}
+      {/* ── 5. COLLATERAL & COMMENT ──────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <SectionTitle icon={FileText} label="But & garantie" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Purpose */}
-          <div>
-            <Label>But du prêt</Label>
-            <div className="relative">
-              <select
-                value={form.purpose ?? ''}
-                onChange={e => setForm(f => ({ ...f, purpose: e.target.value as LoanPurpose }))}
-                className="w-full appearance-none px-4 py-2.5 pr-9 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]">
-                <option value="">— Sélectionner —</option>
-                {Object.entries(PURPOSE_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-            <FieldError msg={errors.purpose} />
+        <SectionTitle icon={ShieldCheck} label="Garantie" />
+        
+        <div>
+          <Label>Garantie</Label>
+          <div className="relative">
+            <select
+              value={form.collateral ?? ''}
+              onChange={e => setForm(f => ({ ...f, collateral: e.target.value as CollateralType }))}
+              className="w-full appearance-none px-4 py-2.5 pr-9 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]">
+              <option value="">— Sélectionner —</option>
+              {Object.entries(COLLATERAL_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
-
-          {/* Collateral */}
-          <div>
-            <Label>Garantie</Label>
-            <div className="relative">
-              <select
-                value={form.collateral ?? ''}
-                onChange={e => setForm(f => ({ ...f, collateral: e.target.value as CollateralType }))}
-                className="w-full appearance-none px-4 py-2.5 pr-9 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]">
-                <option value="">— Sélectionner —</option>
-                {Object.entries(COLLATERAL_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-            <FieldError msg={errors.collateral} />
-          </div>
+          <FieldError msg={errors.collateral} />
         </div>
 
         {/* Comment */}
@@ -645,133 +707,31 @@ export default function LoanForm({ members: propMembers, onSubmit, onCancel, isL
         </div>
       </div>
 
-      {/* ── Actions ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between pt-1 pb-2">
-        {onCancel && (
-          <button onClick={onCancel} disabled={submitting}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
-            <ArrowLeft className="w-4 h-4" /> Annuler
-          </button>
-        )}
-        <button onClick={handleOpenRecap} disabled={submitting || isLoading}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-linear-to-r
-           from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md
-           hover:shadow-lg transition-all disabled:opacity-60 ml-auto">
-          {submitting || isLoading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
-            : <><Landmark className="w-4 h-4" /> Soumettre la demande</>
-          }
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <button type="button" onClick={onCancel}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+          <ArrowLeft className="w-4 h-4" /> Annuler
         </button>
-      </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg disabled:opacity-60"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Traitement...
+            </>
+          ) : (
+            <>
+              <Landmark className="w-4 h-4" />
+              Soumettre
+            </>
+          )}
+        </button>
+      </div>  
 
-      {showRecap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]">
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-[#DDEAD5]/30">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900">Vérification avant soumission</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Récapitulatif de la demande</p>
-                </div>
-              </div>
-              <button onClick={() => setShowRecap(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-white hover:text-gray-600 transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Body — data recap */}
-            <div className="px-5 py-4 overflow-y-auto space-y-4">
-
-              {/* Warning */}
-              <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  Des données exactes facilitent l'étude du crédit. Merci de vérifier avant de soumettre.
-                </p>
-              </div>
-
-              {/* Member */}
-              <RecapSection title="Membre">
-                <RecapRow label="Nom" value={selectedMember?.full_name} />
-                <RecapRow label="ID"  value={selectedMember?.id_number} />
-                {selectedAccount && (
-                  <RecapRow label="Compte" value={`${selectedAccount.account_number} · ${formatHTG(selectedAccount.balance)}`} />
-                )}
-              </RecapSection>
-
-              {/* Loan */}
-              <RecapSection title="Prêt demandé">
-                <RecapRow label="Type"      value={form.loan_type ? LOAN_TYPE_CFG[form.loan_type].label : '—'} />
-                <RecapRow label="Montant"   value={form.amount ? formatHTG(form.amount) : '—'} highlight />
-                <RecapRow label="Durée"     value={form.duration_months ? `${form.duration_months} mois` : '—'} />
-                <RecapRow label="Taux"      value={form.interest_rate ? `${form.interest_rate}% / an` : '—'} />
-                <RecapRow label="Fréquence" value={form.repayment_frequency ? FREQ_LABELS[form.repayment_frequency] : '—'} />
-                {form.fees && <RecapRow label="Frais de dossier" value={formatHTG(form.fees)} />}
-              </RecapSection>
-
-              {/* Simulation */}
-              <RecapSection title="Simulation">
-                <RecapRow label="Mensualité"      value={formatHTG(Math.round(monthly))} highlight />
-                <RecapRow label="Intérêts totaux" value={formatHTG(Math.round(totalInterest))} />
-                <RecapRow label="Taux effectif"   value={`${effectiveRate.toFixed(2)}%`} />
-              </RecapSection>
-
-              {/* Dates */}
-              <RecapSection title="Dates">
-                <RecapRow label="Demande" value={form.created_at ? new Date(form.created_at).toLocaleDateString('fr-FR') : '—'} />
-                {form.start_date && (
-                  <RecapRow label="Début" value={new Date(form.start_date).toLocaleDateString('fr-FR')} />
-                )}
-                {endDate && (
-                  <RecapRow label="Fin estimée" value={new Date(endDate).toLocaleDateString('fr-FR')} />
-                )}
-              </RecapSection>
-
-              {/* Purpose & collateral */}
-              <RecapSection title="But & garantie">
-                <RecapRow label="But"      value={form.purpose    ? PURPOSE_LABELS[form.purpose]       : '—'} />
-                <RecapRow label="Garantie" value={form.collateral ? COLLATERAL_LABELS[form.collateral] : '—'} />
-                {form.comment && (
-                  <div className="pt-2">
-                    <p className="text-xs text-gray-400 mb-1">Commentaire</p>
-                    <p className="text-xs text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-2.5">
-                      {form.comment}
-                    </p>
-                  </div>
-                )}
-              </RecapSection>
-
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between gap-2 px-5 py-4 bg-gray-50 border-t border-gray-100">
-              <button
-                onClick={() => setShowRecap(false)}
-                disabled={submitting}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50">
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Modifier
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60">
-                {submitting
-                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Envoi en cours…</>
-                  : <><CheckCircle2 className="w-3.5 h-3.5" /> Confirmer et soumettre</>
-                }
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-    </div>
+    </form>
   );
 }

@@ -180,9 +180,9 @@ export default function TransferDashboard() {
             <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center">
               <ArrowLeftRight className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Virements</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Transfert</h1>
           </div>
-          <p className="text-sm text-gray-500 ml-12">Gestion et suivi des virements membres</p>
+          <p className="text-sm text-gray-500 ml-12">Gestion et suivi des transferts membres</p>
         </div>
       </div>
 

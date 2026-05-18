@@ -2,14 +2,9 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, User, X, AlertTriangle, Loader2 } from 'lucide-react';
-
+import { MemberOption } from './validations';
+//\app\components\members\MemberPicker.tsx
 // ─── Types ────────────────────────────────────────────────────────────────────
-export interface MemberOption {
-  id:            string;
-  full_name:     string;
-  id_number:     string;
-  phone_number?: string;
-}
 
 interface MemberPickerProps {
   members:          MemberOption[];
@@ -55,7 +50,7 @@ export default function MemberPicker({
       .filter(m => m.id !== excludeMemberId)
       .filter(m => {
         if (!q) return true;
-        const haystack = normalize(`${m.full_name} ${m.id_number}`);
+        const haystack = normalize(`${m.member_name} ${m.id_number}`);
         return haystack.includes(q);
       });
   }, [members, search, excludeMemberId]);
@@ -123,7 +118,7 @@ export default function MemberPicker({
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F9F9F6] text-left border-b border-gray-50 last:border-0 transition-colors"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{m.full_name}</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">{m.member_name}</p>
                     <p className="text-xs text-gray-400">#{m.id_number}</p>
                   </div>
                   {m.phone_number && (
@@ -150,7 +145,7 @@ export default function MemberPicker({
               <User className="w-4 h-4 text-[#2E7D32]" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-800 truncate">{selectedMember.full_name}</p>
+              <p className="text-sm font-bold text-gray-800 truncate">{selectedMember.member_name}</p>
               <p className="text-xs text-gray-500 truncate">
                 #{selectedMember.id_number}
                 {selectedMember.phone_number && ` · ${selectedMember.phone_number}`}

@@ -27,7 +27,7 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
   const [formData, setFormData] = useState({
     id_membre:         '',
     typeCompte:        '' as 'epargne' | 'cheques' | 'terme' | '',
-    statutCompte:      'actif' as 'actif' | 'ferme' | 'suspendu',
+    statutCompte:      'actif' as 'actif' | 'ferme' | 'gele' | 'en_attente' |'archive',
     dateOuverture:     new Date().toISOString().split('T')[0],
     dateFermeture:     null as string | null,
     tauxInteret:       null as number | null,
@@ -46,7 +46,7 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
       setFormData({
         id_membre:        account.id_membre || account.member || '',
         typeCompte:       account.typeCompte || '',
-        statutCompte:     account.statutCompte || 'actif',
+        statutCompte:     account.account_status || 'actif',
         dateOuverture:    account.dateOuverture || account.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         dateFermeture:    account.dateFermeture || null,
         tauxInteret:      account.tauxInteret || null,
@@ -179,7 +179,7 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
       </div>
 
       {/* ── Footer CAPOSA ── */}
-      <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-100 rounded-b-2xl">
         <p className="text-xs text-gray-400">
           Tous les champs marqués <span className="text-red-500">*</span> sont obligatoires
         </p>

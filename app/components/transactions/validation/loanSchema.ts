@@ -21,30 +21,15 @@ export const collateralTypes = [
   "materiel",
   "aucune",
 ] as const;
-
 export type CollateralType = typeof collateralTypes[number];
-
-export const loanPurposes = [
-  "achat_marchandises",
-  "fonds_roulement",
-  "construction",
-  "reparation_maison",
-  "plantation",
-  "elevage",
-  "scolarite",
-  "urgence",
-  "equipement",
-] as const;
-
-export type LoanPurpose = typeof loanPurposes[number];  
 
 export const repaymentFrequencies = [
   "mensuel",
   "hebdomadaire",
   "saisonnier",
 ] as const;
-
 export type RepaymentFrequency = typeof repaymentFrequencies[number];
+
 export const loanStatuses = [
   "en_attente",
   "approuve",
@@ -53,40 +38,40 @@ export const loanStatuses = [
   "rembourse",
   "annule",
 ] as const;
-
 export type LoanStatus = typeof loanStatuses[number];
+
+// ─── LoanData (objet complet retourné par le backend) ───────────────────────
 export interface LoanData {
   // Identity
   id_loan: string;
   id_member: string;
   member_name: string;
   account_number?: string;
+  phone_number?: string;
 
   // Loan conditions
   loan_type: LoanType;
-  purpose: LoanPurpose;
   collateral: CollateralType;
   amount: number;
   duration_months: number;
   interest_rate: number;
   repayment_frequency: RepaymentFrequency;
-  fees?: number;
   comment?: string;
   notes?: string;
 
-  // State
+  // State (gérés par Django)
   status: LoanStatus;
   rejection_reason?: string;
   cancellation_reason?: string;
 
-  // Dates
-  created_at: string;          // ← OBLIGATOIRE : set on insert by Django (auto_now_add)
-  approved_at?: string;        // set when supervisor approves
-  disbursed_at?: string;       // set when caissier disburses
-  start_date?: string;         // set on disbursement (often = disbursed_at)
-  end_date?: string;           // computed from start_date + duration_months
-  closed_at?: string;          // set on close (rembourse/rejete/annule)
-  next_payment_date?: string;  // computed by backend for active loans
+  // Dates (gérées par Django)
+  created_at: string;
+  approved_at?: string;
+  disbursed_at?: string;
+  start_date?: string;
+  end_date?: string;
+  closed_at?: string;
+  next_payment_date?: string;
 
   // Actors
   processed_by?: string;
@@ -97,7 +82,7 @@ export interface LoanData {
   caisse_numero?: string;
   session_id?: string;
 
-  // Backend-computed (never stored)
+  // Backend-computed
   monthly_payment: number;
   total_amount: number;
   payments_made: number;
@@ -108,12 +93,14 @@ export interface LoanData {
   progress_pct?: number;
 }
 
-// Interface utilisée par le formulaire (certaines valeurs optionnelles)
+// Type utilisé par le formulaire
 export type LoanFormData = Partial<LoanData>;
 
-// 🧰 Erreurs de validation génériques
+// Erreurs de validation
 export type FormErrors<T> = Partial<Record<keyof T, string>>;
 export type LoanFormErrors = FormErrors<LoanFormData>;
+
+// ─── Schéma Zod minimal ─────────────────────────────────────────────────────
 export const loanSchema = z.object({
   id_member: z.string().min(1, "Le membre est requis."),
 
@@ -123,7 +110,7 @@ export const loanSchema = z.object({
 
   amount: z
     .number({ required_error: "Le montant est requis." })
-    .min(100, "Le montant minimum est de 100."),
+    .min(100, "Le montant minimum est de 100 HTG."),
 
   duration_months: z
     .number({ required_error: "La durée est requise." })
@@ -135,79 +122,21 @@ export const loanSchema = z.object({
     .min(0, "Le taux ne peut pas être négatif.")
     .max(100, "Le taux ne peut pas dépasser 100%."),
 
-  purpose: z.enum(loanPurposes, {
-    errorMap: () => ({ message: "Le but du prêt est requis." }),
-  }),
-
   collateral: z.enum(collateralTypes, {
-    errorMap: () => ({ message: "Le type de garantie est requis." }),
+    errorMap: () => ({ message: "La garantie est requise." }),
   }),
 
   repayment_frequency: z.enum(repaymentFrequencies, {
     errorMap: () => ({ message: "La fréquence de remboursement est requise." }),
   }),
 
-  status: z.enum(loanStatuses).optional(),
-
-  created_at: z.string().min(1, "La date de demande est requise."),
-
-  start_date: z.string().optional(),
-
-  end_date: z.string().optional(),
-
   comment: z
     .string()
     .max(500, "Le commentaire ne peut pas dépasser 500 caractères.")
     .optional(),
-
-  fees: z
-    .number({ required_error: "Les frais sont requis." })
-    .optional(),
 });
-// // ✅ Validation Zod principale
-// export const loanSchema = z.object({
-//   id_member: z.string().min(1, "Le membre est requis."),
 
-//   typePret: z.enum(loanTypes, {
-//     errorMap: () => ({ message: "Le type de prêt est requis." }),
-//   }),
-
-//   montantDemande: z
-//     .number({ invalid_type_error: "Montant invalide." })
-//     .min(100, "Le montant minimum est de 100."),
-
-//   dureeMois: z
-//     .number({ invalid_type_error: "Durée invalide." })
-//     .min(1)
-//     .max(360, "La durée ne peut pas dépasser 360 mois."),
-
-//   tauxInteret: z
-//     .number({ invalid_type_error: "Taux invalide." })
-//     .min(0)
-//     .max(100),
-
-//   // Champs ajoutés
-//   but: z.enum(loanPurposes, {
-//     errorMap: () => ({ message: "Le but du prêt est requis." }),
-//   }),
-
-//   garantie: z.enum(collateralTypes, {
-//     errorMap: () => ({ message: "La garantie est requise." }),
-//   }),
-
-//   frequenceRemboursement: z.enum(repaymentFrequencies, {
-//     errorMap: () => ({ message: "La fréquence de remboursement est requise." }),
-//   }),
-
-//   statut: z.enum(loanStatuses).optional(),
-//   dateDemande: z.string().min(1, "La date de demande est requise."),
-//   dateDebut: z.string().optional(),
-//   dateFin: z.string().optional(),
-//   commentaire: z.string().max(500).optional(),
-//   frais: z.number().optional(),
-// });
-
-// Fonction utilitaire de validation sécurisée
+// Validation Zod (seule fonction nécessaire — fini validateLoanForm)
 export function validateLoanWithZod(data: any) {
   const result = loanSchema.safeParse(data);
   if (!result.success) {

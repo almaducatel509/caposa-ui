@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { X, UserPen, UserPlus, AlertTriangle, Loader2 } from "lucide-react";
 import {
-  EmployeeData, BranchData, Post, EmployeeFormData,
+  EmployeeData, BranchData,  EmployeeFormData,
   ErrorMessages, employeeDataToFormData,
 } from '../validations';
 import { fetchBranches }                         from '@/app/lib/api/branche';
@@ -12,6 +12,7 @@ import { createEmployee, putEmployeeMultipart }  from '@/app/lib/api/employee';
 import EmployeeFormFields                        from '../EmployeeFormFields';
 import { Modal }                                 from '../../ui/Modal';
 import UserAvatar from "../../core/UserAvatar";
+import { Post } from "../../postes/PostTable";
 
 interface EditEmployeeModalProps {
   isOpen:    boolean;

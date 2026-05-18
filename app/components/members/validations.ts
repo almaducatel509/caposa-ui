@@ -15,6 +15,13 @@ import {
 
 export type Gender = "M" | "F";
 
+export interface MemberOption {
+  id:            string;
+  member_name: string;
+  id_number:     string;
+  phone_number?: string;
+}
+
 export interface MemberData {
   member_number: string;
   account_number: string;
@@ -336,7 +343,6 @@ export function normalizeMemberStatus(raw: string | undefined): 'actif' | 'inact
 export function getMemberStatus(member: { statutMember?: string }) {
   return member.statutMember || 'active';
 }
-
 export type ErrorMessages<T> = {
   [K in keyof T]?: T[K] extends object ? ErrorMessages<T[K]> | string : string;
 } & { first_name?: string; last_name?: string; department_code?: string };

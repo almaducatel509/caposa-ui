@@ -18,12 +18,16 @@ export const transferStatuses = [
 export type TransferStatus = typeof transferStatuses[number];
 
 export type TransferFormData = Partial<TransferData>;
-export type TransferFormErrors = Partial<Record<keyof TransferFormData, string>>;
+export type TransferFormErrors =
+  Partial<Record<keyof TransferFormData, string>> & {
+    id_member_source?: string;
+    id_member_destination?: string;
+  };
 
 export interface TransferData {
   id:         number;
   id_member:           string;           // celui qui initie
-  member_name?:        string;
+  member_name:        string;
   account_source:      string;
   account_destination: string;
   destination_name?:   string;           // bénéficiaire (transfert externe)

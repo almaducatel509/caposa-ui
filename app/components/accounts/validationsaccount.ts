@@ -50,6 +50,14 @@ export function getAllowedNextStatuses(from: AccountStatus): AccountStatus[] {
    INTERFACES
 ========================================================= */
 
+export interface AccountOption {
+  id:             string;
+  account_number: string;
+  typeCompte:   'epargne' | 'cheques' | 'terme';
+  balance:        number;
+  account_status: 'actif' | 'gele' | 'en_attent' | 'ferme' | 'archive';
+}
+
 export interface AccountData {
   // ⬇️ Champs exacts de l'API
   id: string;

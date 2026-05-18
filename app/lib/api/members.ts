@@ -22,11 +22,10 @@ function mapApiMember(m: any): MemberData {
     department_code:  m.department_code ?? undefined,
   };
 }
-
+ 
 export const fetchMembers = async (): Promise<MemberData[]> => {
   try {
-    const response = await AxiosInstance.get("/members/");   
-    // 🔍 DEBUG
+    const response = await AxiosInstance.get("/members/");
     console.group('🌐 API /members/');
     console.log('1er poste:', response.data?.[0] ?? response.data?.results?.[0]);
     console.log('Clés:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
@@ -37,17 +36,15 @@ export const fetchMembers = async (): Promise<MemberData[]> => {
     return [];
   }
 };
-// export const fetchMembers = async () => {
-//   try {
-//     const response = await AxiosInstance.get("/members/");
-//     console.log("Réponse brute API :", response); // 👈 Affiche tout, headers inclus
-//     console.log("Données membres :", response.data); // 👈 Affiche juste les données utiles
-//     return response.data;
-//   } catch (e) {
-//     console.error("Erreur récupération membres:", e);
-//     return [];
-//   }
-// };
+export const fetchMemberAccounts = async (memberId: string): Promise<any[]> => {
+  try {
+    const response = await AxiosInstance.get(`/members/${memberId}/accounts/`);
+    return response.data;
+  } catch (e) {
+    console.error("Erreur récupération comptes:", e);
+    return [];
+  }
+};
 
 
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
