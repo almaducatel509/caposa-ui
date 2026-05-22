@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { FaSync } from 'react-icons/fa';
 import PageHeader from '../header';
-import TransactionDetailModal, { TransactionDetail } from '../transactions/DetailModal';
 import LoanBulkActionDropdown, { LoanBulkAction } from './LoanBulkActionDropdown';
 import LoanBulkActionModal, { LoanForBulk } from './modals/LoanBulkActionModal';
 import LoanFilterBar, {
@@ -19,14 +18,14 @@ import LoanFilterBar, {
 // ⚠️ Renamed: EditLoanModal → ReviewLoanModal (the component does "review", not free edit)
 import ReviewLoanModal, { LoanForEdit, EmployeeOption } from './modals/ReviewLoanModal';
 import type {
-  LoanData, LoanFormData, LoanPurpose, LoanStatus, LoanType,
+  LoanData, LoanFormData,  LoanStatus, LoanType,
   CollateralType, RepaymentFrequency,
 } from '../transactions/validation/loanSchema';
 import NewLoanModal from './modals/NewLoanModal';
 import DisburseLoanModal, { LoanForDisburse } from './modals/DisburseLoanModal';
 import { UserRole } from '@/app/lib/auth';
 import RepaymentLoanModal, { LoanForRepayment } from './modals/RepaymentLoanModal';
-
+import TransactionDetailModal, { TransactionDetail, LoanDetail } from '../transactions/DetailModal';
 // ─── Temporary useAuth ────────────────────────────────────────────────────────
 // ⚠️ MOCK: replace with the real hook once `@/app/lib/auth` exposes `useAuth()`.
 //    To test different roles, change MOCK_ROLE below:
@@ -73,18 +72,6 @@ const TYPE_LABELS: Record<LoanType, string> = {
   personnel: "Personnel",
 };
 
-const PURPOSE_LABELS: Record<LoanPurpose, string> = {
-  achat_marchandises: "Achat de marchandises",
-  fonds_roulement: "Fonds de roulement",
-  construction: "Construction",
-  reparation_maison: "Réparation maison",
-  plantation: "Plantation",
-  elevage: "Élevage",
-  scolarite: "Scolarité",
-  urgence: "Urgence",
-  equipement: "Équipement",
-};
-
 // ─── UX rules: who can act on which status ────────────────────────────────────
 // ✅ Used to disable the Edit/Review icon when the user has nothing to do on this loan.
 //    The backend remains the final authority — this just avoids dead clicks.
@@ -113,8 +100,21 @@ const GRID = '40px 2fr 1.2fr 1.4fr 1.2fr 1.5fr 1fr 140px';
 const formatHTG = (n: number) =>
   new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(n) + ' HTG';
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+// const formatDate = (iso: string) =>
+//   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function formatDate(iso: string) {
+  const d      = new Date(iso);
+  const now    = new Date();
+  const diffMs  = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH   = Math.floor(diffMs / 3600000);
+  const diffD   = Math.floor(diffMs / 86400000);
+  if (diffMin < 60) return `Il y a ${diffMin} min`;
+  if (diffH   < 24) return `Il y a ${diffH} h`;
+  if (diffD   <  7) return `Il y a ${diffD} j`;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
 
 function SortIcon({ field, sortField, sortDir }: { field: string; sortField: string; sortDir: 'asc' | 'desc' }) {
   if (sortField !== field) return <ChevronsUpDown className="w-3.5 h-3.5 text-gray-300" />;
@@ -163,10 +163,6 @@ function generateLoans(): LoanData[] {
     "equipement", "scolaire", "personnel",
   ];
 
-  const purposes: LoanPurpose[] = [
-    "plantation", "construction", "scolarite", "elevage",
-    "equipement", "achat_marchandises", "fonds_roulement",
-  ];
 
   const collaterals: CollateralType[] = [
     "epargne_bloquee", "caution_solidaire", "betail",
@@ -236,7 +232,6 @@ function generateLoans(): LoanData[] {
 
       // Loan conditions
       loan_type:           pick(types),
-      purpose:             pick(purposes),
       collateral:          pick(collaterals),
       amount,
       duration_months,
@@ -294,7 +289,7 @@ function getEffectiveTab(l: LoanData): TabId {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function LoansTable() {
-  // ── Auth ──
+  // ── Auth ── 
   const { user } = useAuth();
 
   const userRole: UserRole =
@@ -417,19 +412,33 @@ export default function LoansTable() {
   ], [isDemandesTab]);
 
   // ── Detail (read-only view) ──
-  const STATUS_MAP: Record<LoanStatus, TransactionDetail['status']> = {
-    en_attente: 'en_attente', approuve: 'en_cours', decaisse: 'decaisse',
-    rembourse:  'rembourse',  rejete: 'echoue',     annule: 'annule',
+const STATUS_MAP: Record<LoanStatus, LoanDetail['status']> = {
+  en_attente: 'en_attente',
+  approuve:   'en_cours',
+  decaisse:   'decaisse',
+  rembourse:  'rembourse',
+  rejete:     'echoue',
+  annule:     'annule',
+};
+const handleView = (l: LoanData) => {
+  const detail: LoanDetail = {
+    id:             l.id_loan,
+    kind:           'loan',
+    status:         STATUS_MAP[l.status],
+    montant:        l.amount,
+    created_at:     l.disbursed_at ?? l.created_at,
+    member_name:    l.member_name,
+    member_id:      l.id_member,
+    account_number: l.account_number,
+    description:    `${TYPE_LABELS[l.loan_type]}`,  // ⚠️ backticks, pas apostrophes
+    processed_by:   l.processed_by,
+    validated_by:   l.validated_by,
+    caisse_numero:  l.caisse_numero,
+    caisse_id:      l.caisse_id,
+    session_id:     l.session_id,
   };
-
-  const handleView = (l: LoanData) => setDetailTx({
-    id: l.id_loan, kind: 'loan', status: STATUS_MAP[l.status],
-    montant: l.amount, created_at: l.disbursed_at ?? l.created_at,
-    member_name: l.member_name, member_id: l.id_member, account_number: l.account_number,
-    description: `${TYPE_LABELS[l.loan_type]} — ${PURPOSE_LABELS[l.purpose]}`,
-    processed_by: l.processed_by, validated_by: l.validated_by,
-    caisse_numero: l.caisse_numero, caisse_id: l.caisse_id, session_id: l.session_id,
-  });
+  setDetailTx(detail);
+};
 
   // ── Open review modal ──
   const handleReview = (l: LoanData) => setEditingLoan(l);
@@ -479,7 +488,6 @@ export default function LoansTable() {
 
       // Locked fields
       loan_type:       TYPE_LABELS[editingLoan.loan_type],
-      purpose:         PURPOSE_LABELS[editingLoan.purpose],
       duration_months: editingLoan.duration_months,
       interest_rate:   editingLoan.interest_rate,
       monthly_payment: editingLoan.monthly_payment,
@@ -817,10 +825,9 @@ export default function LoansTable() {
                   </div>
                 </div>
 
-                {/* Type / Purpose */}
+                {/* Type  */}
                 <div>
                   <p className="text-xs font-medium text-gray-700">{TYPE_LABELS[loan.loan_type]}</p>
-                  <p className="text-xs text-gray-400 truncate">{PURPOSE_LABELS[loan.purpose]}</p>
                 </div>
 
                 {/* Amount */}
@@ -841,7 +848,6 @@ export default function LoansTable() {
                     </p>
                   )}
                 </div>
-
                 {/* Column 5: Duration or Progress */}
                 {isDemandesTab ? (
                   <div>

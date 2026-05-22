@@ -3,16 +3,17 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowDownCircle } from 'lucide-react';
 import DepositForm from './DepositForm';
-import DepositFilterBar from './DepositFilterBar';
+import DepositFilterBar, { DepositFilterPeriod, DepositFilterRange } from './DepositFilterBar';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 import { Modal } from '../../ui/Modal';
-import DepositTable, { DepositData } from './DepositTable';
+import DepositTable from './DepositTable';
 import EditDepositModal from './EditDepositModal';
+import { DepositData, DepositFormData, DepositFormValidated } from '../validation/deposit';
 
 // ─── Mock ────────────────────────────────────────────────────────
 
 function generateMockDeposits(daysBack: number): DepositData[] {
-  const subtypes: DepositData['depositSubtype'][] = ['cash', 'check', 'transfer', 'other'];
+  const subtypes: DepositData['depositSubtype'][] = ['cash', 'check'];
   const statuses: DepositData['status'][]         = ['encaisse', 'encaisse', 'encaisse', 'en_attente', 'en_cours', 'echoue'];
   const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
   const sources  = ['Salaire', 'Remboursement', 'Épargne', 'Vente', 'Envoi diaspora', 'Dividendes'];
@@ -59,38 +60,20 @@ function generateMockDeposits(daysBack: number): DepositData[] {
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function DepositDashboard() {
-  const [period,       setPeriod]       = useState<'day' | 'week' | 'month'>('week');
   const [loading,      setLoading]      = useState(false);
-  const [modalOpen,    setModalOpen]    = useState(false);
   const [detailTx,     setDetailTx]     = useState<TransactionDetail | null>(null);
   const [editDeposit,  setEditDeposit]  = useState<DepositData | null>(null);
+  const [newDepositOpen, setNewDepositOpen] = useState(false);
 
-  // ── Filtres ─────────────────────────────────────────────────
+  // ── Filtres : UNE SEULE source de vérité ─────────────────
   const [search,         setSearch]         = useState('');
-  const [selectedType,   setSelectedType]   = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedPeriod, setSelectedPeriod] = useState<DepositFilterPeriod>('all');
+  const [selectedType,   setSelectedType]   = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedRange,  setSelectedRange]  = useState<DepositFilterRange>('all');
 
-  const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
-  const deposits = useMemo(() => generateMockDeposits(daysBack), [period]);
-
-  // ── Filtrage ────────────────────────────────────────────────
-  const filteredDeposits = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return deposits.filter(d => {
-      if (selectedType   !== 'all' && d.depositSubtype !== selectedType)   return false;
-      if (selectedStatus !== 'all' && d.status         !== selectedStatus) return false;
-      if (q) {
-        const haystack = [
-          d.codeAutorisation,
-          d.idCompte,
-          d.member_name,
-          d.source,
-        ].filter(Boolean).join(' ').toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [deposits, search, selectedType, selectedStatus]);
+  // On génère un dataset large ; le filtrage période se fait dans la table.
+  const deposits = useMemo(() => generateMockDeposits(365), []);
 
   // ── Handlers ────────────────────────────────────────────────
   const handleView = (dep: DepositData) => {
@@ -116,16 +99,20 @@ export default function DepositDashboard() {
     });
   };
 
-  const handleEdit = (dep: DepositData) => {
-    setEditDeposit(dep);
-  };
+  const handleEdit = (dep: DepositData) => setEditDeposit(dep);
+
   const handleExport = async (ids: number[]) => {
-      // TODO : appel API export CSV
-      console.log('Exporter les IDs :', ids);
+    console.log('Exporter les IDs :', ids);
   };
+
   const handleRefresh = () => {
     setLoading(true);
     setTimeout(() => setLoading(false), 800);
+  };
+
+  const handleDepositSubmit = async (data: DepositFormValidated) => {
+    console.log('Mock submit:', data);
+    await new Promise(r => setTimeout(r, 500));
   };
 
   return (
@@ -147,35 +134,42 @@ export default function DepositDashboard() {
       {/* ── Barre de filtres ── */}
       <DepositFilterBar
         filterValue={search}
+        selectedPeriod={selectedPeriod}
         selectedType={selectedType}
         selectedStatus={selectedStatus}
-        selectedPeriod={period}
-        totalCount={filteredDeposits.length}
+        selectedRange={selectedRange}
+        totalCount={deposits.length}
         loading={loading}
         onSearchChange={setSearch}
         onClear={() => setSearch('')}
+        onPeriodChange={setSelectedPeriod}
         onTypeChange={setSelectedType}
         onStatusChange={setSelectedStatus}
-        onPeriodChange={setPeriod}
-        onAdd={() => setModalOpen(true)}
+        onRangeChange={setSelectedRange}
+        onAdd={() => setNewDepositOpen(true)}
         onRefresh={handleRefresh}
-        deposits={filteredDeposits}
+        deposits={deposits}
       />
 
       {/* ── Tableau ── */}
       <DepositTable
-        deposits={filteredDeposits}
+        deposits={deposits}
         loading={loading}
         onView={handleView}
         onEdit={handleEdit}
         onExport={handleExport}
+        search={search}
+        selectedType={selectedType}
+        selectedStatus={selectedStatus}
+        selectedPeriod={selectedPeriod}
+        selectedRange={selectedRange}
       />
 
       {/* ── Modal nouveau dépôt ── */}
-      {modalOpen && (
+      {newDepositOpen && (
         <Modal
           isOpen
-          onClose={() => setModalOpen(false)}
+          onClose={() => setNewDepositOpen(false)}
           size="4xl"
           title={
             <div className="flex items-center gap-3">
@@ -191,11 +185,8 @@ export default function DepositDashboard() {
         >
           <div className="p-5 overflow-y-auto max-h-[70vh]">
             <DepositForm
-              onSubmit={async (data) => {
-                console.log('Dépôt soumis :', data);
-                setModalOpen(false);
-              }}
-              onCancel={() => setModalOpen(false)}
+              onSubmit={handleDepositSubmit}
+              onCancel={() => setNewDepositOpen(false)}
             />
           </div>
         </Modal>
@@ -203,7 +194,7 @@ export default function DepositDashboard() {
 
       {/* ── Modal détail transaction ── */}
       {detailTx && (
-      <TransactionDetailModal
+        <TransactionDetailModal
           transaction={detailTx}
           onClose={() => setDetailTx(null)}
         />

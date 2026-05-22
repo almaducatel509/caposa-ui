@@ -163,7 +163,6 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
     id_membre:         loan.id_member,
     compte:            loan.account_number,
     type:              TYPE_LABELS_EXPORT[loan.loan_type]    ?? loan.loan_type,
-    objet:             PURPOSE_LABELS_EXPORT[loan.purpose]   ?? loan.purpose,
     montant:           loan.amount,
     taux_interet:      `${loan.interest_rate}%`,
     duree_mois:        loan.duration_months,

@@ -7,7 +7,7 @@ export const mockTransactions: TransactionData[] = [
     status: 'completed',
     amount: 15000,
     currency: 'HTG',
-    description: 'Dépôt espèces — Cotisation mensuelle',
+    description: 'Dépôt',
     reference: 'DEP-2025-001',
     member_id: 1,
     member_name: 'Hudson Joseph',

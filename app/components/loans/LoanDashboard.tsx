@@ -11,12 +11,11 @@ import {
   Eye, MoreHorizontal,
 } from 'lucide-react';
 import LoanForm from './LoanFormFields';
-import TransactionDetailModal, { TransactionDetail } from '../transactions/DetailModal';
+import TransactionDetailModal, { LoanDetail, TransactionDetail } from '../transactions/DetailModal';
 import PageHeader from '../header';
+import { LoanStatus, LoanType } from '../transactions/validation/loanSchema';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type LoanStatus = 'en_attente' | 'approuve' | 'decaisse' | 'rembourse' | 'rejete' | 'annule';
-type LoanType   = 'commerce' | 'logement' | 'agriculture' | 'elevage' | 'equipement' | 'scolaire' | 'personnel';
 
 interface LoanData {
   id:               number;
@@ -187,10 +186,10 @@ export default function LoanDashboard() {
   const recentLoans = useMemo(() => periodLoans.slice(0, 5), [periodLoans]);
   const recentActifs = useMemo(() => activeOnly.slice(0, 5), [activeOnly]);
 
-  const LOAN_STATUS_MAP: Record<LoanStatus, TransactionDetail['status']> = {
-    en_attente: 'en_attente', approuve: 'en_cours',  decaisse: 'decaisse',
-    rembourse:  'rembourse',  rejete:   'echoue',     annule:   'annule',
-  };
+  const LOAN_STATUS_MAP: Record<LoanStatus, LoanDetail['status']> = {
+  en_attente: 'en_attente', approuve: 'en_cours',  decaisse: 'decaisse',
+  rembourse:  'rembourse',  rejete:   'echoue',     annule:   'annule',
+};
 
   const handleView = (l: LoanData) => setDetailTx({
     id: l.id, kind: 'loan', status: LOAN_STATUS_MAP[l.status],
@@ -422,7 +421,7 @@ export default function LoanDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
                 <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} />
                 <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Prêts']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) ?? 0), 'Montant']}/>
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Prêts">
                   {volumeData.map((_, i) => <Cell key={i} fill={i === volumeData.length - 1 ? C.green : C.greenPale} />)}
                 </Bar>
@@ -469,7 +468,7 @@ export default function LoanDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
                 <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} />
                 <YAxis stroke="#9CA3AF" fontSize={11} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Montant']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) ?? 0), 'Montant']}/>
                 <Bar dataKey="amount" radius={[6, 6, 0, 0]} name="Montant">
                   {volumeData.map((_, i) => <Cell key={i} fill={i === volumeData.length - 1 ? C.blue : '#D4E3EF'} />)}
                 </Bar>
@@ -484,7 +483,7 @@ export default function LoanDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
                 <XAxis dataKey="range" stroke="#9CA3AF" fontSize={11} />
                 <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Prêts']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) ?? 0),  'Prêts']} />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Prêts">
                   {progressDistrib.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Bar>
@@ -528,7 +527,7 @@ export default function LoanDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" horizontal={false} />
                 <XAxis type="number" stroke="#9CA3AF" fontSize={11} allowDecimals={false} />
                 <YAxis type="category" dataKey="label" stroke="#9CA3AF" fontSize={11} width={80} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Prêts']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) ?? 0),  'Prêts']} />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]} name="Prêts">
                   {statusDistrib.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Bar>
@@ -543,7 +542,7 @@ export default function LoanDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0EC" />
                 <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} />
                 <YAxis stroke="#9CA3AF" fontSize={11} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Solde']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) ?? 0),  'Solde']} />
                 <Bar dataKey="amount" radius={[6, 6, 0, 0]} fill={C.blue} name="Solde restant" />
               </BarChart>
             </ResponsiveContainer>

@@ -31,6 +31,8 @@ interface TransactionBase {
   account_number?: string;
   idCompte?:       string;
   requiresVerification?: boolean;
+  mensualité?: number;
+  remainingBalance?: number;
 
   // Traçabilité
   processed_by?:    string;

@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertTriangle, Loader2, RefreshCw,
 } from 'lucide-react';
 import { depositSchema, DepositSubtype, type DepositFormValidated } from '../validation/deposit';
+import DepositReceipt from './DepositReceipt';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface MemberOption {
@@ -125,7 +126,7 @@ export default function DepositForm({
   onCancel,
   isLoading = false,
 }: DepositFormProps) {
-
+const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(null);
   const [memberSearch,    setMemberSearch]    = useState('');
   const [memberOpen,      setMemberOpen]      = useState(false);
   const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
@@ -213,7 +214,16 @@ export default function DepositForm({
   };
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+    console.log("🟢 Form complète :", form);
 
+      console.log("🟢 Valeurs importantes :", {
+        membre: selectedMember,
+        compte: selectedAccount,
+        montant: form.montantTransaction,
+        mode: form.depositSubtype,
+        source: form.source,
+        description: form.description,
+      });
     console.log("📤 Données brutes du formulaire :", form);
 
     const payload = {
@@ -243,10 +253,10 @@ export default function DepositForm({
       amountWords:          form.amountWords || null,
       issuePlace:           form.issuePlace || null,
 
-      // Système
-      holdPeriod:           hold,
-      requiresVerification: needsVerif,
-      availableImmediately: availImm,
+      // // Système
+      // holdPeriod:           hold,
+      // requiresVerification: needsVerif,
+      // availableImmediately: availImm,
     };
 
     console.log("📦 Payload avant validation :", payload);
@@ -274,6 +284,14 @@ export default function DepositForm({
     try {
       const response = await onSubmit(result.data);
       console.log("📥 Réponse backend :", response);
+      try {
+      const response = await onSubmit(result.data);
+      console.log("📥 Réponse backend :", response);
+      setSubmittedData(result.data);  // 👈 AJOUTE CETTE LIGNE
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
       setSubmitted(true);
     } finally {
       setSubmitting(false);
@@ -308,7 +326,7 @@ export default function DepositForm({
       amountWords: '',
       issuePlace: '',
     });
-
+setSubmittedData(null)
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
@@ -316,22 +334,30 @@ export default function DepositForm({
   };
 
   // ── Écran succès ────────────────────────────────────────────────────────────
-  if (submitted) {
+  // if (submitted) {
+  //   return (
+  //     <div className="flex flex-col items-center justify-center py-16 gap-4">
+  //       <div className="w-16 h-16 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
+  //         <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
+  //       </div>
+  //       <p className="text-lg font-bold text-gray-900">Dépôt enregistré</p>
+  //       <p className="text-sm text-gray-500">La transaction a été créée avec succès.</p>
+  //       <button onClick={handleReset}
+  //         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
+  //         <RefreshCw className="w-4 h-4" /> Nouveau dépôt
+  //       </button>
+  //     </div>
+  //   );
+  // }
+  if (submitted && submittedData) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
-        </div>
-        <p className="text-lg font-bold text-gray-900">Dépôt enregistré</p>
-        <p className="text-sm text-gray-500">La transaction a été créée avec succès.</p>
-        <button onClick={handleReset}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-          <RefreshCw className="w-4 h-4" /> Nouveau dépôt
-        </button>
-      </div>
+      <DepositReceipt
+        data={submittedData}
+        memberName={selectedMember?.full_name}
+        onReset={handleReset}
+      />
     );
   }
-
   // ── Formulaire ──────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
@@ -661,7 +687,12 @@ export default function DepositForm({
           }
         </button>
       </div>
-
+    {form.depositSubtype === 'check' && amount > 0 && (
+      <div className="text-xs text-gray-500 px-3 py-2 bg-blue-50 rounded-lg">
+        Le montant sera disponible après vérification (généralement 3 jours).
+        Le délai final sera confirmé après traitement.
+      </div>
+    )}
     </form>
   );
 } 

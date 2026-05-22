@@ -6,6 +6,8 @@ import {
   Bell, LogIn, LogOut, Loader2,
   ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, HandCoins,
   XCircle, AlertTriangle, CheckCircle,
+  Landmark,
+  Repeat,
 } from 'lucide-react';
 
 import { fetchDashboard, fetchTransactions, openSession, closeSession } from '@/app/lib/api/caisse';
@@ -415,35 +417,80 @@ export default function DashboardCaissier() {
         typeData={typeData}
       />
 
-      {/* ── Dernières transactions ── */}
+     {/* ── Actions rapides ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-gray-500" />
-            <h2 className="font-semibold text-gray-900">Dernières transactions</h2>
-            <span className="ml-2 px-2 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">
-              {transactions.length}
-            </span>
+            <h2 className="font-semibold text-gray-900">Actions rapides</h2>
           </div>
         </div>
 
         <div className="divide-y divide-gray-50">
-          {transactions.length === 0
-            ? <p className="text-sm text-gray-400 text-center py-10">Aucune transaction</p>
-            : transactions.slice(0, 8).map(tx => <TxRow key={tx.id} tx={tx} />)
-          }
-        </div>
 
-        <div className="border-t border-gray-100 px-5 py-3">
-          <Link
-            href="/dashboard/transactions"
-            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-semibold text-[#2E7D32] hover:bg-[#DDEAD5]/40 transition-colors"
-          >
-            Voir toutes les transactions
-            <ChevronRight className="w-3.5 h-3.5" />
+          {/* Dépôt */}
+          <Link href="/dashboard/transactions/deposits" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <ArrowDownCircle className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="font-medium text-gray-900">Dépôt</p>
+                <p className="text-xs text-gray-500">Enregistrer un dépôt</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-green-600 font-semibold">+ 12 500 HTG</p>
+              <p className="text-xs text-gray-400">08:42</p>
+            </div>
           </Link>
+
+          {/* Retrait */}
+          <Link href="/dashboard/transactions/withdrawals" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <ArrowUpCircle className="w-5 h-5 text-red-600" />
+              <div>
+                <p className="font-medium text-gray-900">Retrait</p>
+                <p className="text-xs text-gray-500">Effectuer un retrait</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-red-600 font-semibold">- 4 000 HTG</p>
+              <p className="text-xs text-gray-400">09:10</p>
+            </div>
+          </Link>
+
+          {/* Transfert */}
+          <Link href="/dashboard/transactions/transfers" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <Repeat className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="font-medium text-gray-900">Transfert</p>
+                <p className="text-xs text-gray-500">Transférer entre comptes</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-blue-600 font-semibold">+ 7 800 HTG</p>
+              <p className="text-xs text-gray-400">10:05</p>
+            </div>
+          </Link>
+
+          {/* Prêt */}
+          <Link href="/dashboard/loans" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <Landmark className="w-5 h-5 text-yellow-600" />
+              <div>
+                <p className="font-medium text-gray-900">Prêt</p>
+                <p className="text-xs text-gray-500">Remboursement ou demande</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-yellow-600 font-semibold">- 25 000 HTG</p>
+              <p className="text-xs text-gray-400">07:55</p>
+            </div>
+          </Link>
+
         </div>
       </div>
+
 
       {/* ── Modals ── */}
       {quickModal === 'depot' && (

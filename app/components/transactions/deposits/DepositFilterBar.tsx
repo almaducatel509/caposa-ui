@@ -7,25 +7,33 @@ import {
   Banknote, FileCheck, ArrowLeftRight, Wallet, MoreHorizontal,
   CheckCircle2, Clock, Loader2, XCircle,
   Plus, RefreshCw,
+  Filter,
+  Calendar,
 } from 'lucide-react';
 import { ExportAllButton } from '@/app/ExportAllButton';
-import { DepositData } from './DepositTable';
+import { DepositData } from '../validation/deposit';
+export type DepositFilterRange  = 'all' | 'small' | 'medium' | 'large' | 'xlarge';
+export type DepositFiltertype = 'all' | 'cash'| 'check';
+
+export type DepositFilterPeriod = 'all' | 'today' | 'week' | 'month' | 'year';
 
 interface DepositFilterBarProps {
+  selectedPeriod: DepositFilterPeriod;
   filterValue:    string;
   selectedType:   string;
   selectedStatus: string;
-  selectedPeriod: 'day' | 'week' | 'month';
   totalCount:     number;
   loading?:       boolean;
   onSearchChange: (v: string) => void;
   onClear:        () => void;
   onTypeChange:   (v: string) => void;
   onStatusChange: (v: string) => void;
-  onPeriodChange: (v: 'day' | 'week' | 'month') => void;
+  onPeriodChange: (v: DepositFilterPeriod)=> void;
   onAdd:          () => void;
   onRefresh:      () => void;
   deposits:       DepositData[];
+  selectedRange:  DepositFilterRange;
+  onRangeChange:  (key: DepositFilterRange) => void;
 }
 
 // ─── Dropdown ────────────────────────────────────────────────────────────────
@@ -55,11 +63,18 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
-  filterValue, selectedType, selectedStatus, selectedPeriod, totalCount, loading = false,
+  filterValue,onRangeChange, selectedType,selectedRange, selectedStatus, selectedPeriod, totalCount, loading = false,
   onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange,
   onAdd, onRefresh, deposits,
 }) => {
 
+
+  const PERIOD_OPTIONS = [
+    { key: 'all',   label: 'Toutes périodes', icon: Filter   },
+    { key: 'today', label: "Aujourd'hui",     icon: Calendar },
+    { key: 'week',  label: '7 jours',         icon: Calendar },
+    { key: 'month', label: '30 jours',        icon: Calendar },
+  ];
   const TYPE_OPTIONS = [
     { key: 'all',      label: 'Tous les types', icon: Wallet           },
     { key: 'cash',     label: 'Espèces',        icon: Banknote         },
@@ -78,8 +93,21 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
 
   const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label   ?? 'Tous les types';
   const statusLabel = STATUS_OPTIONS.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
-  const activeCount = (selectedType !== 'all' ? 1 : 0) + (selectedStatus !== 'all' ? 1 : 0);
+  // const activeCount = (selectedType !== 'all' ? 1 : 0) + (selectedStatus !== 'all' ? 1 : 0);
+  const activeCount = [
+    selectedPeriod !== 'all',
+    selectedType   !== 'all',
+    selectedStatus !== 'all',
+    selectedRange  !== 'all',
+  ].filter(Boolean).length;
 
+  const handleReset = () => {
+    onPeriodChange('all');
+    onTypeChange('all');
+    onStatusChange('all');
+    onRangeChange('all');
+  };  
+  
   // ── Export : transforme les dépôts en lignes prêtes pour CSV ──
   const depositsForExport = deposits.map(dep => {
     const typeLbl =
@@ -178,21 +206,21 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
         <div className="h-5 w-px bg-gray-200" />
 
         {/* Filtre période */}
-        <div className="flex gap-1">
-          {(['day', 'week', 'month'] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => onPeriodChange(p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                selectedPeriod === p
-                  ? 'bg-[#2E7D32] text-white shadow-sm'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {p === 'day' ? "Aujourd'hui" : p === 'week' ? '7 jours' : '30 jours'}
-            </button>
-          ))}
-        </div>
+          <div className="flex gap-1">
+            {PERIOD_OPTIONS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => onPeriodChange(p.key as DepositFilterPeriod)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  selectedPeriod === p.key
+                    ? 'bg-[#2E7D32] text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
         <div className="h-5 w-px bg-gray-200" />
 
@@ -257,7 +285,7 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
             );
           })}
         </Dropdown>
-
+       
         {/* Réinitialiser */}
         {activeCount > 0 && (
           <div className="flex items-center gap-2">
@@ -266,7 +294,7 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
               {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
             </span>
             <button
-              onClick={() => { onTypeChange('all'); onStatusChange('all'); }}
+              onClick={handleReset}
               className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all"
             >
               <X className="w-3 h-3" /> Effacer

@@ -31,6 +31,18 @@ body {
     text-wrap: balance;
   }
 }
+@media print {
+  /* Masquer tout sauf la fiche */
+  body * { visibility: hidden; }
+  #deposit-receipt, #deposit-receipt * { visibility: visible; }
+  #deposit-receipt {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+  }
+  /* Masquer le header de modal aussi */
+  .print\:hidden { display: none !important; }
+}
 /* 
 //🎉 Résumé problem de modal:
 Le changement dans globals.css (retirer overflow-x: hidden sur html) a résolu le problème pour TOUS les modals de ton application, pas seulement celui qu'on testait.
