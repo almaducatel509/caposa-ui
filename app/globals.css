@@ -30,10 +30,51 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}@media print {
+  /* Cache tout par défaut */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Sauf le reçu et son contenu */
+  #withdrawal-receipt,
+  #withdrawal-receipt *,
+  #deposit-receipt,
+  #deposit-receipt * {
+    visibility: visible;
+  }
+
+  /* Repositionne le reçu en haut de la page */
+  #withdrawal-receipt,
+  #deposit-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Forcer le fond blanc et préserver les couleurs (montants verts/rouges, badges) */
+  @page {
+    margin: 1.5cm;
+  }
+
+  html, body {
+    background: white !important;
+  }
+
+  /* Garder les couleurs des badges, montants, etc. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
-@media print {
+/* @media print {
   /* Masquer tout sauf la fiche */
-  body * { visibility: hidden; }
+  /* body * { visibility: hidden; }
   #deposit-receipt, #deposit-receipt * { visibility: visible; }
   #deposit-receipt {
     position: absolute;
@@ -41,9 +82,9 @@ body {
     width: 100%;
   }
   /* Masquer le header de modal aussi */
-  .print\:hidden { display: none !important; }
-}
-/* 
-//🎉 Résumé problem de modal:
+  /* .print\:hidden { display: none !important; }
+} */ 
+/*  */
+/* //🎉 Résumé problem de modal:
 Le changement dans globals.css (retirer overflow-x: hidden sur html) a résolu le problème pour TOUS les modals de ton application, pas seulement celui qu'on testait.
-Tu n'as donc PAS besoin de changer useDisclosure() en useState() dans tes autres modals - ils devraient tous fonctionner maintenant avec leur code actuel. */
+Tu n'as donc PAS besoin de changer useDisclosure() en useState() dans tes autres modals - ils devraient tous fonctionner maintenant avec leur code actuel. */ 

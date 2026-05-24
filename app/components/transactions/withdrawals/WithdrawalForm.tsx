@@ -6,11 +6,13 @@ import {
   Landmark, User, Hash, FileText, ShieldCheck,
   CheckCircle2, AlertTriangle, Loader2, Search,
   X, ChevronDown, RefreshCw,
+  ArrowDownCircle,
 } from 'lucide-react';
 import { MemberOption } from '../../members/validations';
+import WithdrawalReceipt from './WithdrawalReceipt';
+import { WithdrawalFormValidated, withdrawalSchema } from '../validation/withdrawal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type WithdrawalSubtype = 'counter' | 'check' | 'loan_disbursement' | 'other';
 
 
 interface AccountOption {
@@ -23,8 +25,8 @@ interface AccountOption {
 
 export interface WithdrawalFormProps {
   members?:   MemberOption[];
-  onSubmit?:  (data: unknown) => Promise<void>;
-  onCancel?:  () => void;
+  onSubmit:  (data: WithdrawalFormValidated) => Promise<void>;
+  onCancel:  () => void;
   isLoading?: boolean;
 }
 
@@ -134,13 +136,12 @@ export default function WithdrawalForm({
   const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
   const [memberAccounts,  setMemberAccounts]  = useState<AccountOption[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
-
-  const [step,       setStep]       = useState<'form' | 'confirm' | 'success'>('form');
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState<WithdrawalFormValidated | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [errors,     setErrors]     = useState<Record<string, string>>({});
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
-    withdrawalSubtype: 'counter' as WithdrawalSubtype,
+    idCompte: '',
     montantTransaction: '',
     motif:              '',
     description:        '',
@@ -152,10 +153,9 @@ export default function WithdrawalForm({
       setForm(f => ({ ...f, [key]: e.target.value }));
 
   const amount       = parseFloat(form.montantTransaction) || 0;
-  const subCfg       = SUBTYPE_CFG[form.withdrawalSubtype];
   const isBlocked    = selectedAccount !== null && selectedAccount.statutCompte !== 'actif';
   const insufficient = selectedAccount ? amount > selectedAccount.soldeActuel : false;
-  const needsVerif   = amount > 50000 || form.withdrawalSubtype === 'check';
+  const needsVerif   = amount > 50000;
 
   // Filtrage membres
   const filteredMembers = useMemo(() =>
@@ -173,144 +173,96 @@ export default function WithdrawalForm({
     setErrors(e => ({ ...e, member: '', account: '' }));
   };
 
+  const handleAccountSelect = (acc: AccountOption) => {
+    if (acc.statutCompte !== 'actif') return;
+    setSelectedAccount(acc);
+    setForm(f => ({ ...f, idCompte: acc.account_number }));
+    setErrors(e => ({ ...e, idCompte: '' }));
+  };
+
   const handleClearMember = () => {
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
+    setForm(f => ({ ...f, idCompte: '' }));
   };
 
-  const handleAccountSelect = (acc: AccountOption) => {
-    if (acc.statutCompte !== 'actif') return;
-    setSelectedAccount(acc);
-    setErrors(e => ({ ...e, account: '' }));
-  };
-
-  const validate = (): boolean => {
-    const e: Record<string, string> = {};
-    if (!selectedMember)               e.member  = 'Sélectionnez un membre';
-    if (!selectedAccount)              e.account = 'Sélectionnez un compte';
-    if (isBlocked)                     e.account = 'Ce compte est suspendu';
-    if (amount <= 0)                   e.amount  = 'Montant invalide';
-    if (insufficient)                  e.amount  = 'Solde insuffisant';
-    if (!form.motif.trim())            e.motif   = 'Motif requis';
-    if (!form.codeAutorisation.trim()) e.code    = 'Code d\'autorisation requis';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    if (validate()) setStep('confirm');
-  };
+      console.log("🟢 Form complète :", form);
+      console.log("🟢 Valeurs importantes :", {
+        membre: selectedMember,
+        compte: selectedAccount,
+        montant: form.montantTransaction,
+        description: form.description,
+      });
+    console.log("📤 Données brutes du formulaire :", form);
 
-  const handleConfirm = async () => {
-    setSubmitting(true);
     const payload = {
-      idCompte:           selectedAccount!.account_number,
+      idCompte:             form.idCompte,
       typeTransaction:    'WITHDRAWAL' as const,
       codeAutorisation:   form.codeAutorisation,
       montantTransaction: amount,
-      withdrawalSubtype:  form.withdrawalSubtype,
-      motif:              form.motif,
-      description:        form.description || null,
-      requiresVerification: needsVerif,
-      member_id:          selectedMember!.id,
-    };
-    try {
-      if (onSubmit) await onSubmit(payload);
-      setStep('success');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      reason:             form.description || null,
+    };                              
 
-  const handleReset = () => {
-    setStep('form');
-    setForm({ withdrawalSubtype: 'counter', montantTransaction: '', motif: '', description: '', codeAutorisation: '' });
-    setSelectedMember(null);
-    setSelectedAccount(null);
-    setMemberAccounts([]);
-    setErrors({});
-  };
+  console.log("📦 Payload avant validation :", payload);
 
-  // ── Succès ─────────────────────────────────────────────────────────────────
-  if (step === 'success') {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
-        </div>
-        <p className="text-lg font-bold text-gray-900">Retrait enregistré</p>
-        <p className="text-sm text-gray-500 text-center max-w-xs">
-          La transaction a été créée. Délai : <span className="font-semibold">{subCfg.delay}</span>.
-        </p>
-        <div className="flex gap-2 mt-2">
-          <button onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-            <RefreshCw className="w-4 h-4" /> Nouveau retrait
-          </button>
-          {onCancel && (
-            <button onClick={onCancel}
-              className="px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
-              Fermer
-            </button>
-          )}
-        </div>
-      </div>
-    );
+  const result = withdrawalSchema.safeParse(payload);
+
+  if (!result.success) {
+    console.log("❌ Erreurs de validation :", result.error.format());
+
+    const fieldErrors: Record<string, string> = {};
+    result.error.errors.forEach((err) => {
+      const key = String(err.path[0]);
+      if (!fieldErrors[key]) fieldErrors[key] = err.message;
+    });
+
+    setErrors(fieldErrors);
+    return;
   }
 
-  // ── Confirmation ────────────────────────────────────────────────────────────
-  if (step === 'confirm') {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-[#2E7D32]" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">Confirmer le retrait</p>
-              <p className="text-xs text-gray-400">Vérifiez les informations avant de valider</p>
-            </div>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {[
-              ['Membre',  selectedMember?.member_name ?? '—'],
-              ['Compte',  selectedAccount?.account_number ?? '—'],
-              ['Type',    subCfg.label],
-              ['Montant', formatHTG(amount)],
-              ['Motif',   form.motif],
-              ['Délai',   subCfg.delay],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between py-2.5">
-                <span className="text-xs text-gray-500">{label}</span>
-                <span className={`text-sm font-semibold ${label === 'Montant' ? 'text-red-600' : 'text-gray-800'}`}>{value}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-start gap-2 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
-            <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-yellow-700 font-medium">Cette transaction sera traitée et ne pourra pas être annulée.</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <button type="button" onClick={() => setStep('form')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
-            <ArrowLeft className="w-4 h-4" /> Modifier
-          </button>
-          <button type="button" onClick={handleConfirm} disabled={submitting || isLoading}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-            {submitting || isLoading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Traitement…</>
-              : <><CheckCircle2 className="w-4 h-4" /> Valider le retrait</>
-            }
-          </button>
-        </div>
-      </div>
-    );
-  }
+  console.log("✅ Données validées envoyées au backend :", result.data);
 
+  setErrors({});
+  setSubmitting(true);
+
+  try {
+    const response = await onSubmit(result.data);
+    console.log("📥 Réponse backend :", response);
+    setSubmittedData(result.data);
+    setSubmitted(true);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleReset = () => {
+  setSubmitted(false);
+  setSubmittedData(null);
+  setForm({
+    idCompte: '',
+    montantTransaction: '',
+    motif:              '',
+    description:        '',
+    codeAutorisation:   '',
+  });
+  setSelectedMember(null);
+  setSelectedAccount(null);
+  setMemberAccounts([]);
+  setErrors({});
+};
+
+if (submitted && submittedData) {
+  return (
+    <WithdrawalReceipt
+      data={submittedData}
+      memberName={selectedMember?.member_name}
+      onReset={handleReset}
+    />
+  );
+}
   // ── Formulaire ──────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
@@ -422,34 +374,10 @@ export default function WithdrawalForm({
         </div>
       </div>
 
-      {/* ── 2. Type de retrait ── */}
+      {/* ── 2. Montant + Motif ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <SectionHeader step={2} title="Type de retrait" icon={TrendingDown} />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {(Object.keys(SUBTYPE_CFG) as WithdrawalSubtype[]).map(sub => {
-            const cfg    = SUBTYPE_CFG[sub];
-            const Icon   = cfg.icon;
-            const active = form.withdrawalSubtype === sub;
-            return (
-              <button key={sub} type="button"
-                onClick={() => setForm(f => ({ ...f, withdrawalSubtype: sub }))}
-                className={`flex flex-col items-start gap-2 px-3 py-3 rounded-xl border-2 text-left transition-all
-                  ${active ? 'border-[#2E7D32] bg-[#DDEAD5]/40' : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'}`}>
-                <Icon className={`w-5 h-5 ${active ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
-                <div>
-                  <p className={`text-xs font-semibold ${active ? 'text-[#1B5E20]' : 'text-gray-700'}`}>{cfg.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5 leading-tight hidden sm:block">{cfg.desc}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── 3. Montant + Motif ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <SectionHeader step={3} title="Montant et motif" icon={Banknote} />
-{/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
+        <SectionHeader step={2} title="Montant et motif" icon={Banknote} />
+      {/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Montant (HTG)" required error={errors.amount}>
             <div className="relative">
@@ -526,9 +454,9 @@ export default function WithdrawalForm({
         )}
       </div>
 
-      {/* ── 4. Autorisation superviseur ── */}
+      {/* ── 3. Autorisation superviseur ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <SectionHeader step={4} title="Autorisation superviseur" icon={ShieldCheck} />
+        <SectionHeader step={3} title="Autorisation superviseur" icon={ShieldCheck} />
         <div className="flex items-start gap-3 mb-4 px-3 py-2.5 bg-[#EBF2F8] border border-[#355C7D]/20 rounded-xl">
           <ShieldCheck className="w-4 h-4 text-[#355C7D] shrink-0 mt-0.5" />
           <p className="text-xs text-[#355C7D] font-medium">
@@ -548,16 +476,20 @@ export default function WithdrawalForm({
       </div>
 
       {/* ── Footer ── */}
-      <div className="flex items-center justify-between gap-3 pt-1">
+     <div className="flex items-center justify-between gap-3 pt-1">
         <button type="button" onClick={onCancel}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
-          <ArrowLeft className="w-4 h-4" /> Annuler
+          className="px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
+          Annuler
         </button>
-        <button type="submit" disabled={isBlocked || isLoading}
+        <button type="submit" disabled={submitting || isLoading || isBlocked}
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-          <TrendingDown className="w-4 h-4" /> Vérifier le retrait
+          {submitting || isLoading
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
+            : <><ArrowDownCircle className="w-4 h-4" /> Enregistrer le dépôt</>
+          }
         </button>
       </div>
+      
     </form>
   );
 }

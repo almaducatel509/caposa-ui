@@ -9,14 +9,10 @@ import {
 } from 'lucide-react';
 import { depositSchema, DepositSubtype, type DepositFormValidated } from '../validation/deposit';
 import DepositReceipt from './DepositReceipt';
+import { MemberOption } from '../../members/validations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-interface MemberOption {
-  id: string;
-  full_name: string;
-  id_number: string;
-  phone_number?: string;
-}
+
 
 interface AccountOption {
   id: string;
@@ -51,12 +47,12 @@ function formatHTG(n: number) {
 
 // ─── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_MEMBERS: MemberOption[] = [
-  { id: 'dcb21971', full_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: 'a1b2c3d4', full_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-  { id: 'b3c4d5e6', full_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
-  { id: 'c4d5e6f7', full_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
-  { id: 'd5e6f7a8', full_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
-  { id: 'e6f7a8b9', full_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
+  { id: 'dcb21971', member_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
+  { id: 'a1b2c3d4', member_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
+  { id: 'b3c4d5e6', member_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
+  { id: 'c4d5e6f7', member_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
+  { id: 'd5e6f7a8', member_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
+  { id: 'e6f7a8b9', member_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
 ];
 
 const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
@@ -126,7 +122,7 @@ export default function DepositForm({
   onCancel,
   isLoading = false,
 }: DepositFormProps) {
-const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(null);
+  const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(null);
   const [memberSearch,    setMemberSearch]    = useState('');
   const [memberOpen,      setMemberOpen]      = useState(false);
   const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
@@ -136,31 +132,31 @@ const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(
   const [submitting,      setSubmitting]      = useState(false);
   const [errors,          setErrors]          = useState<Record<string, string>>({});
   const [form, setForm] = useState({
-  idCompte: '',
-  codeAutorisation: '',
-  montantTransaction: '',
-  depositSubtype: 'cash',
-  source: '',
-  description: '',
+    idCompte: '',
+    codeAutorisation: '',
+    montantTransaction: '',
+    depositSubtype: 'cash',
+    source: '',
+    description: '',
 
-  // Champs chèque existants
-  checkNumber: '',
-  issuingBank: '',
-  checkIssuerName: '',
-  checkDate: '',
+    // Champs chèque existants
+    checkNumber: '',
+    issuingBank: '',
+    checkIssuerName: '',
+    checkDate: '',
 
-  // Nouveaux champs MICR
-  micrSequence: '',
-  bankCode: '',
-  accountNumberMicr: '',
-  branchCode: '',
-  productCode: '',
+    // Nouveaux champs MICR
+    micrSequence: '',
+    bankCode: '',
+    accountNumberMicr: '',
+    branchCode: '',
+    productCode: '',
 
-  // Champs supplémentaires
-  beneficiary: '',
-  amountWords: '',
-  issuePlace: '',
-});
+    // Champs supplémentaires
+    beneficiary: '',
+    amountWords: '',
+    issuePlace: '',
+  });
 
 
   // Calculs automatiques
@@ -186,7 +182,7 @@ const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(
 
   const filteredMembers = useMemo(() =>
     members.filter(m =>
-      m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      m.member_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
       m.id_number.includes(memberSearch)
     ), [members, memberSearch]);
 
@@ -212,6 +208,7 @@ const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(
     setMemberAccounts([]);
     setForm(f => ({ ...f, idCompte: '' }));
   };
+  
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     console.log("🟢 Form complète :", form);
@@ -284,14 +281,7 @@ const [submittedData, setSubmittedData] = useState<DepositFormValidated | null>(
     try {
       const response = await onSubmit(result.data);
       console.log("📥 Réponse backend :", response);
-      try {
-      const response = await onSubmit(result.data);
-      console.log("📥 Réponse backend :", response);
-      setSubmittedData(result.data);  // 👈 AJOUTE CETTE LIGNE
-      setSubmitted(true);
-    } finally {
-      setSubmitting(false);
-    }
+      setSubmittedData(result.data);
       setSubmitted(true);
     } finally {
       setSubmitting(false);
@@ -333,27 +323,11 @@ setSubmittedData(null)
     setErrors({});
   };
 
-  // ── Écran succès ────────────────────────────────────────────────────────────
-  // if (submitted) {
-  //   return (
-  //     <div className="flex flex-col items-center justify-center py-16 gap-4">
-  //       <div className="w-16 h-16 rounded-2xl bg-[#DDEAD5] flex items-center justify-center">
-  //         <CheckCircle2 className="w-8 h-8 text-[#2E7D32]" />
-  //       </div>
-  //       <p className="text-lg font-bold text-gray-900">Dépôt enregistré</p>
-  //       <p className="text-sm text-gray-500">La transaction a été créée avec succès.</p>
-  //       <button onClick={handleReset}
-  //         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
-  //         <RefreshCw className="w-4 h-4" /> Nouveau dépôt
-  //       </button>
-  //     </div>
-  //   );
-  // }
   if (submitted && submittedData) {
     return (
       <DepositReceipt
         data={submittedData}
-        memberName={selectedMember?.full_name}
+        memberName={selectedMember?.member_name}
         onReset={handleReset}
       />
     );
@@ -376,7 +350,7 @@ setSubmittedData(null)
                   ${selectedMember ? 'border-[#2E7D32] bg-[#DDEAD5]/30' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <span className={`flex-1 truncate ${selectedMember ? 'font-medium text-gray-800' : 'text-gray-400'}`}>
-                  {selectedMember?.full_name ?? 'Rechercher un membre…'}
+                  {selectedMember?.member_name ?? 'Rechercher un membre…'}
                 </span>
                 {selectedMember
                   ? <button type="button" onClick={e => { e.stopPropagation(); handleClearMember(); }}
@@ -405,10 +379,10 @@ setSubmittedData(null)
                           <button key={m.id} type="button" onClick={() => handleMemberSelect(m)}
                             className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#DDEAD5]/30 transition-colors text-left">
                             <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                              <span className="text-xs font-bold text-[#2E7D32]">{m.full_name[0]}</span>
+                              <span className="text-xs font-bold text-[#2E7D32]">{m.member_name[0]}</span>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-800">{m.full_name}</p>
+                              <p className="text-sm font-medium text-gray-800">{m.member_name}</p>
                               <p className="text-xs text-gray-400">N° {m.id_number}</p>
                             </div>
                           </button>
@@ -687,12 +661,12 @@ setSubmittedData(null)
           }
         </button>
       </div>
-    {form.depositSubtype === 'check' && amount > 0 && (
-      <div className="text-xs text-gray-500 px-3 py-2 bg-blue-50 rounded-lg">
-        Le montant sera disponible après vérification (généralement 3 jours).
-        Le délai final sera confirmé après traitement.
-      </div>
-    )}
+      {form.depositSubtype === 'check' && amount > 0 && (
+        <div className="text-xs text-gray-500 px-3 py-2 bg-blue-50 rounded-lg">
+          Le montant sera disponible après vérification (généralement 3 jours).
+          Le délai final sera confirmé après traitement.
+        </div>
+      )}
     </form>
   );
 } 

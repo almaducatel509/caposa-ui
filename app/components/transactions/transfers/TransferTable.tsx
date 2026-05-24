@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import {
   ArrowLeftRight, Building2,
   CheckCircle2, XCircle, AlertCircle, Download, Pencil,
+  Grid,
 } from 'lucide-react';
 import TransferExportModal from './TransferExportModal';
 import { TransferData, TransferStatus, TransferType } from '../validation/transfert';
@@ -59,7 +60,8 @@ const TYPE_CFG: Record<TransferType, { icon: React.ElementType; label: string; c
   }
 };
 
-const COLS = '40px 1.4fr 1.2fr 1.2fr 1fr 1.2fr 1fr 90px';
+// const COLS = '40px 1.4fr 1.2fr 1.2fr 1fr 1.2fr 1fr 90px';
+const GRID = '40px 1.3fr 1.2fr 1fr 0.9fr 1fr 1fr 90px';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -93,16 +95,37 @@ function EyeIcon() {
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function TransferTable({ transfers, loading, onView, onEdit, onExport }: TransferTableProps) {
-  const [search,     setSearch]     = useState('');
-  const [statusF,    setStatusF]    = useState('all');
-  const [typeF,      setTypeF]      = useState('all');
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+   const [selected, setSelected] = useState<Set<number>>(new Set());
 // ── Tri ───────────────────────────────────────────────────────
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
+  
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
 
-const sorted = useMemo(() => [...transfers].sort((a, b) => {
-  const dir = sortDir === 'asc' ? 1 : -1;
+  const SortHeader = ({ field, label }: { field: string; label: string }) => {
+    const active = sortField === field;
+    return (
+      <button
+        onClick={() => toggleSort(field)}
+        className="flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-gray-500 hover:text-[#2E7D32] transition-colors"
+      >
+        {label}
+        <span className="flex flex-col leading-none">
+          <span className={`text-[8px] ${active && sortDir === 'asc' ? 'text-[#2E7D32]' : 'text-gray-300'}`}>▲</span>
+          <span className={`text-[8px] -mt-0.5 ${active && sortDir === 'desc' ? 'text-[#2E7D32]' : 'text-gray-300'}`}>▼</span>
+        </span>
+      </button>
+    );
+  };
+  const sorted = useMemo(() => [...transfers].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
     if (sortField === 'montant')
       return (a.montant - b.montant) * dir;
 
@@ -138,7 +161,6 @@ const sorted = useMemo(() => [...transfers].sort((a, b) => {
 
     if (sortField === 'destination_name')
       return (a.destination_name ?? '').localeCompare(b.destination_name ?? '') * dir;
-
     // fallback
     return (a.member_name ?? '').localeCompare(b.member_name ?? '') * dir;
 
@@ -185,9 +207,9 @@ const sorted = useMemo(() => [...transfers].sort((a, b) => {
       )}
 
       {/* ── En-tête colonnes ── */}
-      <div
-        className="grid items-center px-5 py-3 border-b border-gray-100 bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6]"
-        style={{ gridTemplateColumns: COLS }}
+       <div
+        className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
+        style={{ display: 'grid', gridTemplateColumns: GRID }}
       >
         <div className="flex justify-center">
           <input
@@ -198,18 +220,25 @@ const sorted = useMemo(() => [...transfers].sort((a, b) => {
             className="w-3.5 h-3.5 rounded accent-[#2E7D32] cursor-pointer"
           />
         </div>
-        {['Membre', 'Comptes', 'Référence', 'Type', 'Montant', 'Statut', 'Actions'].map(col => (
-          <div key={col} className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-            {col}
-          </div>
-        ))}
+        <SortHeader field="member_name" label="Membre" />
+        <SortHeader field="account_source" label="Comptes" />
+        <SortHeader field="reference" label="Référence" />
+        {/* <SortHeader field="typeTransfert" label="Type" /> */}
+        <SortHeader field="created_at" label="Date" />
+        <SortHeader field="status" label="Statut" />    
+        <SortHeader field="montant" label="Montant" />
+
+        <div className="text-xs font-semibold uppercase tracking-widest text-gray-500">Actions</div>
       </div>
 
       {/* ── Corps ── */}
       <div className="divide-y divide-gray-50">
 
         {loading && Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="grid items-center px-5 py-3.5" style={{ gridTemplateColumns: COLS }}>
+          <div 
+            key={i} className="grid items-center px-5 py-3.5"         
+            style={{ gridTemplateColumns: GRID }}
+          >
             {Array.from({ length: 8 }).map((_, j) => (
               <div key={j} className="h-3 w-20 bg-gray-100 animate-pulse rounded" />
             ))}
@@ -242,7 +271,7 @@ const sorted = useMemo(() => [...transfers].sort((a, b) => {
                   ? 'bg-[#DDEAD5]/50 border-[#2E7D32]'
                   : 'hover:bg-[#DDEAD5]/10 border-transparent'
               }`}
-              style={{ gridTemplateColumns: COLS }}
+              style={{ gridTemplateColumns: GRID }}
             >
               {/* Checkbox */}
               <div className="flex justify-center">
@@ -254,15 +283,12 @@ const sorted = useMemo(() => [...transfers].sort((a, b) => {
                 />
               </div>
 
-              {/* Membre */}
+             {/* Membre */}
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-[#2E7D32]">{initial}</span>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{memberLbl}</p>
-                  <p className="text-xs text-gray-400">{formatDate(t.created_at ?? t.dateTransfert)}</p>
-                </div>
+                <p className="text-sm font-medium text-gray-800 truncate">{memberLbl}</p>
               </div>
 
               {/* Comptes */}
@@ -276,13 +302,14 @@ const sorted = useMemo(() => [...transfers].sort((a, b) => {
               <p className="text-xs font-mono text-gray-500">{t.reference ?? '—'}</p>
 
               {/* Type */}
-              <span
+              {/* <span
                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold w-fit"
                 style={{ backgroundColor: tpCfg.bg, color: tpCfg.color }}
               >
                 <TpIcon className="w-3 h-3 shrink-0" />{tpCfg.label}
-              </span>
-
+              </span> */}
+              {/* Date */}
+              <p className="text-xs text-gray-500">{formatDate(t.created_at ?? t.dateTransfert)}</p>
               {/* Montant */}
               <p className="text-sm font-bold text-[#355C7D]">{formatHTG(t.montant)}</p>
 

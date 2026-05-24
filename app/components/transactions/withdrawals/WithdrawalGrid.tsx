@@ -8,6 +8,7 @@ import WithdrawalFilterBar from './WithdrawalFilterBar';
 import WithdrawalForm from './WithdrawalForm';
 import EditWithdrawalModal from './EditWithdrawalModal';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
+import { WithdrawalFormValidated } from '../validation/withdrawal';
 
 // ─── Mock data ────────────────────────────────────────────────────
 
@@ -132,6 +133,11 @@ export default function WithdrawalDashboard() {
     setTimeout(() => setLoading(false), 800);
   };
 
+  const handleWithdrawalSubmit = async (data: WithdrawalFormValidated) => {
+    console.log('Mock submit:', data);
+    await new Promise(r => setTimeout(r, 500));
+  };
+
   return (
     <div className="min-h-screen bg-[#F9F9F6] p-6 flex flex-col gap-6">
 
@@ -197,7 +203,10 @@ export default function WithdrawalDashboard() {
               </button>
             </div>
             <div className="p-5 overflow-y-auto max-h-[80vh]">
-              <WithdrawalForm onCancel={() => setModalOpen(false)} />
+              <WithdrawalForm 
+                onCancel={() => setModalOpen(false)} 
+                onSubmit={ handleWithdrawalSubmit}                            
+              />
             </div>
           </div>
         </div>
