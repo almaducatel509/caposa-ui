@@ -54,4 +54,5 @@ export interface Branch {
   updated_at?: string;
   total_staff: number;
   full_address: string;
+  status?:string;
 }

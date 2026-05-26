@@ -1,55 +1,38 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, ChevronDown, X, AlertTriangle, Loader2, User } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Search, ChevronDown, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { fetchMembers } from '@/app/lib/api/members';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Account {
-  id: string;
-  account_type: string;
-}
-
-interface Member {
-  id:         string;
-  first_name: string;
-  last_name:  string;
-  photo_url:  string | null;
-  gender:     'M' | 'F' | null;
-  accounts?:  Account[];
-}
+import { MemberData } from '../members/validations';
 
 interface CompteAutocompleteProps {
-  selectedKey?:      string;
+  selectedKey?:       string;
   onSelectionChange?: (key: string) => void;
-  errorMessage?:     string;
-  isDisabled?:       boolean;
-  isRequired?:       boolean;
-  className?:        string;
-  label?:            string;
-  placeholder?:      string;
-  excludeMemberId?:  string;   // pour exclure l'initiateur de la liste
+  errorMessage?:      string;
+  isDisabled?:        boolean;
+  isRequired?:        boolean;
+  className?:         string;
+  label?:             string;
+  placeholder?:       string;
+  excludeMemberId?:   string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function Avatar({ member, size = 'sm' }: { member: Member; size?: 'sm' | 'md' }) {
-  const dim = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
-  const txt = size === 'sm' ? 'text-sm'  : 'text-base';
-
-  if (member.photo_url) {
+// ─── Helpers ─────────────────────────────────────────────────────────────
+function Avatar({ member }: { member: MemberData }) {
+  if (member.photo_profil) {
     return (
       <img
-        src={member.photo_url}
+        src={member.photo_profil}
         alt={`${member.first_name} ${member.last_name}`}
-        className={`${dim} rounded-full object-cover shrink-0`}
+        className="w-8 h-8 rounded-full object-cover shrink-0"
       />
     );
   }
-
   const initials = `${member.first_name[0] ?? ''}${member.last_name[0] ?? ''}`.toUpperCase();
   return (
-    <div className={`${dim} rounded-full bg-[#DDEAD5] flex items-center justify-center shrink-0`}>
-      <span className={`${txt} font-bold text-[#2E7D32]`}>{initials || '?'}</span>
+    <div className="w-8 h-8 rounded-full bg-[#DDEAD5] flex items-center justify-center shrink-0">
+      <span className="text-sm font-bold text-[#2E7D32]">{initials || '?'}</span>
     </div>
   );
 }
@@ -58,35 +41,37 @@ function normalize(str: string) {
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ────────────────────────────────────────────────────────────────
 export default function CompteAutocomplete({
   selectedKey,
   onSelectionChange,
   errorMessage,
-  isDisabled    = false,
-  isRequired    = false,
-  className     = '',
-  label         = 'Membre',
-  placeholder   = 'Rechercher un membre par ID ou nom…',
+  isDisabled  = false,
+  isRequired  = false,
+  className   = '',
+  label       = 'Membre',
+  placeholder = 'Rechercher un membre par ID ou nom…',
   excludeMemberId,
 }: CompteAutocompleteProps) {
 
-  const [members,     setMembers]     = useState<Member[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [loadError,   setLoadError]   = useState('');
+  const [members,   setMembers]   = useState<MemberData[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [open,        setOpen]        = useState(false);
   const [query,       setQuery]       = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
 
+  // Position du dropdown (portail)
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
   const listRef    = useRef<HTMLUListElement>(null);
 
-  // ── Chargement initial ──────────────────────────────────────────────────
+  // ── Chargement initial ────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
         setLoading(true);
@@ -102,17 +87,16 @@ export default function CompteAutocomplete({
         if (!cancelled) setLoading(false);
       }
     })();
-
     return () => { cancelled = true; };
   }, []);
 
-  // ── Membre actuellement sélectionné (pour l'affichage) ─────────────────
+  // ── Membre sélectionné ────────────────────────────────────────────────
   const selectedMember = useMemo(
     () => members.find(m => m.id === selectedKey) ?? null,
     [members, selectedKey]
   );
 
-  // ── Filtrage ───────────────────────────────────────────────────────────
+  // ── Filtrage ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
     return members
@@ -124,10 +108,31 @@ export default function CompteAutocomplete({
       });
   }, [members, query, excludeMemberId]);
 
-  // ── Fermeture au clic extérieur ─────────────────────────────────────────
+  // ── Calcul de la position du dropdown ─────────────────────────────────
+  const updatePosition = () => {
+    if (!inputRef.current) return;
+    const r = inputRef.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [open]);
+
+  // ── Fermeture au clic extérieur ───────────────────────────────────────
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideWrapper = wrapperRef.current?.contains(target);
+      const insideList    = listRef.current?.contains(target);
+      if (!insideWrapper && !insideList) {
         setOpen(false);
         setQuery('');
       }
@@ -136,20 +141,20 @@ export default function CompteAutocomplete({
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
-  // ── Reset de l'index actif quand la liste filtrée change ───────────────
+  // ── Reset de l'index actif ────────────────────────────────────────────
   useEffect(() => {
     setActiveIndex(filtered.length > 0 ? 0 : -1);
   }, [filtered.length, open]);
 
-  // ── Scroll automatique sur l'élément actif ─────────────────────────────
+  // ── Scroll auto sur l'élément actif ───────────────────────────────────
   useEffect(() => {
     if (!open || activeIndex < 0 || !listRef.current) return;
     const el = listRef.current.children[activeIndex] as HTMLElement | undefined;
     el?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex, open]);
 
-  // ── Sélection ──────────────────────────────────────────────────────────
-  const handleSelect = (member: Member) => {
+  // ── Handlers ──────────────────────────────────────────────────────────
+  const handleSelect = (member: MemberData) => {
     onSelectionChange?.(member.id);
     setOpen(false);
     setQuery('');
@@ -163,7 +168,6 @@ export default function CompteAutocomplete({
     inputRef.current?.focus();
   };
 
-  // ── Navigation clavier ─────────────────────────────────────────────────
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) {
       setOpen(true);
@@ -189,7 +193,6 @@ export default function CompteAutocomplete({
     }
   };
 
-  // ── Valeur affichée dans l'input ───────────────────────────────────────
   const displayValue = open
     ? query
     : selectedMember
@@ -198,9 +201,66 @@ export default function CompteAutocomplete({
 
   const isDisabledFinal = isDisabled || loading || !!loadError;
 
+  // ── Dropdown (rendu via portail) ──────────────────────────────────────
+  const dropdown = open && !isDisabledFinal ? (
+    <div
+      style={{
+        position: 'fixed',
+        top:      pos.top,
+        left:     pos.left,
+        width:    pos.width,
+        zIndex:   9999,
+      }}
+      className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+    >
+      {filtered.length === 0 ? (
+        <div className="px-4 py-6 text-center text-xs text-gray-400 italic">
+          Aucun membre trouvé pour « {query} »
+        </div>
+      ) : (
+        <ul
+          ref={listRef}
+          role="listbox"
+          className="max-h-72 overflow-y-auto py-1"
+        >
+          {filtered.map((member, idx) => {
+            const isActive   = idx === activeIndex;
+            const isSelected = member.id === selectedKey;
+            return (
+              <li
+                key={member.id}
+                role="option"
+                aria-selected={isSelected}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onClick={() => handleSelect(member)}
+                className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
+                  ${isActive   ? 'bg-[#DDEAD5]/50' : ''}
+                  ${isSelected ? 'bg-[#DDEAD5]'    : ''}`}
+              >
+                <Avatar member={member} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {member.first_name} {member.last_name}
+                  </p>
+                  <p className="text-xs text-gray-400 font-mono truncate">
+                    ID: {member.id.slice(0, 8)}…
+                  </p>
+                </div>
+                {member.accounts && member.accounts.length > 0 && (
+                  <span className="text-xs font-semibold text-[#355C7D] bg-[#EBF2F8] px-2 py-0.5 rounded-md shrink-0">
+                    {member.accounts.length} compte{member.accounts.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div ref={wrapperRef} className={`flex flex-col gap-1.5 ${className}`}>
-
       {/* Label */}
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1">
         {label} {isRequired && <span className="text-red-400">*</span>}
@@ -256,56 +316,8 @@ export default function CompteAutocomplete({
         </div>
       </div>
 
-      {/* Dropdown */}
-      {open && !isDisabledFinal && (
-        <div className="relative">
-          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-            {filtered.length === 0 ? (
-              <div className="px-4 py-6 text-center text-xs text-gray-400 italic">
-                Aucun membre trouvé pour « {query} »
-              </div>
-            ) : (
-              <ul
-                ref={listRef}
-                role="listbox"
-                className="max-h-[280px] overflow-y-auto py-1"
-              >
-                {filtered.map((member, idx) => {
-                  const isActive   = idx === activeIndex;
-                  const isSelected = member.id === selectedKey;
-                  return (
-                    <li
-                      key={member.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      onClick={() => handleSelect(member)}
-                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
-                        ${isActive   ? 'bg-[#DDEAD5]/50' : ''}
-                        ${isSelected ? 'bg-[#DDEAD5]'    : ''}`}
-                    >
-                      <Avatar member={member} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">
-                          {member.first_name} {member.last_name}
-                        </p>
-                        <p className="text-xs text-gray-400 font-mono truncate">
-                          ID: {member.id.slice(0, 8)}…
-                        </p>
-                      </div>
-                      {member.accounts && member.accounts.length > 0 && (
-                        <span className="text-xs font-semibold text-[#355C7D] bg-[#EBF2F8] px-2 py-0.5 rounded-md shrink-0">
-                          {member.accounts.length} compte{member.accounts.length > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Dropdown via portail */}
+      {typeof window !== 'undefined' && dropdown && createPortal(dropdown, document.body)}
 
       {/* Erreur chargement */}
       {loadError && (

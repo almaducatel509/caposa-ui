@@ -16,8 +16,9 @@ import AccountDetailModal  from './modals/AccountDetailModal';
 import CloseAccountModal   from './modals/CloseAccountModal';
 import SuspendAccountModal from './modals/SuspendAccountModal';
 import AccountHistoryModal from './modals/AccountHistoryModal';
-import CreateAccountModal  from './modals/EditAccountModal';
 
+import CreateAccountModal from './modals/CreateAccountModal';
+import EditAccountModal   from './modals/EditAccountModal';
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
@@ -68,7 +69,7 @@ const AccountGrid: React.FC = () => {
   const [showSuspend,     setShowSuspend]     = useState(false);
   const [showHistory,     setShowHistory]     = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-
+  const [showEditModal,   setShowEditModal]   = useState(false);  
   // ── Load ───────────────────────────────────────────────────────────────────
   const loadAccounts = async () => {
     setLoading(true);
@@ -112,7 +113,14 @@ const AccountGrid: React.FC = () => {
     setSelectedAccount(null);
     setShowCreateModal(true);
   };
-
+  const handleEdit = (a: AccountData) => {
+    if (!canActOn(a)) {
+      console.warn('Action ignorée : compte fermé/archivé non modifiable.');
+      return;
+    }
+    setSelectedAccount(a);
+    setShowEditModal(true);
+  };
   // Lecture : toujours autorisée
   const handleView             = (a: AccountData) => { setSelectedAccount(a); setShowDetail(true); };
   const handleViewTransactions = (a: AccountData) => { setSelectedAccount(a); setShowHistory(true); };
@@ -245,14 +253,11 @@ const AccountGrid: React.FC = () => {
       />
       <CreateAccountModal
         isOpen={showCreateModal}
-        onClose={() => { setShowCreateModal(false); setSelectedAccount(null); }}
-        account={selectedAccount}
+        onClose={() => setShowCreateModal(false)}
         onSuccess={(created) => {
           setAccounts(prev => [...prev, created]);
-          setShowCreateModal(false);
-          setSelectedAccount(null);
         }}
-      />
+      />  
 
       <AccountDetailModal
         isOpen={showDetail}

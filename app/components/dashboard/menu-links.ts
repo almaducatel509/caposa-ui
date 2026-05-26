@@ -50,7 +50,7 @@ export const links: MainLink[] = [
 
   { name: 'Comptes', href: '/dashboard/accounts', icon: MdOutlineSupervisorAccount },
   { name: 'Session', href: '/dashboard/sessions', icon: MdOutlineWorkHistory },
-  { name: 'Caisse', href: '/dashboard/caisses', icon: PiCashRegisterFill  },
+  { name: 'Terminal', href: '/dashboard/terminal', icon: PiCashRegisterFill  },
 
   {
     name: 'Transactions',
@@ -88,7 +88,7 @@ export const links: MainLink[] = [
     href: '/dashboard/rapports',
     icon: HiOutlineDocumentDuplicate,
   },
-
+//Terminal
   { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },
   { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
   { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },

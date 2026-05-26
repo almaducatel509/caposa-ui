@@ -136,6 +136,8 @@ export interface Holiday {
 
 // interface branch dans C:\Users\alma2\Documents\Final Project\caposa-ui\types\data.d.ts
 export interface Branch {
+    [x: string]: string | number | readonly string[] | undefined;
+    [x: string]: ReactNode;
     branch_id: string;
     branch_name: string;
     branch_address: string;

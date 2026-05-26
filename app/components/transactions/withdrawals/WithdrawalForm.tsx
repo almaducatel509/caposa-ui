@@ -270,7 +270,6 @@ if (submitted && submittedData) {
       {/* ── 1. Membre + Compte ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={1} title="Membre et compte à débiter" icon={User} />
-{/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Dropdown membre */}
           <Field label="Membre" required error={errors.member}>

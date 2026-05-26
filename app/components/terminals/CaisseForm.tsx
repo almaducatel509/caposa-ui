@@ -12,8 +12,10 @@ import {
 //   • les mocks de fallback
 //   • la gestion des erreurs réseau
 //   • les headers JWT via AxiosInstance
-import { fetchBranches, createCaisse, Branch } from '@/app/lib/api/caisse';
 import { CaisseFormValues, validateForm, CaisseSchema } from '../sessions/validation';
+import { fetchBranches } from '@/app/lib/api/branche';
+import { createCaisse } from '@/app/lib/api/caisse';
+import { Branch } from '@/types/branche';
 
 
 // ─── Helpers UI ───────────────────────────────────────────────────
@@ -220,7 +222,7 @@ export default function CaisseForm({ onSuccess, onCancel }: Props) {
             >
               <option value="">Sélectionner une agence</option>
               {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
+                <option key={b.id} value={b.id}>{b.branch_name}</option>
               ))}
             </select>
           </div>

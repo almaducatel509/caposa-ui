@@ -1,5 +1,5 @@
 'use client';
-import TreasuryDashboard from '@/app/components/treasury/TreasuryDashboard';
+import TreasuryDashboard from '@/app/components/treasury/TreasuryOverview';
 
 export default function TreasuryPage() {
   return (

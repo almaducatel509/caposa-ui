@@ -3,6 +3,7 @@ import AxiosInstance from "@/app/lib/axiosInstance";
 import {
   createAccountSchema,
   CreateAccountInput,
+  mapFormDataToCreatePayload,
 } from "@/app/components/accounts/validationsaccount";
 import type { AccountData } from "@/app/components/accounts/validationsaccount";
 import { enrichAccountData } from "@/app/components/accounts/mockAccountData";
@@ -105,22 +106,47 @@ export const checkMemberEligibility = async (
 
 // ─── WRITE ───────────────────────────────────────────────────────────────────
 
-export const createAccount = async (payload: unknown): Promise<AccountData> => {
-  const parsed = createAccountSchema.safeParse(payload);
-  if (!parsed.success) throw parsed.error;
+// export const createAccount = async (input: CreateAccountInput): Promise<AccountData> => {
+//   // 1. Valider l'entrée (format du formulaire)
+//   const parsed = createAccountSchema.safeParse(input);
+//   if (!parsed.success) throw parsed.error;
 
-  try {
-    const { data } = await AxiosInstance.post(
-      "/accounts/",
-      parsed.data as CreateAccountInput
-    );
-    return enrichOne(data);
-  } catch (error: any) {
-    console.error("❌ Create account error:", error?.response?.data);
-    throw new Error(parseApiError(error, "Impossible de créer le compte."));
+//   // 2. Mapper en payload backend
+//   const payload = mapFormDataToCreatePayload(parsed.data);
+
+//   // 3. Envoyer
+//   try {
+//     const { data } = await AxiosInstance.post("/accounts/", payload);
+//     return enrichOne(data);
+//   } catch (error: any) {
+//     console.error("❌ Create account error:", error?.response?.data);
+//     throw new Error(parseApiError(error, "Impossible de créer le compte."));
+//   }
+// };
+export const createAccount = async (input: CreateAccountInput): Promise<AccountData> => {
+  // 🚧 BYPASS TOTAL — endpoint backend cassé, on simule côté front
+  // TODO: retirer ce bloc quand POST /accounts/ sera fonctionnel
+  const parsed = createAccountSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.errors[0]?.message ?? "Données invalides");
   }
-};
 
+  const payload = mapFormDataToCreatePayload(parsed.data);
+  await new Promise(r => setTimeout(r, 400));
+
+  const now = new Date().toISOString();
+  return enrichOne({
+    id:             crypto.randomUUID(),
+    account_number: payload.account_number,
+    member:         payload.member,
+    account_type:   payload.account_type,
+    balance:        "0",
+    account_status: "actif",
+    created_by:     "front-bypass",
+    created_at:     now,
+    updated_at:     now,
+  });
+};
 export const updateAccount = async (
   id: string,
   payload: unknown

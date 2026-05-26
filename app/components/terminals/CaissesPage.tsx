@@ -5,17 +5,16 @@ import { PiCashRegisterFill } from 'react-icons/pi';
 import {
   Search, RefreshCw, ChevronDown, ChevronUp,
   Banknote, MapPin, Building2, Hash, Coins,
-  ToggleLeft, ToggleRight, Eye, X,
+  ToggleLeft, ToggleRight,  X,
   Archive, AlertCircle, CheckCircle2,
   TrendingUp, Clock, Loader2, Plus,
 } from 'lucide-react';
-import { fetchBranches, createCaisse, Branch } from '@/app/lib/api/caisse';
 import {
   CaisseSchema,
   CaisseFormValues,
   validateForm,
 } from '@/app/components/sessions/validation';
-import CaisseForm from '@/app/components/caisses/CaisseForm';
+import CaisseForm from '@/app/components/terminals/CaisseForm';
 import AxiosInstance from '@/app/lib/axiosInstance';
 import { Caisse } from '@/types/caisse';
 
@@ -238,9 +237,7 @@ function CaisseCard({ caisse, onOpenDetail }: { caisse: Caisse; onOpenDetail: (c
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => onOpenDetail(caisse)} className="p-2 rounded-xl text-gray-400 hover:text-[#2E7D32] hover:bg-[#DDEAD5]/40 transition-colors" title="Voir les détails">
-            <Eye size={16} />
-          </button>
+         
           <button onClick={() => setExpanded(e => !e)} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -273,7 +270,7 @@ function CaisseCard({ caisse, onOpenDetail }: { caisse: Caisse; onOpenDetail: (c
 
 // ─── Page principale ─────────────────────────────────────────────
 
-export default function CaissesPage() {
+export default function TerminalPage() {
   const [caisses,      setCaisses]     = useState<Caisse[]>([]);
   const [filtered,     setFiltered]    = useState<Caisse[]>([]);
   const [loading,      setLoading]     = useState(true);
@@ -443,24 +440,8 @@ export default function CaissesPage() {
         )}
       </div>
 
-      {/* Lien Archives → /dashboard/archives
-          Les caisses archivées (actif=false) sont visibles dans la page archives globale
-          sous la catégorie "Administratif / Gestion caisse".
-          TODO API : le lien peut inclure ?categorie=caisse quand le backend supporte ce filtre. */}
-      <Link
-        href="/dashboard/archives"
-        className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all group"
-      >
-        <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-gray-200 flex items-center justify-center shrink-0 transition-colors">
-          <Archive className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Caisses archivées</p>
-          <p className="text-xs text-gray-400">Voir les caisses désactivées et hors service</p>
-        </div>
-        <ChevronDown className="w-4 h-4 text-gray-400 ml-auto -rotate-90 group-hover:text-gray-600 transition-colors" />
-      </Link>
-
+     
+     
       {/* Modal détail caisse */}
       {detailModal && (
         <CaisseDetailModal caisse={detailModal} onClose={() => setDetailModal(null)} />

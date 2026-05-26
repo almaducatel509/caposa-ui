@@ -73,7 +73,7 @@ interface DiscrepancyCause {
   note?: string;
 }
 
-type Tab = 'summary' | 'discrepancies' | 'transactions' | 'bank' | 'agents' | 'notes';
+type Tab = 'summary' | 'discrepancies' | 'agents' | 'notes';
 type DiscrepancyFilter = 'all' | 'pending' | 'explained';
 
 // ─── Palette CAPOSA ───────────────────────────────────────────────────────────
@@ -203,9 +203,7 @@ const ReconciliationPage: React.FC = () => {
   // ── Onglets config ──
   const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: number }[] = [
     { id: 'summary',       label: 'Résumé',            icon: Banknote    },
-    { id: 'discrepancies', label: 'Écarts détaillés',  icon: BarChart2,  badge: pendingCount },
-    { id: 'transactions',  label: 'Transactions',      icon: FileText    },
-    { id: 'bank',          label: 'Dépôts bancaires',  icon: Landmark    },
+   
     { id: 'agents',        label: 'Agents de crédit',  icon: Users       },
     { id: 'notes',         label: 'Notes',             icon: StickyNote  },
   ] as const;
@@ -364,12 +362,7 @@ const ReconciliationPage: React.FC = () => {
             </table>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-100 bg-[#F9F9F6] flex justify-center">
-            <button onClick={() => setActiveTab('discrepancies')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all">
-              <BarChart2 className="w-4 h-4" /> Voir l'analyse complète des écarts
-            </button>
-          </div>
+          
         </div>
       )}
 
@@ -465,76 +458,9 @@ const ReconciliationPage: React.FC = () => {
           {/* ── Écarts détaillés ────────────────────────────────────────────── */}
           {activeTab === 'discrepancies' && <DiscrepancySummaryTable />}
 
-          {/* ── Transactions ────────────────────────────────────────────────── */}
-          {activeTab === 'transactions' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-bold text-gray-800">Transactions du jour</p>
-                <span className="text-xs text-gray-400">{transactions.length} transactions</span>
-              </div>
-              <div className="rounded-xl border border-gray-100 overflow-hidden">
-                <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] px-5 py-3 grid grid-cols-6 gap-3">
-                  {['Heure', 'Type', 'Membre', 'Montant', 'Statut', 'Actions'].map(h => (
-                    <p key={h} className="text-xs font-bold uppercase tracking-widest text-gray-500">{h}</p>
-                  ))}
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {transactions.map((tx, idx) => (
-                    <div key={tx.id} className={`grid grid-cols-6 gap-3 items-center px-5 py-4 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#F9F9F6]/40'}`}>
-                      <p className="text-sm font-medium text-gray-700">{tx.time}</p>
-                      <p className="text-sm text-gray-700">{TX_TYPE[tx.type]}</p>
-                      <p className="text-sm font-semibold text-gray-800">{tx.member}</p>
-                      <p className="text-sm font-bold text-[#355C7D]">{formatHTG(tx.amount)}</p>
-                      <div><StatusBadge status={tx.status} /></div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => handleStatusChange(tx.id, 'match')}    title="Conforme"    className="p-1.5 rounded-lg hover:bg-[#DDEAD5] text-[#2E7D32] transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                        <button onClick={() => handleStatusChange(tx.id, 'discrepancy')} title="Écart"    className="p-1.5 rounded-lg hover:bg-red-50   text-red-500    transition-colors"><AlertTriangle className="w-4 h-4" /></button>
-                        <button onClick={() => handleStatusChange(tx.id, 'pending')}  title="En attente" className="p-1.5 rounded-lg hover:bg-yellow-50 text-[#D4AF37]  transition-colors"><Clock className="w-4 h-4" /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          
 
-          {/* ── Dépôts bancaires ────────────────────────────────────────────── */}
-          {activeTab === 'bank' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-bold text-gray-800">Dépôts bancaires</p>
-                <span className="text-xs text-gray-400">{bankDeposits.length} bordereaux</span>
-              </div>
-              <div className="space-y-3">
-                {bankDeposits.map(bd => (
-                  <div key={bd.id} className="p-5 bg-white rounded-2xl border border-gray-100 hover:shadow-sm transition-shadow">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">Bordereau {bd.slipNumber}</p>
-                        {bd.notes && <p className="text-xs text-gray-500 mt-0.5">📝 {bd.notes}</p>}
-                      </div>
-                      <StatusBadge status={bd.status} />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {[
-                        { label: 'Attendu',  value: bd.expectedAmount  },
-                        { label: 'Confirmé', value: bd.confirmedAmount },
-                        { label: 'Écart',    value: bd.confirmedAmount - bd.expectedAmount, colored: true },
-                      ].map(col => (
-                        <div key={col.label}>
-                          <p className="text-xs text-gray-500 mb-1">{col.label}</p>
-                          <p className={`text-base font-bold ${col.colored ? (col.value === 0 ? 'text-[#2E7D32]' : 'text-red-600') : 'text-gray-800'}`}>
-                            {formatHTG(col.value)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
+          
           {/* ── Agents ──────────────────────────────────────────────────────── */}
           {activeTab === 'agents' && (
             <div>
@@ -565,11 +491,7 @@ const ReconciliationPage: React.FC = () => {
                           </p>
                         </div>
                       ))}
-                      <div className="flex items-end">
-                        <button className="text-xs font-semibold text-[#355C7D] hover:text-[#2E7D32] transition-colors flex items-center gap-1">
-                          Voir reçus <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
+                     
                     </div>
                   </div>
                 ))}

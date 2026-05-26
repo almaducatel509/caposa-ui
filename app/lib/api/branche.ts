@@ -83,7 +83,7 @@ export const fetchOpeningHours = async () => {
 };
 
 /* =====================================================
-   BRANCHES — CRUD
+   BRANCHES — CRUD app\lib\api\branche.ts
 ===================================================== */
 
 /** Récupère la liste complète des branches.
@@ -109,17 +109,6 @@ export const fetchBranches = async () => {
  *  En cas d'erreur, on relance pour que le modal puisse afficher un message clair.
  */
 
-// ─── Ancienne version (commentée pour référence) ───────────────────────────
-// export const createBranch = async (branchData: any) => {
-//   try {
-//     const response = await AxiosInstance.post('/branches/', branchData);
-//     console.log('Réponse API :', response.data);
-//     return response.data;
-//   } catch (error) {
-//     console.error('Erreur API :', error);
-//     return [];  // ❌ retournait [] sur erreur → mensonge silencieux
-//   }
-// };
 
 // ─── Nouvelle version : throw + parseApiError ──────────────────────────────
 export const createBranch = async (branchData: any) => {
