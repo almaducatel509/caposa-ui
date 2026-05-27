@@ -2,22 +2,31 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Calendar, DollarSign, Users, FileText, CheckCircle, Lock } from 'lucide-react';
 import { BarChart, Bar, Cell, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line } from 'recharts';
+import type { EmployeeData } from '@/app/components/employees/validations';
+import { Session } from '@/types/session';
+import { Branch } from '@/types/branche';
+import { getFullName, getInitials } from '@/app/utils/employee';
+import { ExportAllButton } from '@/app/ExportAllButton';
 
-interface CashHandover {
+export interface CashHandover {
   id: string;
+  type: 'opening' | 'closing';
   amount: number;
-  handed_by: string;
-  handed_by_name: string;
-  verified_by: string;
-  verified_by_name: string;
-  received_by: string;
-  received_by_name: string;
-  branch_id: string;
-  handover_date: string;
-  created_at: string;
-  status: 'confirmed' | 'locked';
   notes?: string;
-  is_locked: boolean;
+  created_at: string;
+
+  // FKs
+  session_id: string;
+  branch_id: string;
+  verified_by_id: string;
+  received_by_id: string;
+
+  // Objets joints (singulier — un seul de chaque)
+  session?: Session;
+  branch?: Branch;
+  employee?: EmployeeData;       // l'employé de la session (celui qui remet)
+  verified_by?: EmployeeData;
+  received_by?: EmployeeData;
 }
 
 const KPICard = ({ icon: Icon, label, value, subValue, color }: any) => (
@@ -42,14 +51,24 @@ const CashHandoverHistory: React.FC = () => {
 
   // Génération de données échantillon (Lun-Ven, 8h-10h)
   const generateSampleHandovers = (): CashHandover[] => {
-    const employees = [
-      { id: 'emp_001', name: 'Jean Dupont' },
-      { id: 'emp_002', name: 'Marie Tremblay' },
-      { id: 'emp_003', name: 'Paul Martin' },
-      { id: 'emp_004', name: 'Sophie Lavoie' },
-      { id: 'emp_005', name: 'Luc Gagnon' },
-      { id: 'emp_006', name: 'Claire Bergeron' }
-    ];
+     const makeEmployee = (id: string, first: string, last: string): EmployeeData => ({
+    id,
+    first_name: first,
+    last_name: last,
+    phone_number: '',
+    payment_ref: '',
+    posts: [],
+    branch: 'branch_001',
+    nomComplet: `${first} ${last}`,
+  });
+   const employees: EmployeeData[] = [
+    makeEmployee('emp_001', 'Jean', 'Dupont'),
+    makeEmployee('emp_002', 'Marie', 'Tremblay'),
+    makeEmployee('emp_003', 'Paul', 'Martin'),
+    makeEmployee('emp_004', 'Sophie', 'Lavoie'),
+    makeEmployee('emp_005', 'Luc', 'Gagnon'),
+    makeEmployee('emp_006', 'Claire', 'Bergeron'),
+  ];
 
     const data: CashHandover[] = [];
     const daysBack = periodFilter === 'day' ? 1 : 
@@ -74,7 +93,7 @@ const CashHandoverHistory: React.FC = () => {
       
       // Sélectionner 3 employés différents
       const shuffled = [...employees].sort(() => Math.random() - 0.5);
-      const handedBy = shuffled[0];
+      const employee = shuffled[0];       // ← celui qui remet
       const verifiedBy = shuffled[1];
       const receivedBy = shuffled[2];
       
@@ -82,21 +101,22 @@ const CashHandoverHistory: React.FC = () => {
       
       data.push({
         id: `handover_${i + 1}`,
-        amount: amount,
-        handed_by: handedBy.id,
-        handed_by_name: handedBy.name,
-        verified_by: verifiedBy.id,
-        verified_by_name: verifiedBy.name,
-        received_by: receivedBy.id,
-        received_by_name: receivedBy.name,
-        branch_id: 'branch_001',
-        handover_date: date.toISOString(),
-        created_at: date.toISOString(),
-        status: 'locked',
+        type: 'closing',
+        amount,
         notes: Math.random() > 0.7 ? 'Fonds de caisse standard du matin' : undefined,
-        is_locked: true
+        created_at: date.toISOString(),
+
+        // FKs
+        session_id: `session_${i + 1}`,
+        branch_id: 'branch_001',
+        verified_by_id: verifiedBy.id,
+        received_by_id: receivedBy.id,
+
+        // Objets joints
+        employee,
+        verified_by: verifiedBy,
+        received_by: receivedBy,
       });
-      
       attempts++;
     }
     
@@ -107,16 +127,18 @@ const CashHandoverHistory: React.FC = () => {
 
   // Filtrage
   const filteredHandovers = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+
     return handovers.filter(h => {
-      const matchesSearch = 
-        h.handed_by_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        h.verified_by_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        h.received_by_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        h.id.toLowerCase().includes(searchTerm.toLowerCase());
-      
+      const matchesSearch =
+        getFullName(h.employee).toLowerCase().includes(term) ||
+        getFullName(h.verified_by).toLowerCase().includes(term) ||
+        getFullName(h.received_by).toLowerCase().includes(term) ||
+        h.id.toLowerCase().includes(term);
+
       const matchesMinAmount = !minAmount || h.amount >= parseFloat(minAmount);
       const matchesMaxAmount = !maxAmount || h.amount <= parseFloat(maxAmount);
-      
+
       return matchesSearch && matchesMinAmount && matchesMaxAmount;
     });
   }, [handovers, searchTerm, minAmount, maxAmount]);
@@ -179,11 +201,13 @@ const CashHandoverHistory: React.FC = () => {
   // Calculs des KPIs
   const totalAmount = handovers.reduce((sum, h) => sum + h.amount, 0);
   const averageAmount = handovers.length > 0 ? totalAmount / handovers.length : 0;
-  const uniqueEmployees = new Set([
-    ...handovers.map(h => h.handed_by),
-    ...handovers.map(h => h.verified_by),
-    ...handovers.map(h => h.received_by)
-  ]).size;
+  const uniqueEmployees = new Set(
+    handovers.flatMap(h => [
+      h.employee?.id,
+      h.verified_by?.id,
+      h.received_by?.id,
+    ]).filter(Boolean)
+  ).size;
 
   // Graphique: Volume par période
   const volumeByPeriod = useMemo(() => {
@@ -288,9 +312,34 @@ const CashHandoverHistory: React.FC = () => {
       minute: '2-digit'
     });
   };
+  // Remises actuellement sélectionnées
+  const selectedHandovers = useMemo(
+    () => filteredHandovers.filter(h => selectedRows.has(h.id)),
+    [filteredHandovers, selectedRows]
+  );
+  
+
+  // Format aplati pour Excel (une ligne = une remise, colonnes simples)
+  const exportRows = useMemo(
+    () => selectedHandovers.map(h => ({
+      id: h.id,
+      date: new Date(h.created_at).toLocaleDateString('fr-CA'),
+      heure: new Date(h.created_at).toLocaleTimeString('fr-CA', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      remis_par: getFullName(h.employee),
+      verifie_par: getFullName(h.verified_by),
+      recu_par: getFullName(h.received_by),
+      montant: h.amount,
+      type: h.type,
+      notes: h.notes ?? '',
+    })),
+    [selectedHandovers]
+  );
 
   return (
-<div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
       {/* Filtre de période */}
       <div className="mb-6 flex gap-3">
         {(['day', 'week', 'month', 'year'] as const).map(period => (
@@ -364,7 +413,7 @@ const CashHandoverHistory: React.FC = () => {
               <XAxis dataKey="label" stroke="#6b7280" fontSize={12} />
               <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
               <Tooltip 
-                formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''}
+                formatter={(value) => typeof value === 'number' ? formatCurrency(value) : String(value)}
                 contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} 
               />
               <Bar dataKey="amount" fill="#2E7D32" radius={[8, 8, 0, 0]} name="Montant" />
@@ -412,7 +461,7 @@ const CashHandoverHistory: React.FC = () => {
 
         {/* Header du tableau */}
         <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-6 py-4">
-          <div className="grid grid-cols-12 gap-4 items-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <div className="grid grid-cols-12 gap-5 items-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
             <div className="col-span-1 flex items-center gap-2">
               <input
                 type="checkbox"
@@ -426,10 +475,8 @@ const CashHandoverHistory: React.FC = () => {
             <div className="col-span-2">Vérifié par</div>
             <div className="col-span-2">Reçu par</div>
             <div className="col-span-2">Montant</div>
-            <div className="col-span-1 text-center">Actions</div>
           </div>
         </div>
-
         {/* Badge de sélection */}
         {selectedRows.size > 0 && (
           <div className="bg-[#DDEAD5] border-b border-[#2E7D32]/20 px-6 py-3 flex items-center justify-between">
@@ -444,11 +491,24 @@ const CashHandoverHistory: React.FC = () => {
                 Désélectionner tout
               </button>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="px-4 py-2 bg-white border-2 border-[#2E7D32] text-[#2E7D32] rounded-lg text-sm font-semibold hover:bg-[#DDEAD5] transition-colors">
-                Exporter PDF
-              </button>
-            </div>
+
+            <ExportAllButton
+              data={exportRows}
+              filename="remises_caisse"
+              label="Exporter Excel"
+              separator=";"
+              headerLabels={{
+                id: 'Référence',
+                date: 'Date',
+                heure: 'Heure',
+                remis_par: 'Remis par',
+                verifie_par: 'Vérifié par',
+                recu_par: 'Reçu par',
+                montant: 'Montant (CAD)',
+                type: 'Type',
+                notes: 'Notes',
+              }}
+            />
           </div>
         )}
 
@@ -508,10 +568,12 @@ const CashHandoverHistory: React.FC = () => {
                     <div className="col-span-2">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center text-white text-xs font-bold">
-                          {handover.handed_by_name.split(' ').map(n => n[0]).join('')}
+                          {getInitials(handover.employee)}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{handover.handed_by_name}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {getFullName(handover.employee)}
+                          </p>
                           <p className="text-xs text-gray-500">Remis</p>
                         </div>
                       </div>
@@ -521,23 +583,27 @@ const CashHandoverHistory: React.FC = () => {
                     <div className="col-span-2">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#355C7D] to-[#2A4A5E] flex items-center justify-center text-white text-xs font-bold">
-                          {handover.verified_by_name.split(' ').map(n => n[0]).join('')}
+                          {getInitials(handover.verified_by)}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{handover.verified_by_name}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {getFullName(handover.verified_by)}
+                          </p>
                           <p className="text-xs text-gray-500">Vérifié</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Reçu par */}
-                    <div className="col-span-2">
+                   <div className="col-span-2">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#C9B27C] flex items-center justify-center text-white text-xs font-bold">
-                          {handover.received_by_name.split(' ').map(n => n[0]).join('')}
+                          {getInitials(handover.received_by)}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{handover.received_by_name}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {getFullName(handover.received_by)}
+                          </p>
                           <p className="text-xs text-gray-500">Reçu</p>
                         </div>
                       </div>
@@ -554,18 +620,7 @@ const CashHandoverHistory: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="col-span-1 flex items-center justify-center gap-2">
-                      <button 
-                        className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all group/btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('Voir PDF', handover.id);
-                        }}
-                      >
-                        <FileText className="w-4 h-4 text-gray-600 group-hover/btn:text-gray-800" />
-                      </button>
-                    </div>
+                    
                   </div>
                 );
               })}
