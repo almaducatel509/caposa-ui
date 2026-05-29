@@ -282,3 +282,60 @@ Cette décision impacte :
 - Permissions d'accès
 - Niveau de détail affiché
 - Actions disponibles
+
+`participant Cashier
+participant Front
+participant Backend
+participant Treasury
+participant Reconciliation
+
+== Ouverture et opérations caisse ==
+Cashier -> Front: Ouvrir caisse
+Front -> Backend: POST /cashier/session/open
+Backend --> Front: session ouverte
+
+Cashier -> Front: Effectuer transactions
+Front -> Backend: POST /transactions
+Backend --> Front: transaction enregistrée
+
+Cashier -> Front: Fermer caisse
+Front -> Backend: POST /cashier/session/close
+Backend -> Backend: Génère Remittance (pending)
+Backend --> Front: remise créée
+
+== Validation des remises ==
+Treasury -> Front: Ouvrir écran remises
+Front -> Backend: GET /treasury/remittances?status=pending
+Backend --> Front: liste des remises
+
+Treasury -> Front: Ouvrir une remise
+Front -> Backend: GET /treasury/remittances/:id
+Backend --> Front: détails + totaux
+
+Treasury -> Front: Valider remise
+Front -> Backend: POST /treasury/remittances/:id/validate
+Backend -> Backend: 
+    - recalcul totaux
+    - compare déclaré vs théorique
+    - update treasury
+    - update remittance.status = validated
+    - create audit
+Backend --> Front: remise validée
+
+# == Vérification avant réconciliation ==
+Front -> Backend: GET /treasury/reconciliation/status
+Backend -> Backend: Vérifie toutes les remises + caisses fermées
+Backend --> Front: can_reconcile = true/false
+
+# == Réconciliation journalière ==
+Treasury -> Front: Lancer réconciliation
+Front -> Backend: POST /treasury/reconciliation/start
+Backend -> Backend:
+    - calcule cash théorique total
+    - calcule cash réel total
+    - calcule écarts
+    - génère rapport final
+    - update treasury consolidated
+Backend --> Front: rapport final
+Front -> Treasury: Affiche réconciliation
+`

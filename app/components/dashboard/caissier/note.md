@@ -1,8 +1,44 @@
 # 📋 CAPOSA — Note de travail
 > Dernière mise à jour : 26 mars 2026
-
 ---
+3 — Fermeture de la caisse
+La caissière compte physiquement l’argent.
 
+👉 Elle trouve :
+
+80 000 HTG en bon état
+
+1 billet de 500 HTG déchiré
+
+Elle saisit dans CAPOSA :
+
+Cash réel : 80 000 HTG
+
+Anomalies :
+
+Billet déchiré (500 HTG)
+
+CAPOSA calcule l’écart :
+
+Si théorique = 80 500 HTG
+
+Réel = 80 000 HTG
+➡️ Écart = -500 HTG
+---
+Étape 4 — Remise à la trésorerie
+La caissière remet :
+
+80 000 HTG cash
+
+1 billet de 500 HTG déchiré (classé comme non valide)
+
+Elle valide la remise.
+CAPOSA génère :
+
+Un bordereau de remise
+
+Un statut “En attente de validation trésorerie”
+---
 ## ✅ Ce qui est fait
 
 ### Design System
