@@ -387,7 +387,7 @@ export default function DashboardCaissier() {
                 ? 'bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white'
                 : 'bg-white border-2 border-red-300 text-red-700 hover:bg-red-50'
             }`}>
-            {caisseStatus === 'fermée' ? 'Ouvrir la caisse maintenant' : 'Fermer la session'}
+            {caisseStatus === 'fermée' ? 'Ouvrir la session' : 'Fermer la session'}
           </button>
         </div>
       </div>

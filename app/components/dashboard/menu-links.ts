@@ -76,9 +76,9 @@ export const links: MainLink[] = [
     icon: GiTwoCoins,
     hasSubmenu: true,
     subLinks: [
-      { name: "Vue d'ensemble", href: '/dashboard/treasury', icon: RiDashboardLine },
-      { name: 'Encaisse', href: '/dashboard/treasury/cash', icon: GiReceiveMoney },
-      { name: 'Coffre', href: '/dashboard/treasury/vault', icon: PiVaultFill },
+      { name: "Remise", href: '/dashboard/treasury', icon: PiVaultFill },
+      // { name: 'Encaisse', href: '/dashboard/treasury/cash', icon: GiReceiveMoney },
+      // { name: 'Coffre', href: '/dashboard/treasury/vault', icon: PiVaultFill },
       { name: 'Réconciliation', href: '/dashboard/treasury/reconciliation', icon: RiFileList3Line },
     ],
   },

@@ -1,44 +1,47 @@
-'use client';
-import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { FileCheck, Download, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
-import SessionRow from './SessionRow';
-import EcartModal from './EcartModal';
-import { MOCK_RECONCILIATION } from '@/app/lib/api/treasury.mock';
-import { ReconciliationReport, Ecart } from '@/types/reconciliation.types';
-import PageHeader from '../../header';
 
 // ─── Source de vérité unique ──────────────────────────────────────────────────
 // Quand l'API est prête, remplacer cet import par un useEffect + fetch dans le composant
+'use client';
+import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  FileCheck, Download, AlertTriangle, CheckCircle2,
+  Lock, Clock, StickyNote,
+} from 'lucide-react';
+import { MOCK_RECONCILIATION } from '@/app/lib/api/treasury.mock';
+import { ReconciliationReport, Ecart } from '@/types/reconciliation.types';
+import PageHeader from '../../header';
+import EcartModal from './EcartModal';
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
-  new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(n) + ' HTG';
+  new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(Math.abs(n)) + ' HTG';
 
-// ─── Composant principal ───────────────────────────────────────────────────────
+// ─── Composant principal ──────────────────────────────────────────────────────
 const ReconciliationPage: React.FC = () => {
   const router = useRouter();
-  const [report,   setReport]   = useState<ReconciliationReport>(MOCK_RECONCILIATION);
+
+  // TODO API : remplacer par useEffect + fetch('/api/treasury/reconciliation/start', { method: 'POST' })
+  const [report,     setReport]     = useState<ReconciliationReport>(MOCK_RECONCILIATION);
   const [ecartTarget, setEcartTarget] = useState<Ecart | null>(null);
+  const [globalNote,  setGlobalNote]  = useState('');
   const [submitting,  setSubmitting]  = useState(false);
   const [submitted,   setSubmitted]   = useState(false);
+  const [rapportId,   setRapportId]   = useState<string | null>(null);
 
-  // Tous les écarts expliqués → peut soumettre
-  const allExplained = useMemo(() =>
-    report.sessions.every(s =>
-      s.ecarts.every(e => e.statut !== 'en_attente')
-    ), [report]);
+  // Tous les écarts expliqués ?
+  const allEcarts = useMemo(() =>
+    report.sessions.flatMap(s => s.ecarts), [report]);
 
-  const totalEcarts = useMemo(() =>
-    report.sessions.reduce((sum, s) => sum + s.ecarts.filter(e => e.statut === 'en_attente').length, 0),
-  [report]);
+  const pending   = useMemo(() => allEcarts.filter(e => e.statut === 'en_attente'),  [allEcarts]);
+  const explained = useMemo(() => allEcarts.filter(e => e.statut === 'explique'),    [allEcarts]);
+  const canSubmit = pending.length === 0;
 
-  // ── Expliquer un écart ──────────────────────────────────────────────────
+  // ── Expliquer un écart ────────────────────────────────────────────────────
   const handleExplainConfirm = async (ecartId: string, note: string) => {
     // TODO API : await fetch(`/api/treasury/reconciliation/ecart/${ecartId}/explain`, {
     //   method: 'POST', body: JSON.stringify({ note }),
     // });
-
     setReport(prev => ({
       ...prev,
       sessions: prev.sessions.map(s => ({
@@ -46,29 +49,27 @@ const ReconciliationPage: React.FC = () => {
         ecarts: s.ecarts.map(e =>
           e.id === ecartId ? { ...e, statut: 'explique' as const, note } : e
         ),
-        statut: s.ecarts.every(e =>
-          e.id === ecartId ? true : e.statut !== 'en_attente'
-        ) ? 'explique' as const : s.statut,
       })),
     }));
     setEcartTarget(null);
   };
 
-  // ── Soumettre la réconciliation ─────────────────────────────────────────
+  // ── Soumettre ─────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!allExplained) return;
+    if (!canSubmit) return;
     setSubmitting(true);
-    // TODO API : await fetch('/api/treasury/reconciliation/submit', { method: 'POST' });
+    // TODO API :
+    //   const { rapport_id } = await fetch('/api/treasury/reconciliation/submit', {
+    //     method: 'POST', body: JSON.stringify({ note: globalNote }),
+    //   }).then(r => r.json());
+    //   setRapportId(rapport_id);
     await new Promise(r => setTimeout(r, 800));
+    setRapportId('RPT-20260529-br-pap'); // mock
     setSubmitted(true);
     setSubmitting(false);
   };
 
-  const ecartColor = report.ecart_total < 0
-    ? 'text-red-600' : report.ecart_total > 0
-    ? 'text-amber-600' : 'text-[#1B5E20]';
-
-  // ── Vue soumise ────────────────────────────────────────────────────────
+  // ── Vue soumise ───────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 p-8 min-h-[60vh]">
@@ -82,15 +83,27 @@ const ReconciliationPage: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => router.push('/dashboard/rapports?type=reconciliation')}
+          onClick={() => router.push(
+            `/dashboard/rapports?type=reconciliation${rapportId ? `&id=${rapportId}` : ''}`
+          )}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2E7D32] text-white text-sm font-semibold hover:bg-[#1B5E20] transition-colors"
         >
           <FileCheck className="w-4 h-4" />
           Voir le rapport
         </button>
+        <button
+          onClick={() => router.push('/dashboard/treasury')}
+          className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-100 transition-colors"
+        >
+          Fermer
+        </button>
+
       </div>
     );
   }
+
+  const ecartTotal = report.ecart_total;
+  const ecartColor = ecartTotal < 0 ? 'text-red-600' : ecartTotal > 0 ? 'text-amber-600' : 'text-[#1B5E20]';
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
@@ -101,33 +114,31 @@ const ReconciliationPage: React.FC = () => {
           title="Réconciliation journalière"
           subtitle={`${report.branch_name} · ${report.date}`}
         />
-        <div className="flex items-center gap-2">
-          {/* Statut global */}
-          {allExplained ? (
+        <div>
+          {canSubmit ? (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20]">
               <CheckCircle2 className="w-3.5 h-3.5" /> Prêt à soumettre
             </span>
           ) : (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-              <AlertTriangle className="w-3.5 h-3.5" /> {totalEcarts} écart{totalEcarts > 1 ? 's' : ''} en attente
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {pending.length} écart{pending.length > 1 ? 's' : ''} en attente
             </span>
           )}
         </div>
       </div>
 
-      {/* ── Banner chiffres clés ── */}
+      {/* ── Banner consolidé ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
           {[
-            { label: 'Cash ouverture',  value: fmt(report.total_ouverture),  sub: 'Fonds de départ',              color: 'text-gray-800' },
-            { label: 'Cash théorique',  value: fmt(report.total_theorique),  sub: 'Selon transactions système',   color: 'text-gray-800' },
-            { label: 'Cash réel compté',value: fmt(report.total_reel),       sub: 'Comptage physique',            color: 'text-gray-800' },
+            { label: 'Cash ouverture',   value: fmt(report.total_ouverture),  sub: 'Fonds de départ',             color: 'text-gray-800' },
+            { label: 'Cash théorique',   value: fmt(report.total_theorique),  sub: 'Selon transactions système',  color: 'text-gray-800' },
+            { label: 'Cash réel compté', value: fmt(report.total_reel),       sub: 'Comptage physique total',     color: 'text-gray-800' },
             {
               label: 'Écart total',
-              value: (report.ecart_total === 0 ? '—' :
-                (report.ecart_total < 0 ? '−' : '+') + fmt(report.ecart_total)),
-              sub: report.ecart_total === 0 ? 'Aucun écart' :
-                   report.ecart_total < 0  ? 'Manque'      : 'Excédent',
+              value: ecartTotal === 0 ? '—' : (ecartTotal < 0 ? '−' : '+') + fmt(ecartTotal),
+              sub:   ecartTotal === 0 ? 'Aucun écart' : ecartTotal < 0 ? 'Manque' : 'Excédent',
               color: ecartColor,
             },
           ].map(c => (
@@ -140,77 +151,156 @@ const ReconciliationPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Sessions ── */}
+      {/* ── Tableau des écarts ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-        {/* En-tête colonnes */}
-        <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3">
-          <div className="grid grid-cols-[36px_1.4fr_1fr_1fr_1fr_100px_40px] gap-3 text-xs font-semibold uppercase tracking-wide text-gray-600">
-            <span></span>
-            <span>Caissière</span>
-            <span>Ouverture</span>
-            <span>Théorique</span>
-            <span>Réel compté</span>
-            <span>Écart</span>
-            <span></span>
+        {/* En-tête avec compteurs */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">Tableau des écarts</h3>
+          <div className="flex items-center gap-2">
+            {pending.length > 0 && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
+                <Clock className="w-3 h-3" /> {pending.length} en attente
+              </span>
+            )}
+            {explained.length > 0 && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                <CheckCircle2 className="w-3 h-3" /> {explained.length} expliqué{explained.length > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Lignes sessions */}
-        {report.sessions.map(s => (
-          <SessionRow
-            key={s.session_id}
-            session={s}
-            onExplainEcart={setEcartTarget}
+        {/* Colonnes */}
+        <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3">
+          <div className="grid grid-cols-[2fr_90px_90px_90px_110px_120px] gap-3 text-xs font-semibold uppercase tracking-wide text-gray-600">
+            <span>Source</span>
+            <span>Attendu</span>
+            <span>Réel</span>
+            <span>Écart</span>
+            <span>Statut</span>
+            <span>Action</span>
+          </div>
+        </div>
+
+        {/* Lignes écarts */}
+        <div className="divide-y divide-gray-50">
+          {allEcarts.length === 0 && (
+            <div className="py-12 text-center text-sm text-gray-400">
+              <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#2E7D32]" />
+              Aucun écart détecté — journée équilibrée
+            </div>
+          )}
+
+          {allEcarts.map(e => (
+            <div
+              key={e.id}
+              className="grid grid-cols-[2fr_90px_90px_90px_110px_120px] gap-3 items-center px-5 py-3.5 hover:bg-[#FAFAF6] transition-colors"
+            >
+              {/* Source */}
+              <div>
+                <p className="text-sm font-medium text-gray-800">{e.label}</p>
+                {e.note && (
+                  <p className="text-xs text-blue-600 mt-0.5 italic leading-snug">{e.note}</p>
+                )}
+              </div>
+
+              {/* Attendu */}
+              <p className="text-sm text-gray-600">{fmt(e.attendu)}</p>
+
+              {/* Réel */}
+              <p className="text-sm text-gray-600">{fmt(e.reel)}</p>
+
+              {/* Écart */}
+              <p className={`text-sm font-bold ${e.ecart < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                {e.ecart < 0 ? '−' : '+'}{fmt(e.ecart)}
+              </p>
+
+              {/* Statut */}
+              {e.statut === 'en_attente' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
+                  <Clock className="w-2.5 h-2.5" /> En attente
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Expliqué
+                </span>
+              )}
+
+              {/* Action */}
+              {e.statut === 'en_attente' ? (
+                <button
+                  onClick={() => setEcartTarget(e)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1B5E20] border border-[#A7D1A2] hover:bg-[#DDEAD5] transition-colors"
+                >
+                  Expliquer
+                </button>
+              ) : (
+                <button
+                  onClick={() => setEcartTarget(e)}
+                  className="px-3 py-1.5 rounded-lg text-xs text-gray-400 border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  Modifier
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Note globale + Footer ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 space-y-4">
+
+        {/* Note globale optionnelle */}
+        <div>
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">
+            <StickyNote className="w-3.5 h-3.5" />
+            Note globale (optionnelle)
+          </label>
+          <textarea
+            value={globalNote}
+            onChange={e => setGlobalNote(e.target.value)}
+            rows={2}
+            placeholder="Ex : Journée sans incident majeur. Frais BDP confirmés par relevé bancaire."
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent"
           />
-        ))}
-
-      </div>
-
-      {/* ── Footer actions ── */}
-      <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-4">
-        <div className="text-sm text-gray-500">
-          {allExplained
-            ? 'Tous les écarts ont été expliqués. La réconciliation peut être soumise.'
-            : `${totalEcarts} écart${totalEcarts > 1 ? 's' : ''} doit encore être expliqué avant de soumettre.`
-          }
         </div>
-        <div className="flex items-center gap-3">
-          {/* Export PDF — toujours disponible */}
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
-            <Download className="w-4 h-4" />
-            Exporter PDF
-          </button>
 
-          {/* Soumettre — bloqué si écarts non expliqués */}
-          <button
-            onClick={handleSubmit}
-            disabled={!allExplained || submitting}
-            title={!allExplained ? 'Expliquez tous les écarts avant de soumettre' : ''}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-              allExplained
-                ? 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {submitting ? (
-              'Soumission…'
-            ) : allExplained ? (
-              <><FileCheck className="w-4 h-4" /> Soumettre la réconciliation</>
-            ) : (
-              <><Lock className="w-4 h-4" /> Réconciliation bloquée</>
-            )}
-          </button>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            {canSubmit
+              ? 'Tous les écarts sont expliqués. La réconciliation peut être soumise.'
+              : `${pending.length} écart${pending.length > 1 ? 's' : ''} doit encore être expliqué.`
+            }
+          </p>
+          <div className="flex items-center gap-3">
+           
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit || submitting}
+              title={!canSubmit ? 'Expliquez tous les écarts avant de soumettre' : ''}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                canSubmit
+                  ? 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {submitting ? 'Soumission…'
+                : canSubmit
+                  ? <><FileCheck className="w-4 h-4" /> Soumettre la réconciliation</>
+                  : <><Lock className="w-4 h-4" /> Réconciliation bloquée</>
+              }
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Modale écart ── */}
+      {/* Modale écart */}
       <EcartModal
         ecart={ecartTarget}
         onClose={() => setEcartTarget(null)}
         onConfirm={handleExplainConfirm}
       />
-
     </div>
   );
 };

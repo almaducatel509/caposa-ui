@@ -13,9 +13,10 @@ export interface AnomalieDecision {
 export interface Remise {
   id: string;
   session_id: string;
-  date: string;          // 'YYYY-MM-DD'
-  time: string;          // 'HHhMM'
-  amount: number;
+  date: string;           // 'YYYY-MM-DD'
+  time: string;           // 'HHhMM' — heure de fermeture
+  opening_amount: number; // fonds remis par le trésorier à l'ouverture (matin)
+  amount: number;         // montant remis par la caissière à la fermeture (soir)
   anomaly: boolean;
   late_days: number;
   cashier:     { name: string; initials: string };
@@ -37,3 +38,7 @@ export interface Remise {
 //  POST /api/treasury/handovers/:id/decide
 //    body: { decision: Decision, reject_reason?: string, anomalie?: AnomalieDecision }
 //    → Remise (mise à jour)
+//
+//  Champs backend attendus :
+//    opening_amount = session.opening_amount  (fonds de caisse donné le matin)
+//    amount         = handover.amount         (montant remis le soir)
