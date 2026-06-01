@@ -533,12 +533,11 @@ const RemisesTable: React.FC = () => {
                         <ExpandField label="Ouverture (donné)"   value={fmt(r.opening_amount)} />
                         <ExpandField label="Fermeture (remis)"   value={fmt(r.amount)} green />
                         <ExpandField label="Écart net"
-                          value={
-                            r.amount - r.opening_amount === 0
-                              ? '—'
-                              : (r.amount - r.opening_amount > 0 ? '+' : '−') +
-                                fmt(r.amount - r.opening_amount)
-                          }
+                          value={(() => {
+                            const ecart = r.opening_amount - r.amount;
+                            if (ecart === 0) return '—';
+                            return (ecart > 0 ? '+' : '−') + fmt(Math.abs(ecart));
+                          })()}
                         />
                         {r.anomalie_decision?.amount != null && (
                           <ExpandField

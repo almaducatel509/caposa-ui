@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { X, Archive, AlertTriangle, Loader2, ShieldCheck, Eye, EyeOff, User } from "lucide-react";
-import { PostData } from "./validations";
+import { PostData } from "../validations";
 
 /*
  * Soft delete — archive le poste (status: "inactive").
@@ -92,7 +92,7 @@ const DeletePostModal: React.FC<DeletePostModalProps> = ({
   const permissions = [
     post.deposit    && { label: "Dépôt",     color: "#2E7D32", bg: "#DDEAD5" },
     post.withdrawal && { label: "Retrait",   color: "#D4AF37", bg: "#FFF4D6" },
-    post.transfert  && { label: "Transfert", color: "#355C7D", bg: "#E6F1FB" },
+    post.transfer  && { label: "Transfert", color: "#355C7D", bg: "#E6F1FB" },
   ].filter(Boolean) as { label: string; color: string; bg: string }[];
 
   return (

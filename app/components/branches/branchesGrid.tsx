@@ -24,6 +24,7 @@ import { BranchData } from "./validations";
 import BrancheTable from "./BrancheTable";
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
 import { Holiday, HolidayData } from "../holidays/validations";
+import { Loader2 } from "lucide-react";
 
 /* ─── Type local pour les onglets ──────────────────────────────────────── */
 type BranchTabId = "active" | "inactive" | "archive";
@@ -281,6 +282,16 @@ const BranchesGrid: React.FC = () => {
     loadBranches();
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
+          {/* <p className="text-sm text-gray-500">Chargement des succursales…</p> */}
+        </div>
+      </div>
+    );
+  }
   /* ─── Render ────────────────────────────────────────────────────────── */
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
@@ -305,13 +316,11 @@ const BranchesGrid: React.FC = () => {
       <BranchFilterBar
         filterValue={search}
         selectedSize={selectedSize}
-        selectedStatus={selectedStatus}
         totalCount={filteredBranches.length}
         onSearchChange={setSearch}
         onClear={() => setSearch("")}
         onSizeChange={setSelectedSize}
         // ─── Aligné sur AccountGrid : handleStatusChange synchronise dropdown + onglet ──
-        onStatusChange={handleStatusChange}
         onAdd={handleAdd}
     />
 

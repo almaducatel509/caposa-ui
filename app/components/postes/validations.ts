@@ -18,7 +18,7 @@ export interface PostData {
   description: string;
   deposit: boolean;
   withdrawal: boolean;
-  transfer: boolean;          // ← corrigé : transfer (pas transfert)
+  transfer: boolean;          // ← corrigé : transfer (pas transfer)
   post_name?: string;         // optionnel pour rétrocompatibilité
   created_at?: string;
   updated_at?: string;

@@ -7,9 +7,9 @@ import { fetchPosts, archivePost } from "@/app/lib/api/post";
 
 import PostTable, { Post } from "./PostTable";
 import PostFilterBar from "./PostFilterBar";
-import EditPostModal from "./EditPostModal";
-import DeletePostModal from "./DeletePostModal";
 import PageHeader from "../header";
+import DeletePostModal from "./modals/DeletePostModal";
+import EditPostModal from "./modals/EditPostModal";
 
 interface PostGridProps {
   posts?: Post[];
@@ -73,7 +73,7 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
       selectedType === "all" ||
       (selectedType === "deposit" && p.deposit) ||
       (selectedType === "withdrawal" && p.withdrawal) ||
-      (selectedType === "transfer" && p.transfert);
+      (selectedType === "transfer" && p.transfer);
 
     return matchSearch && matchType;
   });
@@ -84,7 +84,7 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
     const rows = [
       "Nom,Description,Dépôt,Retrait,Transfert",
       ...filteredPosts.map((p) =>
-        [`"${p.name}"`, `"${p.description}"`, p.deposit, p.withdrawal, p.transfert].join(",")
+        [`"${p.name}"`, `"${p.description}"`, p.deposit, p.withdrawal, p.transfer].join(",")
       ),
     ].join("\n");
     const link = document.createElement("a");

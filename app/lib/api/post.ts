@@ -34,16 +34,25 @@ export const getPostById = async (id: string) => {
 };
 
 /* ─── Create post ────────────────────────────────────────────────────────── */
-
 export const createPost = async (postData: any) => {
   try {
+    console.log("Payload envoyé:", JSON.stringify(postData, null, 2));
     const response = await AxiosInstance.post('/posts/', postData);
     return response.data;
-  } catch (error) {
-    console.error("Erreur lors de la création du poste:", error);
+  } catch (error: any) {
+    console.error("Django dit:", JSON.stringify(error.response?.data, null, 2));
     throw error;
   }
 };
+// export const createPost = async (postData: any) => {
+//   try {
+//     const response = await AxiosInstance.post('/posts/', postData);
+//     return response.data;
+//   } catch (error) {
+//     console.error("Erreur lors de la création du poste:", error);
+//     throw error;
+//   }
+// };
 
 /* ─── Update post ────────────────────────────────────────────────────────── */
 

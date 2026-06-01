@@ -293,3 +293,64 @@ Pour toute question sur :
 - `@/types/caisse.ts` — contrats de données
 - `@/types/session-rules.ts` — règles d'ouverture
 - `@/app/lib/api/SessionManager.ts` — logique d'appels
+# 1. Détection de panne — comment ça marche concrètement
+Ton fichier sessionValidation.ts a déjà tout ce qu'il faut comme structure. Ce qu'il manque c'est un champ last_activity et un statut interrompue.
+
+## Côté backend Django, le modèle Session ajoute :
+````python
+class Session(models.Model):
+    statut = models.CharField(choices=[
+        ("ouverte", "Ouverte"),
+        ("fermee", "Fermée"),
+        ("interrompue", "Interrompue"),
+    ])
+    last_activity = models.DateTimeField(auto_now=True)  # se met à jour automatiquement
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+````
+Le processus de détection (tâche périodique) :
+
+# python# tasks.py — tourne toutes les 5 minutes via Celery ou cron
+```python
+from django.utils import timezone
+from datetime import timedelta
+
+def marquer_sessions_interrompues():
+    seuil = timezone.now() - timedelta(minutes=30)
+    Session.objects.filter(
+        statut="ouverte",
+        last_activity__lt=seuil
+    ).update(statut="interrompue")
+```
+# Si une session ouverte n'a eu aucune activité depuis 30 minutes → panne probable → marquée interrompue automatiquement.
+## 2. Sécurité des données pendant une panne
+**Il y a 3 niveaux de protection :**
+### Niveau 1 — Transactions atomiques
+```python
+from django.db import transaction
+
+with transaction.atomic():
+    compte.solde -= montant
+    Transaction.objects.create(...)
+    # Si n'importe quelle ligne plante → tout est annulé
+```
+Une transaction à moitié faite n'existe pas. Soit elle est complète, soit elle n'existe pas.
+### Niveau 2 — Intégrité référentielle
+Toute transaction est liée à une session. Pas de session valide = pas de transaction possible. C'est déjà dans ton design.
+### Niveau 3 — Audit trail
+Chaque opération garde une trace immuable — qui, quoi, quand. Même après une panne, l'historique est intact.
+
+# 3. Saisie différée — données avec dates passées
+Pour le scénario "on a travaillé sur papier, maintenant on entre les données" :
+Ce que tu ajoutes au modèle Transaction :
+```python
+pythontransaction_date = models.DateTimeField()   # date réelle de l'opération (saisie manuelle)
+created_at = models.DateTimeField(auto_now_add=True)  # date d'entrée dans le système
+saisi_par = models.ForeignKey(Employe, on_delete=models.PROTECT)
+motif_saisie_differee = models.TextField(null=True, blank=True)
+```
+Côté frontend caposa-ui, tu ajoutes un mode "saisie différée" avec :
+
+Un champ date/heure modifiable (pas bloqué à aujourd'hui)
+Un champ motif obligatoire
+Accessible uniquement aux rôles superviseur ou admin

@@ -3,9 +3,9 @@
 import React, { useState, useEffect, ChangeEvent } from "react";
 import { X, Loader2, CheckCircle2 } from "lucide-react";
 import { FaEdit, FaPlus } from "react-icons/fa";
-import { PostData, postSchema, ErrorMessages } from "./validations";
 import { updatePost, createPost, getPostById } from "@/app/lib/api/post";
-import PostFormFields from "./PostFormFields";
+import PostFormFields from "../PostFormFields";
+import { PostData, ErrorMessages, postSchema } from "../validations";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
@@ -38,7 +38,7 @@ const Modal: React.FC<{
 
 const INITIAL: PostData = {
   id: "", name: "", description: "",
-  deposit: false, withdrawal: false, transfert: false,
+  deposit: false, withdrawal: false, transfer: false,
 };
 
 const EditPostModal: React.FC<EditPostModalProps> = ({
@@ -63,7 +63,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
             description: data.description || "",
             deposit: data.deposit || false,
             withdrawal: data.withdrawal || false,
-            transfert: data.transfert || false,
+            transfer: data.transfer || false,
           });
         } else {
           setFormData(INITIAL);

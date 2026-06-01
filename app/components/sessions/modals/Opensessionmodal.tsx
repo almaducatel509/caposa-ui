@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { OpenSessionPayload, CaisseDevise } from '@/types/caisse';
 import { canOpenSessionNow } from '@/app/utils/sessionEligibility';
-import { BranchData, Holiday, OpeningHour } from '../../branches/validations';
+import { BranchData,   } from '../../branches/validations';
+import { Holiday } from '../../holidays/validations';
+import { OpeningHour } from '@/types/branche';
 
 // ─── Props ───────────────────────────────────────────────────────
 interface Props {

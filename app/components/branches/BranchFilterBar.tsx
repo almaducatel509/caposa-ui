@@ -2,21 +2,18 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { FiSearch } from "react-icons/fi";
-import { FaPlus, FaDownload, FaBuilding, FaCheckCircle } from "react-icons/fa";
-import { MdKeyboardArrowDown } from "react-icons/md";
-import { CheckCircle, ChevronDown, Upload, Wallet, X } from "lucide-react";
+import { ChevronDown, Upload, Wallet, X } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
 interface BranchFilterBarProps {
   filterValue:    string;
   selectedSize:   string;
-  selectedStatus: string;
   totalCount:     number;
   onSearchChange: (value: string) => void;
   onClear:        () => void;
   onSizeChange:   (key: string) => void;
-  onStatusChange: (key: string) => void;
   onAdd:          () => void;
   importLoading?: boolean;
   onImport?:      () => void;
@@ -24,20 +21,19 @@ interface BranchFilterBarProps {
 
 /* ─── Dropdown natif ─────────────────────────────────────────────────────── */
 
-
 function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-     const handler = (e: MouseEvent) => {
-       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-     };
-     if (open) document.addEventListener('mousedown', handler);
-     return () => document.removeEventListener('mousedown', handler);
-   }, [open]);
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
-    return (
+  return (
     <div className="relative" ref={ref}>
       <div onClick={() => setOpen(o => !o)}>{trigger}</div>
       {open && (
@@ -54,12 +50,10 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
   filterValue,
   selectedSize,
-  selectedStatus,
   totalCount,
   onSearchChange,
   onClear,
   onSizeChange,
-  onStatusChange,
   onAdd,
   onImport,
   importLoading = false,
@@ -71,22 +65,8 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
     { key: "large",  label: "Grandes (20+)"           },
   ];
 
-  const statusOptions = [
-    { key: "all",      label: "Tous les statuts" },
-    { key: "active",   label: "Actives"          },
-    { key: "inactive", label: "Inactives"        },  
-    { key: "archive", label: "archive"        },
-
-  ];
-
-  // const activeFiltersCount = [
-  //   selectedSize   !== "all",
-  //   selectedStatus !== "all",
-  // ].filter(Boolean).length;
-
- const typeLabel   = sizeOptions.find(o => o.key === selectedSize)?.label   ?? 'Toutes les tailles';
-  const statusLabel = statusOptions.find(o => o.key === selectedStatus)?.label ?? 'Tous les statuts';
-  const activeCount = [selectedSize !== 'all', selectedStatus !== 'all'].filter(Boolean).length;
+  const typeLabel  = sizeOptions.find(o => o.key === selectedSize)?.label ?? 'Toutes les tailles';
+  const activeCount = [selectedSize !== 'all'].filter(Boolean).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -143,7 +123,7 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
       {/* Ligne 2 */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 flex flex-wrap items-center gap-3">
 
-         <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Résultats</span>
           <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#DDEAD5] text-[#1B5E20]">
             {totalCount}
@@ -151,7 +131,7 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
         </div>
         <div className="h-5 w-px bg-gray-200" />
 
-         {/* Filtre type */}
+        {/* Filtre taille */}
         <Dropdown
           trigger={
             <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
@@ -165,63 +145,27 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
             </button>
           }
         >
-          {sizeOptions.map(opt => {
-            return (
-              <button
-                key={opt.key}
-                onClick={() => onSizeChange(opt.key)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
-                  selectedSize === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
-                }`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </Dropdown>
-
-        {/* Filtre statut */}
-        <Dropdown
-          trigger={
-            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
-              selectedStatus !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium'
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-              <CheckCircle className="w-3.5 h-3.5" />
-              {statusLabel}
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          }
-        >
-          {statusOptions.map(opt => (
+          {sizeOptions.map(opt => (
             <button
               key={opt.key}
-              onClick={() => onStatusChange(opt.key)}
+              onClick={() => onSizeChange(opt.key)}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
-                selectedStatus === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
+                selectedSize === opt.key ? 'bg-[#DDEAD5] text-[#1B5E20] font-medium' : 'text-gray-700'
               }`}
             >
-              <CheckCircle className="w-4 h-4 text-[#2E7D32]" />
               {opt.label}
             </button>
           ))}
         </Dropdown>
 
         {activeCount > 0 && (
-          <div>
+          <div className="flex items-center gap-2">
             <div className="h-5 w-px bg-gray-200" />
-            {/* <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
-              {activeFiltersCount} filtre(s)
-            </span> */}
             <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
               {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
             </span>
             <button
-              onClick={() => {
-                onSizeChange("all");
-                onStatusChange("all");
-              }}
+              onClick={() => onSizeChange("all")}
               className="text-xs text-red-600"
             >
               Effacer

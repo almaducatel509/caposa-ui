@@ -5,9 +5,11 @@ import {
   Eye, Pencil, Trash2,
   ChevronDown, ChevronUp, ChevronsUpDown,
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
-  ShieldOff,
+  ShieldOff, CheckCircle2, Check, X,
 } from "lucide-react";
 import { PostData } from "./validations";
+import PostBulkActionDropdown, { PostBulkAction } from "./PostBulkActionDropdown";
+import PostBulkActionModal from "./modals/PostBulkActionModal";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
@@ -15,17 +17,18 @@ export interface Post extends PostData {
   description: any;
   deposit: any;
   withdrawal: any;
-  transfert: any;
+  transfer: any;
   id: string;
   name: string;
 }
 
 export interface PostTableProps {
-  posts:      Post[];
-  isLoading:  boolean;
-  onEdit:     (p: Post) => void;
-  onDelete:   (p: Post) => void;
-  onView?:    (p: Post) => void;
+  posts:          Post[];
+  isLoading:      boolean;
+  onEdit:         (p: Post) => void;
+  onDelete:       (p: Post) => void;
+  onView?:        (p: Post) => void;
+  onBulkAction?:  (action: PostBulkAction, ids: string[]) => Promise<void>;
 }
 
 /* ─── Permission badges ──────────────────────────────────────────────────── */
@@ -81,11 +84,13 @@ function SkeletonRow() {
 /* ─── Composant principal ────────────────────────────────────────────────── */
 
 const PostTable: React.FC<PostTableProps> = ({
-  posts, isLoading, onEdit, onDelete, onView,
+  posts, isLoading, onEdit, onDelete, onView, onBulkAction,
 }) => {
-  const [sortField, setSortField] = useState<keyof Post>("name");
-  const [sortDir,   setSortDir]   = useState<"asc" | "desc">("asc");
-  const [selected,  setSelected]  = useState<Set<string>>(new Set());
+  const [sortField,    setSortField]    = useState<keyof Post>("name");
+  const [sortDir,      setSortDir]      = useState<"asc" | "desc">("asc");
+  const [selected,     setSelected]     = useState<Set<string>>(new Set());
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [activeAction, setActiveAction] = useState<PostBulkAction | null>(null);
 
   /* ── Tri ── */
   const toggleSort = (field: keyof Post) => {
@@ -117,6 +122,53 @@ const PostTable: React.FC<PostTableProps> = ({
     setSelected(s);
   };
 
+  /* ── Postes sélectionnés ── */
+  const selectedPosts = useMemo(
+    () => sorted.filter(p => selected.has(p.id)),
+    [sorted, selected],
+  );
+
+  /* ── Export CSV interne ── */
+  const handleExportCSV = (postsToExport: Post[]) => {
+    const headers = ['Nom', 'Description', 'Dépôt', 'Retrait', 'transfer'];
+    const rows = postsToExport.map(p => [
+      p.name,
+      p.description ?? '',
+      p.deposit    ? 'Oui' : 'Non',
+      p.withdrawal ? 'Oui' : 'Non',
+      p.transfer  ? 'Oui' : 'Non',
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${v}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `postes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /* ── Handler bulk action ── */
+  const handleBulkAction = async (action: PostBulkAction, ids: string[]) => {
+    if (onBulkAction) {
+      await onBulkAction(action, ids);
+      return;
+    }
+
+    const postsToProcess = posts.filter(p => ids.includes(p.id));
+
+    if (action === 'export') {
+      handleExportCSV(postsToProcess);
+      return;
+    }
+
+    console.log(`[Bulk] ${action}`, ids);
+  };
+
   const SORTABLE_COLS: { label: string; field: keyof Post }[] = [
     { label: "Nom du poste",  field: "name"        },
     { label: "Description",   field: "description" },
@@ -126,19 +178,48 @@ const PostTable: React.FC<PostTableProps> = ({
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
+      {/* ── Barre sélection multiple ── */}
+      {selected.size > 0 && (
+        <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
+            <span className="text-sm font-semibold text-[#1B5E20]">
+              {selected.size} poste{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <PostBulkActionDropdown
+              selectedCount={selected.size}
+              isOpen={dropdownOpen}
+              onToggle={() => setDropdownOpen(o => !o)}
+              onAction={(action) => setActiveAction(action)}
+            />
+            <button onClick={() => setSelected(new Set())}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Header colonnes ── */}
       <div
-        className="grid items-center px-5 py-3 bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6]"
+        className="grid items-center px-5 py-3 bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6]"
         style={{ gridTemplateColumns: "40px 2fr 3fr 1fr 120px" }}
       >
         <div className="flex justify-center">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            ref={(el) => { if (el) el.indeterminate = someSelected; }}
-            onChange={toggleAll}
-            className="w-3.5 h-3.5 accent-[#2E7D32] cursor-pointer"
-          />
+          <button
+            onClick={toggleAll}
+            className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+              allSelected || someSelected
+                ? "bg-[#2E7D32] border-[#2E7D32]"
+                : "bg-white border-gray-300 hover:border-[#2E7D32]"
+            }`}
+          >
+            {(allSelected || someSelected) && (
+              <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+            )}
+          </button>
         </div>
 
         {SORTABLE_COLS.map(({ label, field }) => (
@@ -171,25 +252,29 @@ const PostTable: React.FC<PostTableProps> = ({
 
         {!isLoading && sorted.map((post) => {
           const isSelected = selected.has(post.id);
-          const permCount = [post.deposit, post.withdrawal, post.transfert].filter(Boolean).length;
+          const permCount = [post.deposit, post.withdrawal, post.transfer].filter(Boolean).length;
 
           return (
             <div
               key={post.id}
               className={[
                 "grid items-center px-5 py-3 transition-colors",
-                isSelected ? "bg-[#DDEAD5]/20" : "hover:bg-[#DDEAD5]/10",
+                isSelected
+                  ? "bg-[#DDEAD5]/50 border-l-2 border-[#2E7D32]"
+                  : "hover:bg-[#DDEAD5]/10",
               ].join(" ")}
               style={{ gridTemplateColumns: "40px 2fr 3fr 1fr 120px" }}
             >
               {/* Checkbox */}
               <div className="flex justify-center">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggleRow(post.id)}
-                  className="w-3.5 h-3.5 accent-[#2E7D32] cursor-pointer"
-                />
+                <button
+                  onClick={() => toggleRow(post.id)}
+                  className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+                    isSelected ? 'bg-[#2E7D32] border-[#2E7D32]' : 'bg-white border-gray-300 hover:border-[#2E7D32]'
+                  }`}
+                >
+                  {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                </button>
               </div>
 
               {/* Nom */}
@@ -205,10 +290,10 @@ const PostTable: React.FC<PostTableProps> = ({
 
               {/* Permissions */}
               <div className="flex flex-wrap gap-1.5">
-                <PermBadge label="Dépôt"    icon={ArrowDownToLine}  active={post.deposit}    color="#2E7D32" />
-                <PermBadge label="Retrait"  icon={ArrowUpFromLine}  active={post.withdrawal} color="#D4AF37" />
-                <PermBadge label="Transfert" icon={ArrowLeftRight}  active={post.transfert}  color="#355C7D" />
-                {!post.deposit && !post.withdrawal && !post.transfert && (
+                <PermBadge label="Dépôt"     icon={ArrowDownToLine} active={post.deposit}    color="#2E7D32" />
+                <PermBadge label="Retrait"   icon={ArrowUpFromLine} active={post.withdrawal} color="#D4AF37" />
+                <PermBadge label="transfer" icon={ArrowLeftRight}  active={post.transfer}  color="#355C7D" />
+                {!post.deposit && !post.withdrawal && !post.transfer && (
                   <span className="text-xs text-gray-400 italic">Aucune</span>
                 )}
               </div>
@@ -235,18 +320,33 @@ const PostTable: React.FC<PostTableProps> = ({
         })}
       </div>
 
-      {/* ── Footer sélection ── */}
-      {selected.size > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#DDEAD5]/20 flex items-center justify-between">
-          <p className="text-xs text-[#1B5E20] font-medium">
-            {selected.size} poste{selected.size > 1 ? "s" : ""} sélectionné{selected.size > 1 ? "s" : ""}
+      {/* ── Footer ── */}
+      {!isLoading && posts.length > 0 && (
+        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            <span className="font-semibold text-gray-600">{sorted.length}</span>{" "}
+            poste{sorted.length !== 1 ? "s" : ""}
           </p>
-          <button onClick={() => setSelected(new Set())}
-            className="text-xs text-gray-500 hover:text-gray-700 underline">
-            Désélectionner tout
-          </button>
+          {selected.size > 0 && (
+            <button onClick={() => setSelected(new Set())}
+              className="text-xs text-gray-500 hover:text-gray-700 underline">
+              Désélectionner tout
+            </button>
+          )}
         </div>
       )}
+
+      {/* ── Modal d'action groupée ── */}
+      <PostBulkActionModal
+        action={activeAction}
+        posts={selectedPosts}
+        onClose={() => setActiveAction(null)}
+        onConfirm={async (action, eligibleIds) => {
+          await handleBulkAction(action, eligibleIds);
+          setSelected(new Set());
+          setActiveAction(null);
+        }}
+      />
     </div>
   );
 };
