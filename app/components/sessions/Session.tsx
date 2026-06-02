@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   History, LogIn, LogOut,
   Banknote, Loader2, RefreshCw, Plus,
+  AlertTriangle,
 } from 'lucide-react';
 import { CaisseSession, OpenSessionPayload } from '@/types/caisse';
 import AxiosInstance from '@/app/lib/axiosInstance';
@@ -299,14 +300,7 @@ if (loading) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowOpen(true)}
-              disabled={!canOpen}
-              className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#2E7D32] text-white text-sm font-semibold hover:bg-[#256427] transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
-            >
-              <Plus className="w-4 h-4" />
-              Démarrer une session
-            </button>
+           
             <ExportAllButton
               data={exportData}
               filename="sessions"
@@ -344,24 +338,7 @@ if (loading) {
         {/* Banner — règles horaires/calendrier */}
         {openingRules && <SessionClosedBanner rules={openingRules} />}
 
-        {/* ── KPIs ── */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {[
-            { label: 'Ouvertes',  value: nbOuvertes,             color: 'text-green-700', bg: 'bg-green-50',     Icon: LogIn    },
-            { label: 'Fermées',   value: nbFermees,              color: 'text-gray-700',  bg: 'bg-gray-100',     Icon: LogOut   },
-            { label: 'En caisse', value: formatHTG(totalOuvert), color: 'text-[#2E7D32]', bg: 'bg-[#DDEAD5]/50', Icon: Banknote },
-          ].map(({ label, value, color, bg, Icon }) => (
-            <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                <Icon className={`w-5 h-5 ${color}`} />
-              </div>
-              <div>
-                <p className={`text-lg font-bold ${color}`}>{value}</p>
-                <p className="text-xs text-gray-400">{label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        
 
         <SessionTable
           sessions={sessions}

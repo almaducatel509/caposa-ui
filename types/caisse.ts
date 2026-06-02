@@ -9,7 +9,7 @@
 // ─── Enums / Littéraux ───────────────────────────────────────────
 // Déclarés EN PREMIER — utilisés par les interfaces ci-dessous.
 
-export type CaisseStatus  = 'ouverte' | 'fermée';
+export type CaisseStatus = 'ouverte' | 'fermée' | 'interrompue';
 export type CaisseDevise  = 'HTG' | 'USD';
 export type AlertSeverity = 'error' | 'warning' | 'info';
 

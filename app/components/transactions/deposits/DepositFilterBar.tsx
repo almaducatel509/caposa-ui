@@ -9,8 +9,8 @@ import {
   Plus, RefreshCw,
   Filter,
   Calendar,
+  AlertTriangle,
 } from 'lucide-react';
-import { ExportAllButton } from '@/app/ExportAllButton';
 import { DepositData } from '../validation/deposit';
 export type DepositFilterRange  = 'all' | 'small' | 'medium' | 'large' | 'xlarge';
 export type DepositFiltertype = 'all' | 'cash'| 'check';
@@ -34,6 +34,7 @@ interface DepositFilterBarProps {
   deposits:       DepositData[];
   selectedRange:  DepositFilterRange;
   onRangeChange:  (key: DepositFilterRange) => void;
+  onDiffered?: () => void;   // présent seulement si le rôle l'autorise
 }
 
 // ─── Dropdown ────────────────────────────────────────────────────────────────
@@ -65,7 +66,8 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
   filterValue,onRangeChange, selectedType,selectedRange, selectedStatus, selectedPeriod, totalCount, loading = false,
   onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange,
-  onAdd, onRefresh, deposits,
+  onAdd, onRefresh, deposits, onDiffered,
+
 }) => {
 
 
@@ -170,26 +172,13 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
             <Plus className="w-4 h-4" />
             Nouveau dépôt
           </button>
-         
-          <ExportAllButton
-            data={depositsForExport}
-            filename="depots"
-            columns={['code', 'compte', 'membre', 'type', 'source', 'montant', 'statut', 'caisse', 'traite_par', 'valide_par', 'date']}
-            headerLabels={{
-              code:       "Code d'autorisation",
-              compte:     'N° de compte',
-              membre:     'Membre',
-              type:       'Type',
-              source:     'Source',
-              montant:    'Montant (HTG)',
-              statut:     'Statut',
-              caisse:     'Caisse',
-              traite_par: 'Traité par',
-              valide_par: 'Validé par',
-              date:       'Date',
-            }}
-            separator=";"
-          />
+          {onDiffered && (
+            <button onClick={onDiffered}
+              className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#D4AF37] text-white text-sm font-semibold hover:bg-[#b98e01] transition-colors">
+              <AlertTriangle className="w-4 h-4" />
+              Saisie différée
+            </button>
+          )}
         </div>
       </div>
 

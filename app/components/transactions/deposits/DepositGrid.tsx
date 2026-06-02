@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ArrowDownCircle } from 'lucide-react';
+import { AlertTriangle, ArrowDownCircle } from 'lucide-react';
 import DepositForm from './DepositForm';
 import DepositFilterBar, { DepositFilterPeriod, DepositFilterRange } from './DepositFilterBar';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
@@ -9,7 +9,8 @@ import { Modal } from '../../ui/Modal';
 import DepositTable from './DepositTable';
 import EditDepositModal from './EditDepositModal';
 import { DepositData, DepositFormData, DepositFormValidated } from '../validation/deposit';
-
+import DifferedDepositModal from './Differeddepositmodal';
+import { useSession } from 'next-auth/react';
 // ─── Mock ────────────────────────────────────────────────────────
 
 function generateMockDeposits(daysBack: number): DepositData[] {
@@ -71,10 +72,14 @@ export default function DepositDashboard() {
   const [selectedType,   setSelectedType]   = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRange,  setSelectedRange]  = useState<DepositFilterRange>('all');
-
-  // On génère un dataset large ; le filtrage période se fait dans la table.
+  const [showDiffered, setShowDiffered] = useState(false);
+  // Hardcodé pour l'instant — Django n'est pas prêt
+  // À remplacer par ton contexte auth quand le backend sera prêt
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.isAdmin ?? false;
+  const role    = isAdmin ? 'admin' : 'caissier';  // On génère un dataset large ; le filtrage période se fait dans la table.
   const deposits = useMemo(() => generateMockDeposits(365), []);
-
+console.log(role,isAdmin, "admin et role");
   // ── Handlers ────────────────────────────────────────────────
   const handleView = (dep: DepositData) => {
     setDetailTx({
@@ -149,6 +154,7 @@ export default function DepositDashboard() {
         onAdd={() => setNewDepositOpen(true)}
         onRefresh={handleRefresh}
         deposits={deposits}
+        onDiffered={role === 'admin' ? () => setShowDiffered(true) : undefined}
       />
 
       {/* ── Tableau ── */}
@@ -209,8 +215,36 @@ export default function DepositDashboard() {
             setEditDeposit(null);
           }}
         />
-      )}
-
+    )}
+    {showDiffered && (
+      <Modal
+        isOpen
+        onClose={() => setShowDiffered(false)}
+        size="3xl"
+        title={
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Saisie différée</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Transaction enregistrée hors délai</p>
+            </div>
+          </div>
+        }
+      >
+        <div className="p-6 max-h-[80vh] overflow-y-auto">
+          <DifferedDepositModal
+            sessionId="SESS-MOCK"
+            saisiPar={(session?.user as any)?.username ?? 'inconnu'}
+            onSubmit={async (data) => {
+              console.log('[Mock] Saisie différée :', data);
+            }}
+            onCancel={() => setShowDiffered(false)}
+          />
+        </div>
+      </Modal>
+    )}
     </div>
   );
 }

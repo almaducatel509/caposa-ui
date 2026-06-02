@@ -13,7 +13,7 @@ import { CaisseSession } from '@/types/caisse';
 import SessionBulkActionModal from './modals/SessionBulkActionModal';
 import SessionBulkActionDropdown, { SessionBulkAction } from './SessionBulkActionDropdown';
 
-type TabId = 'toutes' | 'ouverte' | 'fermée';
+type TabId = 'toutes' | 'ouverte' | 'fermée' | 'interrompue';
 
 interface SessionTableProps {
   sessions:     CaisseSession[];
@@ -125,6 +125,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
     toutes:  sessions.length,
     ouverte: sessions.filter(s => s.statut === 'ouverte').length,
     fermée:  sessions.filter(s => s.statut === 'fermée').length,
+    // AJOUTER
+    interrompue: sessions.filter(s => s.statut === 'interrompue').length,
   }), [sessions]);
 
   // ── Tab filter ────────────────────────────────────────────────────────────
@@ -132,6 +134,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
     if (activeTab === 'toutes')  return true;
     if (activeTab === 'ouverte') return s.statut === 'ouverte';
     if (activeTab === 'fermée')  return s.statut === 'fermée';
+    // AJOUTER
+    if (activeTab === 'interrompue') return s.statut === 'interrompue';
     return false;
   }), [sessions, activeTab]);
 
@@ -178,7 +182,15 @@ const SessionTable: React.FC<SessionTableProps> = ({
         {([
           { id: 'toutes'  as TabId, label: 'Toutes',   icon: LayoutGrid, active: 'border-[#2E7D32] text-[#1B5E20]',  badge: 'bg-[#DDEAD5] text-[#1B5E20]',  count: counts.toutes  },
           { id: 'ouverte' as TabId, label: 'Ouvertes', icon: LogIn,      active: 'border-green-500 text-green-700',  badge: 'bg-green-50 text-green-700',   count: counts.ouverte },
-          { id: 'fermée'  as TabId, label: 'Fermées',  icon: Archive,    active: 'border-gray-500 text-gray-700',    badge: 'bg-gray-100 text-gray-600',    count: counts.fermée  },
+          { id: 'fermée'  as TabId, label: 'Fermées',  icon: Archive,    active: 'border-gray-500 text-gray-700',    badge: 'bg-gray-100 text-gray-600',    count: counts.fermée  },// AJOUTER dans le .map([...])
+          { 
+            id: 'interrompue' as TabId, 
+            label: 'Interrompues', 
+            icon: AlertTriangle,          // déjà importé ✓
+            active: 'border-red-500 text-red-700', 
+            badge: 'bg-red-50 text-red-700', 
+            count: counts.interrompue 
+          },
         ]).map(tab => {
           const Icon = tab.icon;
           const isCurrent = activeTab === tab.id;
@@ -291,11 +303,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
               {/* Caissier */}
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
-                  isOpen
-                    ? 'bg-[#DDEAD5] text-[#1B5E20]'
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
+                <div className={`... ${
+                    session.statut === 'ouverte'      ? 'bg-[#DDEAD5] text-[#1B5E20]' :
+                    session.statut === 'interrompue'  ? 'bg-red-50 text-red-600' :
+                    'bg-gray-100 text-gray-500'
+                  }`}
+                >
                   {getInitials(session.caissier_nom)}
                 </div>
                 <div className="min-w-0">
@@ -303,20 +316,21 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     {session.caissier_nom ?? session.username}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${
-                      isOpen
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      <span className={`w-1 h-1 rounded-full ${isOpen ? 'bg-green-500' : 'bg-gray-400'}`} />
-                      {isOpen ? 'En cours' : 'Fermée'}
-                    </span>
-                    {isForcee && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-red-50 text-red-600">
-                        <AlertTriangle className="w-2 h-2" />
-                        Forcée
-                      </span>
-                    )}
+                    {session.statut === 'ouverte' && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-green-50 text-green-700">
+                          <span className="w-1 h-1 rounded-full bg-green-500" /> En cours
+                        </span>
+                      )}
+                      {session.statut === 'fermée' && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-500">
+                          <span className="w-1 h-1 rounded-full bg-gray-400" /> Fermée
+                        </span>
+                      )}
+                      {session.statut === 'interrompue' && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-red-50 text-red-600">
+                          <span className="w-1 h-1 rounded-full bg-red-500" /> Interrompue
+                        </span>
+                      )}
                   </div>
                 </div>
               </div>
@@ -405,6 +419,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
             {counts.fermée > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.fermée} Fermée{counts.fermée !== 1 ? 's' : ''}
+              </span>
+            )}
+            {/* AJOUTER après le badge fermées */}
+            {counts.interrompue > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {counts.interrompue} Interrompue{counts.interrompue !== 1 ? 's' : ''}
               </span>
             )}
           </div>

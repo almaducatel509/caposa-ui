@@ -6,9 +6,10 @@ import {
   CheckCircle2, XCircle, Pencil, Download, Clock, Loader2,
   ChevronDown, ChevronsUpDown, ChevronUp, Check,
 } from 'lucide-react';
-import DepositExportModal from './DepositExportModal';
+// import DepositExportModal from './DepositExportModal';
 import { DepositFilterPeriod, DepositFilterRange } from './DepositFilterBar';
 import { DepositData } from '../validation/deposit';
+import { ExportAllButton } from '@/app/ExportAllButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,6 @@ export default function DepositTable({
 
   // ── States locaux UNIQUEMENT pour ce qui n'est pas géré par le parent ──
   const [selected,   setSelected]   = useState<Set<number>>(new Set());
-  const [exportOpen, setExportOpen] = useState(false);
   const [sortField,  setSortField]  = useState('created_at');
   const [sortDir,    setSortDir]    = useState<'asc' | 'desc'>('desc');
 
@@ -200,12 +200,39 @@ export default function DepositTable({
             {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setExportOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#355C7D] text-white rounded-xl hover:bg-[#2a4a65] transition-all"
-            >
-              <Download className="w-3.5 h-3.5" /> Exporter
-            </button>
+           // APRÈS
+            <ExportAllButton
+              data={sorted
+                .filter(d => selected.has(d.id))
+                .map(dep => ({
+                  code:       dep.codeAutorisation,
+                  compte:     dep.idCompte,
+                  membre:     dep.member_name,
+                  type:       SUBTYPE_CFG[dep.depositSubtype]?.label ?? '—',
+                  source:     dep.source,
+                  montant:    dep.montantTransaction,
+                  statut:     STATUS_CFG[dep.status]?.label ?? '—',
+                  caisse:     dep.caisse_numero,
+                  traite_par: dep.processed_by,
+                  valide_par: dep.validated_by,
+                  date:       dep.created_at?.split('T')[0] ?? '—',
+                }))}
+              filename="depots_selection"
+              headerLabels={{
+                code:       "Code d'autorisation",
+                compte:     'N° de compte',
+                membre:     'Membre',
+                type:       'Type',
+                source:     'Source',
+                montant:    'Montant (HTG)',
+                statut:     'Statut',
+                caisse:     'Caisse',
+                traite_par: 'Traité par',
+                valide_par: 'Validé par',
+                date:       'Date',
+              }}
+              separator=";"
+            />
             <button
               onClick={() => setSelected(new Set())}
               className="p-1.5 rounded-lg text-gray-500 hover:bg-white/60 transition-all"
@@ -393,16 +420,7 @@ export default function DepositTable({
         </div>
       )}
 
-      <DepositExportModal
-        open={exportOpen}
-        deposits={sorted.filter(d => selected.has(d.id))}
-        onClose={() => setExportOpen(false)}
-        onConfirm={async (ids) => {
-          await onExport(ids);
-          setSelected(new Set());
-          setExportOpen(false);
-        }}
-      />
+     
     </div>
   );
 }
