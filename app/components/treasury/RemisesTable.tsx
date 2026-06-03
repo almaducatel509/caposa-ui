@@ -12,8 +12,9 @@ import {
 } from 'lucide-react';
 import AnomalieModal from './AnomalieModal';
 import { Remise, Decision, AnomalieDecision } from '@/types/remise';
-import { MOCK_REMISES_ARCHIVED, MOCK_REMISES_PENDING } from '@/app/lib/api/treasury.mock';
-
+import AxiosInstance from '@/app/lib/axiosInstance';
+import { useEffect } from 'react';
+import { TableSkeleton } from '../ui/TableSkeleton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -258,8 +259,23 @@ const headerBase =
 // ─── Composant principal ──────────────────────────────────────────────────────
 const RemisesTable: React.FC = () => {
   const [tab,      setTab]      = useState<'pending' | 'archived'>('pending');
-  const [pending,  setPending]  = useState<Remise[]>(MOCK_REMISES_PENDING);
-  const [archived, setArchived] = useState<Remise[]>(MOCK_REMISES_ARCHIVED);
+  const [pending,  setPending]  = useState<Remise[]>([]);
+  const [archived, setArchived] = useState<Remise[]>([]);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      AxiosInstance.get('/treasury/handovers/?status=pending'),
+      AxiosInstance.get('/treasury/handovers/?status=archived')
+    ]).then(([pendingRes, archivedRes]) => {
+      setPending(pendingRes.data);
+      setArchived(archivedRes.data);
+    }).catch(e => {
+      console.error(e);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, []);
 
   // Modale anomalie
   const [anomalieTarget, setAnomalieTarget] = useState<Remise | null>(null);
@@ -320,6 +336,15 @@ const RemisesTable: React.FC = () => {
       <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
     </button>
   );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mt-6">
+        <TableSkeleton columns={7} rows={4} />
+      </div>
+    );
+  }
 
   return (
     <>

@@ -108,37 +108,9 @@ const MOCK_TRANSACTIONS: CaisseTransaction[] = [
   },
   {
     id: 't3', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
-    cash_register_id: 'C-01', type: 'transfert_sortant', montant: 8350,
-    solde_apres: 54150, client: 'Agence Tozin', reference: 'TRF-003',
-    statut: 'normal', effectue_par: 'jean.dupont',
-    ip_address: '192.168.1.10', device_id: 'Chrome/124',
-    timestamp: new Date(Date.now() - 4 * 3600000).toISOString(),
-  },
-  {
-    id: 't4', session_id: 'SES-local-demo', cashier_id: 'marie.joseph',
-    cash_register_id: 'C-01', type: 'depot', montant: 30000,
-    solde_apres: 84150, client: 'Réginald Beaumont', reference: 'DEP-004',
-    statut: 'normal', effectue_par: 'marie.joseph',
-    ip_address: '192.168.1.10', device_id: 'Chrome/124',
-    timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: 't5', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
-    cash_register_id: 'C-01', type: 'retrait', montant: 5000,
-    solde_apres: 79150, client: 'Roseline Pierre', reference: 'RET-005',
-    statut: 'annulee', motif_annulation: 'Erreur de saisie — montant incorrect.',
-    effectue_par: 'jean.dupont',
-    ip_address: '192.168.1.10', device_id: 'Chrome/124',
-    timestamp: new Date(Date.now() - 1 * 3600000).toISOString(),
-  },
-];
+const MOCK_TRANSACTIONS: CaisseTransaction[] = [];
 
-
-const MOCK_ALERTS: CaisseAlert[] = [
-  { id: 'a1', severity: 'warning', message: 'Remise de 14h non complétée', time: '14:02' },
-  { id: 'a2', severity: 'error',   message: 'Écart de 250 HTG détecté hier', time: '09:15' },
-  { id: 'a3', severity: 'info',    message: 'Audit prévu à 16h00 aujourd\'hui', time: '09:00' },
-];
+const MOCK_ALERTS: CaisseAlert[] = [];
 
 // ─── fetchDashboard ───────────────────────────────────────────────
 

@@ -8,10 +8,13 @@ import {
   FileCheck, Download, AlertTriangle, CheckCircle2,
   Lock, Clock, StickyNote,
 } from 'lucide-react';
-import { MOCK_RECONCILIATION } from '@/app/lib/api/treasury.mock';
+import { useEffect } from 'react';
+import AxiosInstance from '@/app/lib/axiosInstance';
 import { ReconciliationReport, Ecart } from '@/types/reconciliation.types';
 import PageHeader from '../../header';
 import EcartModal from './EcartModal';
+import { Skeleton } from '../../ui/skeleton';
+import { TableSkeleton } from '../../ui/TableSkeleton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -21,28 +24,44 @@ const fmt = (n: number) =>
 const ReconciliationPage: React.FC = () => {
   const router = useRouter();
 
-  // TODO API : remplacer par useEffect + fetch('/api/treasury/reconciliation/start', { method: 'POST' })
-  const [report,     setReport]     = useState<ReconciliationReport>(MOCK_RECONCILIATION);
+  const [report,     setReport]     = useState<ReconciliationReport | null>(null);
   const [ecartTarget, setEcartTarget] = useState<Ecart | null>(null);
   const [globalNote,  setGlobalNote]  = useState('');
   const [submitting,  setSubmitting]  = useState(false);
   const [submitted,   setSubmitted]   = useState(false);
   const [rapportId,   setRapportId]   = useState<string | null>(null);
+  const [error,       setError]       = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: branches } = await AxiosInstance.get('/branches/');
+        const branchId = branches[0]?.id;
+        if (!branchId) return;
+
+        const { data: recData } = await AxiosInstance.get(`/treasury/reconciliation/?branch=${branchId}`);
+        setReport(recData);
+      } catch (e) {
+        console.error('Erreur chargement réconciliation:', e);
+        setError('Impossible de charger les données de réconciliation.');
+      }
+    }
+    loadData();
+  }, []);
 
   // Tous les écarts expliqués ?
   const allEcarts = useMemo(() =>
-    report.sessions.flatMap(s => s.ecarts), [report]);
+    report ? report.sessions.flatMap(s => s.ecarts) : [], [report]);
 
   const pending   = useMemo(() => allEcarts.filter(e => e.statut === 'en_attente'),  [allEcarts]);
   const explained = useMemo(() => allEcarts.filter(e => e.statut === 'explique'),    [allEcarts]);
   const canSubmit = pending.length === 0;
 
-  // ── Expliquer un écart ────────────────────────────────────────────────────
   const handleExplainConfirm = async (ecartId: string, note: string) => {
     // TODO API : await fetch(`/api/treasury/reconciliation/ecart/${ecartId}/explain`, {
     //   method: 'POST', body: JSON.stringify({ note }),
     // });
-    setReport(prev => ({
+    setReport(prev => prev ? ({
       ...prev,
       sessions: prev.sessions.map(s => ({
         ...s,
@@ -50,7 +69,7 @@ const ReconciliationPage: React.FC = () => {
           e.id === ecartId ? { ...e, statut: 'explique' as const, note } : e
         ),
       })),
-    }));
+    }) : null);
     setEcartTarget(null);
   };
 
@@ -70,6 +89,42 @@ const ReconciliationPage: React.FC = () => {
   };
 
   // ── Vue soumise ───────────────────────────────────────────────────────────
+  if (error) {
+    return <div className="p-8 text-red-500">{error}</div>;
+  }
+  
+  if (!report) {
+    return (
+      <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+        {/* Header Skeleton */}
+        <div className="flex justify-between items-center">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-32 rounded-xl" />
+        </div>
+        
+        {/* Banner Skeleton */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+          <Skeleton className="h-6 w-48 mb-6" />
+          <div className="grid grid-cols-3 gap-6">
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+        </div>
+
+        {/* Sessions Skeletons */}
+        <div className="space-y-6">
+          <Skeleton className="h-6 w-32" />
+          <TableSkeleton columns={5} rows={3} />
+          <TableSkeleton columns={5} rows={2} />
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 p-8 min-h-[60vh]">

@@ -1,30 +1,14 @@
-import axios from 'axios';
-import { getCookie, getCookies, setCookie, deleteCookie, hasCookie } from 'cookies-next';
+﻿import axios from 'axios';
+import { getCookie, setCookie, deleteCookie } from 'cookies-next';
 
 // --- Single request interceptor ---
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_ROUTE || 'http://localhost:8000/api/';
+// Hardcode pour eviter les problemes de cache Turbopack sur localhost (qui cause des timeouts IPv6)
+const BASE_URL = 'http://127.0.0.1:8000/api/';
 
 const AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' }
-});
-
-AxiosInstance.interceptors.request.use((config) => {
-  // Fix: enlève le slash initial de l'URL pour éviter l'écrasement du baseURL
-  if (config.url?.startsWith('/')) {
-    config.url = config.url.slice(1);
-  }
-
-  if (typeof window !== "undefined") {
-    const access = getCookie(ACCESS_COOKIE) as string | undefined;
-    if (access) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${access}`;
-    }
-  }
-
-  return config;
 });
 
 // ---- Helpers
@@ -35,13 +19,14 @@ const isJwtExpired = (token?: string | null) => {
   if (!token) return true;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.exp * 1000 < Date.now();
+    // On ajoute 10 secondes de marge (buffer) pour eviter qu'il n'expire en vol
+    return (payload.exp * 1000) < (Date.now() + 10000);
   } catch {
     return true;
   }
 };
 
-// Pour éviter les refresh concurrents
+// Pour eviter les refresh concurrents
 let isRefreshing = false;
 let pendingQueue: Array<(token: string | null) => void> = [];
 
@@ -50,39 +35,59 @@ function onRefreshed(newToken: string | null) {
   pendingQueue = [];
 }
 
-
-AxiosInstance.interceptors.request.use((config) => {
-  // If this file can be imported in server code, keep this guard
-  if (typeof window !== "undefined") {
-    const access = getCookie(ACCESS_COOKIE) as string | undefined;
-    if (access) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${access}`;
+AxiosInstance.interceptors.request.use(
+  async (config) => {
+    // Fix: enleve le slash initial de l'URL pour eviter l'ecrasement du baseURL
+    if (config.url?.startsWith('/')) {
+      config.url = config.url.slice(1);
     }
-  }
-
-  // Optional debug (don’t log tokens!)
-  if (process.env.NODE_ENV !== "production") {
-    //console.debug('📤', config.method, (config.baseURL || '') + (config.url || ''));
-  }
-
-  return config;
-});
-
-AxiosInstance.interceptors.request.use((config) => {
-  // Fix: enlève le slash initial de l'URL pour éviter l'écrasement du baseURL
-  if (config.url?.startsWith('/')) {
-    config.url = config.url.slice(1);
-  }
-
-  if (typeof window !== "undefined") {
-    const access = getCookie(ACCESS_COOKIE) as string | undefined;
-    if (access) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${access}`;
+    
+    // Si la requete est deja une requete de refresh, on ne fait rien
+    if (config.url?.includes('token/refresh/')) {
+       return config;
     }
-  }
 
-  return config;
-});
+    if (typeof window !== "undefined") {
+      let access = getCookie(ACCESS_COOKIE) as string | undefined;
+      const refresh = getCookie(REFRESH_COOKIE) as string | undefined;
+      
+      // Si le token est expire et qu'on a un refresh token
+      if (isJwtExpired(access) && refresh) {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            const res = await axios.post(${BASE_URL}token/refresh/, { refresh });
+            const newAccess = res.data.access;
+            setCookie(ACCESS_COOKIE, newAccess, { maxAge: 60 * 60 * 24, path: '/' });
+            onRefreshed(newAccess);
+            access = newAccess;
+          } catch (e) {
+            // Echec du refresh (refresh token expire), on deconnecte l'utilisateur
+            deleteCookie(ACCESS_COOKIE);
+            deleteCookie(REFRESH_COOKIE);
+            onRefreshed(null);
+            access = undefined;
+            window.location.href = '/login';
+          } finally {
+            isRefreshing = false;
+          }
+        } else {
+          // On attend que la requete de refresh en cours se termine
+          access = await new Promise((resolve) => {
+            pendingQueue.push(resolve);
+          }) || undefined;
+        }
+      }
+
+      if (access) {
+        config.headers = config.headers ?? {};
+        config.headers.Authorization = Bearer ;
+      }
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 export default AxiosInstance;

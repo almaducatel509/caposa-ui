@@ -4,25 +4,21 @@ import {
   createAccountSchema,
   CreateAccountInput,
   mapFormDataToCreatePayload,
+  AccountData,
 } from "@/app/components/accounts/validationsaccount";
-import type { AccountData } from "@/app/components/accounts/validationsaccount";
-import { enrichAccountData } from "@/app/components/accounts/mockAccountData";
 
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
-  // 404 → endpoint pas encore implémenté côté backend
   if (error?.response?.status === 404) {
     return "Endpoint indisponible (route backend manquante).";
   }
   if (error?.response?.data?.message) return error.response.data.message;
-  // Ne stringify QUE si c'est un objet JSON — sinon on récupère du HTML
-  // (pages d'erreur Django en mode DEBUG=True) qui pollue l'UI.
   if (error?.response?.data && typeof error.response.data === 'object') {
     try { return JSON.stringify(error.response.data); } catch {}
   }
   return fallback;
 }
 
-const enrichOne  = (a: any): AccountData => enrichAccountData(a);
+const enrichOne  = (a: any): AccountData => a as AccountData;
 const enrichMany = (arr: any[]): AccountData[] => (arr ?? []).map(enrichOne);
 
 // ─── READ ────────────────────────────────────────────────────────────────────
@@ -106,46 +102,22 @@ export const checkMemberEligibility = async (
 
 // ─── WRITE ───────────────────────────────────────────────────────────────────
 
-// export const createAccount = async (input: CreateAccountInput): Promise<AccountData> => {
-//   // 1. Valider l'entrée (format du formulaire)
-//   const parsed = createAccountSchema.safeParse(input);
-//   if (!parsed.success) throw parsed.error;
-
-//   // 2. Mapper en payload backend
-//   const payload = mapFormDataToCreatePayload(parsed.data);
-
-//   // 3. Envoyer
-//   try {
-//     const { data } = await AxiosInstance.post("/accounts/", payload);
-//     return enrichOne(data);
-//   } catch (error: any) {
-//     console.error("❌ Create account error:", error?.response?.data);
-//     throw new Error(parseApiError(error, "Impossible de créer le compte."));
-//   }
-// };
 export const createAccount = async (input: CreateAccountInput): Promise<AccountData> => {
-  // 🚧 BYPASS TOTAL — endpoint backend cassé, on simule côté front
-  // TODO: retirer ce bloc quand POST /accounts/ sera fonctionnel
+  // 1. Valider l'entrée (format du formulaire)
   const parsed = createAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.errors[0]?.message ?? "Données invalides");
-  }
+  if (!parsed.success) throw parsed.error;
 
+  // 2. Mapper en payload backend
   const payload = mapFormDataToCreatePayload(parsed.data);
-  await new Promise(r => setTimeout(r, 400));
 
-  const now = new Date().toISOString();
-  return enrichOne({
-    id:             crypto.randomUUID(),
-    account_number: payload.account_number,
-    member:         payload.member,
-    account_type:   payload.account_type,
-    balance:        "0",
-    account_status: "actif",
-    created_by:     "front-bypass",
-    created_at:     now,
-    updated_at:     now,
-  });
+  // 3. Envoyer
+  try {
+    const { data } = await AxiosInstance.post("/accounts/", payload);
+    return enrichOne(data);
+  } catch (error: any) {
+    console.error("❌ Create account error:", error?.response?.data);
+    throw new Error(parseApiError(error, "Impossible de créer le compte."));
+  }
 };
 export const updateAccount = async (
   id: string,
