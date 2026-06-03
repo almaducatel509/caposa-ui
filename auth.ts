@@ -62,7 +62,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       //   //  roles: payload.roles || [],             // rôles éventuels
       //  };
       
-       const ADMIN_USERNAMES = ["YT1", "Karimc"]; // 👈 mets tes admins ici
+       const ADMIN_USERNAMES = ["YT1", "Karimc", "Claudin"]; // 👈 mets tes admins ici
         return {
           id: (payload.user_id ?? payload.username ?? username).toString(),
           username: payload.username ?? username,
