@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from 'cookies-next';
 
 // --- Single request interceptor ---
@@ -56,7 +56,7 @@ AxiosInstance.interceptors.request.use(
         if (!isRefreshing) {
           isRefreshing = true;
           try {
-            const res = await axios.post(${BASE_URL}token/refresh/, { refresh });
+            const res = await axios.post(`${BASE_URL}token/refresh/`, { refresh });
             const newAccess = res.data.access;
             setCookie(ACCESS_COOKIE, newAccess, { maxAge: 60 * 60 * 24, path: '/' });
             onRefreshed(newAccess);
