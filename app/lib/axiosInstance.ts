@@ -28,8 +28,8 @@ AxiosInstance.interceptors.request.use((config) => {
 });
 
 // ---- Helpers
-const ACCESS_COOKIE = process.env.TOKEN_NAME || "auth_token";
-const REFRESH_COOKIE = process.env.REFRESH_TOKEN || "refresh_token";
+const ACCESS_COOKIE = process.env.NEXT_PUBLIC_TOKEN_NAME || process.env.TOKEN_NAME || "caposa_access_token";
+const REFRESH_COOKIE = process.env.NEXT_PUBLIC_REFRESH_TOKEN || process.env.REFRESH_TOKEN || "caposa_refresh_token";
 
 const isJwtExpired = (token?: string | null) => {
   if (!token) return true;
