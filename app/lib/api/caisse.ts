@@ -21,7 +21,6 @@ import { CaisseFormValues } from '@/app/components/sessions/validation';
 
 // ✅ Source unique pour les transactions côté UI (dashboard, listes, etc.)
 import type { TransactionData } from '@/app/components/transactions/types';
-import { mockTransactions } from '@/app/components/transactions/mockTransactions';
 
 // ─── Helper interne ───────────────────────────────────────────────
 
@@ -32,12 +31,8 @@ function isNetworkOrServerError(err: unknown): boolean {
 }
 
 // ─── Mocks (uniquement ce qui n'a pas de source dédiée) ──────────
-
-const MOCK_ALERTS: CaisseAlert[] = [
-  { id: 'a1', severity: 'warning', message: 'Remise de 14h non complétée',     time: '14:02' },
-  { id: 'a2', severity: 'error',   message: 'Écart de 250 HTG détecté hier',   time: '09:15' },
-  { id: 'a3', severity: 'info',    message: "Audit prévu à 16h00 aujourd'hui", time: '09:00' },
-];
+// Les alertes ne sont pas encore implémentées côté backend.
+const MOCK_ALERTS: CaisseAlert[] = [];
 
 // ─── Caisses ─────────────────────────────────────────────────────
 
@@ -113,8 +108,8 @@ export async function fetchTransactions(): Promise<TransactionData[]> {
     const { data } = await AxiosInstance.get<TransactionData[]>('/transactions/');
     return data;
   } catch (err) {
-    console.warn('[caisse] fetchTransactions → mock :', err);
-    return mockTransactions;
+    console.error('[caisse] fetchTransactions error :', err);
+    return [];
   }
 }
 
@@ -173,10 +168,11 @@ export async function createTransaction(payload: {
 
 export async function fetchAlerts(): Promise<CaisseAlert[]> {
   try {
-    const { data } = await AxiosInstance.get<CaisseAlert[]>('/alerts/');
-    return data;
+    // const { data } = await AxiosInstance.get<CaisseAlert[]>('/alerts/');
+    // return data;
+    return MOCK_ALERTS;
   } catch (err) {
-    console.warn('[caisse] fetchAlerts → mock :', err);
+    console.error('[caisse] fetchAlerts error :', err);
     return MOCK_ALERTS;
   }
 }

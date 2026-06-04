@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Wallet } from 'lucide-react';
 import { AccountData, AccountStatus } from './validationsaccount';
-import { mockAccounts } from './mockAccountData';
+import { fetchAccounts } from '@/app/lib/api/accounts';
 import { AccountBulkAction } from './AccountBulkActionDropdown';
 
 // UI
@@ -74,8 +74,8 @@ const AccountGrid: React.FC = () => {
   const loadAccounts = async () => {
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 500));
-      setAccounts(mockAccounts);
+      const data = await fetchAccounts();
+      setAccounts(data);
     } catch (err) {
       console.error('Erreur chargement comptes:', err);
       setError('Impossible de charger les données des comptes.');

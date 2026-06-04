@@ -88,3 +88,7 @@ body {
 /* //🎉 Résumé problem de modal:
 Le changement dans globals.css (retirer overflow-x: hidden sur html) a résolu le problème pour TOUS les modals de ton application, pas seulement celui qu'on testait.
 Tu n'as donc PAS besoin de changer useDisclosure() en useState() dans tes autres modals - ils devraient tous fonctionner maintenant avec leur code actuel. */ 
+button, a {
+  cursor: pointer;
+}
+

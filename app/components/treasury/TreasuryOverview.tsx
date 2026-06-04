@@ -6,16 +6,11 @@ import { FiBell } from 'react-icons/fi';
 import PageHeader from '../header';
 import RemisesTable from './RemisesTable';
 import { TreasuryDashboard, CurrencyCode } from '@/types/tresorerie';
-import { MOCK_DASHBOARD, MOCK_PENDING_COUNT } from '@/app/lib/api/treasury.mock';
-// Remplace les deux constantes MOCK_* par :
-// const [pending, setPending]   = useState<Remise[]>([]);
-// const [archived, setArchived] = useState<Remise[]>([]);
-
-// useEffect(() => {
-//   fetch('/api/treasury/handovers?status=pending').then(r => r.json()).then(setPending);
-//   fetch('/api/treasury/handovers?status=archived').then(r => r.json()).then(setArchived);
-// }, []);
-// ─── Mock (remplacer par fetch('/api/treasury/dashboard') ) ──────────────────
+import { useEffect, useState } from 'react';
+import AxiosInstance from '@/app/lib/axiosInstance';
+import { Skeleton } from '../ui/skeleton';
+import { CardSkeleton } from '../ui/CardSkeleton';
+import { TableSkeleton } from '../ui/TableSkeleton';
 
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -32,8 +27,79 @@ const formatTime = (iso: string) =>
 
 // ─── Composant ───────────────────────────────────────────────────────────────
 const TreasuryOverview: React.FC = () => {
-  const dashboard    = MOCK_DASHBOARD;      // TODO: useState + useEffect + fetch
-  const pendingCount = MOCK_PENDING_COUNT;  // TODO: fetch('/api/treasury/handovers?status=pending&count=true')
+  const [dashboard, setDashboard] = useState<TreasuryDashboard | null>(null);
+  const [pendingCount, setPendingCount] = useState<number>(0);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: branches } = await AxiosInstance.get('/branches/');
+        const branchId = branches[0]?.id;
+        if (!branchId) return;
+
+        const { data: dashData } = await AxiosInstance.get(`/treasury/dashboard/?branch=${branchId}`);
+        setDashboard(dashData);
+
+        const { data: pending } = await AxiosInstance.get('/treasury/handovers/?status=pending');
+        setPendingCount(pending.length);
+      } catch (e) {
+        console.error('Erreur chargement trésorerie:', e);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (!dashboard) {
+    return (
+      <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+        {/* Header Skeleton */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-40 rounded-xl" />
+        </div>
+
+        {/* Banner Skeleton */}
+        <div className="bg-linear-to-br from-[#2E7D32] to-[#1B5E20] rounded-2xl p-6 md:p-8 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:divide-x md:divide-white/15">
+            <div className="md:pr-6 space-y-4">
+              <Skeleton className="h-4 w-32 bg-white/20" />
+              <Skeleton className="h-10 w-48 bg-white/20" />
+              <Skeleton className="h-3 w-40 bg-white/20" />
+            </div>
+            <div className="md:px-6 space-y-4">
+              <Skeleton className="h-4 w-32 bg-white/20" />
+              <Skeleton className="h-8 w-36 bg-white/20" />
+            </div>
+            <div className="md:pl-6 space-y-4">
+              <Skeleton className="h-4 w-32 bg-white/20" />
+              <Skeleton className="h-8 w-36 bg-white/20" />
+            </div>
+          </div>
+        </div>
+
+        {/* KPIs Skeletons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <TableSkeleton columns={6} rows={5} />
+          </div>
+          <div className="space-y-6">
+            <CardSkeleton className="h-64" withIcon={false} />
+            <CardSkeleton className="h-48" withIcon={false} />
+          </div>
+        </div>
+      </div>
+    );
+  }
  
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
