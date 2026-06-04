@@ -26,6 +26,8 @@ import { Holiday } from '../holidays/validations';
 //chemin douteux
 import { OpeningHour } from '@/types/branche';
 import { ExportAllButton } from '@/app/ExportAllButton';
+import DifferedDepositModal from '../transactions/deposits/Differeddepositmodal';
+import { useSession } from 'next-auth/react';
 
 // ═══════════════════════════════════════════════════════════════
 // MOCK_SESSIONS — données réalistes pour développement UI
@@ -138,7 +140,8 @@ export default function SessionsComponent() {
 
   // Modal fermeture (déclenché par 🚪)
   const [closeSession,  setCloseSession]  = useState<CaisseSession | null>(null);
-
+  const [showDiffered, setShowDiffered] = useState(false);
+  const { data: authSession } = useSession();
   // 🆕 Vérification horaires + calendrier
   const { rules: openingRules } = useSessionOpeningRules();
   const canOpen = openingRules ? openingRules.canOpen : true;
@@ -284,6 +287,35 @@ if (loading) {
         />
       )}
 
+      {showDiffered && (
+        <Modal
+          isOpen
+          onClose={() => setShowDiffered(false)}     
+          size="3xl"
+          title={
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Saisie différée</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Transaction enregistrée hors délai</p>
+              </div>
+            </div>
+          }
+        >
+          <div className="p-6 max-h-[80vh] overflow-y-auto">
+            <DifferedDepositModal
+              sessionId="SESS-MOCK"
+              saisiPar={(authSession?.user as any)?.username ?? 'inconnu'}                
+              onSubmit={async (data) => {
+                console.log('[Mock] Saisie différée :', data);
+              }}
+              onCancel={() => setShowDiffered(false)}
+            />
+          </div>
+        </Modal>
+      )}
       <div className="w-full min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8">
 
         {/* ── Header ── */}
@@ -300,7 +332,13 @@ if (loading) {
           </div>
 
           <div className="flex items-center gap-2">
-           
+           <button
+            onClick={() => setShowDiffered(true)}
+            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#D4AF37] text-white text-sm font-semibold hover:bg-[#b98e01] transition-colors"
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Saisie différée
+          </button>
             <ExportAllButton
               data={exportData}
               filename="sessions"
@@ -323,8 +361,6 @@ if (loading) {
                 notes: 'Notes',
               }}
             />
-            
-
             <button
               onClick={() => load(true)}
               disabled={refreshing}

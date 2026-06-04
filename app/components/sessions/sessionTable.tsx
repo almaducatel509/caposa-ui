@@ -394,12 +394,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-blue-50 hover:text-blue-500">
                   <Eye className="w-3.5 h-3.5" />
                 </button>
-                {isOpen && onClose && (
-                  <button title="Fermer la session" onClick={() => onClose(session)}
-                    className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
-                    <LogOut className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                
               </div>
             </div>
           );

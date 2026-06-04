@@ -1,3 +1,4 @@
+//app\components\ui\Modal.tsx
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -7,7 +8,6 @@ interface ModalProps {
   children:  React.ReactNode;
   title?:    React.ReactNode;  // ← optionnel
 }
-
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,

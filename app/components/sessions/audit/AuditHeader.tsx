@@ -11,11 +11,14 @@ interface AuditHeaderProps {
   conformity:      ConformityStatus;
   onExportPDF?:    () => void;
   onPrint?:        () => void;
+  montantOuverture?: number;
+  montantFermeture?: number;
 }
 
 export default function AuditHeader({
   sessionId, sessionLabel, caissierNom, dateSession,
-  conformity, onExportPDF, onPrint,
+  conformity, onExportPDF, onPrint,montantOuverture,
+  montantFermeture,
 }: AuditHeaderProps) {
   return (
     <div className="mb-6 print:mb-4">
@@ -48,6 +51,16 @@ export default function AuditHeader({
             {' · '}
             {dateSession}
           </p>
+          {(montantOuverture != null || montantFermeture != null) && (
+            <div className="flex gap-4 mt-1.5 text-sm text-gray-500">
+              <span>Ouverture : <span className="font-semibold text-gray-700">
+                {montantOuverture?.toLocaleString('fr-CA')} HTG
+              </span></span>
+              <span>Fermeture : <span className="font-semibold text-gray-700">
+                {montantFermeture != null ? montantFermeture.toLocaleString('fr-CA') + ' HTG' : '—'}
+              </span></span>
+            </div>
+          )}
         </div>
 
         {/* Actions (masquées à l'impression) */}
@@ -59,13 +72,7 @@ export default function AuditHeader({
             <FileDown className="w-4 h-4" />
             Exporter PDF
           </button>
-          <button
-            onClick={onPrint}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#1a1a1a] text-white text-sm font-semibold hover:bg-[#000] transition-colors shadow-sm"
-          >
-            <Printer className="w-4 h-4" />
-            Imprimer
-          </button>
+          
         </div>
       </div>
     </div>

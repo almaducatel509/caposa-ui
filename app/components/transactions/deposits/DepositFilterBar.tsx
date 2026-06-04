@@ -34,7 +34,6 @@ interface DepositFilterBarProps {
   deposits:       DepositData[];
   selectedRange:  DepositFilterRange;
   onRangeChange:  (key: DepositFilterRange) => void;
-  onDiffered?: () => void;   // présent seulement si le rôle l'autorise
 }
 
 // ─── Dropdown ────────────────────────────────────────────────────────────────
@@ -66,7 +65,7 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
   filterValue,onRangeChange, selectedType,selectedRange, selectedStatus, selectedPeriod, totalCount, loading = false,
   onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange,
-  onAdd, onRefresh, deposits, onDiffered,
+  onAdd, onRefresh, deposits, 
 
 }) => {
 
@@ -110,35 +109,6 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
     onRangeChange('all');
   };  
   
-  // ── Export : transforme les dépôts en lignes prêtes pour CSV ──
-  const depositsForExport = deposits.map(dep => {
-    const typeLbl =
-      dep.depositSubtype === 'cash'     ? 'Espèces'   :
-      dep.depositSubtype === 'check'    ? 'Chèque'    :
-      dep.depositSubtype === 'transfer' ? 'Virement'  :
-      dep.depositSubtype === 'other'    ? 'Autre'     : '—';
-
-    const statutLbl =
-      dep.status === 'encaisse'   ? 'Encaissé'   :
-      dep.status === 'en_attente' ? 'En attente' :
-      dep.status === 'en_cours'   ? 'En cours'   :
-      dep.status === 'echoue'     ? 'Échoué'     : '—';
-
-    return {
-      code:        dep.codeAutorisation,
-      compte:      dep.idCompte,
-      membre:      dep.member_name,
-      type:        typeLbl,
-      source:      dep.source,
-      montant:     dep.montantTransaction,
-      statut:      statutLbl,
-      caisse:      dep.caisse_numero,
-      traite_par:  dep.processed_by,
-      valide_par:  dep.validated_by,
-      date:        dep.created_at?.split('T')[0] ?? '—',
-    };
-  });
-
   return (
     <div className="space-y-3">
 
@@ -172,13 +142,6 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
             <Plus className="w-4 h-4" />
             Nouveau dépôt
           </button>
-          {onDiffered && (
-            <button onClick={onDiffered}
-              className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#D4AF37] text-white text-sm font-semibold hover:bg-[#b98e01] transition-colors">
-              <AlertTriangle className="w-4 h-4" />
-              Saisie différée
-            </button>
-          )}
         </div>
       </div>
 
