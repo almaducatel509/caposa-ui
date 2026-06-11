@@ -116,8 +116,19 @@ export const createBranch = async (branchData: any) => {
     const response = await AxiosInstance.post('/branches/', branchData);
     return response.data;
   } catch (error: any) {
-    console.error('❌ Erreur createBranch:', error?.response?.data);
-    throw new Error(parseApiError(error, "Impossible de créer la branche."));
+    const data = error?.response?.data;
+    
+    // Si Django retourne du HTML (mode DEBUG), on affiche un message générique
+    const message =
+      typeof data === 'string' && data.includes('<!DOCTYPE')
+        ? 'Erreur serveur — vérifiez que le backend fonctionne correctement.'
+        : typeof data === 'object'
+          ? Object.entries(data)
+              .map(([k, v]) => `${k} : ${Array.isArray(v) ? v.join(', ') : v}`)
+              .join(' | ')
+          : 'Impossible de créer la branche.';
+
+    throw new Error(message);
   }
 };
 

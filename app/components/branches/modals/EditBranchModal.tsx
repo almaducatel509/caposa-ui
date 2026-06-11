@@ -141,17 +141,15 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           branch_email:              data.branch_email,
           department_code:           data.department_code ?? 'OUEST',
           city:                      data.city ?? '',
-          number_of_tellers:         data.number_of_tellers,
-          number_of_clerks:          data.number_of_clerks,
-          number_of_credit_officers: data.number_of_credit_officers,
-          number_of_posts:
-            (data.number_of_tellers || 0) +
-            (data.number_of_clerks || 0) +
-            (data.number_of_credit_officers || 0),
           opening_date:              data.opening_date,
           opening_hour:              openingHourId,
           holidays:                  holidayIds,
           status:                    data.statusBranche ?? 'inactive',
+           // ── Champs backend silencieux ──
+          number_of_posts:           data.number_of_posts           ?? 0,
+          number_of_tellers:         data.number_of_tellers         ?? 0,
+          number_of_clerks:          data.number_of_clerks          ?? 0,
+          number_of_credit_officers: data.number_of_credit_officers ?? 0,
         });
       } catch (err: any) {
         console.error('❌ Erreur chargement:', err);
@@ -169,21 +167,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     setApiError(null);
   };
 
-  // ── Auto total postes ──
-  useEffect(() => {
-    if (!formData) return;
-    const total =
-      (formData.number_of_tellers || 0) +
-      (formData.number_of_clerks || 0) +
-      (formData.number_of_credit_officers || 0);
-    if (total !== formData.number_of_posts) {
-      setFormData(prev => prev ? { ...prev, number_of_posts: total } : prev);
-    }
-  }, [
-    formData?.number_of_tellers,
-    formData?.number_of_clerks,
-    formData?.number_of_credit_officers,
-  ]);
+  
 
   // ── Détection doublons ──
   const findDuplicate = (): string | null => {

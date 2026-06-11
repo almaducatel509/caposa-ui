@@ -19,14 +19,15 @@ export const branchBaseSchema = z.object({
     errorMap: () => ({ message: "Sélectionnez un département valide" }),
   }),
   city: z.string().min(1, "La ville est requise"),
-  number_of_tellers:         z.number().min(1, "Au moins 1 caissier est requis"),
-  number_of_clerks:          z.number().min(1, "Au moins 1 commis est requis"),
-  number_of_credit_officers: z.number().min(1, "Au moins 1 agent crédit est requis"),
   opening_date:    z.string().min(1, "La date d'ouverture est requise"),
-  number_of_posts: z.number().optional(),
   opening_hour:    z.string().uuid("L'identifiant de l'horaire doit être un UUID valide").optional(),
   holidays:        z.array(z.string().uuid("L'identifiant du jour férié doit être un UUID valide")).optional(),
   status:          z.enum(["inactive", "active", "archive"]).default("inactive"),
+  // Dans branchBaseSchema, ajouter :
+  number_of_posts:           z.number().int().min(0).default(0),
+  number_of_tellers:         z.number().int().min(0).default(0),
+  number_of_clerks:          z.number().int().min(0).default(0),
+  number_of_credit_officers: z.number().int().min(0).default(0),
 });
 
 export const branchActivationSchema = branchBaseSchema

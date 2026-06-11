@@ -166,12 +166,17 @@ export function OpeningHourAutocomplete({
               ? "Aucun horaire créé"
               : "Rechercher un horaire…"
           }
+          onFocus={() => {
+            if (!isDisabled) {
+              setSearchValue(""); // ← reset la recherche à l'ouverture
+              setOpen(true);
+            }
+          }}
           onChange={(e) => {
             setSearchValue(e.target.value);
             setOpen(true);
-            if (selectedKey) onSelectionChange("");
+            // NE PAS clear la sélection ici — on la garde jusqu'à ce que l'user choisisse autre chose
           }}
-          onFocus={() => !isDisabled && setOpen(true)}
           className={`w-full h-11 pl-10 pr-10 rounded-xl border-2 text-sm transition-colors outline-none
             ${isDisabled
               ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100"

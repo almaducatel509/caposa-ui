@@ -47,7 +47,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         const result = await loginUser(username, password);
         if (!result.success) return null;
 
-        const { access } = result.details as { access: string; refresh: string };
+        const { access, refresh } = result.details as { access: string; refresh: string };
         if (!access) return null;
 
         // 3) Décoder l’`access` pour extraire l’info utilisateur
@@ -67,6 +67,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           id: (payload.user_id ?? payload.username ?? username).toString(),
           username: payload.username ?? username,
           isAdmin: ADMIN_USERNAMES.includes(payload.username ?? username), // 👈 ajout
+          accessToken: access,   // 👈 ajouter
+          refreshToken: refresh, // 👈 ajouter
         };
       },
     }),
@@ -84,6 +86,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       token.email = (user as any).email;
       token.username = (user as any).username;
       token.isAdmin = (user as any).isAdmin;
+      token.accessToken  = (user as any).accessToken;  // new
+      token.refreshToken = (user as any).refreshToken; // new
     }
     return token;
   },
@@ -91,6 +95,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     if (session.user) {
       (session.user as any).username = token.username;
       (session.user as any).isAdmin = token.isAdmin;
+      (session.user as any).accessToken   = token.accessToken;  // new
+      (session.user as any).refreshToken  = token.refreshToken; // new
+    
     }
     return session;
   },

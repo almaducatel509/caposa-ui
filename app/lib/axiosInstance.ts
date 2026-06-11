@@ -1,3 +1,4 @@
+//C:\Users\alma2\Documents\Final Project\caposa-ui\app\lib\axiosInstance.ts
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from 'cookies-next';
 

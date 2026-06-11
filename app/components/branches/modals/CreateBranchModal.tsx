@@ -51,20 +51,20 @@ interface CreateBranchModalProps {
 
 // ─── Valeurs initiales ─────────────────────────────────────────────────────
 const INITIAL_FORM: BranchFormData = {
-  branch_name:               '',
-  branch_address:            '',
-  branch_phone_number:       '',
-  branch_email:              '',
-  department_code:           'OUEST',
-  city:                      '',
-  number_of_posts:           0,
-  number_of_tellers:         0,
-  number_of_clerks:          0,
-  number_of_credit_officers: 0,
-  opening_date:              '',
-  opening_hour:              undefined,
-  holidays:                  [],
-  status:                    'inactive',
+  branch_name: '',
+  branch_address: '',
+  branch_phone_number: '',
+  branch_email: '',
+  department_code: 'OUEST',
+  city: '',
+  opening_date: '',
+  opening_hour: undefined,
+  holidays: [],
+  status: 'inactive',
+  number_of_posts: 0,
+  number_of_tellers: 0,
+  number_of_clerks: 0,
+  number_of_credit_officers: 0
 };
 
 // ============= COMPONENT =============
@@ -116,20 +116,7 @@ const CreateBranchModal: React.FC<CreateBranchModalProps> = ({
     setApiError(null);
   };
 
-  // Auto total postes
-  useEffect(() => {
-    const total =
-      (formData.number_of_tellers || 0) +
-      (formData.number_of_clerks || 0) +
-      (formData.number_of_credit_officers || 0);
-    if (total !== formData.number_of_posts) {
-      setFormData(prev => ({ ...prev, number_of_posts: total }));
-    }
-  }, [
-    formData.number_of_tellers,
-    formData.number_of_clerks,
-    formData.number_of_credit_officers,
-  ]);
+  
 
   const findDuplicate = (): string | null => {
     const found = branches.find((b: any) =>

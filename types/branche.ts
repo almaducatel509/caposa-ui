@@ -41,10 +41,6 @@ export interface Branch {
   statusBranche: "active" | "inactive" | "archive";
   department_code: DepartmentCode;
   city: string;
-  number_of_posts: number;
-  number_of_tellers: number;
-  number_of_clerks: number;
-  number_of_credit_officers: number;
   opening_date: string;
   opening_hour: string;
   holidays?: string[];
@@ -55,4 +51,8 @@ export interface Branch {
   total_staff: number;
   full_address: string;
   status?:string;
+  number_of_posts: 0,           // ← ajouté
+  number_of_tellers: 0,         // ← ajouté
+  number_of_clerks: 0,          // ← ajouté
+  number_of_credit_officers: 0, // ← ajouté
 }

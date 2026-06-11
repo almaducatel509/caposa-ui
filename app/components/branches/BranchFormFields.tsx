@@ -88,12 +88,7 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
     });
   };
 
-  // Total postes calculé automatiquement
-  const totalPosts =
-    (formData.number_of_tellers || 0) +
-    (formData.number_of_clerks || 0) +
-    (formData.number_of_credit_officers || 0);
-
+ 
   // Villes disponibles selon le département
   const cities = formData.department_code
     ? CITIES_BY_DEPARTMENT[formData.department_code as DepartmentCode] ?? []
@@ -261,47 +256,6 @@ const BranchFormFields: React.FC<BranchFormFieldsProps> = ({
         </div>
       </Section>
 
-      {/* ── SECTION 3 : Personnel ────────────────────────────────────────── */}
-      <Section number={3} icon={Users} title="Personnel et postes">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          {[
-            { name: 'number_of_tellers',         label: 'Caissiers',     err: errors.number_of_tellers },
-            { name: 'number_of_clerks',          label: 'Commis',        err: errors.number_of_clerks },
-            { name: 'number_of_credit_officers', label: 'Agents crédit', err: errors.number_of_credit_officers },
-          ].map(({ name, label, err }) => (
-            <div key={name}>
-              <FieldLabel label={label} required />
-              <input
-                type="number"
-                name={name}
-                value={(formData as any)[name] || 0}
-                onChange={handleInput}
-                min={0}
-                disabled={isSubmitting}
-                className={[
-                  'w-full h-11 px-4 rounded-xl border-2 text-sm text-center font-semibold bg-white outline-none transition-colors',
-                  isSubmitting ? 'opacity-50 cursor-not-allowed' : '',
-                  err ? 'border-red-400 ring-2 ring-red-200' : 'border-gray-200 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20',
-                ].join(' ')}
-              />
-              <FieldError msg={err} />
-            </div>
-          ))}
-
-          <div>
-            <FieldLabel label="Total postes" />
-            <input
-              type="number"
-              value={totalPosts}
-              readOnly
-              className="w-full h-11 px-4 rounded-xl border-2 border-gray-100 text-sm text-center font-bold text-gray-900 bg-gray-50 cursor-not-allowed"
-            />
-            <p className="text-xs text-gray-400 mt-1 text-center">Calculé auto.</p>
-          </div>
-
-        </div>
-      </Section>
 
      {/* ── Section 4 : Horaire d'ouverture ── */}
       <div className=" rounded-2xl border border-gray-100  shadow-sm">

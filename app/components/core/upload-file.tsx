@@ -1,5 +1,5 @@
 'use client'
-import { Camera } from 'lucide-react'
+import { Camera, Trash } from 'lucide-react'
 import { useState, useRef, ChangeEvent, useEffect } from 'react'
 
 const MAX_SIZE_MB = 2
@@ -16,6 +16,7 @@ export default function PhotoSelector({ value, onChange, onRemove, variant = 'ci
   const [preview, setPreview] = useState<string | null>(value ?? null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const [hoverDelete, setHoverDelete] = useState(false);
   useEffect(() => {
   console.log("VALUE REÇUE :", value)
 
@@ -92,11 +93,23 @@ export default function PhotoSelector({ value, onChange, onRemove, variant = 'ci
           <input ref={inputRef} id="photo-input" type="file" accept=".jpg,.jpeg,.png"
             style={{ display: 'none' }} onChange={handleFileChange} />
           {preview && (
-            <button onClick={handleRemove} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 13, color: 'var(--color-text-secondary)', padding: 0, fontFamily: 'inherit',
-            }}>
-              Supprimer
+           <button
+              onClick={handleRemove}
+              onMouseEnter={() => setHoverDelete(true)}
+              onMouseLeave={() => setHoverDelete(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Trash
+                size={16}
+                color={hoverDelete ? '#2E7D32' : '#888'} // Couleur CAPOSA au hover
+              />
             </button>
           )}
         </div>

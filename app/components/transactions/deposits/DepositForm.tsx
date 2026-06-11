@@ -352,13 +352,22 @@ setSubmittedData(null)
                 <span className={`flex-1 truncate ${selectedMember ? 'font-medium text-gray-800' : 'text-gray-400'}`}>
                   {selectedMember?.member_name ?? 'Rechercher un membre…'}
                 </span>
-                {selectedMember
-                  ? <button type="button" onClick={e => { e.stopPropagation(); handleClearMember(); }}
-                      className="p-0.5 rounded-md hover:bg-[#c8e0bc] text-gray-500">
+                  {selectedMember ? (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={e => { e.stopPropagation(); handleClearMember(); }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          handleClearMember();
+                        }
+                      }}
+                      className="p-0.5 rounded-md hover:bg-[#c8e0bc] text-gray-500 cursor-pointer"
+                    >
                       <X className="w-3.5 h-3.5" />
-                    </button>
-                  : <ChevronDown className="w-4 h-4 text-gray-400" />
-                }
+                    </div>
+                  ) : null}
               </button>
 
               {memberOpen && (
