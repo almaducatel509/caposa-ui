@@ -39,7 +39,7 @@ AxiosInstance.interceptors.request.use(
       config.url = config.url.slice(1);
     }
 
-    if (config.url?.includes('token/refresh/')) {
+    if (config.url?.includes('auth/refresh/')) {
       return config;
     }
 
@@ -51,7 +51,7 @@ AxiosInstance.interceptors.request.use(
         if (!isRefreshing) {
           isRefreshing = true;
           try {
-            const res = await axios.post(`${BASE_URL}token/refresh/`, { refresh });
+            const res = await axios.post(`${BASE_URL}auth/refresh/`, { refresh });
             const newAccess = res.data.access;
             setCookie(ACCESS_COOKIE, newAccess, { maxAge: 60 * 60 * 24, path: '/' });
             onRefreshed(newAccess);

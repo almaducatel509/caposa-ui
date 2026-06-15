@@ -50,7 +50,7 @@ export async function createDeposit(
   if (idemKey) headers['Idempotency-Key'] = idemKey;
 
   const { data } = await AxiosInstance.post<CreateDepositResponse>(
-    '/api/deposits/',
+    '/api/transactions/deposit/',
     payload,
     { headers }
   );
@@ -105,7 +105,7 @@ export async function fetchDashboard(): Promise<{
 
 export async function fetchTransactions(): Promise<TransactionData[]> {
   try {
-    const { data } = await AxiosInstance.get<TransactionData[]>('/transactions/');
+    const { data } = await AxiosInstance.get<TransactionData[]>('/caisse-transactions/');
     return data;
   } catch (err) {
     console.error('[caisse] fetchTransactions error :', err);
@@ -154,7 +154,7 @@ export async function createTransaction(payload: {
   const body = { ...payload, session: sessionId };
 
   try {
-    const { data } = await AxiosInstance.post<CaisseTransaction>('/transactions/', body);
+    const { data } = await AxiosInstance.post<CaisseTransaction>('/caisse-transactions/', body);
     return data;
   } catch (err) {
     if (!isNetworkOrServerError(err)) throw err;
