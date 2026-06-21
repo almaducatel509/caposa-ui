@@ -17,7 +17,8 @@ import {
   CaisseAlert,
   OpenSessionPayload,
 } from '@/types/caisse';
-import { CaisseFormValues } from '@/app/components/sessions/validation';
+import { CaisseCreateValues } from '@/app/components/terminals/validation';
+import { Caisse } from '@/types/caisse';
 
 // ✅ Source unique pour les transactions côté UI (dashboard, listes, etc.)
 import type { TransactionData } from '@/app/components/transactions/types';
@@ -33,11 +34,54 @@ function isNetworkOrServerError(err: unknown): boolean {
 // ─── Mocks (uniquement ce qui n'a pas de source dédiée) ──────────
 // Les alertes ne sont pas encore implémentées côté backend.
 const MOCK_ALERTS: CaisseAlert[] = [];
+// app/lib/api/caisse.ts  — ajouter à la fin
 
+
+// TODO API : supprimer ce bloc quand GET /caisses/ est disponible
+const MOCK_CAISSES: Caisse[] = [
+  {
+    id: '1', numero_caisse: 'C-01', nom_caisse: 'Caisse principale',
+    localisation: 'Rez-de-chaussée — Accueil', branch: 'uuid-1',
+    branch_name: 'Agence Port-au-Prince', 
+    solde_initial: 50000, solde_actuel: 53700, actif: true,
+    created_at: '2024-01-15T08:00:00Z', nb_sessions: 42,
+    derniere_session: '2026-03-30T15:35:00Z',
+  },
+  {
+    id: '2', numero_caisse: 'C-02', nom_caisse: 'Caisse secondaire',
+    localisation: '1er étage — Guichet B', branch: 'uuid-1',
+    branch_name: 'Agence Port-au-Prince', 
+    solde_initial: 30000, solde_actuel: 28500, actif: true,
+    created_at: '2024-02-01T08:00:00Z', nb_sessions: 28,
+    derniere_session: '2026-03-29T17:00:00Z',
+  },
+  {
+    id: '3', numero_caisse: 'C-03', nom_caisse: 'Caisse USD',
+    localisation: 'Rez-de-chaussée — Devises', branch: 'uuid-2',
+    branch_name: 'Agence Pétion-Ville', 
+    solde_initial: 5000, solde_actuel: 4800, actif: false,
+    created_at: '2024-03-10T08:00:00Z', nb_sessions: 15,
+    derniere_session: '2026-02-28T16:00:00Z',
+  },
+];
+
+/** Récupère la liste des caisses.
+ *  TODO API : supprimer le fallback MOCK_CAISSES quand GET /caisses/ est prêt.
+ *  Terminal et OpenSession utilisent cette même fonction — un seul endroit à modifier.
+ */
+export const fetchCaisses = async (): Promise<Caisse[]> => {
+  try {
+    const { data } = await AxiosInstance.get<Caisse[]>('/caisses/');
+    return Array.isArray(data) ? data : (data as any)?.results ?? [];
+  } catch (err) {
+    console.warn('fetchCaisses → fallback mocks', err); // ← ajouter
+    return MOCK_CAISSES;
+  }
+};
 // ─── Caisses ─────────────────────────────────────────────────────
-
-export async function createCaisse(payload: CaisseFormValues): Promise<void> {
-  await AxiosInstance.post('/caisses/', payload);
+export async function createCaisse(payload: CaisseCreateValues): Promise<Caisse> {
+  const { data } = await AxiosInstance.post<Caisse>('/caisses/', payload);
+  return data;
 }
 
 // ─── Dépôts ──────────────────────────────────────────────────────
@@ -192,4 +236,12 @@ export async function closeSession(
   payload: { montant_fermeture: number }
 ): Promise<CaisseSession> {
   return SessionManager.close(sessionId, payload);
+}
+export async function toggleCaisseActif(id: string, actif: boolean): Promise<Caisse> {
+  // TODO API : PATCH /caisses/{id}/
+  // Django vérifie côté serveur :
+  //   - si actif=false : pas de session ouverte, pas de transactions pending
+  //   - 409 si contrainte violée → message d'erreur à afficher dans l'UI
+  const { data } = await AxiosInstance.patch<Caisse>(`/caisse/${id}/`, { actif });
+  return data;
 }

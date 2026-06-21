@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   LogOut, Wallet, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle2, Loader2,
-  AlertCircle, Package, Calculator, FileText,
+  AlertCircle, FileText,
 } from 'lucide-react';
 import { CaisseSession } from '@/types/caisse';
 
@@ -24,69 +24,24 @@ const cls = (err?: string) =>
       : 'border-gray-200 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20'
   }`;
 
-// ─── Checkbox ────────────────────────────────────────────────────
-
-function CheckItem({
-  label, description, checked, onChange, error,
-}: {
-  label: string; description: string;
-  checked: boolean; onChange: (v: boolean) => void;
-  error?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
-        checked
-          ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
-          : error
-          ? 'border-red-300 bg-red-50'
-          : 'border-gray-200 bg-[#F9F9F6] hover:border-gray-300'
-      }`}
-    >
-      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-        checked ? 'border-[#2E7D32] bg-[#2E7D32]' : 'border-gray-300'
-      }`}>
-        {checked && <CheckCircle2 size={12} className="text-white" />}
-      </div>
-      <div>
-        <p className={`text-sm font-semibold ${checked ? 'text-[#1B5E20]' : 'text-gray-700'}`}>
-          {label}
-        </p>
-        <p className="text-xs text-gray-400 mt-0.5">{description}</p>
-        {error && (
-          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-            <AlertCircle size={10} />{error}
-          </p>
-        )}
-      </div>
-    </button>
-  );
-}
-
 // ─── Props ────────────────────────────────────────────────────────
 
 interface Props {
   session:   CaisseSession;
   onClose:   () => void;
   onConfirm: (payload: {
-    montant_fermeture:        number;
-    note_fermeture?:          string;
-    remise_effectuee:         boolean;
-    reconciliation_effectuee: boolean;
+    montant_fermeture: number;
+    note_fermeture?:   string;
   }) => Promise<void>;
 }
 
 // ─── Composant ───────────────────────────────────────────────────
 
 export default function CloseSessionModal({ session, onClose, onConfirm }: Props) {
-  const [montant,           setMontant]          = useState('');
-  const [note,              setNote]             = useState('');
-  const [remise,            setRemise]           = useState(false);
-  const [reconciliation,    setReconciliation]   = useState(false);
-  const [errors,            setErrors]           = useState<Record<string, string>>({});
-  const [loading,           setLoading]          = useState(false);
+  const [montant, setMontant] = useState('');
+  const [note,    setNote]    = useState('');
+  const [errors,  setErrors]  = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   const devise = session.devise ?? 'HTG';
 
@@ -107,12 +62,6 @@ export default function CloseSessionModal({ session, onClose, onConfirm }: Props
     if (hasEcart && !note.trim())
       e.note = 'Une note est requise en cas d\'écart';
 
-    if (!remise)
-      e.remise = 'Confirmez que la remise a été effectuée';
-
-    if (!reconciliation)
-      e.reconciliation = 'Confirmez que la réconciliation a été effectuée';
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -122,10 +71,8 @@ export default function CloseSessionModal({ session, onClose, onConfirm }: Props
     setLoading(true);
     try {
       await onConfirm({
-        montant_fermeture:        parseFloat(montant),
-        note_fermeture:           note.trim() || undefined,
-        remise_effectuee:         remise,
-        reconciliation_effectuee: reconciliation,
+        montant_fermeture: parseFloat(montant),
+        note_fermeture:    note.trim() || undefined,
       });
     } finally {
       setLoading(false);
@@ -224,27 +171,6 @@ export default function CloseSessionModal({ session, onClose, onConfirm }: Props
             <AlertCircle size={11} />{errors.note}
           </p>
         )}
-      </div>
-
-      {/* ── Checklist fin de journée ── */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-          Checklist de clôture *
-        </p>
-        <CheckItem
-          label="Remise effectuée"
-          description="Le cash a été remis au responsable trésorerie"
-          checked={remise}
-          onChange={v => { setRemise(v); setErrors(e => ({ ...e, remise: '' })); }}
-          error={errors.remise}
-        />
-        <CheckItem
-          label="Réconciliation effectuée"
-          description="Les transactions ont été vérifiées et balancées"
-          checked={reconciliation}
-          onChange={v => { setReconciliation(v); setErrors(e => ({ ...e, reconciliation: '' })); }}
-          error={errors.reconciliation}
-        />
       </div>
 
       {/* ── Actions ── */}

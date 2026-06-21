@@ -7,7 +7,7 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import {
-  Clock, Archive, ShieldAlert, Check, X, AlertTriangle,
+  Clock, Archive, ShieldAlert, Check, X, AlertTriangle, Inbox,
   ChevronDown, ChevronUp, ChevronsUpDown, FileDown,
 } from 'lucide-react';
 import AnomalieModal from './AnomalieModal';
@@ -256,6 +256,33 @@ const AuditStep: React.FC<{ label: string }> = ({ label }) => (
 const headerBase =
   'bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600';
 
+// ─── État vide pending — deux variantes selon le contexte ─────────────────────
+// Distinction importante :
+//  - "rien à faire" : aucune remise n'a jamais existé aujourd'hui (aucune session
+//    ouverte/fermée) → pas de check vert, ce serait mensonger.
+//  - "tout traité" : il y a eu des remises et elles ont toutes été décidées
+//    → check vert légitime, et la réconciliation peut démarrer.
+const EmptyPendingState: React.FC<{ hasArchived: boolean }> = ({ hasArchived }) => {
+  if (hasArchived) {
+    return (
+      <div className="py-14 text-center text-sm text-gray-400">
+        <Check className="w-8 h-8 mx-auto mb-2 text-[#2E7D32]" />
+        Toutes les remises ont été traitées
+      </div>
+    );
+  }
+  return (
+    <div className="py-14 text-center text-sm text-gray-400">
+      <Inbox className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+      <p className="text-gray-500 font-medium">Aucune remise pour le moment</p>
+      <p className="text-xs text-gray-400 mt-1">
+        Aucune session n&apos;a encore été clôturée aujourd&apos;hui.
+        Les remises apparaîtront ici dès qu&apos;une caissière fermera sa session.
+      </p>
+    </div>
+  );
+};
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 const RemisesTable: React.FC = () => {
   const [tab,      setTab]      = useState<'pending' | 'archived'>('pending');
@@ -412,12 +439,9 @@ const RemisesTable: React.FC = () => {
         {/* ── Lignes ── */}
         <div className="divide-y divide-gray-50">
 
-          {/* Vide pending */}
+          {/* Vide pending — distingue "rien à faire" vs "tout traité" */}
           {tab === 'pending' && pending.length === 0 && (
-            <div className="py-14 text-center text-sm text-gray-400">
-              <Check className="w-8 h-8 mx-auto mb-2 text-[#2E7D32]" />
-              Toutes les remises ont été traitées
-            </div>
+            <EmptyPendingState hasArchived={archived.length > 0} />
           )}
 
           {/* ── En attente ── */}
@@ -482,6 +506,16 @@ const RemisesTable: React.FC = () => {
           ))}
 
           {/* ── Archive ── */}
+          {tab === 'archived' && archived.length === 0 && (
+            <div className="py-14 text-center text-sm text-gray-400">
+              <Inbox className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-gray-500 font-medium">Aucune remise archivée</p>
+              <p className="text-xs text-gray-400 mt-1">
+                L&apos;historique apparaîtra ici une fois des remises traitées.
+              </p>
+            </div>
+          )}
+
           {tab === 'archived' && sortedArchived.map(r => {
             const isOpen = expandedId === r.id;
             return (

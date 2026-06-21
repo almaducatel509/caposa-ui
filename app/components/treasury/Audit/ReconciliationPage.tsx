@@ -1,361 +1,257 @@
-
 // ─── Source de vérité unique ──────────────────────────────────────────────────
-// Quand l'API est prête, remplacer cet import par un useEffect + fetch dans le composant
+// La réconciliation est une vue de santé AUTOMATIQUE et EN LECTURE SEULE.
+// Elle agrège ce qui a déjà été décidé à l'étape Remise (par session/terminal).
+// Aucune action n'est possible ici — pas d'explication d'écart, pas de
+// soumission. Le trésorier consulte, il n'agit pas.
 'use client';
-import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
 import {
-  FileCheck, Download, AlertTriangle, CheckCircle2,
-  Lock, Clock, StickyNote,
+  Inbox, TrendingUp, TrendingDown, Minus, Check, X, AlertCircle,
 } from 'lucide-react';
-import { useEffect } from 'react';
 import AxiosInstance from '@/app/lib/axiosInstance';
-import { ReconciliationReport, Ecart } from '@/types/reconciliation.types';
+import { AxiosError } from 'axios';
+import { ReconciliationReport } from '@/types/reconciliation.types';
 import PageHeader from '../../header';
-import EcartModal from './EcartModal';
 import { Skeleton } from '../../ui/skeleton';
 import { TableSkeleton } from '../../ui/TableSkeleton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
-  new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(Math.abs(n)) + ' HTG';
+  new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(Math.abs(n)) + ' G';
+
+const fmtSigned = (n: number) => {
+  if (n === 0) return '—';
+  return (n > 0 ? '+' : '−') + fmt(n);
+};
+
+// ─── Micro-composants (mêmes codes visuels que RemisesTable) ──────────────────
+const Avatar: React.FC<{ initials: string }> = ({ initials }) => (
+  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 bg-[#DDEAD5] text-[#1B5E20]">
+    {initials}
+  </div>
+);
+
+const headerBase =
+  'bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600';
+
+// ─── État vide — cohérent avec celui de RemisesTable ──────────────────────────
+const NoHandoversYet: React.FC = () => (
+  <div className="py-14 text-center text-sm text-gray-400">
+    <Inbox className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+    <p className="text-gray-500 font-medium">Aucune remise à réconcilier</p>
+    <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto">
+      Aucune session n&apos;a encore été clôturée et remise aujourd&apos;hui.
+      La réconciliation se construit automatiquement dès qu&apos;une remise est traitée.
+    </p>
+  </div>
+);
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 const ReconciliationPage: React.FC = () => {
-  const router = useRouter();
-
-  const [report,     setReport]     = useState<ReconciliationReport | null>(null);
-  const [ecartTarget, setEcartTarget] = useState<Ecart | null>(null);
-  const [globalNote,  setGlobalNote]  = useState('');
-  const [submitting,  setSubmitting]  = useState(false);
-  const [submitted,   setSubmitted]   = useState(false);
-  const [rapportId,   setRapportId]   = useState<string | null>(null);
-  const [error,       setError]       = useState<string | null>(null);
+  const [report,  setReport]  = useState<ReconciliationReport | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
         const { data: branches } = await AxiosInstance.get('/branches/');
         const branchId = branches[0]?.id;
-        if (!branchId) return;
+        if (!branchId) { setLoading(false); return; }
 
-        const { data: recData } = await AxiosInstance.get(`/treasury/reconciliation/?branch=${branchId}`);
-        setReport(recData);
+        const { data } = await AxiosInstance.get(`/treasury/reconciliation/?branch=${branchId}`);
+        setReport(data);
       } catch (e) {
-        console.error('Erreur chargement réconciliation:', e);
-        setError('Impossible de charger les données de réconciliation.');
+        const err = e as AxiosError<{ detail?: string }>;
+        if (err.response?.status === 404) {
+          // Pas de rapport pour cette branche/date = état normal, pas une erreur
+          setReport(null);
+        } else {
+          console.error('Erreur chargement réconciliation:', err);
+          const detail = err.response?.data?.detail;
+          setError(
+            detail
+              ? `${detail} (HTTP ${err.response?.status})`
+              : err.response
+                ? `Erreur serveur (HTTP ${err.response.status}). Vérifiez les logs backend.`
+                : 'Impossible de joindre le serveur. Le backend tourne-t-il ?'
+          );
+        }
+      } finally {
+        setLoading(false);
       }
     }
     loadData();
   }, []);
 
-  // Tous les écarts expliqués ?
-  const allEcarts = useMemo(() =>
-    report ? report.sessions.flatMap(s => s.ecarts) : [], [report]);
-
-  const pending   = useMemo(() => allEcarts.filter(e => e.statut === 'en_attente'),  [allEcarts]);
-  const explained = useMemo(() => allEcarts.filter(e => e.statut === 'explique'),    [allEcarts]);
-  const canSubmit = pending.length === 0;
-
-  const handleExplainConfirm = async (ecartId: string, note: string) => {
-    // TODO API : await fetch(`/api/treasury/reconciliation/ecart/${ecartId}/explain`, {
-    //   method: 'POST', body: JSON.stringify({ note }),
-    // });
-    setReport(prev => prev ? ({
-      ...prev,
-      sessions: prev.sessions.map(s => ({
-        ...s,
-        ecarts: s.ecarts.map(e =>
-          e.id === ecartId ? { ...e, statut: 'explique' as const, note } : e
-        ),
-      })),
-    }) : null);
-    setEcartTarget(null);
-  };
-
-  // ── Soumettre ─────────────────────────────────────────────────────────────
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    // TODO API :
-    //   const { rapport_id } = await fetch('/api/treasury/reconciliation/submit', {
-    //     method: 'POST', body: JSON.stringify({ note: globalNote }),
-    //   }).then(r => r.json());
-    //   setRapportId(rapport_id);
-    await new Promise(r => setTimeout(r, 800));
-    setRapportId('RPT-20260529-br-pap'); // mock
-    setSubmitted(true);
-    setSubmitting(false);
-  };
-
-  // ── Vue soumise ───────────────────────────────────────────────────────────
-  if (error) {
-    return <div className="p-8 text-red-500">{error}</div>;
-  }
-  
-  if (!report) {
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (loading) {
     return (
       <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
-        {/* Header Skeleton */}
-        <div className="flex justify-between items-center">
-          <div>
-            <Skeleton className="h-8 w-64 mb-2" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-          <Skeleton className="h-10 w-32 rounded-xl" />
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-48" />
         </div>
-        
-        {/* Banner Skeleton */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <Skeleton className="h-6 w-48 mb-6" />
-          <div className="grid grid-cols-3 gap-6">
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
+            ))}
           </div>
         </div>
-
-        {/* Sessions Skeletons */}
-        <div className="space-y-6">
-          <Skeleton className="h-6 w-32" />
-          <TableSkeleton columns={5} rows={3} />
-          <TableSkeleton columns={5} rows={2} />
-        </div>
+        <TableSkeleton columns={6} rows={4} />
       </div>
     );
   }
 
-  if (submitted) {
+  // ── Erreur technique réelle ─────────────────────────────────────────────
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-6 p-8 min-h-[60vh]">
-        <div className="w-16 h-16 rounded-full bg-[#DDEAD5] flex items-center justify-center">
-          <CheckCircle2 className="w-9 h-9 text-[#2E7D32]" />
+      <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+        <PageHeader title="Réconciliation" subtitle="Vue de santé de la succursale" />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="py-14 text-center text-sm text-gray-400">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <p className="text-gray-500 font-medium">Réconciliation temporairement indisponible</p>
+            <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto">
+              Un problème technique empêche le chargement des données pour le moment.
+              Réessayez dans quelques instants, ou contactez le support si le problème persiste.
+            </p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-[11px] text-gray-300 mt-3 font-mono">{error}</p>
+            )}
+          </div>
         </div>
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Réconciliation soumise</h2>
-          <p className="text-sm text-gray-500">
-            Le rapport du {report.date} a été généré et transmis à la section Rapports.
-          </p>
-        </div>
-        <button
-          onClick={() => router.push(
-            `/dashboard/rapports?type=reconciliation${rapportId ? `&id=${rapportId}` : ''}`
-          )}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2E7D32] text-white text-sm font-semibold hover:bg-[#1B5E20] transition-colors"
-        >
-          <FileCheck className="w-4 h-4" />
-          Voir le rapport
-        </button>
-        <button
-          onClick={() => router.push('/dashboard/treasury')}
-          className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-100 transition-colors"
-        >
-          Fermer
-        </button>
-
       </div>
     );
   }
 
-  const ecartTotal = report.ecart_total;
-  const ecartColor = ecartTotal < 0 ? 'text-red-600' : ecartTotal > 0 ? 'text-amber-600' : 'text-[#1B5E20]';
+  // ── Aucune donnée — état normal, vraie page stylée ──────────────────────
+  if (!report || report.sessions.length === 0) {
+    return (
+      <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+        <PageHeader title="Réconciliation" subtitle="Vue de santé de la succursale" />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <NoHandoversYet />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Données présentes ────────────────────────────────────────────────────
+  const ecartColor =
+    report.ecart_total < 0 ? 'text-red-600'
+    : report.ecart_total > 0 ? 'text-amber-600'
+    : 'text-[#1B5E20]';
+
+  const EcartIcon =
+    report.ecart_total < 0 ? TrendingDown
+    : report.ecart_total > 0 ? TrendingUp
+    : Minus;
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
 
       {/* ── Header ── */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <PageHeader
-          title="Réconciliation journalière"
-          subtitle={`${report.branch_name} · ${report.date}`}
-        />
-        <div>
-          {canSubmit ? (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20]">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Prêt à soumettre
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              {pending.length} écart{pending.length > 1 ? 's' : ''} en attente
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* ── Banner consolidé ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
-          {[
-            { label: 'Cash ouverture',   value: fmt(report.total_ouverture),  sub: 'Fonds de départ',             color: 'text-gray-800' },
-            { label: 'Cash théorique',   value: fmt(report.total_theorique),  sub: 'Selon transactions système',  color: 'text-gray-800' },
-            { label: 'Cash réel compté', value: fmt(report.total_reel),       sub: 'Comptage physique total',     color: 'text-gray-800' },
-            {
-              label: 'Écart total',
-              value: ecartTotal === 0 ? '—' : (ecartTotal < 0 ? '−' : '+') + fmt(ecartTotal),
-              sub:   ecartTotal === 0 ? 'Aucun écart' : ecartTotal < 0 ? 'Manque' : 'Excédent',
-              color: ecartColor,
-            },
-          ].map(c => (
-            <div key={c.label} className="px-6 py-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{c.label}</p>
-              <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
-              <p className="text-xs text-gray-400 mt-1">{c.sub}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Tableau des écarts ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-
-        {/* En-tête avec compteurs */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900">Tableau des écarts</h3>
-          <div className="flex items-center gap-2">
-            {pending.length > 0 && (
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                <Clock className="w-3 h-3" /> {pending.length} en attente
-              </span>
-            )}
-            {explained.length > 0 && (
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                <CheckCircle2 className="w-3 h-3" /> {explained.length} expliqué{explained.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Colonnes */}
-        <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3">
-          <div className="grid grid-cols-[2fr_90px_90px_90px_110px_120px] gap-3 text-xs font-semibold uppercase tracking-wide text-gray-600">
-            <span>Source</span>
-            <span>Attendu</span>
-            <span>Réel</span>
-            <span>Écart</span>
-            <span>Statut</span>
-            <span>Action</span>
-          </div>
-        </div>
-
-        {/* Lignes écarts */}
-        <div className="divide-y divide-gray-50">
-          {allEcarts.length === 0 && (
-            <div className="py-12 text-center text-sm text-gray-400">
-              <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#2E7D32]" />
-              Aucun écart détecté — journée équilibrée
-            </div>
-          )}
-
-          {allEcarts.map(e => (
-            <div
-              key={e.id}
-              className="grid grid-cols-[2fr_90px_90px_90px_110px_120px] gap-3 items-center px-5 py-3.5 hover:bg-[#FAFAF6] transition-colors"
-            >
-              {/* Source */}
-              <div>
-                <p className="text-sm font-medium text-gray-800">{e.label}</p>
-                {e.note && (
-                  <p className="text-xs text-blue-600 mt-0.5 italic leading-snug">{e.note}</p>
-                )}
-              </div>
-
-              {/* Attendu */}
-              <p className="text-sm text-gray-600">{fmt(e.attendu)}</p>
-
-              {/* Réel */}
-              <p className="text-sm text-gray-600">{fmt(e.reel)}</p>
-
-              {/* Écart */}
-              <p className={`text-sm font-bold ${e.ecart < 0 ? 'text-red-600' : 'text-amber-600'}`}>
-                {e.ecart < 0 ? '−' : '+'}{fmt(e.ecart)}
-              </p>
-
-              {/* Statut */}
-              {e.statut === 'en_attente' ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                  <Clock className="w-2.5 h-2.5" /> En attente
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                  <CheckCircle2 className="w-2.5 h-2.5" /> Expliqué
-                </span>
-              )}
-
-              {/* Action */}
-              {e.statut === 'en_attente' ? (
-                <button
-                  onClick={() => setEcartTarget(e)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1B5E20] border border-[#A7D1A2] hover:bg-[#DDEAD5] transition-colors"
-                >
-                  Expliquer
-                </button>
-              ) : (
-                <button
-                  onClick={() => setEcartTarget(e)}
-                  className="px-3 py-1.5 rounded-lg text-xs text-gray-400 border border-gray-200 hover:bg-gray-50 transition-colors"
-                >
-                  Modifier
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Note globale + Footer ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 space-y-4">
-
-        {/* Note globale optionnelle */}
-        <div>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">
-            <StickyNote className="w-3.5 h-3.5" />
-            Note globale (optionnelle)
-          </label>
-          <textarea
-            value={globalNote}
-            onChange={e => setGlobalNote(e.target.value)}
-            rows={2}
-            placeholder="Ex : Journée sans incident majeur. Frais BDP confirmés par relevé bancaire."
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            {canSubmit
-              ? 'Tous les écarts sont expliqués. La réconciliation peut être soumise.'
-              : `${pending.length} écart${pending.length > 1 ? 's' : ''} doit encore être expliqué.`
-            }
-          </p>
-          <div className="flex items-center gap-3">
-           
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit || submitting}
-              title={!canSubmit ? 'Expliquez tous les écarts avant de soumettre' : ''}
-              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                canSubmit
-                  ? 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              {submitting ? 'Soumission…'
-                : canSubmit
-                  ? <><FileCheck className="w-4 h-4" /> Soumettre la réconciliation</>
-                  : <><Lock className="w-4 h-4" /> Réconciliation bloquée</>
-              }
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Modale écart */}
-      <EcartModal
-        ecart={ecartTarget}
-        onClose={() => setEcartTarget(null)}
-        onConfirm={handleExplainConfirm}
+      <PageHeader
+        title="Réconciliation"
+        subtitle={`${report.branch_name} · ${report.date}`}
       />
+
+      {/* ── Banner consolidé — même style que TreasuryOverview ── */}
+      <div className="bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] rounded-2xl p-6 md:p-8 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:divide-x md:divide-white/15">
+          <div className="md:pr-6">
+            <p className="text-white/70 text-xs font-medium uppercase tracking-widest mb-2">
+              Ouverture de la branche
+            </p>
+            <p className="text-3xl font-bold text-white">{fmt(report.total_ouverture)}</p>
+            <p className="text-white/60 text-xs mt-2">Total distribué aux terminaux ce matin</p>
+          </div>
+          <div className="md:px-6">
+            <p className="text-white/70 text-xs font-medium uppercase tracking-widest mb-2">
+              Fermeture de la branche
+            </p>
+            <p className="text-3xl font-bold text-white">{fmt(report.total_fermeture)}</p>
+            <p className="text-white/60 text-xs mt-2">Total remis par tous les terminaux</p>
+          </div>
+          <div className="md:pl-6">
+            <p className="text-white/70 text-xs font-medium uppercase tracking-widest mb-2">
+              Écart total
+            </p>
+            <p className="text-3xl font-bold text-white flex items-center gap-2">
+              <EcartIcon className="w-6 h-6" />
+              {fmtSigned(report.ecart_total)}
+            </p>
+            <p className="text-white/60 text-xs mt-2">
+              Théorique {fmt(report.total_theorique)} · déjà tranché en remise
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tableau par terminal — lecture seule ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">Détail par terminal</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Lecture seule — chaque écart a déjà été traité à l&apos;étape remise
+          </p>
+        </div>
+
+        <div className={`${headerBase} grid grid-cols-[1.6fr_110px_110px_110px_110px_120px] gap-3`}>
+          <span>Caissière</span>
+          <span>Ouverture</span>
+          <span>Théorique</span>
+          <span>Fermeture</span>
+          <span>Écart</span>
+          <span>Décision</span>
+        </div>
+
+        <div className="divide-y divide-gray-50">
+          {report.sessions.map(s => (
+            <div
+              key={s.session_id}
+              className="grid grid-cols-[1.6fr_110px_110px_110px_110px_120px] gap-3 items-center px-5 py-3.5 hover:bg-[#FAFAF6] transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <Avatar initials={s.cashier_initials} />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">{s.cashier_name}</p>
+                  <p className="text-xs text-gray-400">{s.session_id}</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">{fmt(s.cash_ouverture)}</p>
+              <p className="text-sm text-gray-600">{fmt(s.cash_theorique)}</p>
+              <p className="text-sm font-semibold text-gray-800">{fmt(s.cash_fermeture)}</p>
+              <p className={`text-sm font-bold ${
+                s.ecart === 0 ? 'text-gray-400' : s.ecart < 0 ? 'text-red-600' : 'text-amber-600'
+              }`}>
+                {fmtSigned(s.ecart)}
+              </p>
+              {s.decision === 'approved' ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20] w-fit">
+                  <Check className="w-3 h-3" /> Approuvé
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 w-fit">
+                  <X className="w-3 h-3" /> Rejeté
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Totaux en pied de tableau */}
+        <div className="grid grid-cols-[1.6fr_110px_110px_110px_110px_120px] gap-3 items-center px-5 py-3.5 bg-[#F5F9F3] border-t border-[#DDEAD5]">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Total branche</p>
+          <p className="text-sm font-bold text-gray-800">{fmt(report.total_ouverture)}</p>
+          <p className="text-sm font-bold text-gray-800">{fmt(report.total_theorique)}</p>
+          <p className="text-sm font-bold text-gray-800">{fmt(report.total_fermeture)}</p>
+          <p className={`text-sm font-bold ${ecartColor}`}>{fmtSigned(report.ecart_total)}</p>
+          <span />
+        </div>
+      </div>
     </div>
   );
 };

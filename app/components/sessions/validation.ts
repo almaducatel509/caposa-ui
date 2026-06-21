@@ -32,12 +32,6 @@ export const CaisseSchema = z.object({
     .string()
     .uuid('Agence invalide'),
 
-  devise: z
-    .enum(['HTG', 'USD'], {
-      errorMap: () => ({ message: 'Devise invalide (HTG ou USD)' }),
-    })
-    .default('HTG'),
-
   solde_initial: z
     .number({ invalid_type_error: 'Doit être un nombre' })
     .min(0, 'Le solde ne peut pas être négatif'),
@@ -66,9 +60,6 @@ export const OpenSessionSchema = z.object({
     .string()
     .uuid('Agence invalide — sélectionnez une agence'),
 
-  devise: z.enum(['HTG', 'USD'], {
-    errorMap: () => ({ message: 'Sélectionnez une devise' }),
-  }),
 
   // Autorisation
   superviseur: z

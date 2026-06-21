@@ -4,38 +4,28 @@
    BACKEND NOTES — à lire avant de modifier ce fichier
    ─────────────────────────────────────────────────────────────────────────────
 
-   Champs envoyés à l'API (voir toMemberApiFormData dans validations.ts) :
-     - first_name, last_name, gender, date_of_birthday
-     - id_type, id_number
-     - phone_number, email
-     - department (nom humain, pas le code), city, address
-     - income_source, monthly_income
-     - account_type, devise, initial_balance
-     - beneficiary_name, beneficiary_relation, beneficiary_phone
-     - photo_profil (File, si includePhoto=true)
+   Champs envoyés à POST /members/ :
+     first_name, last_name, gender, date_of_birthday
+     id_type, id_number
+     id_expiry_date   → si id_type = passeport | permis
+     id_description   → si id_type = autre
+     phone_number, email
+     department (nom humain via codeToName()), city, address
+     income_source, monthly_income
+     photo_profil (File)
 
-   Champs NON envoyés à l'API (UI only) :
-     - department_code  → converti en department (nom) avant envoi via codeToName()
-     - consent          → validation UI uniquement, pas persisté en base
-     - address          → dérivé automatiquement de street + city dans le useEffect
 
-   FUTURE CANDIDATES (à ajouter quand le backend supporte) :
-     - monthly_income   → pas encore dans le serializer Django, ignoré silencieusement
-     - beneficiary_*    → idem, à ajouter dans MemberSerializer.fields
-     - id_type          → à ajouter dans le modèle Member Django
-     - devise           → déjà dans CaisseSession, à relier au compte membre
+   Champs UI only (non envoyés) :
+     department_code  → converti en department avant envoi
+     consent          → validation UI uniquement
+     address          → composé automatiquement de street + city
 
-   REMINDER : l'API attend department NAME (pas le code).
-     toMemberApiPayload() mappe department_code → department via codeToName().
-
-   account_number est GÉNÉRÉ côté backend — ne pas l'exposer dans ce formulaire.
-   membership_tier est CALCULÉ côté backend (basé sur initial_balance ou ancienneté).
-   status est géré via les actions groupées, pas ici.
-   total_amount est READ-ONLY (calculé par le backend via annotate).
+   Champs générés côté backend (ne pas exposer ici) :
+     account_number, membership_tier, status, total_amount
 ────────────────────────────────────────────────────────────────────────────── */
 
-import React, { useEffect, useState, useRef } from 'react';
-import { User, Phone, MapPin, Banknote, Users, ShieldCheck, Camera, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { User, Phone, Banknote, Users, ShieldCheck } from 'lucide-react';
 import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
 import type { DepartmentCode } from '@/app/data/haitiLocations';
 import type { MemberUiForm, FieldErrors } from './validations';
@@ -111,8 +101,8 @@ function ProgressBar({ form }: { form: MemberUiForm }) {
   const fields = [
     form.first_name, form.last_name, form.gender, form.date_of_birthday,
     form.id_type, form.id_number, form.phone_number, form.department_code,
-    form.city, form.address, form.income_source, form.account_type,
-    form.devise, form.consent,
+    form.city, form.address, form.income_source,
+    form.consent,
   ];
   const filled = fields.filter(v => v !== '' && v !== undefined && v !== null).length;
   const pct    = Math.round((filled / fields.length) * 100);
@@ -120,8 +110,12 @@ function ProgressBar({ form }: { form: MemberUiForm }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 px-5 py-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Complétion du formulaire</span>
-        <span className={`text-sm font-bold ${pct === 100 ? 'text-[#2E7D32]' : 'text-gray-700'}`}>{pct}%</span>
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Complétion du formulaire
+        </span>
+        <span className={`text-sm font-bold ${pct === 100 ? 'text-[#2E7D32]' : 'text-gray-700'}`}>
+          {pct}%
+        </span>
       </div>
       <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div
@@ -144,7 +138,6 @@ const MemberFormFields: React.FC<{
 }> = ({ formData, setFormData, errors, setErrors, isEditMode = false }) => {
 
   const [street, setStreet] = useState('');
-  // const photoRef = useRef<HTMLInputElement>(null);
 
   const clear = (key: keyof MemberUiForm) => {
     if (!setErrors) return;
@@ -165,6 +158,21 @@ const MemberFormFields: React.FC<{
     }
   }, [isEditMode]);
 
+  // Reset champs conditionnels quand id_type change
+  const handleIdTypeChange = (newType: MemberUiForm['id_type']) => {
+    setFormData({
+      id_type:        newType,
+      id_expiry_date: undefined,
+      id_description: undefined,
+    });
+    clear('id_type');
+    clear('id_expiry_date');
+    clear('id_description');
+  };
+
+  const needsExpiry = formData.id_type === 'passeport' || formData.id_type === 'permis';
+  const needsDesc   = formData.id_type === 'autre';
+
   return (
     <div className="space-y-4">
 
@@ -173,7 +181,7 @@ const MemberFormFields: React.FC<{
       {/* ── 1. Identité ── */}
       <Section number={1} icon={User} title="Identité">
 
-      {/* Photo */}
+        {/* Photo */}
         <div className="space-y-1">
           <PhotoSelector
             value={typeof formData.photo_profil === 'string' ? formData.photo_profil : null}
@@ -182,6 +190,7 @@ const MemberFormFields: React.FC<{
           />
           {errors.photo_profil && <p className="text-xs text-red-500">{errors.photo_profil}</p>}
         </div>
+
         <Field label="Prénom" required error={errors.first_name}>
           <Input
             value={formData.first_name}
@@ -220,10 +229,11 @@ const MemberFormFields: React.FC<{
           />
         </Field>
 
+        {/* Type de pièce — déclenche les champs conditionnels */}
         <Field label="Type de pièce d'identité" required error={errors.id_type}>
           <Select
-            value={formData.id_type}
-            onChange={e => { setFormData({ id_type: e.target.value as any }); clear('id_type'); }}
+            value={formData.id_type ?? ''}
+            onChange={e => handleIdTypeChange(e.target.value as MemberUiForm['id_type'])}
             error={errors.id_type}
           >
             <option value="" disabled>— Sélectionner —</option>
@@ -234,15 +244,45 @@ const MemberFormFields: React.FC<{
           </Select>
         </Field>
 
+        {/* Numéro — toujours présent */}
         <Field label="Numéro de pièce" required error={errors.id_number}>
           <Input
             value={formData.id_number}
             onChange={e => { setFormData({ id_number: e.target.value }); clear('id_number'); }}
-            placeholder="Ex: 001-234-567-8"
+            placeholder={
+              formData.id_type === 'cin'       ? 'Ex: 001-234-567-8' :
+              formData.id_type === 'passeport' ? 'Ex: A12345678'     :
+              formData.id_type === 'permis'    ? 'Ex: PL-001234'     :
+              'Numéro de pièce'
+            }
             disabled={isEditMode}
             error={errors.id_number}
           />
         </Field>
+
+        {/* Date d'expiration — passeport ou permis seulement */}
+        {needsExpiry && (
+          <Field label="Date d'expiration" required error={errors.id_expiry_date}>
+            <Input
+              type="date"
+              value={formData.id_expiry_date ?? ''}
+              onChange={e => { setFormData({ id_expiry_date: e.target.value }); clear('id_expiry_date'); }}
+              error={errors.id_expiry_date}
+            />
+          </Field>
+        )}
+
+        {/* Description — autre seulement */}
+        {needsDesc && (
+          <Field label="Préciser le type de pièce" required error={errors.id_description}>
+            <Input
+              value={formData.id_description ?? ''}
+              onChange={e => { setFormData({ id_description: e.target.value }); clear('id_description'); }}
+              placeholder="Ex: Acte de naissance, carte consulaire…"
+              error={errors.id_description}
+            />
+          </Field>
+        )}
 
       </Section>
 
@@ -349,101 +389,6 @@ const MemberFormFields: React.FC<{
 
       </Section>
 
-      {/* ── 4. Compte à ouvrir ── */}
-      {/* BACKEND: account_type et devise sont envoyés à l'API.
-          account_number est GÉNÉRÉ côté backend — ne pas l'exposer ici.
-          initial_balance → utilisé pour créer le premier dépôt côté Django.
-          Si le backend ne supporte pas encore devise, il sera ignoré silencieusement. */}
-      <Section number={4} icon={Banknote} title="Compte à ouvrir">
-
-        <Field label="Type de compte" required error={errors.account_type}>
-          <Select
-            value={formData.account_type}
-            onChange={e => { setFormData({ account_type: e.target.value as any }); clear('account_type'); }}
-            error={errors.account_type}
-            disabled={isEditMode}
-          >
-            <option value="savings">Épargne</option>
-            <option value="checking">Courant</option>
-          </Select>
-        </Field>
-
-        <Field label="Devise" required error={errors.devise}>
-          <Select
-            value={formData.devise}
-            onChange={e => { setFormData({ devise: e.target.value as any }); clear('devise'); }}
-            error={errors.devise}
-            disabled={isEditMode}
-          >
-            <option value="HTG">HTG — Gourde haïtienne</option>
-            <option value="USD">USD — Dollar américain</option>
-          </Select>
-        </Field>
-
-        <Field label="Solde initial" error={errors.initial_balance}>
-          <Input
-            type="number"
-            min="0"
-            value={formData.initial_balance ?? ''}
-            onChange={e => {
-              setFormData({ initial_balance: e.target.value ? Number(e.target.value) : undefined });
-              clear('initial_balance');
-            }}
-            placeholder="0.00"
-            disabled={isEditMode}
-            error={errors.initial_balance}
-          />
-        </Field>
-
-      </Section>
-
-      {/* ── 5. Bénéficiaire désigné ── */}
-      <Section number={5} icon={Users} title="Bénéficiaire désigné">
-
-        <div className="md:col-span-2 -mt-1 mb-1">
-          <p className="text-xs text-gray-400">
-            Personne à contacter ou à qui reviennent les fonds en cas de décès du membre.
-          </p>
-          {/* BACKEND: beneficiary_name, beneficiary_relation, beneficiary_phone
-              À ajouter dans MemberSerializer.fields et Member model Django.
-              Actuellement envoyés mais ignorés si le serializer ne les inclut pas. */}
-        </div>
-
-        <Field label="Nom complet du bénéficiaire" error={errors.beneficiary_name} full>
-          <Input
-            value={formData.beneficiary_name ?? ''}
-            onChange={e => { setFormData({ beneficiary_name: e.target.value }); clear('beneficiary_name'); }}
-            placeholder="Ex: Marie Dupont"
-            error={errors.beneficiary_name}
-          />
-        </Field>
-
-        <Field label="Lien de parenté" error={errors.beneficiary_relation}>
-          <Select
-            value={formData.beneficiary_relation ?? ''}
-            onChange={e => { setFormData({ beneficiary_relation: e.target.value as any }); clear('beneficiary_relation'); }}
-            error={errors.beneficiary_relation}
-          >
-            <option value="" disabled>— Sélectionner —</option>
-            <option value="conjoint">Conjoint(e)</option>
-            <option value="enfant">Enfant</option>
-            <option value="parent">Parent</option>
-            <option value="frere_soeur">Frère / Sœur</option>
-            <option value="autre">Autre</option>
-          </Select>
-        </Field>
-
-        <Field label="Téléphone du bénéficiaire" error={errors.beneficiary_phone}>
-          <Input
-            type="tel"
-            value={formData.beneficiary_phone ?? ''}
-            onChange={e => { setFormData({ beneficiary_phone: e.target.value.replace(/\D/g, '') }); clear('beneficiary_phone'); }}
-            placeholder="Ex: 50912345678"
-            error={errors.beneficiary_phone}
-          />
-        </Field>
-
-      </Section>
       {/* ── 6. Consentement ── */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex items-start gap-3 mb-4">
@@ -456,7 +401,6 @@ const MemberFormFields: React.FC<{
           </div>
         </div>
 
-        {/* Checkbox consentement */}
         <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
           formData.consent
             ? 'bg-[#DDEAD5]/50 border-[#2E7D32]/30'
@@ -481,7 +425,6 @@ const MemberFormFields: React.FC<{
         </label>
         {errors.consent && <p className="text-xs text-red-500 mt-2">{errors.consent}</p>}
 
-        {/* Signature — EN DEHORS du label */}
         <SignatureField
           value={formData.signature ?? ''}
           onChange={(val) => setFormData({ signature: val })}

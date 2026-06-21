@@ -1,8 +1,9 @@
 // src/app/dashboard/sessions/utils/sessionEligibility.ts
 
-import type { OpeningHour, Holiday } from "@/types/branche";
+import type { OpeningHour } from "@/types/branche";
 import { isBranchActive } from "./branchStatus";
 import { BranchData } from "../components/branches/validations";
+import { Holiday } from "../components/holidays/validations";
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 

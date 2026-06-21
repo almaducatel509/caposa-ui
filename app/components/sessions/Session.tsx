@@ -5,7 +5,7 @@ import {
   Banknote, Loader2, RefreshCw, Plus,
   AlertTriangle,
 } from 'lucide-react';
-import { CaisseSession, OpenSessionPayload } from '@/types/caisse';
+import { Caisse, CaisseSession, OpenSessionPayload } from '@/types/caisse';
 import AxiosInstance from '@/app/lib/axiosInstance';
 import { SessionManager } from '@/app/lib/api/Sessionmanager';
 import { Modal } from '@/app/components/ui/Modal';
@@ -28,6 +28,7 @@ import { OpeningHour } from '@/types/branche';
 import { ExportAllButton } from '@/app/ExportAllButton';
 import DifferedDepositModal from '../transactions/deposits/Differeddepositmodal';
 import { useSession } from 'next-auth/react';
+import { fetchCaisses } from '@/app/lib/api/caisse';
 
 // ═══════════════════════════════════════════════════════════════
 // MOCK_SESSIONS — données réalistes pour développement UI
@@ -66,6 +67,7 @@ interface SessionModalWrapperProps {
   branches:     BranchData[];
   openingHours: OpeningHour[];
   holidays:     Holiday[];
+  caisses: Caisse[];
 }
 
 function SessionModalWrapper({
@@ -74,6 +76,7 @@ function SessionModalWrapper({
   branches,
   openingHours,
   holidays,
+  caisses,
 }: SessionModalWrapperProps) {
 
   const handleConfirm = async (payload: OpenSessionPayload) => {
@@ -111,8 +114,7 @@ function SessionModalWrapper({
           branches={branches}
           openingHours={openingHours}
           holidays={holidays}
-          onRequireOverride={handleRequireOverride}
-        />
+          onRequireOverride={handleRequireOverride} caisses={caisses}        />
       </div>
     </Modal>
   );
@@ -127,7 +129,7 @@ export default function SessionsComponent() {
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [showOpen,     setShowOpen]     = useState(false);
-
+  const[caisses, setCaisses]            = useState<Caisse[]>([]);
   // Données de référence pour vérifier l'éligibilité
   const [branches,     setBranches]     = useState<BranchData[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
@@ -150,14 +152,16 @@ export default function SessionsComponent() {
   useEffect(() => {
     const loadRefData = async () => {
       try {
-        const [b, oh, hd] = await Promise.all([
+        const [b, oh, hd,ca] = await Promise.all([
           fetchBranches(),
           fetchOpeningHours(),
           fetchHolidays(),
+          fetchCaisses(),
         ]);
         setBranches(b);
         setOpeningHours(oh);
         setHolidays(hd);
+        setCaisses(ca);
       } catch (err) {
         console.error('Erreur chargement données de référence:', err);
       }
@@ -244,8 +248,7 @@ if (loading) {
           onSuccess={() => load(true)}
           branches={branches}
           openingHours={openingHours}
-          holidays={holidays}
-        />
+          holidays={holidays} caisses={caisses}        />
       )}
 
       {/* Modal fermeture */}

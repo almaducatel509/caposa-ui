@@ -5,7 +5,8 @@ export const appConfig = {
     defaultDate: '2024-01-01'
   };
   
-  export function formatDate(dateString: string) {
+  export function formatDate(dateString?: string): string {
+  if (!dateString) return '—';
   const date = new Date(dateString);
   return new Intl.DateTimeFormat(appConfig.dateFormat, {
     timeZone: appConfig.timeZone,

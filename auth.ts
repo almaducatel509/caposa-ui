@@ -97,11 +97,15 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       (session.user as any).isAdmin = token.isAdmin;
       (session.user as any).accessToken   = token.accessToken;  // new
       (session.user as any).refreshToken  = token.refreshToken; // new
-    
+    session.user.name = token.username as string;
     }
     return session;
   },
 },
 });
-
+// vérifier qu'aucun serializer custom n'ajoute des données sensibles au token.
+// # settings.py
+// SIMPLE_JWT = {
+//     'SIGNING_KEY': SECRET_KEY,  # ← doit venir de .env, jamais hardcodé
+// }
 //  C:\Users\alma2\Documents\Final Project\caposa-ui\auth.ts

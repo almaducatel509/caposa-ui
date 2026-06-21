@@ -10,7 +10,6 @@
 // Déclarés EN PREMIER — utilisés par les interfaces ci-dessous.
 
 export type CaisseStatus = 'ouverte' | 'fermée' | 'interrompue';
-export type CaisseDevise  = 'HTG' | 'USD';
 export type AlertSeverity = 'error' | 'warning' | 'info';
 
 export type TransactionType =
@@ -34,7 +33,6 @@ export interface Caisse {
   localisation:     string;
   branch:           string;        // UUID → FK vers Branch
   branch_name?:     string;        // annoté par le serializer Django
-  devise:           CaisseDevise;
   solde_initial:    number;
   solde_actuel?:    number;        // calculé par le backend (annotate ou property)
   actif:            boolean;
@@ -47,14 +45,13 @@ export interface Caisse {
 
 export interface CaisseSession {
   id: string;
-
+  devise:string;
   // ── Identité ──────────────────────────────────────────────────
   username:             string;        // FK → User.username (caissier)
   caissier_nom: string | undefined;       // nom lisible — lecture seule, retourné par l'API
   numero_caisse:        string;        // ex : C-01
   branch:               string;        // UUID agence
   branch_name?:         string;        // nom lisible — retourné par l'API
-  devise:               CaisseDevise;  // HTG | USD
 
   // ── Caisse physique (dénormalisé pour affichage) ──────────────
   nom_caisse?:          string;
@@ -142,7 +139,6 @@ export interface OpenSessionPayload {
   username:            string;     // FK User.username (caissier)
   numero_caisse:       string;
   branch:              string;     // UUID agence
-  devise:              CaisseDevise;
   superviseur:         string;
   id_responsable_cash: string;
   montant_ouverture:   number;

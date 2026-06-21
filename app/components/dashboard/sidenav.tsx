@@ -40,8 +40,8 @@ console.log("Email:", session?.user?.email);
   //   .slice(0, 2);
   const currentUser = {
       name:  session?.user?.name  ?? "Utilisateur",
-      email: session?.user?.email ?? "—",
-      role:  (session?.user as any)?.role ?? "Caissier",
+      email: session?.user?.email ?? "Email",
+      role:  (session?.user as any)?.isAdmin ? 'Administrateur' : 'Caissier',
     };
 
     const initials = currentUser.name

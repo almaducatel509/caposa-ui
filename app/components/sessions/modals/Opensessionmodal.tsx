@@ -5,11 +5,11 @@ import {
   Eye, EyeOff, Banknote, User, Hash,
   Building2, Coins,
 } from 'lucide-react';
-import { OpenSessionPayload, CaisseDevise } from '@/types/caisse';
-import { canOpenSessionNow } from '@/app/utils/sessionEligibility';
+import { OpenSessionPayload } from '@/types/caisse';
 import { BranchData,   } from '../../branches/validations';
 import { Holiday } from '../../holidays/validations';
 import { OpeningHour } from '@/types/branche';
+import { Caisse } from '@/types/caisse';
 
 // ─── Props ───────────────────────────────────────────────────────
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
   branches:          BranchData[];
   openingHours:      OpeningHour[];
   holidays:          Holiday[];
+  caisses:           Caisse[];           
   onRequireOverride: (reason: string, details: string) => void;
 }
 
@@ -60,13 +61,14 @@ export default function OpenSessionModal({
   branches,
   openingHours,
   holidays,
+  caisses,
   onRequireOverride,
 }: Props) {
   const [form, setForm] = useState({
     username:            '',
     numero_caisse:       '',
     branch:              '',
-    devise:              'HTG' as CaisseDevise,
+    devise:              'HTG' ,
     superviseur:         '',
     id_responsable_cash: '',
     montant_ouverture:   '',
@@ -81,7 +83,16 @@ export default function OpenSessionModal({
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: '' }));
   };
-
+// Dans le composant, remplace le set('numero_caisse') simple
+  const handleCaisseChange = (numeroOrId: string) => {
+    set('numero_caisse', numeroOrId);
+    const caisse = caisses.find(c => c.numero_caisse === numeroOrId);
+    if (caisse) {
+      // Auto-sélectionne la succursale si elle correspond à une branch connue
+      const matchBranch = branches.find(b => b.id === caisse.branch || b.branch_name === caisse.branch_name);
+      if (matchBranch) set('branch', String(matchBranch.id));
+    }
+  };
   // ── Validation ────────────────────────────────────────────────
 
   const validate = (): boolean => {
@@ -94,7 +105,7 @@ export default function OpenSessionModal({
       e.numero_caisse = 'Le numéro de caisse est requis';
 
     if (!form.branch.trim())
-      e.branch = "L'agence est requise";
+      e.branch = "Le succursale est requise";
 
     if (!form.superviseur.trim())
       e.superviseur = 'Le superviseur est requis';
@@ -116,44 +127,41 @@ export default function OpenSessionModal({
     // Étape 1 : validation des champs
     if (!validate()) return;
 
-    // Étape 2 : vérification de l'éligibilité de la branche
-    const branch = branches.find(b => b.id === form.branch);
-    if (!branch) {
-      setErrors({ branch: "Branche introuvable" });
-      return;
+  // ── DEBUG ────────────────────────────────────────────────────
+        console.group('🔍 OpenSession DEBUG');
+        console.log('form.branch (id sélectionné):', form.branch);
+        console.log('openingHours disponibles:', openingHours);
+        console.log('heure actuelle:', new Date().toLocaleTimeString('fr-FR'));
+        console.groupEnd();
+        // ── FIN DEBUG ────────────────────────────────────────────
+    // Étape 2 : log de contrôle — toutes les données collectées
+    const payload = {
+      username:            form.username.trim(),
+      caissier_nom:        form.username.trim(),
+      numero_caisse:       form.numero_caisse.trim(),
+      branch:              form.branch.trim(),
+      devise:              'HTG',
+      superviseur:         form.superviseur.trim(),
+      id_responsable_cash: form.id_responsable_cash.trim(),
+      montant_ouverture:   parseFloat(form.montant_ouverture),
+    };
+
+    const manquants = Object.entries(payload)
+      .filter(([_, v]) => v === '' || v === null || Number.isNaN(v))
+      .map(([k]) => k);
+
+    console.group('📋 OpenSession — Payload final');
+    console.log('Données:', payload);
+    if (manquants.length > 0) {
+      console.warn('⚠️ Champs manquants ou invalides:', manquants);
+    } else {
+      console.log('✅ Tous les champs sont présents — prêt pour POST /sessions/');
     }
+    console.groupEnd();
 
-    const branchHours    = openingHours.find(h => h.id === branch.opening_hour);
-    const branchHolidays = holidays.filter(h => branch.holidays?.includes(h.id));
-
-    if (!branchHours) {
-      setErrors({ branch: "Horaires de la branche non configurés" });
-      return;
-    }
-
-    const eligibility = canOpenSessionNow(
-      branch,
-      new Date(),
-      branchHours,
-      branchHolidays
-    );
-
-    // Cas 1 : Tout est bon → ouverture directe
-    if (eligibility.eligible) {
-      await doOpenSession();
-      return;
-    }
-
-    // Cas 2 : Hors horaires ou jour férié → demande d'approbation directeur
-    if (eligibility.requiresOverride) {
-      onRequireOverride(eligibility.reason, eligibility.details ?? '');
-      return;
-    }
-
-    // Cas 3 : Branche archivée ou non configurée → blocage total
-    setErrors({
-      branch: eligibility.details ?? "Impossible d'ouvrir une session dans cette branche",
-    });
+    // TODO BACKEND : vérification horaires déléguée au backend
+    // Django retournera 403 {"detail": "OUTSIDE_HOURS", "requires_override": true}
+    await doOpenSession();
   };
 
   // ── Ouverture effective ───────────────────────────────────────
@@ -166,7 +174,6 @@ export default function OpenSessionModal({
         caissier_nom:        form.username.trim(),
         numero_caisse:       form.numero_caisse.trim(),
         branch:              form.branch.trim(),
-        devise:              form.devise,
         superviseur:         form.superviseur.trim(),
         id_responsable_cash: form.id_responsable_cash.trim(),
         montant_ouverture:   parseFloat(form.montant_ouverture),
@@ -196,7 +203,6 @@ export default function OpenSessionModal({
       </div>
     );
   }
-
   // ── Formulaire ────────────────────────────────────────────────
 
   return (
@@ -232,18 +238,23 @@ export default function OpenSessionModal({
         <Field label="Numéro de caisse *" error={errors.numero_caisse}>
           <div className="relative">
             <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
+            <select
               value={form.numero_caisse}
-              onChange={e => set('numero_caisse', e.target.value)}
-              placeholder="C-01"
-              className={inputCls(errors.numero_caisse) + ' pl-8'}
-            />
+              onChange={e => handleCaisseChange(e.target.value)}
+              className={inputCls(errors.numero_caisse) + ' pl-8 pr-4 appearance-none cursor-pointer'}
+            >
+              <option value="">-- Sélectionnez une caisse --</option>
+              {caisses.filter(c => c.actif).map(c => (
+                <option key={c.id} value={c.numero_caisse}>
+                  {c.numero_caisse} — {c.nom_caisse} 
+                </option>
+              ))}
+            </select>
           </div>
         </Field>
 
         {/* Agence — <select> avec vraies branches */}
-        <Field label="Agence *" error={errors.branch}>
+        <Field label="Succursale *" error={errors.branch}>
           <div className="relative">
             <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <select
@@ -251,7 +262,7 @@ export default function OpenSessionModal({
               onChange={e => set('branch', e.target.value)}
               className={inputCls(errors.branch) + ' pl-8 pr-4 appearance-none cursor-pointer'}
             >
-              <option value="">-- Sélectionnez une agence --</option>
+              <option value="">-- Sélectionnez un succursale --</option>
               {branches.map(b => (
                 <option key={b.id} value={b.id}>
                   {b.branch_name} ({b.branch_code})
@@ -261,26 +272,6 @@ export default function OpenSessionModal({
           </div>
         </Field>
 
-        {/* Devise */}
-        <Field label="Devise *">
-          <div className="flex gap-2">
-            {(['HTG', 'USD'] as CaisseDevise[]).map(d => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => set('devise', d)}
-                className={`flex-1 h-10 rounded-xl border-2 text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                  form.devise === d
-                    ? 'border-[#2E7D32] bg-[#DDEAD5]/40 text-[#1B5E20]'
-                    : 'border-gray-200 bg-[#F9F9F6] text-gray-500 hover:border-gray-300'
-                }`}
-              >
-                <Coins size={13} />
-                {d}
-              </button>
-            ))}
-          </div>
-        </Field>
 
         {/* Superviseur */}
         <Field label="Superviseur *" error={errors.superviseur}

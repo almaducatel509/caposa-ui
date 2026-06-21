@@ -10,9 +10,10 @@ import {
   Repeat,
 } from 'lucide-react';
 
-import { fetchDashboard, fetchTransactions, openSession, closeSession } from '@/app/lib/api/caisse';
+import { fetchDashboard, fetchTransactions, openSession, closeSession, fetchCaisses } from '@/app/lib/api/caisse';
 import type { TransactionData } from '@/app/components/transactions/types';
 import type {
+  Caisse,
   CaisseAlert, CaisseSession, CaisseStatus, OpenSessionPayload,
 } from '@/types/caisse';
 
@@ -20,12 +21,14 @@ import type {
 
 import OpenSessionModal  from '../../sessions/modals/Opensessionmodal';
 import CloseSessionModal from '../../sessions/modals/Closesessionmodal';
-import DepositForm       from '@/app/components/transactions/deposits/DepositForm';
-import WithdrawalForm    from '@/app/components/transactions/withdrawals/WithdrawalForm';
-import TransferForm      from '@/app/components/transactions/transfers/TransferForm';
+
 import { Modal }         from '../../ui/Modal';
 import { useSession }    from 'next-auth/react';
 import DashboardStats, { TypePoint, VolumePoint } from './DashboardStats';
+import { OpeningHour } from '@/types/branche';
+import { fetchBranches, fetchOpeningHours, fetchHolidays } from '@/app/lib/api/branche';
+import { BranchData } from '../../branches/validations';
+import { Holiday } from '../../holidays/validations';
 
 // ─── Constantes ──────────────────────────────────────────────────
 
@@ -187,7 +190,6 @@ export default function DashboardCaissier() {
   const [isLoading,      setIsLoading]     = useState(true);
   const [showOpenModal,  setShowOpenModal]  = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [quickModal,     setQuickModal]    = useState<string | null>(null);
   const [time,           setTime]          = useState(getNow());
   const [period,         setPeriod]        = useState<'day' | 'week' | 'month'>('week');
 
@@ -195,12 +197,31 @@ export default function DashboardCaissier() {
   const greeting  = getGreeting();
   const GreetIcon = greeting.icon;
   const { data: session } = useSession();
+  const [caisses, setCaisses] = useState<Caisse[]>([]);
+  const [branches,     setBranches]     = useState<BranchData[]>([]);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
+  const [holidays,     setHolidays]     = useState<Holiday[]>([]);
 
   useEffect(() => {
     const t = setInterval(() => setTime(getNow()), 60000);
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    Promise.all([
+      fetchBranches(),
+      fetchOpeningHours(),
+      fetchHolidays(),
+      fetchCaisses(),        // ← ajouter
+    ]).then(([b, oh, h, c]) => {
+      console.log('caisses reçues:', c); // ← vérifier ici
+      setBranches(Array.isArray(b) ? b : (b?.results ?? []));
+      setOpeningHours(Array.isArray(oh) ? oh : (oh?.results ?? []));
+      setHolidays(Array.isArray(h) ? h : (h?.results ?? []));
+      setCaisses(Array.isArray(c) ? c : []);
+    });
+  }, []);
+  
   useEffect(() => {
     fetchDashboard().then(data => {
       setSessions(data.sessions);
@@ -493,40 +514,7 @@ export default function DashboardCaissier() {
 
 
       {/* ── Modals ── */}
-      {quickModal === 'depot' && (
-        <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
-          title={<h3 className="text-base font-bold text-gray-900">Faire un dépôt</h3>}>
-          <DepositForm
-            onSubmit={async () => {
-              setQuickModal(null);
-              const tx = await fetchTransactions();
-              setTransactions(tx);
-            }}
-            onCancel={() => setQuickModal(null)}
-          />
-        </Modal>
-      )}
-
-      {quickModal === 'retrait' && (
-        <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
-          title={<h3 className="text-base font-bold text-gray-900">Faire un retrait</h3>}>
-          <WithdrawalForm
-            onSubmit={async () => {
-              setQuickModal(null);
-              const tx = await fetchTransactions();
-              setTransactions(tx);
-            }}
-            onCancel={() => setQuickModal(null)}
-          />
-        </Modal>
-      )}
-
-      {quickModal === 'transfert' && (
-        <Modal isOpen size="xl" onClose={() => setQuickModal(null)}
-          title={<h3 className="text-base font-bold text-gray-900">Faire un transfert</h3>}>
-          <TransferForm onCancel={() => setQuickModal(null)} />
-        </Modal>
-      )}
+      
 
       {showOpenModal && (
         <Modal isOpen size="3xl" onClose={() => setShowOpenModal(false)}
@@ -545,8 +533,14 @@ export default function DashboardCaissier() {
             <OpenSessionModal
               onClose={() => setShowOpenModal(false)}
               onConfirm={handleOpenSession}
-              branches={[]} openingHours={[]} holidays={[]}
-              onRequireOverride={() => { throw new Error('Function not implemented.'); }}
+              branches={branches} // ✅ plus []
+              openingHours={openingHours} // ✅ plus []
+              holidays={holidays} // ✅ plus []
+              onRequireOverride={(reason, details) => {
+                console.warn('Override requis:', reason, details);
+                // TODO: ouvrir un modal d'approbation directeur
+              } } 
+              caisses={caisses}            
             />
           </div>
         </Modal>

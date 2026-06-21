@@ -109,6 +109,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
           branch:        formData.branch,
           posts:         formData.posts,
           user:          userPayload,
+          photo_profil:  formData.photo_profil,  // ← ajouter cette ligne
         };
         const updated = await putEmployeeMultipart(String(employee.id), payload, { withPassword: !keepCurrentPassword });
         onSuccess(updated);

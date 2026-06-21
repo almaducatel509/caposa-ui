@@ -114,11 +114,7 @@ export interface TransactionData {
    ZOD — Création de compte (simple : 2 champs)
 ========================================================= */
 export const createAccountSchema = z.object({
-  id_membre: z.string().regex(
-    /^\d{10,14}$/,
-    "Numéro de membre invalide (10 à 14 chiffres requis)"
-  ),
-
+  id_membre: z.string().min(1, "ID membre requis"),
   typeCompte: z.enum(ACCOUNT_TYPES, {
     errorMap: () => ({ message: "Type de compte invalide" }),
   }),
@@ -161,7 +157,7 @@ export function mapAccountTypeToApi(type: AccountType): string {
     cheques: 'Checking Account',
     terme:   'Term Deposit Account',
   };
-  return mapping[type];
+  return type;
 }
 
 export function mapApiAccountToFormData(apiAccount: AccountData): AccountData {
@@ -184,10 +180,6 @@ export function mapFormDataToCreatePayload(input: CreateAccountInput) {
     account_type:   mapAccountTypeToApi(input.typeCompte),
     account_status: true,   // boolean temporaire (le backend attend ça)
 
-    // ⚠ TEMPORAIRE
-    ...(FRONTEND_GENERATES_ACCOUNT_NUMBER && {
-      account_number: generateTempAccountNumber(input.id_membre, input.typeCompte),
-    }),
   };
 }
 

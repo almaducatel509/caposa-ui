@@ -15,8 +15,9 @@ import {
   validateForm,
 } from '@/app/components/sessions/validation';
 import CaisseForm from '@/app/components/terminals/CaisseForm';
-import AxiosInstance from '@/app/lib/axiosInstance';
 import { Caisse } from '@/types/caisse';
+import { fetchCaisses } from '@/app/lib/api/caisse';
+import CaisseCard from './CaisseCard';
 
 // ─── TODO API : remplacer l'interface locale par l'import global ──
 // import { Caisse } from '@/types/caisse';
@@ -24,11 +25,11 @@ import { Caisse } from '@/types/caisse';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
-function fmt(v: number, devise = 'HTG') {
-  return new Intl.NumberFormat('fr-CA', {
-    style: 'currency', currency: devise, minimumFractionDigits: 2,
-  }).format(v);
-}
+// function fmt(v: number, devise = 'HTG') {
+//   return new Intl.NumberFormat('fr-CA', {
+//     style: 'currency', currency: devise, minimumFractionDigits: 2,
+//   }).format(v);
+// }
 
 function formatDate(iso?: string) {
   if (!iso) return '—';
@@ -49,34 +50,6 @@ function formatDate(iso?: string) {
 //
 //     def get_solde_actuel(self, obj):
 //         return obj.calculer_solde_actuel()
-
-const MOCK_CAISSES: Caisse[] = [
-  {
-    id: '1', numero_caisse: 'C-01', nom_caisse: 'Caisse principale',
-    localisation: 'Rez-de-chaussée — Accueil', branch: 'uuid-1',
-    branch_name: 'Agence Port-au-Prince', devise: 'HTG',
-    solde_initial: 50000, solde_actuel: 53700, actif: true,
-    created_at: '2024-01-15T08:00:00Z', nb_sessions: 42,
-    derniere_session: '2026-03-30T15:35:00Z',
-  },
-  {
-    id: '2', numero_caisse: 'C-02', nom_caisse: 'Caisse secondaire',
-    localisation: '1er étage — Guichet B', branch: 'uuid-1',
-    branch_name: 'Agence Port-au-Prince', devise: 'HTG',
-    solde_initial: 30000, solde_actuel: 28500, actif: true,
-    created_at: '2024-02-01T08:00:00Z', nb_sessions: 28,
-    derniere_session: '2026-03-29T17:00:00Z',
-  },
-  {
-    id: '3', numero_caisse: 'C-03', nom_caisse: 'Caisse USD',
-    localisation: 'Rez-de-chaussée — Devises', branch: 'uuid-2',
-    branch_name: 'Agence Pétion-Ville', devise: 'USD',
-    solde_initial: 5000, solde_actuel: 4800, actif: false,
-    created_at: '2024-03-10T08:00:00Z', nb_sessions: 15,
-    derniere_session: '2026-02-28T16:00:00Z',
-  },
-];
-// ─── FIN MOCK ────────────────────────────────────────────────────
 
 // ─── Modal générique ─────────────────────────────────────────────
 
@@ -138,7 +111,6 @@ function CaisseDetailModal({ caisse, onClose }: { caisse: Caisse; onClose: () =>
         <div className="grid grid-cols-2 gap-3">
           {[
             { icon: Hash,       label: 'Numéro',      value: caisse.numero_caisse                },
-            { icon: Coins,      label: 'Devise',       value: caisse.devise                       },
             { icon: MapPin,     label: 'Localisation', value: caisse.localisation                 },
             { icon: Building2,  label: 'Agence',       value: caisse.branch_name ?? caisse.branch },
             { icon: Clock,      label: 'Créée le',     value: formatDate(caisse.created_at)       },
@@ -157,7 +129,7 @@ function CaisseDetailModal({ caisse, onClose }: { caisse: Caisse; onClose: () =>
             <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
               <Banknote size={11} />Solde initial
             </p>
-            <p className="text-lg font-bold text-[#1B5E20]">{fmt(caisse.solde_initial, caisse.devise)}</p>
+            <p className="text-lg font-bold text-[#1B5E20]">{(caisse.solde_initial )} HT</p>
           </div>
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
@@ -167,7 +139,7 @@ function CaisseDetailModal({ caisse, onClose }: { caisse: Caisse; onClose: () =>
                 via SerializerMethodField ou annotate() sur le queryset.
                 Si absent → on affiche le solde initial comme fallback. */}
             <p className="text-lg font-bold text-blue-700">
-              {caisse.solde_actuel != null ? fmt(caisse.solde_actuel, caisse.devise) : '—'}
+              {caisse.solde_actuel != null ? (caisse.solde_actuel) : '—'}
             </p>
           </div>
         </div>
@@ -199,75 +171,6 @@ function CaisseDetailModal({ caisse, onClose }: { caisse: Caisse; onClose: () =>
   );
 }
 
-// ─── Card caisse ─────────────────────────────────────────────────
-
-function CaisseCard({ caisse, onOpenDetail }: { caisse: Caisse; onOpenDetail: (c: Caisse) => void }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className={`bg-white rounded-2xl border transition-all ${
-      caisse.actif ? 'border-gray-100 shadow-sm' : 'border-dashed border-gray-200 opacity-75'
-    }`}>
-      <div className="flex items-center gap-4 px-5 py-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${caisse.actif ? 'bg-[#DDEAD5]' : 'bg-gray-100'}`}>
-          <PiCashRegisterFill className={`w-5 h-5 ${caisse.actif ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-gray-900">{caisse.nom_caisse}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold">{caisse.numero_caisse}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">{caisse.devise}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${caisse.actif ? 'bg-[#DDEAD5] text-[#1B5E20]' : 'bg-gray-100 text-gray-400'}`}>
-              {caisse.actif ? '● Active' : '○ Inactive'}
-            </span>
-          </div>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">
-            {caisse.localisation} · {caisse.branch_name ?? caisse.branch}
-          </p>
-        </div>
-
-        {/* TODO API : solde_actuel doit venir du backend
-            Fallback sur solde_initial si non retourné */}
-        <div className="text-right shrink-0 hidden sm:block">
-          <p className="text-sm font-bold text-[#2E7D32]">
-            {fmt(caisse.solde_actuel ?? caisse.solde_initial, caisse.devise)}
-          </p>
-          <p className="text-xs text-gray-400">Solde actuel</p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-         
-          <button onClick={() => setExpanded(e => !e)} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Déroulement — tous les champs annotés côté Django */}
-      {expanded && (
-        <div className="px-5 pb-5 border-t border-gray-100 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { icon: Banknote,   label: 'Solde initial',    value: fmt(caisse.solde_initial, caisse.devise),                                              color: 'text-gray-700'  },
-            { icon: TrendingUp, label: 'Solde actuel',     value: caisse.solde_actuel != null ? fmt(caisse.solde_actuel, caisse.devise) : '—',            color: 'text-[#2E7D32]' },
-            { icon: Clock,      label: 'Sessions',         value: String(caisse.nb_sessions ?? '—'),   /* TODO API : annotate Count('sessions') */         color: 'text-blue-600'  },
-            { icon: Clock,      label: 'Dernière session', value: formatDate(caisse.derniere_session), /* TODO API : annotate Max('sessions__ouverture_at') */ color: 'text-gray-700' },
-            { icon: MapPin,     label: 'Localisation',     value: caisse.localisation,                                                                    color: 'text-gray-700'  },
-            { icon: Building2,  label: 'Agence',           value: caisse.branch_name ?? '—',           /* TODO API : source='branch.__str__' dans serializer */ color: 'text-gray-700' },
-            { icon: Clock,      label: 'Créée le',         value: formatDate(caisse.created_at),       /* TODO API : auto_now_add=True sur le modèle */    color: 'text-gray-700'  },
-            { icon: Coins,      label: 'Devise',           value: caisse.devise,                                                                          color: 'text-blue-600'  },
-          ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} className="flex flex-col gap-1 p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-400 flex items-center gap-1"><Icon size={11} />{label}</p>
-              <p className={`text-sm font-semibold ${color} truncate`}>{value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Page principale ─────────────────────────────────────────────
 
 export default function TerminalPage() {
@@ -288,21 +191,19 @@ export default function TerminalPage() {
   //   ?branch=uuid    → filtrer par agence
   //   ?devise=HTG     → filtrer par devise
   // Le backend doit annoter nb_sessions, derniere_session, solde_actuel.
+// ✅ Ajouter l'import
 
-  const load = async (silent = false) => {
-    silent ? setRefreshing(true) : setLoading(true);
-    try {
-      const { data } = await AxiosInstance.get<Caisse[]>('/caisses/');
-      setCaisses(data);
-    } catch {
-      // TODO API : supprimer ce fallback quand l'API est disponible
-      setCaisses(MOCK_CAISSES);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
+    // Dans load() — remplacer le try/catch actuel
+    const load = async (silent = false) => {
+      silent ? setRefreshing(true) : setLoading(true);
+      try {
+        const data = await fetchCaisses();
+        setCaisses(data);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    };
   useEffect(() => { load(); }, []);
 
   // ── Filtrage local ────────────────────────────────────────────────
@@ -329,7 +230,6 @@ export default function TerminalPage() {
   const nbActives   = caisses.filter(c => c.actif).length;
   const nbInactives = caisses.filter(c => !c.actif).length;
   const totalHTG    = caisses
-    .filter(c => c.devise === 'HTG' && c.actif)
     .reduce((s, c) => s + (c.solde_actuel ?? c.solde_initial), 0);
 
   if (loading) {
@@ -380,7 +280,7 @@ export default function TerminalPage() {
         {[
           { label: 'Actives',   value: nbActives,     color: 'text-[#2E7D32]', bg: 'bg-[#DDEAD5]/50', icon: ToggleRight },
           { label: 'Inactives', value: nbInactives,   color: 'text-gray-500',  bg: 'bg-gray-100',     icon: ToggleLeft  },
-          { label: 'Total HTG', value: fmt(totalHTG), color: 'text-[#2E7D32]', bg: 'bg-[#DDEAD5]/50', icon: Banknote    },
+          { label: 'Total HTG', value: (totalHTG), color: 'text-[#2E7D32]', bg: 'bg-[#DDEAD5]/50', icon: Banknote    },
         ].map(({ label, value, color, bg, icon: Icon }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
@@ -435,7 +335,9 @@ export default function TerminalPage() {
           </div>
         ) : (
           filtered.map(c => (
-            <CaisseCard key={c.id} caisse={c} onOpenDetail={setDetailModal} />
+            <CaisseCard key={c.id} caisse={c} onOpenDetail={setDetailModal} onToggle={function (): void {
+              throw new Error('Function not implemented.');
+            } } />
           ))
         )}
       </div>

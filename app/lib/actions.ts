@@ -48,10 +48,13 @@ export const findByUsernameOrEmail = async (username: string) => {
 export const loginUser = async (username: string, password: string) => {
   console.log("loginUser called with:", username, password)
   try {
-    const resp = await axios.post(`${process.env.BASE_URL}token/`, {
-      username,
-      password,
-    });
+    // const resp = await axios.post(`${process.env.BASE_URL}token/`, {
+    //   username,
+    //   password,
+      const resp = await axios.post(`${process.env.BASE_URL}auth/login/`, {
+    username,
+    password,
+  });
 
 
     const token: Token = resp.data;

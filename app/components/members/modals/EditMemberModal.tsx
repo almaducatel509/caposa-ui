@@ -29,12 +29,9 @@ const EMPTY_FORM: MemberUiForm = {
   gender: "F",
   date_of_birthday: "",
   email: "",
-  initial_balance: undefined,
   photo_profil: null,
   id_type: "autre",
   income_source: "autre",
-  account_type: "savings",
-  devise: "HTG",
   consent: true,
   signature: ""
 };

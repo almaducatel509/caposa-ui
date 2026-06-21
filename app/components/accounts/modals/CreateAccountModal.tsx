@@ -15,21 +15,15 @@ import { MemberOption } from '../../members/validations';
 
 // ─── Mock members (même source que WithdrawalForm) ──────────────────────────
 //   À remplacer par fetch /members/ quand l'endpoint sera dispo.
-const MOCK_MEMBERS: MemberOption[] = [
-  { id: '202601000001', member_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: '202601000002', member_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-  { id: '202601000003', member_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
-  { id: '202601000004', member_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
-  { id: '202601000005', member_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
-  { id: '202601000006', member_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
-];
+
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 interface CreateAccountModalProps {
   isOpen:    boolean;
   onClose:   () => void;
   onSuccess: (account: AccountData) => void;
-  members?:  MemberOption[];
+  members:        MemberOption[];
+  membersLoading?: boolean;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -72,7 +66,8 @@ function SectionHeader({ step, title, icon: Icon }: { step: number; title: strin
 
 // ─── Composant ──────────────────────────────────────────────────────────────
 const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
-  isOpen, onClose, onSuccess, members = MOCK_MEMBERS,
+  isOpen, onClose, onSuccess, members, membersLoading = false,
+
 }) => {
   // ── Membre (pattern WithdrawalForm) ──────────────────────────────────────
   const [memberSearch,   setMemberSearch]   = useState('');
@@ -321,7 +316,12 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
                       </div>
                     </div>
                     <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
-                      {filteredMembers.length === 0
+                      {membersLoading
+                        ? <div className="flex items-center justify-center gap-2 py-4">
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            <p className="text-xs text-gray-400">Chargement des membres…</p>
+                          </div>
+                        : filteredMembers.length === 0
                         ? <p className="text-xs text-gray-400 text-center py-4">Aucun membre trouvé</p>
                         : filteredMembers.map(m => (
                             <button

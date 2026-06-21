@@ -19,6 +19,8 @@ import AccountHistoryModal from './modals/AccountHistoryModal';
 
 import CreateAccountModal from './modals/CreateAccountModal';
 import EditAccountModal   from './modals/EditAccountModal';
+import { fetchMembers } from '@/app/lib/api/members';
+import { MemberOption } from '../members/validations';
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
@@ -71,6 +73,25 @@ const AccountGrid: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal,   setShowEditModal]   = useState(false);  
   // ── Load ───────────────────────────────────────────────────────────────────
+   const [memberOptions,   setMemberOptions]   = useState<MemberOption[]>([]);
+  const [membersLoading,  setMembersLoading]  = useState(false);
+
+  const loadMembers = async () => {
+    setMembersLoading(true);
+     try {
+       const data = await fetchMembers(); // retourne MemberData[]
+       setMemberOptions(data.map(m => ({
+         id:           m.id,
+         member_name:  `${m.first_name} ${m.last_name}`.trim(),
+         id_number:    m.id_number ?? '',
+         phone_number: m.phone_number,
+       })));
+     } catch (e) {
+       console.error('Erreur chargement membres:', e);
+     } finally {
+       setMembersLoading(false);
+    }
+  };
   const loadAccounts = async () => {
     setLoading(true);
     try {
@@ -84,7 +105,7 @@ const AccountGrid: React.FC = () => {
     }
   };
 
-  useEffect(() => { loadAccounts(); }, []);
+  useEffect(() => { loadAccounts(); loadMembers(); }, []);
 
   // ── Debounce search ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -251,13 +272,17 @@ const AccountGrid: React.FC = () => {
         activeTab={activeAccountTab}
         onTabChange={setActiveAccountTab}
       />
+      
       <CreateAccountModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        members={memberOptions}
+        membersLoading={membersLoading}
         onSuccess={(created) => {
           setAccounts(prev => [...prev, created]);
+         setShowCreateModal(false);
         }}
-      />  
+      /> 
 
       <AccountDetailModal
         isOpen={showDetail}
