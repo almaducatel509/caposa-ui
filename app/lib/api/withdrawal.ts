@@ -98,7 +98,7 @@ export function mapApiToWithdrawal(w: WithdrawalAPIResponse): WithdrawalData {
 // ─── API calls ───────────────────────────────────────────────────────────────
 export const fetchWithdrawals = async (): Promise<WithdrawalData[]> => {
   try {
-    const { data } = await AxiosInstance.get<WithdrawalAPIResponse[]>("withdrawals/");
+    const { data } = await AxiosInstance.get<WithdrawalAPIResponse[]>("transactions/?type=WITHDRAWAL");
     return data.map(mapApiToWithdrawal);
   } catch (error) {
     console.error("Erreur fetchWithdrawals:", error);
@@ -108,7 +108,7 @@ export const fetchWithdrawals = async (): Promise<WithdrawalData[]> => {
 
 export const fetchWithdrawalsByAccount = async (accountId: string): Promise<WithdrawalData[]> => {
   try {
-    const { data } = await AxiosInstance.get<WithdrawalAPIResponse[]>(`accounts/${accountId}/withdrawals/`);
+    const { data } = await AxiosInstance.get<WithdrawalAPIResponse[]>(`accounts/${accountId}/transactions/?type=WITHDRAWAL`);
     return data.map(mapApiToWithdrawal);
   } catch (error) {
     console.error(`Erreur withdrawals compte ${accountId}:`, error);

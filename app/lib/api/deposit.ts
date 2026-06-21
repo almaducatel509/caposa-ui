@@ -14,7 +14,7 @@ export async function createDeposit(payload: any, idemKey?: string) {
   if (idemKey) headers["Idempotency-Key"] = idemKey;
 
   const { data } = await AxiosInstance.post<CreateDepositResponse>(
-    "/api/deposits/",
+    "/api/transactions/deposit/",
     payload,
     { headers }
   );
@@ -22,19 +22,19 @@ export async function createDeposit(payload: any, idemKey?: string) {
 }
 
 export async function getDeposits() {
-  return AxiosInstance.get("/deposits/");
+  return AxiosInstance.get("/transactions/?type=DEPOSIT");
 }
 
 export async function getDeposit(id: any) {
-  return AxiosInstance.get(`/deposits/${id}/`);
+  return AxiosInstance.get(`/transactions/${id}/`);
 }
 
 export async function updateDeposit(id: any, payload: any) {
-  return AxiosInstance.patch(`/deposits/${id}/`, payload);
+  return AxiosInstance.patch(`/transactions/${id}/`, payload);
 }
 
 export async function deleteDeposit(id: any) {
-  return AxiosInstance.delete(`/deposits/${id}/`);
+  return AxiosInstance.delete(`/transactions/${id}/`);
 }
 // Une fonction API propre et centralisée
 
@@ -45,7 +45,7 @@ export async function deleteDeposit(id: any) {
 // Une base solide pour afficher l’historique dans ton UI (timeline, tableau, etc.)
 export async function getDepositAudit(id: any) {
   try {
-    const response = await AxiosInstance.get(`/deposits/${id}/audit/`);
+    const response = await AxiosInstance.get(`/transactions/${id}/audit/`);
     return response.data;
   } catch (error) {
     console.error("Erreur lors du chargement de l'audit du dépôt :", error);
@@ -154,7 +154,7 @@ export async function fetchDashboard(): Promise<{
 export async function fetchTransactions(): Promise<CaisseTransaction[]> {
   if (API_AVAILABLE) {
     try {
-      return await apiFetch<CaisseTransaction[]>('/transactions/');
+      return await apiFetch<CaisseTransaction[]>('/caisse-transactions/');
     } catch (err) {
       console.warn('[caisse] fetchTransactions → mock', err);
     }
@@ -255,7 +255,7 @@ export async function createTransaction(payload: {
   // ── 3. Appel API ──────────────────────────────────────────────────
   if (API_AVAILABLE) {
     try {
-      const tx = await apiFetch<CaisseTransaction>('/transactions/', {
+      const tx = await apiFetch<CaisseTransaction>('/caisse-transactions/', {
         method: 'POST',
         body:   JSON.stringify(body),
       });
