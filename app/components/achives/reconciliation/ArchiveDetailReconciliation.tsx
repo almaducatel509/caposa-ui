@@ -198,7 +198,7 @@ export default function ArchiveDetailReconciliation({ archiveId = 'ARC_20260215_
 
           {/* Tableau écarts */}
           {archive.reconciliationData.discrepancy !== 0 && (
-            <>
+            <div>
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Détail des écarts</p>
               <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] rounded-xl border border-gray-100 px-4 py-3 mb-2">
                 <div className="grid grid-cols-12 gap-3 text-xs font-bold uppercase tracking-widest text-gray-500">
@@ -232,7 +232,7 @@ export default function ArchiveDetailReconciliation({ archiveId = 'ARC_20260215_
                   </div>
                 </div>
               ))}
-            </>
+            </div>
           )}
         </div>
 

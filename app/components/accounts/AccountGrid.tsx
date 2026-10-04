@@ -2,9 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Wallet } from 'lucide-react';
-import { AccountData, AccountStatus } from './validationsaccount';
-import { fetchAccounts } from '@/app/lib/api/accounts';
+import { activateAccount, closeAccount, fetchAccounts, suspendAccount } from '@/app/lib/api/accounts';
 import { AccountBulkAction } from './AccountBulkActionDropdown';
+import { AccountData, AccountStatus, MemberData } from './validationsaccount';
+import { MemberOption } from '../members/validations';   // garde cet import pour MemberOption uniquement
 
 // UI
 import PageHeader       from '@/app/components/header';
@@ -18,9 +19,7 @@ import SuspendAccountModal from './modals/SuspendAccountModal';
 import AccountHistoryModal from './modals/AccountHistoryModal';
 
 import CreateAccountModal from './modals/CreateAccountModal';
-import EditAccountModal   from './modals/EditAccountModal';
 import { fetchMembers } from '@/app/lib/api/members';
-import { MemberOption } from '../members/validations';
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
@@ -73,30 +72,45 @@ const AccountGrid: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal,   setShowEditModal]   = useState(false);  
   // ── Load ───────────────────────────────────────────────────────────────────
-   const [memberOptions,   setMemberOptions]   = useState<MemberOption[]>([]);
+  const [memberOptions,   setMemberOptions]   = useState<MemberOption[]>([]);
   const [membersLoading,  setMembersLoading]  = useState(false);
-
+  const [allMembers, setAllMembers] = useState<MemberData[]>([]);
   const loadMembers = async () => {
     setMembersLoading(true);
-     try {
-       const data = await fetchMembers(); // retourne MemberData[]
-       setMemberOptions(data.map(m => ({
-         id:           m.id,
-         member_name:  `${m.first_name} ${m.last_name}`.trim(),
-         id_number:    m.id_number ?? '',
-         phone_number: m.phone_number,
-       })));
-     } catch (e) {
-       console.error('Erreur chargement membres:', e);
-     } finally {
-       setMembersLoading(false);
+    try {
+      const data = await fetchMembers();
+      setAllMembers(data.map(m => ({
+        ...m,
+        id_number:  m.id_number ?? '',
+        created_at: m.created_at ?? undefined,
+        updated_at: m.updated_at ?? undefined,
+        full_name:  `${m.first_name} ${m.last_name}`.trim(),
+      } as MemberData)));
+      setMemberOptions(data.map(m => ({
+        id:           m.id,
+        member_name:  `${m.first_name} ${m.last_name}`.trim(),
+        id_number:    m.id_number ?? '',
+        phone_number: m.phone_number,
+      })));
+    } catch (e) {
+      console.error('Erreur chargement membres:', e);
+    } finally {
+      setMembersLoading(false);
     }
   };
   const loadAccounts = async () => {
     setLoading(true);
     try {
       const data = await fetchAccounts();
-      setAccounts(data);
+      console.log('🔍 Comptes avant merge membres:', data);
+      console.log('🔍 allMembers disponibles au moment du merge:', allMembers);
+      const enriched = data.map(acc => {
+        const match = allMembers.find(m => m.id === acc.member);
+        if (!match) console.log('⚠️ Aucun membre trouvé pour acc.member =', acc.member);
+        return { ...acc, member_details: match ?? acc.member_details };
+      });
+      console.log('🔍 Comptes après merge:', enriched);
+      setAccounts(enriched);
     } catch (err) {
       console.error('Erreur chargement comptes:', err);
       setError('Impossible de charger les données des comptes.');
@@ -107,6 +121,13 @@ const AccountGrid: React.FC = () => {
 
   useEffect(() => { loadAccounts(); loadMembers(); }, []);
 
+  useEffect(() => {
+    if (allMembers.length === 0) return;
+    setAccounts(prev => prev.map(acc => ({
+      ...acc,
+      member_details: acc.member_details ?? allMembers.find(m => m.id === acc.member),
+    })));
+  }, [allMembers]);
   // ── Debounce search ────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 300);
@@ -166,14 +187,36 @@ const AccountGrid: React.FC = () => {
   };
 
   // ── Bulk action ────────────────────────────────────────────────────────────
+  // const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
+  //   // Export : autorisé pour tous les comptes
+  //   if (action === 'export') {
+  //     exportToCSV(ids);
+  //     return;
+  //   }
+
+  //   // Autres actions : retirer les comptes fermés/archivés
+  //   const actionableIds = accounts
+  //     .filter(a => ids.includes(a.id) && canActOn(a))
+  //     .map(a => a.id);
+
+  //   const skipped = ids.length - actionableIds.length;
+  //   if (skipped > 0) {
+  //     console.warn(`${skipped} compte(s) fermé(s)/archivé(s) ignoré(s) pour l'action "${action}".`);
+  //   }
+
+  //   switch (action) {
+  //     case 'activate': console.log('Débloquer comptes:', actionableIds); break;
+  //     case 'suspend':  console.log('Geler comptes:',     actionableIds); break;
+  //     case 'close':    console.log('Fermer comptes:',    actionableIds); break;
+  //   }
+  //   await loadAccounts();
+  // };
   const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
-    // Export : autorisé pour tous les comptes
     if (action === 'export') {
       exportToCSV(ids);
       return;
     }
 
-    // Autres actions : retirer les comptes fermés/archivés
     const actionableIds = accounts
       .filter(a => ids.includes(a.id) && canActOn(a))
       .map(a => a.id);
@@ -183,11 +226,17 @@ const AccountGrid: React.FC = () => {
       console.warn(`${skipped} compte(s) fermé(s)/archivé(s) ignoré(s) pour l'action "${action}".`);
     }
 
-    switch (action) {
-      case 'activate': console.log('Débloquer comptes:', actionableIds); break;
-      case 'suspend':  console.log('Geler comptes:',     actionableIds); break;
-      case 'close':    console.log('Fermer comptes:',    actionableIds); break;
+    try {
+      switch (action) {
+        case 'activate': await Promise.all(actionableIds.map(id => activateAccount(id))); break;
+        case 'suspend':  await Promise.all(actionableIds.map(id => suspendAccount(id)));  break;
+        case 'close':    await Promise.all(actionableIds.map(id => closeAccount(id)));    break;
+      }
+    } catch (e) {
+      console.error(`Erreur bulk action "${action}":`, e);
+      throw e;
     }
+
     await loadAccounts();
   };
 

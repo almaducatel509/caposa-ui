@@ -28,7 +28,7 @@ export interface MemberData {
   member_details:   any;
   typeCompte:       string;
   soldeActuel:      number;
-  statutCompte:     any;
+  account_status:     any;
   statutMember:     any;
   dateOuverture:    string;
   status:           "actif" | "inactif" | "suspendu";
@@ -87,43 +87,40 @@ const DateYMDZ = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format YYYY-MM
 const PhoneZ   = z.string().regex(/^\d+$/, "Le téléphone doit contenir uniquement des chiffres");
 const PhotoZ   = z.union([z.instanceof(File), z.string()]).optional().nullable();
 
-export const memberUiSchema = z
-  .object({
-    // ── Identité ──
-    first_name:       z.string().min(1, "Prénom est requis"),
-    last_name:        z.string().min(1, "Nom est requis"),
-    gender:           GenderZ,
-    date_of_birthday: DateYMDZ,
-    id_type:          z.enum(["cin", "passeport", "permis", "autre"], {
-                        required_error: "Type de pièce requis",
-                      }),
-    id_number:        z.string().min(1, "Numéro de pièce est requis"),
-    id_expiry_date:   DateYMDZ.optional(),  // requis si passeport | permis
-    id_description:   z.string().optional(), // requis si autre
-    photo_profil:     PhotoZ,
-    remove_photo:     z.boolean().optional(),
+// Champs communs aux deux modes (création / édition)
+const memberBaseFields = {
+  // ── Identité ──
+  first_name:       z.string().min(1, "Prénom est requis"),
+  last_name:        z.string().min(1, "Nom est requis"),
+  gender:           GenderZ,
+  date_of_birthday: DateYMDZ,
+  id_type:          z.enum(["cin", "passeport", "permis", "autre"], {
+                      required_error: "Type de pièce requis",
+                    }),
+  id_number:        z.string().min(1, "Numéro de pièce est requis"),
+  id_expiry_date:   DateYMDZ.optional(),  // requis si passeport | permis
+  id_description:   z.string().optional(), // requis si autre
+  photo_profil:     PhotoZ,
+  remove_photo:     z.boolean().optional(),
 
-    // ── Contact & Localisation ──
-    phone_number:    PhoneZ,
-    email:           z.string().email("Email invalide").optional().or(z.literal("")).optional(),
-    department_code: DepartmentCodeZ,
-    city:            z.string().min(1, "Ville est requise"),
-    address:         z.string().min(1, "Adresse est requise"),
+  // ── Contact & Localisation ──
+  phone_number:    PhoneZ,
+  email:           z.string().email("Email invalide").optional().or(z.literal("")).optional(),
+  department_code: DepartmentCodeZ,
+  city:            z.string().min(1, "Ville est requise"),
+  address:         z.string().min(1, "Adresse est requise"),
 
-    // ── Situation financière ──
-    income_source:  z.enum(
-      ["salarie", "commercant", "agriculteur", "diaspora", "retraite", "autre"],
-      { required_error: "Source de revenus requise" }
-    ),
-    monthly_income: z.number().nonnegative().optional(),
+  // ── Situation financière ──
+  income_source:  z.enum(
+    ["salarie", "commercant", "agriculteur", "diaspora", "retraite", "autre"],
+    { required_error: "Source de revenus requise" }
+  ),
+  monthly_income: z.number().nonnegative().optional(),
+};
 
-    // ── Consentement & Signature ──
-    signature: z.string().min(1, "La signature est requise"),
-    consent:   z.literal(true, {
-      errorMap: () => ({ message: "Vous devez accepter le traitement de vos données" }),
-    }),
-  })
-  .superRefine((data, ctx) => {
+// Validation conditionnelle sur le type de pièce d'identité — commune aux deux schémas
+function withIdChecks<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
+  return schema.superRefine((data: any, ctx) => {
     if (data.id_type === "passeport" || data.id_type === "permis") {
       if (!data.id_expiry_date) {
         ctx.addIssue({
@@ -143,6 +140,27 @@ export const memberUiSchema = z
       }
     }
   });
+}
+
+// ── CRÉATION — signature + consentement obligatoires ──
+export const memberUiSchema = withIdChecks(
+  z.object({
+    ...memberBaseFields,
+    signature: z.string().min(1, "La signature est requise"),
+    consent:   z.literal(true, {
+      errorMap: () => ({ message: "Vous devez accepter le traitement de vos données" }),
+    }),
+  })
+);
+
+// ── ÉDITION — consentement déjà donné à l'adhésion, pas de re-signature ──
+export const memberUiSchemaEdit = withIdChecks(
+  z.object({
+    ...memberBaseFields,
+    signature: z.string().optional(),
+    consent:   z.boolean().optional(),
+  })
+);
 
 export type MemberUiForm   = z.infer<typeof memberUiSchema>;
 export type FieldErrors<T> = Partial<Record<Extract<keyof T, string>, string>>;
@@ -183,11 +201,13 @@ export function zodToFieldErrors<T>(e: unknown): FieldErrors<T> {
 }
 
 export function validateMemberUi(
-  raw: unknown
+  raw: unknown,
+  opts?: { isEditMode?: boolean }
 ): { data?: MemberUiForm; errors?: FieldErrors<MemberUiForm> } {
-  const parsed = memberUiSchema.safeParse(raw);
+  const schema = opts?.isEditMode ? memberUiSchemaEdit : memberUiSchema;
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) return { errors: zodToFieldErrors<MemberUiForm>(parsed.error) };
-  return { data: parsed.data };
+  return { data: parsed.data as MemberUiForm };
 }
 
 // ─── Converters ───────────────────────────────────────────────────────────────

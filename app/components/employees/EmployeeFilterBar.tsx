@@ -113,7 +113,6 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
         position: positionNames,
         gender: e.gender ?? '—',
         date_of_birth: e.date_of_birth ?? '—',
-        payment_ref: e.payment_ref,
       };
     });
   console.log('📊 Données pour export :', employeesForExport);
@@ -160,15 +159,15 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
             className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {importLoading ? (
-              <>
+              <div>
                 <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
                 Import…
-              </>
+              </div>
             ) : (
-              <>
+              <div>
                 <Upload className="w-4 h-4" />
                 Importer
-              </>
+              </div>
             )}
           </button>
           <ExportAllButton

@@ -178,7 +178,7 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
     date_approbation:  loan.approved_at?.split('T')[0]       ?? '—',
     date_decaissement: loan.disbursed_at?.split('T')[0]      ?? '—',
     date_cloture:      loan.closed_at?.split('T')[0]         ?? '—',
-    agent_credit:      loan.processed_by ?? '—',
+    conseille:      loan.processed_by ?? '—',
     superviseur:       loan.validated_by ?? '—',
     caisse:            loan.caisse_numero,
   }));
@@ -224,15 +224,15 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
               className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {importLoading ? (
-                <>
+                <div>
                   <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
                   Import…
-                </>
+                </div>
               ) : (
-                <>
+                <div>
                   <Upload className="w-4 h-4" />
                   Importer
-                </>
+                </div>
               )}
             </button>
           )}
@@ -338,7 +338,7 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
 
         {/* Badge filtres actifs + reset */}
         {activeCount > 0 && (
-          <>
+          <div>
             <div className="h-6 w-px bg-gray-200 hidden sm:block" />
             <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-lg text-xs font-semibold">
               {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
@@ -349,7 +349,7 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
             >
               <X className="w-3 h-3" /> Réinitialiser
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>

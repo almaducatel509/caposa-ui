@@ -15,32 +15,28 @@ interface SuspendAccountModalProps {
 const SuspendAccountModal: React.FC<SuspendAccountModalProps> = ({
   isOpen, onClose, account, onSuccess,
 }) => {
-  const [reason,       setReason]       = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error,        setError]        = useState<string | null>(null);
+  // ← reason retiré
 
-  const isSuspended = account?.statutCompte === 'suspendu'
-    || (account as any)?.statusAccount === 'gelé';
+  const isSuspended = account?.account_status === 'gele';
   const action = isSuspended ? 'reactivate' : 'suspend';
 
   useEffect(() => {
-    if (isOpen) { setReason(''); setError(null); }
+    if (isOpen) { setError(null); }   // ← setReason('') retiré
   }, [isOpen, account]);
 
   const handleClose  = () => { if (!isSubmitting) onClose(); };
 
   const handleSubmit = async () => {
     if (!account) return;
-    if (action === 'suspend' && !reason.trim()) {
-      setError('La raison de la suspension est obligatoire.');
-      return;
-    }
+    // ← le bloc "if (action === 'suspend' && !reason.trim())" est retiré
     setIsSubmitting(true);
     setError(null);
     try {
       const updated: AccountData = action === 'suspend'
-        ? await suspendAccount(account.id, { reason: reason.trim() })
-        : await reactivateAccount(account.id, { reason: reason.trim() });
+        ? await suspendAccount(account.id)
+        : await reactivateAccount(account.id);
       onSuccess(updated);
       onClose();
     } catch (err: any) {
@@ -51,48 +47,41 @@ const SuspendAccountModal: React.FC<SuspendAccountModalProps> = ({
   };
 
   if (!isOpen || !account) return null;
-
-  const cfg = isSuspended ? {
-    Icon:        ShieldCheck,
-    iconBg:      'bg-[#DDEAD5]',
-    iconColor:   'text-[#2E7D32]',
-    headerBg:    'bg-gradient-to-r from-[#DDEAD5]/60 to-[#F9F9F6]',
-    title:       'Débloquer le compte',
-    subtitle:    `Compte ${account.account_number}`,
-    description: 'Ce compte sera de nouveau opérationnel. Le membre pourra effectuer des dépôts, retraits et transactions.',
-    bannerBg:    'bg-[#DDEAD5]/50 border-[#2E7D32]/20',
-    bannerIcon:  'text-[#2E7D32]',
-    bannerText:  'text-[#1B5E20]',
-    bannerMsg:   "La réactivation sera enregistrée dans le journal d'audit avec la date, l'heure et l'auteur.",
-    reasonLabel: 'Raison de la réactivation',
-    reasonHint:  'Ex : Litige résolu, suspension levée par la direction…',
-    required:    false,
-    btnLabel:    'Débloquer le compte',
-    btnClass:    'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20]',
-    statusBg:    'bg-blue-50 text-[#355C7D]',
-    statusDot:   'bg-[#355C7D]',
-    statusLabel: 'Gelé',
-  } : {
-    Icon:        ShieldOff,
-    iconBg:      'bg-blue-50',
-    iconColor:   'text-[#355C7D]',
-    headerBg:    'bg-gradient-to-r from-blue-50/60 to-[#F9F9F6]',
-    title:       'Geler le compte',
-    subtitle:    `Compte ${account.account_number}`,
-    description: 'Toutes les opérations seront bloquées immédiatement. Le membre ne pourra plus effectuer de transactions.',
-    bannerBg:    'bg-yellow-50 border-yellow-200',
-    bannerIcon:  'text-yellow-600',
-    bannerText:  'text-yellow-800',
-    bannerMsg:   "La suspension sera enregistrée dans le journal d'audit. Elle peut être levée à tout moment par un superviseur.",
-    reasonLabel: 'Raison du gel',
-    reasonHint:  'Ex : Activité suspecte, demande du membre, contrôle interne…',
-    required:    true,
-    btnLabel:    'Confirmer le gel',
-    btnClass:    'bg-gradient-to-r from-[#355C7D] to-[#2A4A5E]',
-    statusBg:    'bg-[#DDEAD5] text-[#1B5E20]',
-    statusDot:   'bg-[#2E7D32]',
-    statusLabel: 'Ouvert',
-  };
+    const cfg = isSuspended ? {
+      Icon: ShieldCheck,
+      iconBg: 'bg-[#DDEAD5]',
+      iconColor: 'text-[#2E7D32]',
+      headerBg: 'bg-gradient-to-r from-[#DDEAD5]/60 to-[#F9F9F6]',
+      title: 'Débloquer le compte',
+      subtitle: `Compte ${account.account_number}`,
+      description: 'Ce compte sera de nouveau opérationnel. Le membre pourra effectuer des dépôts, retraits et transactions.',
+      bannerBg: 'bg-[#DDEAD5]/50 border-[#2E7D32]/20',
+      bannerIcon: 'text-[#2E7D32]',
+      bannerText: 'text-[#1B5E20]',
+      bannerMsg: "La réactivation sera enregistrée dans le journal d'audit avec la date, l'heure et l'auteur.",
+      btnLabel: 'Débloquer le compte',
+      btnClass: 'bg-gradient-to-r from-[#2E7D32] to-[#1B5E20]',
+      statusBg: 'bg-blue-50 text-[#355C7D]',
+      statusDot: 'bg-[#355C7D]',
+      statusLabel: 'Gelé',
+    } : {
+      Icon: ShieldOff,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-[#355C7D]',
+      headerBg: 'bg-gradient-to-r from-blue-50/60 to-[#F9F9F6]',
+      title: 'Geler le compte',
+      subtitle: `Compte ${account.account_number}`,
+      description: 'Toutes les opérations seront bloquées immédiatement. Le membre ne pourra plus effectuer de transactions.',
+      bannerBg: 'bg-yellow-50 border-yellow-200',
+      bannerIcon: 'text-yellow-600',
+      bannerText: 'text-yellow-800',
+      bannerMsg: "La suspension sera enregistrée dans le journal d'audit. Elle peut être levée à tout moment par un superviseur.",
+      btnLabel: 'Confirmer le gel',
+      btnClass: 'bg-gradient-to-r from-[#355C7D] to-[#2A4A5E]',
+      statusBg: 'bg-[#DDEAD5] text-[#1B5E20]',
+      statusDot: 'bg-[#2E7D32]',
+      statusLabel: 'Ouvert',
+    };
 
   const { Icon } = cfg;
 
@@ -149,30 +138,6 @@ const SuspendAccountModal: React.FC<SuspendAccountModalProps> = ({
             <p className={`text-xs leading-relaxed ${cfg.bannerText}`}>{cfg.bannerMsg}</p>
           </div>
 
-          {/* Raison */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-              {cfg.reasonLabel}
-              {cfg.required
-                ? <span className="text-red-500 ml-0.5">*</span>
-                : <span className="text-gray-400 font-normal normal-case ml-1">(optionnel)</span>}
-            </label>
-            <textarea
-              value={reason}
-              onChange={e => { setReason(e.target.value); setError(null); }}
-              placeholder={cfg.reasonHint}
-              rows={3}
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2.5 text-sm border rounded-xl resize-none focus:outline-none focus:ring-2 transition-all disabled:bg-gray-50 disabled:text-gray-400 ${
-                error
-                  ? 'border-red-300 focus:ring-red-200'
-                  : 'border-gray-200 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]'
-              }`}
-            />
-            {error && (
-              <p className="text-xs text-red-500 mt-1">{error}</p>
-            )}
-          </div>
         </div>
 
         {/* Footer */}
@@ -184,8 +149,8 @@ const SuspendAccountModal: React.FC<SuspendAccountModalProps> = ({
           <button onClick={handleSubmit} disabled={isSubmitting}
             className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white rounded-xl hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed ${cfg.btnClass}`}>
             {isSubmitting
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{isSuspended ? 'Déblocage…' : 'Gel…'}</>
-              : <><Icon className="w-3.5 h-3.5" />{cfg.btnLabel}</>}
+              ? <div><Loader2 className="w-3.5 h-3.5 animate-spin" />{isSuspended ? 'Déblocage…' : 'Gel…'}</div>
+              : <div><Icon className="w-3.5 h-3.5" />{cfg.btnLabel}</div>}
           </button>
         </div>
       </div>

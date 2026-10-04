@@ -1,9 +1,8 @@
 "use client";
 
-import React, { ChangeEvent, useMemo } from "react";
+import React, { ChangeEvent } from "react";
 import {
   Calendar,
-  FileText,
   Tag,
   MessageSquare,
   Globe,
@@ -21,9 +20,7 @@ import {
   HOLIDAY_TYPE_LABELS,
   HOLIDAY_SCOPE_LABELS,
 } from "./validations";
-
-// 🔌 À remplacer par fetchBranches() / un import propre
-import { MOCK_BRANCHES } from "../OpeningHours/mock";
+import type { Branch } from "@/types/branche";
 
 /* ─── Composants internes ────────────────────────────────────────────────── */
 
@@ -88,6 +85,8 @@ interface HolidayFormFieldsProps {
   isEditMode: boolean;
   holiday: HolidayData | null;
   mode?: "create" | "edit";
+  /** Liste réelle des branches — vient de fetchBranches(), plus de mock */
+  branches: Branch[];
 }
 
 /* ─── Composant principal ────────────────────────────────────────────────── */
@@ -99,10 +98,9 @@ const HolidayFormFields: React.FC<HolidayFormFieldsProps> = ({
   handleChangeDate,
   isSubmitting,
   isEditMode,
-  mode = "create",
+  branches,
 }) => {
-  /* Si scope=branch, on doit pré-remplir une branche pour le modal d'assignation */
-  const showBranchCodePicker = formData.scope === "branch";
+  const showBranchCodePicker = formData.scope === "branch" || formData.scope === "autre";
 
   const fieldCls = (err?: string) =>
     [
@@ -118,15 +116,15 @@ const HolidayFormFields: React.FC<HolidayFormFieldsProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* ── Bandeau d'info : workflow brouillon → assignation ── */}
+      {/* ── Bandeau d'info : reflète le vrai comportement (plus de brouillon) ── */}
       {!isEditMode && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
           <Info className="w-4 h-4 text-[#355C7D] mt-0.5 shrink-0" />
           <p className="text-xs text-[#355C7D] leading-relaxed">
-            Vous créez la <strong>fiche du jour férié</strong>. Après la
-            création, vous pourrez l'<strong>assigner aux branches concernées</strong>{" "}
-            depuis la liste. Tant qu'il n'est pas assigné, le férié reste un
-            brouillon et ne bloque aucun caissier.
+            <strong>National</strong> s'applique automatiquement à toutes les branches.{" "}
+            <strong>Régional</strong> s'applique aux branches du département choisi.{" "}
+            <strong>Succursale</strong> s'applique uniquement à la branche sélectionnée
+            ci-dessous. Le jour férié est actif dès sa création.
           </p>
         </div>
       )}
@@ -201,7 +199,7 @@ const HolidayFormFields: React.FC<HolidayFormFieldsProps> = ({
 
           {/* Scope — 4 options */}
           <div>
-            <Label required>Portée par défaut</Label>
+            <Label required>Portée</Label>
             <div className="relative">
               <select
                 name="scope"
@@ -211,30 +209,26 @@ const HolidayFormFields: React.FC<HolidayFormFieldsProps> = ({
                 className={selectCls(errors.scope)}
               >
                 {(Object.keys(HOLIDAY_SCOPE_LABELS) as HolidayData["scope"][]).map(
-                  (k) => {
-                    const Icon = SCOPE_ICONS[k];
-                    return (
-                      <option key={k} value={k}>
-                        {HOLIDAY_SCOPE_LABELS[k]}
-                      </option>
-                    );
-                  }
+                  (k) => (
+                    <option key={k} value={k}>
+                      {HOLIDAY_SCOPE_LABELS[k]}
+                    </option>
+                  )
                 )}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
             <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-              Pré-remplit le modal d'assignation. La décision finale se fait à
-              l'étape suivante.
+              Détermine quel champ ci-dessous est requis (département ou branche).
             </p>
             <FieldError msg={errors.scope} />
           </div>
         </div>
 
-        {/* Branch_code conditionnel : seulement si scope=branch */}
+        {/* Branch_code conditionnel : seulement si scope=branch|autre */}
         {showBranchCodePicker && (
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <Label>Branche concernée (suggestion)</Label>
+            <Label required>Branche concernée</Label>
             <div className="relative">
               <select
                 name="branch_code"
@@ -244,7 +238,7 @@ const HolidayFormFields: React.FC<HolidayFormFieldsProps> = ({
                 className={selectCls(errors.branch_code)}
               >
                 <option value="">Sélectionner une branche…</option>
-                {MOCK_BRANCHES.map((b) => (
+                {branches.map((b) => (
                   <option key={b.branch_code} value={b.branch_code}>
                     {b.branch_name}
                   </option>
@@ -253,9 +247,7 @@ const HolidayFormFields: React.FC<HolidayFormFieldsProps> = ({
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
             <p className="text-xs text-amber-700 mt-2 leading-relaxed">
-              Cette branche sera <strong>pré-cochée</strong> dans le modal
-              d'assignation. Vous pourrez en ajouter d'autres ou changer
-              d'avis.
+              Ce jour férié s'appliquera uniquement à cette branche.
             </p>
             <FieldError msg={errors.branch_code} />
           </div>

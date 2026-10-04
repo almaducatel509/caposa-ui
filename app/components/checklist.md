@@ -35,7 +35,7 @@ Si POST /accounts/ reste nécessaire, accepter au moins member_id et retourner l
 
 ***Conseils d’intégration / further improvements
 
-Centralise les schémas Zod et les types dérivés (z.infer<>) pour éviter duplications.
+Centralise les schémas Zod et les types dérivés (z.infer<div>) pour éviter duplications.
 
 Ajoute des messages d’erreur backend compréhensibles pour les mapper dans le frontend.
 

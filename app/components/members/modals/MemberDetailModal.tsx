@@ -97,7 +97,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
             <InfoRow
               label="Date de naissance"
               value={member.date_of_birthday
-                ? <>{fmtDate(member.date_of_birthday)} <span className="text-gray-400">({age} ans)</span></>
+                ? <span>{fmtDate(member.date_of_birthday)} <span className="text-gray-400">({age} ans)</span></span>
                 : '—'}
             />
             <InfoRow label="Niveau" value={tierLabel(tier)} />
@@ -164,7 +164,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
             <InfoRow label="Dernière modification" value={fmtDateTime(member.updated_at)} />
             <div className="sm:col-span-2 flex flex-col gap-0.5">
               <p className="text-xs text-gray-400">ID Membre</p>
-              <p className="text-xs font-mono text-gray-500">{member.id}</p>
+              <div className="text-xs font-mono text-gray-500">{member.id}</div>
             </div>
           </div>
         </div>

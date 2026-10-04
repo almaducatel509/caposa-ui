@@ -182,7 +182,7 @@ export default function AccountHistoryModal({
               </p>
             </div>
           ) : (
-            <>
+            <div>
               {/* En-tête table */}
               <div className="grid px-6 py-2.5 bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500"
                 style={{ gridTemplateColumns: '1.2fr 1fr 1fr 1fr 1.5fr 1fr' }}>
@@ -261,7 +261,7 @@ export default function AccountHistoryModal({
                   );
                 })}
               </div>
-            </>
+            </div>
           )}
         </div>
 

@@ -33,7 +33,7 @@ _Date :_ aujourd’hui
   export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const session = await auth();
     if (!session?.user) redirect("/login?callbackUrl=/dashboard");
-    return <>{children}</>;
+    return <div>{children}</div>;
   }
   ```
 - **Page /login** : redirection automatique vers `/dashboard` si déjà connecté :

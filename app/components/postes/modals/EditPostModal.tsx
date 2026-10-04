@@ -190,11 +190,11 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
         <button onClick={handleSubmit} disabled={isSubmitting}
           className="flex items-center gap-2 px-5 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60">
           {isSubmitting ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />En cours…</>
+            <div><Loader2 className="w-4 h-4 animate-spin" />En cours…</div>
           ) : isEditMode ? (
-            <><FaEdit size={13} />Modifier</>
+            <div><FaEdit size={13} />Modifier</div>
           ) : (
-            <><FaPlus size={13} />Créer</>
+            <div><FaPlus size={13} />Créer</div>
           )}
         </button>
       </div>

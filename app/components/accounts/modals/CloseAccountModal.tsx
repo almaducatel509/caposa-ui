@@ -12,7 +12,7 @@ import { Modal } from '../../ui/Modal';
 // 1. STATUS_COLORS réduit aux 3 statuts métier ('en_attente' supprimé).
 //
 // 2. handleSubmit :
-//    - AVANT : `updateAccount(id, { statutCompte: 'ferme', ... })`
+//    - AVANT : `updateAccount(id, { account_status: 'ferme', ... })`
 //      → champ inexistant + valeur inexistante → silent fail / corruption.
 //    - APRÈS : `closeAccount(id, { reason: closureReason })` qui envoie
 //      `statusAccount: 'fermé'` côté API. Voir accounts.ts.
@@ -39,11 +39,10 @@ const TYPE_LABEL: Record<string, string> = {
   cheques: 'Chèques',
   terme:   'Terme',
 };
-
 const STATUS_COLORS: Record<string, string> = {
-  ouvert: 'bg-[#DDEAD5] text-[#1B5E20]',
-  gelé:   'bg-blue-50 text-[#355C7D]',
-  fermé:  'bg-gray-100 text-gray-500',
+  actif: 'bg-[#DDEAD5] text-[#1B5E20]',
+  gele:  'bg-blue-50 text-[#355C7D]',
+  ferme: 'bg-gray-100 text-gray-500',
 };
 
 const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
@@ -66,7 +65,7 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
   if (!isOpen || !account) return null;
 
   const solde           = account.soldeActuel ?? parseFloat(account.balance ?? '0');
-  const isAlreadyClosed = account.statusAccount === 'fermé';
+  const isAlreadyClosed = account.account_status === 'ferme';  // sans accent, vraie valeur de l'enum
   const canClose        = solde === 0 && !isAlreadyClosed;
 
   const blockingReason = isAlreadyClosed
@@ -89,9 +88,7 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
   const dateOuverture = account.dateOuverture || account.created_at
     ? new Date(account.dateOuverture ?? account.created_at!).toLocaleDateString('fr-FR')
     : '—';
-
-  const statut = account.statusAccount ?? (account.account_status ? 'ouvert' : 'fermé');
-
+  const statut = account.account_status;
   const details = [
     { label: 'Numéro',        value: account.account_number || '—' },
     { label: 'Titulaire',     value: titulaire },
@@ -115,9 +112,7 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
     setError(null);
     try {
       // ← Utilise l'API dédiée qui envoie statusAccount: 'fermé'
-      const closedAccount = await closeAccount(account.id, {
-        reason: reason.trim() || 'Fermeture standard',
-      });
+     const closedAccount = await closeAccount(account.id);
       onSuccess(closedAccount);
       onClose();
     } catch (err: any) {
@@ -220,7 +215,7 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
 
         {/* Closure form */}
         {canClose && (
-          <>
+          <div>
             <div className="flex items-center gap-2 p-3 bg-[#DDEAD5]/50 border border-[#2E7D32]/20 rounded-xl">
               <CheckCircle2 className="w-4 h-4 text-[#2E7D32] shrink-0" />
               <p className="text-xs text-[#1B5E20] font-medium">Solde à 0 HTG — fermeture autorisée</p>
@@ -254,7 +249,7 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
                 />
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
@@ -275,8 +270,8 @@ const CloseAccountModal: React.FC<CloseAccountModalProps> = ({
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isClosing
-            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fermeture…</>
-            : <><XCircle className="w-3.5 h-3.5" /> Confirmer la fermeture</>}
+            ? <div><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fermeture…</div>
+            : <div><XCircle className="w-3.5 h-3.5" /> Confirmer la fermeture</div>}
         </button>
       </div>
 

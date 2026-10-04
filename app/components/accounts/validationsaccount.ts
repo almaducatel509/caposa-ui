@@ -178,7 +178,6 @@ export function mapFormDataToCreatePayload(input: CreateAccountInput) {
   return {
     member:         input.id_membre,
     account_type:   mapAccountTypeToApi(input.typeCompte),
-    account_status: true,   // boolean temporaire (le backend attend ça)
 
   };
 }

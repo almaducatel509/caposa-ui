@@ -344,20 +344,20 @@ const DirectorValidationPage: React.FC = () => {
             }`}>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 {action?.type === 'approve' ? (
-                  <>
+                  <div>
                     <FaLock /> Confirmer l'approbation
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div>
                     <FaUndo /> Demander une correction
-                  </>
+                  </div>
                 )}
               </h2>
             </div>
 
             <div className="p-6 space-y-4">
               {action?.type === 'approve' ? (
-                <>
+                <div>
                   <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
                     <p className="text-sm text-yellow-800 font-medium mb-2">
                       ⚠️ ATTENTION - Action irréversible
@@ -381,9 +381,9 @@ const DirectorValidationPage: React.FC = () => {
                   <p className="text-sm text-gray-600">
                     Confirmez-vous l'approbation et le verrouillage définitif de cette journée ?
                   </p>
-                </>
+                </div>
               ) : (
-                <>
+                <div>
                   <p className="text-sm text-gray-700">
                     Indiquez la raison pour laquelle vous demandez une correction au superviseur :
                   </p>
@@ -394,7 +394,7 @@ const DirectorValidationPage: React.FC = () => {
                     rows={4}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none resize-none"
                   />
-                </>
+                </div>
               )}
             </div>
 
@@ -419,9 +419,9 @@ const DirectorValidationPage: React.FC = () => {
                 }`}
               >
                 {action?.type === 'approve' ? (
-                  <>🔒 Confirmer et Verrouiller</>
+                  <div>🔒 Confirmer et Verrouiller</div>
                 ) : (
-                  <>Demander correction</>
+                  <div>Demander correction</div>
                 )}
               </button>
             </div>

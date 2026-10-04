@@ -94,5 +94,5 @@ export default function AuditSessionProvider({ sessionId, children }: AuditSessi
     </div>
   );
 
-  return <>{children(session)}</>;
+  return <div>{children(session)}</div>;
 }

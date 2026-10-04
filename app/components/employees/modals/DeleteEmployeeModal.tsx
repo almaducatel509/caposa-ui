@@ -5,7 +5,7 @@ import { Modal } from "@/app/components/ui/Modal";
 import { X, AlertTriangle, Archive, Loader2, UserX } from 'lucide-react';
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { EmployeeData } from '../validations';
-import { deleteEmployee } from '@/app/lib/api/employee';
+import { archiveEmployee } from '@/app/lib/api/employee';
 
 interface DeleteEmployeeModalProps {
   isOpen: boolean;
@@ -33,7 +33,7 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
     setIsDeleting(true);
     setApiError(null);
     try {
-      await deleteEmployee(employee.id);
+      await archiveEmployee(employee.id);
       onSuccess(employee.id);
       onClose();
     } catch (error: any) {
@@ -92,7 +92,6 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
               {employee.first_name} {employee.last_name}
             </p>
             <p className="text-xs text-gray-400 truncate">{employee.user?.email}</p>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">{employee.payment_ref}</p>
           </div>
         </div>
 
@@ -128,8 +127,8 @@ const DeleteEmployeeModal: React.FC<DeleteEmployeeModalProps> = ({
         <button onClick={handleDelete} disabled={isDeleting}
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           {isDeleting
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Archivage…</>
-            : <><Archive className="w-4 h-4" /> Archiver l'employé</>
+            ? <div><Loader2 className="w-4 h-4 animate-spin" /> Archivage…</div>
+            : <div><Archive className="w-4 h-4" /> Archiver l'employé</div>
           }
         </button>
       </div>

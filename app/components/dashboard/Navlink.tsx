@@ -37,7 +37,7 @@ export default function NavLinks() {
     {
       title: "GENERAL",
       items: links.filter(l =>
-        ['Terminal','Horaires', 'Branches', 'Postes', 'Calendrier', 'Archives', 'Settings'].includes(l.name)
+        ['Terminal','Horaires', 'Succursales', 'Postes', 'Calendrier', 'Archives', 'Settings'].includes(l.name)
       ),
     },
   ];

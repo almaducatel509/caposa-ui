@@ -56,7 +56,6 @@ const CashHandoverHistory: React.FC = () => {
     first_name: first,
     last_name: last,
     phone_number: '',
-    payment_ref: '',
     posts: [],
     branch: 'branch_001',
     nomComplet: `${first} ${last}`,

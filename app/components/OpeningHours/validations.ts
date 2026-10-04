@@ -1,5 +1,5 @@
 import { z } from "zod";
-
+export type { DepartmentCode } from "@/app/data/haitiLocations";
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
@@ -44,9 +44,7 @@ export type OpeningHours = z.infer<typeof openingHoursSchema>;
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // ─── Domain types ────────────────────────────────────────────────────────────
-export type DepartmentCode =
-  | "OUEST" | "NORD" | "SUD" | "ARTIBONITE" | "CENTRE"
-  | "GRAND_ANSE" | "NIPPES" | "NORDEST" | "NORD_OUEST" | "SUDEST";
+
 
 export interface OpeningHourDetail {
   id: string;

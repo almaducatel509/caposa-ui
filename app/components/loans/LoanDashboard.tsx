@@ -318,7 +318,7 @@ export default function LoanDashboard() {
         {/* Colonne contextuelle : prochain paiement (actifs) ou date création (tous) */}
         <div className="col-span-1">
           {tab === 'actifs' ? (
-            <>
+            <div>
               {isLate ? (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700"><XCircle className="w-3 h-3 shrink-0" />-{loan.late_days}j</span>
               ) : daysLeft <= 7 ? (
@@ -327,12 +327,12 @@ export default function LoanDashboard() {
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20]"><CheckCircle2 className="w-3 h-3 shrink-0" />{daysLeft}j</span>
               )}
               <p className="text-xs text-gray-400 mt-1">{formatDate(loan.next_payment_date)}</p>
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <p className="text-xs font-semibold text-gray-700">{formatDate(loan.created_at)}</p>
               <p className="text-xs text-gray-400">{new Date(loan.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-            </>
+            </div>
           )}
         </div>
 
@@ -392,21 +392,21 @@ export default function LoanDashboard() {
 
       {/* KPIs adaptatifs */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        {tab === 'tous' ? (<>
+        {tab === 'tous' ? (<div>
           <KPICard icon={Landmark}      label="Total prêts"      value={allLoans.length}               sub={`${activeOnly.length} actifs`}                           accent={C.green}   />
           <KPICard icon={Banknote}      label="Total décaissé"   value={formatHTG(totalDisbursed)}                                                                    accent={C.blue}    />
           <KPICard icon={TrendingUp}    label="Solde restant"    value={formatHTG(totalOutstanding)}                                                                  accent={C.green}   />
           <KPICard icon={CheckCircle2}  label="Taux approbation" value={`${approvalRate.toFixed(1)}%`} sub={`${allLoans.filter(l=>l.status==='rembourse').length} remboursés`} accent={C.green} />
           <KPICard icon={Clock}         label="En attente"       value={allLoans.filter(l=>l.status==='en_attente').length} sub="à valider"                           accent={C.gold}    />
           <KPICard icon={AlertTriangle} label="En retard"        value={late.length}                   sub={`${critical.length} critiques`}                          accent="#EF4444"   />
-        </>) : (<>
+        </div>) : (<div>
           <KPICard icon={Landmark}      label="Prêts actifs"     value={activeOnly.length}             sub={`${late.length} en retard`}                              accent={C.green}   />
           <KPICard icon={Banknote}      label="Solde total"      value={formatHTG(totalOutstanding)}                                                                  accent={C.blue}    />
           <KPICard icon={CheckCircle2}  label="Remboursé"        value={formatHTG(totalRepaid)}        sub={`${((totalRepaid/(totalPrincipal||1))*100).toFixed(1)}% du total`} accent={C.green} />
           <KPICard icon={Clock}         label="Attendu / mois"   value={formatHTG(monthlyExpected)}    sub="Paiements mensuels"                                      accent={C.gold}    />
           <KPICard icon={TrendingUp}    label="Ponctualité"      value={`${onTimeRate.toFixed(1)}%`}   sub={`${activeOnly.length - late.length} à jour`}             accent={C.green}   />
           <KPICard icon={AlertTriangle} label="Critiques"        value={critical.length}               sub="30+ jours de retard"                                     accent="#EF4444"   />
-        </>)}
+        </div>)}
       </div>
 
       {/* Graphiques adaptatifs */}

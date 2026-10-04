@@ -111,7 +111,6 @@ export interface Account extends Base {
 // }
 export interface Payment extends Base {
     payment_id: string;
-    payment_ref: string;
     account_number: string;
     transaction_id: string;
 }

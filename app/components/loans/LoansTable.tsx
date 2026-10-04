@@ -31,7 +31,7 @@ import TransactionDetailModal, { TransactionDetail, LoanDetail } from '../transa
 //    To test different roles, change MOCK_ROLE below:
 //      - 'superviseur'  → sees "Approve / Reject" on pending loans
 //      - 'caissier'     → sees "Disburse" on approved loans
-//      - 'agent_credit' → only sees assignment + notes
+//      - 'agent_credit' → only sees assignment + notes plus de agent de credit mais conseiller
 const MOCK_ROLE: UserRole = 'superviseur';
 
 function useAuth(): { user: { employee: { posts_details: { code: string }[] } } | null } {
@@ -934,7 +934,7 @@ const handleView = (l: LoanData) => {
 
                   {/* REMBOURSEMENT : encaisser un paiement du membre */}
                   {isActifsTab && loan.status === 'decaisse' && (
-                    <>
+                    <div>
                       {/* <button
                         title="Envoyer un rappel"
                         onClick={() => handleSendReminder(loan)}
@@ -947,7 +947,7 @@ const handleView = (l: LoanData) => {
                       className="p-1.5 rounded-lg text-[#2E7D32] hover:bg-[#DDEAD5] transition-colors cursor-pointer">
                       <Wallet className="w-3.5 h-3.5" />
                     </button>
-                    </>
+                    </div>
                   )}
                   {isArchiveTab && (
                     <span className="text-xs text-gray-400 italic px-2">Lecture seule</span>

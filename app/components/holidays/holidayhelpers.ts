@@ -1,35 +1,28 @@
 /**
- * holidayHelpers.ts — v3
+ * holidayHelpers.ts — v4
  *
  * ─────────────────────────────────────────────────────────────────────────
  * MODIFICATIONS apportées à ce fichier :
  *
- * 1. ADAPTÉ : `branch_code` polymorphe → `department_code` + `branch_code`
- *    Le scope='regional' utilise maintenant `holiday.department_code`
- *    au lieu de `holiday.branch_code`. Plus clair et plus sûr.
- *
- * 2. AJOUTÉ : `getApplicableHolidaysForBranch`
- *    Filtre la liste complète des fériés pour ne garder que ceux qui
- *    s'appliquent à une branche donnée (selon scope + dept + branch).
- *    Utilisé dans la future page d'assignation des fériés à une branche.
+ * RETRAIT : `pending_assignment` / `isPending`
+ *   Un férié existe dès sa création, plus d'état "brouillon" à filtrer.
+ *   Le nombre de branches concernées se lit directement via
+ *   getApplicableBranches(holiday, allBranches).length — à afficher
+ *   dans EventDetailCard / HolidayInvertedView.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
 import type { Branch } from "@/types/branche";
-import type { HolidayScope, Holiday } from "@/app/components/holidays/validations";
+import type { HolidayScope, Holiday, HolidayData } from "@/app/components/holidays/validations";
 
 export function isHolidayAppliedToBranch(
   holiday: Holiday,
   branch: Branch
 ): boolean {
-  // Un brouillon ne s'applique à AUCUNE branche
-  if (holiday.pending_assignment) return false;
-
   switch (holiday.scope) {
     case "national":
       return true;
     case "regional":
-      // ─── MODIF : utilise department_code (anciennement branch_code surchargé)
       return branch.department_code === holiday.department_code;
     case "branch":
       return branch.branch_code === holiday.branch_code;
@@ -46,35 +39,6 @@ export function getApplicableBranches(
   return allBranches.filter((b) => isHolidayAppliedToBranch(holiday, b));
 }
 
-export function isPendingAssignment(holiday: Holiday): boolean {
-  return holiday.pending_assignment === true;
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// NOUVEAU : Filtre des fériés applicables à une branche donnée
-// ─────────────────────────────────────────────────────────────────────────
-
-/**
- * Filtre les fériés applicables à une branche donnée.
- *
- * Logique :
- *   - National  : toujours applicable (toutes branches)
- *   - Regional  : applicable si holiday.department_code === branch.department_code
- *   - Branch    : applicable si holiday.branch_code === branch.branch_code
- *   - Autre     : par défaut, traité comme branch-level
- *
- * Ignore les fériés en pending_assignment (brouillons).
- *
- * Utilisé dans la page d'assignation des fériés à une branche : on ne
- * propose à l'admin que les fériés qui ont du sens pour CETTE branche.
- */
-export function getApplicableHolidaysForBranch(
-  allHolidays: Holiday[],
-  branch: Branch
-): Holiday[] {
-  return allHolidays.filter((h) => isHolidayAppliedToBranch(h, branch));
-}
-
 export interface GroupedHoliday {
   id: string;
   date: string;
@@ -82,8 +46,6 @@ export interface GroupedHoliday {
   type: Holiday["type"];
   records: Holiday[];
   effectiveScope: HolidayScope;
-  /** true si TOUS les enregistrements du groupe sont en pending_assignment */
-  isPending: boolean;
 }
 
 export function groupHolidaysByEvent(holidays: Holiday[]): GroupedHoliday[] {
@@ -96,7 +58,6 @@ export function groupHolidaysByEvent(holidays: Holiday[]): GroupedHoliday[] {
     if (existing) {
       existing.records.push(h);
       existing.effectiveScope = widerScope(existing.effectiveScope, h.scope);
-      existing.isPending = existing.isPending && h.pending_assignment;
     } else {
       map.set(key, {
         id: h.id,
@@ -105,7 +66,6 @@ export function groupHolidaysByEvent(holidays: Holiday[]): GroupedHoliday[] {
         type: h.type,
         records: [h],
         effectiveScope: h.scope,
-        isPending: h.pending_assignment === true,
       });
     }
   }
@@ -130,19 +90,12 @@ export function getBranchesForGroup(
   group: GroupedHoliday,
   allBranches: Branch[]
 ): Branch[] {
-  if (group.isPending) return [];
-
-  if (
-    group.records.some(
-      (r) => !r.pending_assignment && r.scope === "national"
-    )
-  ) {
+  if (group.records.some((r) => r.scope === "national")) {
     return allBranches;
   }
 
   const concerned = new Set<string>();
   for (const record of group.records) {
-    if (record.pending_assignment) continue;
     for (const branch of allBranches) {
       if (isHolidayAppliedToBranch(record, branch)) {
         concerned.add(branch.branch_code);
@@ -155,9 +108,7 @@ export function getBranchesForGroup(
 export interface HolidayStats {
   total: number;
   upcoming: number;
-  /** Brouillons en attente d'assignation */
-  pending: number;
-  /** Fériés assignés mais sans aucune branche effective (anomalie) */
+  /** Fériés sans aucune branche effective (anomalie — ex: department_code orphelin) */
   unassigned: number;
   activeBranches: number;
 }
@@ -170,23 +121,17 @@ export function computeHolidayStats(
   today.setHours(0, 0, 0, 0);
 
   let upcoming = 0;
-  let pending = 0;
   let unassigned = 0;
 
   for (const g of groups) {
     if (new Date(g.date) >= today) upcoming++;
-    if (g.isPending) {
-      pending++;
-    } else {
-      const branches = getBranchesForGroup(g, allBranches);
-      if (branches.length === 0) unassigned++;
-    }
+    const branches = getBranchesForGroup(g, allBranches);
+    if (branches.length === 0) unassigned++;
   }
 
   return {
     total: groups.length,
     upcoming,
-    pending,
     unassigned,
     activeBranches: allBranches.length,
   };
@@ -241,3 +186,31 @@ export function isUpcoming(dateStr: string): boolean {
     : new Date(dateStr + "T12:00:00");
   return d >= today;
 }
+
+// ================= HELPERS =================
+
+/**
+ * Indique quel champ de localisation est requis selon le scope.
+ * Renvoie 'department_code' | 'branch_code' | null.
+ */
+export const getRequiredScopeCodeField = (
+  scope: HolidayScope
+): "department_code" | "branch_code" | null => {
+  if (scope === "regional") return "department_code";
+  if (scope === "branch" || scope === "autre") return "branch_code";
+  return null;
+};
+
+export const isCommentRequired = (
+  originalHoliday: HolidayData,
+  updatedHoliday: Partial<HolidayData>
+): boolean => {
+  return (
+    (updatedHoliday.type !== undefined &&
+      updatedHoliday.type !== originalHoliday.type) ||
+    (updatedHoliday.scope !== undefined &&
+      updatedHoliday.scope !== originalHoliday.scope) ||
+    (updatedHoliday.date !== undefined &&
+      updatedHoliday.date !== originalHoliday.date)
+  );
+};

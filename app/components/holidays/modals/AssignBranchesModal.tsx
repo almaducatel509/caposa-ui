@@ -164,7 +164,6 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
     console.log("🔹 Description         :", group.description);
     console.log("🔹 Date                :", group.date);
     console.log("🔹 Scope effectif      :", group.effectiveScope);
-    console.log("🔹 isPending           :", group.isPending);
     console.log("🔹 Records dans groupe :", group.records.length);
     console.log(
       "🔹 Branches concernées :",
@@ -684,15 +683,15 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
-            <>
+            <div>
               <Loader2 className="w-4 h-4 animate-spin" />
               Application en cours…
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <CheckCircle className="w-4 h-4" />
               Confirmer l'assignation
-            </>
+            </div>
           )}
         </button>
       </div>

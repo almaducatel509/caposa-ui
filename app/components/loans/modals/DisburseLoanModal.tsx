@@ -153,8 +153,8 @@ const DisburseLoanModal: React.FC<DisburseLoanModalProps> = ({
             disabled={isLoading || !confirmed}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-linear-to-r from-[#2E7D32] to-[#1B5E20] rounded-xl hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed">
             {isLoading
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Décaissement…</>
-              : <><CheckCircle2 className="w-3.5 h-3.5" /> Confirmer le décaissement</>
+              ? <div><Loader2 className="w-3.5 h-3.5 animate-spin" /> Décaissement…</div>
+              : <div><CheckCircle2 className="w-3.5 h-3.5" /> Confirmer le décaissement</div>
             }
           </button>
         </div>

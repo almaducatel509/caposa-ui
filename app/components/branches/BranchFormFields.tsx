@@ -17,7 +17,7 @@ type FormMode = 'create' | 'edit' | 'activate';
 
 interface BranchFormFieldsProps {
   formData: BranchFormData;
-  /** Setter en Partial<> comme dans CompteFormFields — on update plusieurs champs d'un coup */
+  /** Setter en Partial<div> comme dans CompteFormFields — on update plusieurs champs d'un coup */
   setFormData: (updates: Partial<BranchFormData>) => void;
   errors: ErrorMessages<BranchFormData>;
   setErrors?: React.Dispatch<React.SetStateAction<ErrorMessages<BranchFormData>>>;

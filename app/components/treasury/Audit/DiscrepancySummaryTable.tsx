@@ -265,13 +265,13 @@ const DiscrepancySummaryTable: React.FC = () => {
                         title={disc.status === 'pending' ? 'Ajouter une explication' : 'Voir/Modifier'}
                       >
                         {disc.status === 'pending' ? (
-                          <>
+                          <div>
                             <FaEdit /> Expliquer
-                          </>
+                          </div>
                         ) : (
-                          <>
+                          <div>
                             <FaEye /> Voir
-                          </>
+                          </div>
                         )}
                       </button>
                     </div>

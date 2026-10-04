@@ -12,8 +12,8 @@ function TokenSyncer() {
     const access  = (session?.user as any)?.accessToken
     const refresh = (session?.user as any)?.refreshToken
 
-    if (access)  setCookie('auth_token',    access,  { path: '/', maxAge: 60 * 60 * 24 })
-    if (refresh) setCookie('refresh_token', refresh, { path: '/', maxAge: 60 * 60 * 24 * 30 })
+    if (access)  setCookie('caposa_access_token', access, { path: '/', maxAge: 60 * 60 * 24 })
+    if (refresh) setCookie('caposa_refresh_token', refresh, { path: '/', maxAge: 60 * 60 * 24 * 30 })
   }, [session])
 
   return null
@@ -27,3 +27,4 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </SessionProvider>
   )
 }
+//Documents\Final Project\caposa-ui\app\_providers\providers.tsx

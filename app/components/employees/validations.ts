@@ -28,7 +28,6 @@ export const employeeSchema = z.object({
   phone_number:  z.string().regex(/^\d+$/, 'Phone number must only contain digits'),
   address:       z.string().min(1, 'Address is required'),
   gender:        z.string().min(1, "Sélection du sexe est requise"),
-  payment_ref:   z.string().min(1, 'Payment reference is required'),
   branch:        z.string().uuid('Branch must be a valid UUID'),
   posts:         z.array(z.string().uuid('Post must be a valid UUID')).min(1, 'At least one post is required'),
   photo_profil:  imageSchema.optional().nullable(),
@@ -44,11 +43,11 @@ export interface UserInfo {
 
 export interface EmployeeData {
   id: string;
+  payment_ref?: string;   // ← matricule auto-généré par le backend (lecture seule)
   username?: string;
   first_name: string;
   last_name: string;
   phone_number: string;
-  payment_ref: string;
   date_of_birth?: string;
   address?: string;
   gender?: string;
@@ -62,7 +61,7 @@ export interface EmployeeData {
   posts_details?: PostData[];         // ← ⚠️ TABLEAU (un employé a plusieurs postes)
   nomComplet?: string;
   estActif?: boolean;
-  statutEmploye?: 'actif' | 'inactif' | 'suspendu' | 'en_attente';
+  is_active?: boolean;   // ← remplace estActif + statutEmploye, aligné sur le backend
 
   created_at?: string;
   updated_at?: string;
@@ -88,7 +87,6 @@ export type EmployeeFormData = {
   phone_number: string;
   address: string;
   gender: string;
-  payment_ref: string;
   branch: string;
   posts: string[];
   photo_profil?: File | string | null;
@@ -123,9 +121,8 @@ export function formatGender(gender?: string) {
       return 'Non spécifié';
   }
 }
-
-export function getEmployeeStatus(employee: { statutEmploye?: string }) {
-  return employee.statutEmploye || 'active';
+export function getEmployeeStatus(employee: { is_active?: boolean }) {
+  return employee.is_active === false ? 'archive' : 'actif';
 }
 
 export function employeeDataToFormData(employee: EmployeeData): EmployeeFormData {
@@ -142,7 +139,6 @@ export function employeeDataToFormData(employee: EmployeeData): EmployeeFormData
     phone_number:  employee.phone_number || '',
     address:       employee.address || '',
     gender:        employee.gender || 'M',
-    payment_ref:   employee.payment_ref || '',
     branch:        employee.branch || '',
     posts:         employee.posts || [],
     photo_profil:  employee.photo_profil || null,

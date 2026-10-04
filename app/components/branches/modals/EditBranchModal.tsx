@@ -384,9 +384,9 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
             <Sparkles className={`w-4 h-4 shrink-0 ${willBeActive ? 'text-[#2E7D32]' : 'text-amber-500'}`} />
             <p className="text-xs leading-relaxed">
               {willBeActive ? (
-                <><strong>Statut prévu : Active</strong> — la branche aura horaires et jours fériés.</>
+                <div><strong>Statut prévu : Active</strong> — la branche aura horaires et jours fériés.</div>
               ) : (
-                <><strong>Statut prévu : Inactive</strong> — il manque encore <strong>{missing.join(' et ')}</strong> pour qu'elle soit active.</>
+                <div><strong>Statut prévu : Inactive</strong> — il manque encore <strong>{missing.join(' et ')}</strong> pour qu'elle soit active.</div>
               )}
             </p>
           </div>

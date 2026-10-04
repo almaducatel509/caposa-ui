@@ -6,15 +6,14 @@ import {
   CaisseAlert,
   OpenSessionPayload,
 } from '@/types/caisse';
-import { OfflineQueue } from "./Offlinequeue";
 import { SessionManager } from "./Sessionmanager";
 
 export async function createDeposit(payload: any, idemKey?: string) {
-  const headers: Record<string,string> = {};
+  const headers: Record<string, string> = {};
   if (idemKey) headers["Idempotency-Key"] = idemKey;
 
   const { data } = await AxiosInstance.post<CreateDepositResponse>(
-    "/api/transactions/deposit/",
+    "/transactions/deposit/",
     payload,
     { headers }
   );
@@ -36,13 +35,7 @@ export async function updateDeposit(id: any, payload: any) {
 export async function deleteDeposit(id: any) {
   return AxiosInstance.delete(`/transactions/${id}/`);
 }
-// Une fonction API propre et centralisée
 
-// Un audit récupérable depuis n’importe quel composant
-
-// Une intégration cohérente avec ton AxiosInstance
-
-// Une base solide pour afficher l’historique dans ton UI (timeline, tableau, etc.)
 export async function getDepositAudit(id: any) {
   try {
     const response = await AxiosInstance.get(`/transactions/${id}/audit/`);
@@ -53,64 +46,50 @@ export async function getDepositAudit(id: any) {
   }
 }
 
-
 /**
  * caisse.ts  —  API layer caisse
  * ─────────────────────────────────────────────────────────────────
- * Remplace les anciens fetchDashboard / openSession / closeSession.
- *
- * Toutes les fonctions :
- *   • appellent l'API Django si disponible
- *   • tombent sur le mock local sinon
- *   • ne plantent JAMAIS si NEXT_PUBLIC_API_URL est vide ou si
- *     le serveur Django n'est pas encore lancé
+ * Toutes les fonctions appellent directement l'API Django (mocks
+ * retirés — les endpoints sont fonctionnels).
  * ─────────────────────────────────────────────────────────────────
  */
 
 // ─── Config ──────────────────────────────────────────────────────
-const API_BASE      = process.env.NEXT_PUBLIC_API_URL ?? '';
-const API_AVAILABLE = !!API_BASE;
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
-
+/**
+ * Appelle l'API. Ne masque jamais une panne : si la config est
+ * absente, si le serveur est injoignable, ou si l'API répond une
+ * erreur, on lève une Error avec un message explicite — pas de
+ * fallback silencieux, pas de mock.
+ */
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
+  if (!API_BASE) {
+    throw new Error(
+      "Configuration manquante : NEXT_PUBLIC_API_URL n'est pas défini. Impossible de contacter l'API caisse."
+    );
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    });
+  } catch (networkErr) {
+    const detail = networkErr instanceof Error ? networkErr.message : 'erreur réseau inconnue';
+    throw new Error(`Serveur injoignable (${API_BASE}${path}) : ${detail}`);
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.message ?? `HTTP ${res.status} — ${path}`);
+    throw new Error(err?.message ?? `Erreur API ${res.status} — ${path}`);
   }
+
   return res.json() as Promise<T>;
 }
-
-// ─── Mocks (données de démo quand l'API est absente) ─────────────
-
-// ✅ Mock corrigé
-const MOCK_TRANSACTIONS: CaisseTransaction[] = [
-  {
-    id: 't1', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
-    cash_register_id: 'C-01', type: 'depot', montant: 15000,
-    solde_apres: 65000, client: 'Hudson Joseph', reference: 'DEP-001',
-    statut: 'normal', effectue_par: 'jean.dupont',
-    ip_address: '192.168.1.10', device_id: 'Chrome/124',
-    timestamp: new Date(Date.now() - 6 * 3600000).toISOString(),
-  },
-  {
-    id: 't2', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
-    cash_register_id: 'C-01', type: 'retrait', montant: 2500,
-    solde_apres: 62500, client: 'Marie Dupont', reference: 'RET-002',
-    statut: 'normal', effectue_par: 'jean.dupont',
-    ip_address: '192.168.1.10', device_id: 'Chrome/124',
-    timestamp: new Date(Date.now() - 5 * 3600000).toISOString(),
-  },
-  {
-    id: 't3', session_id: 'SES-local-demo', cashier_id: 'jean.dupont',
-const MOCK_TRANSACTIONS: CaisseTransaction[] = [];
-
-const MOCK_ALERTS: CaisseAlert[] = [];
 
 // ─── fetchDashboard ───────────────────────────────────────────────
 
@@ -121,18 +100,8 @@ export async function fetchDashboard(): Promise<{
   montant_caisse: number;
 }> {
   // Sessions : GET /sessions/ (endpoint réel Django)
-  const sessions = await (async () => {
-    if (API_AVAILABLE) {
-      try {
-        const data = await apiFetch<CaisseSession[]>('/sessions/');
-        data.forEach(s => SessionManager.set(s));
-        return data;
-      } catch (err) {
-        console.warn('[caisse] fetchDashboard sessions → fallback local', err);
-      }
-    }
-    return SessionManager.getAll();
-  })();
+  const sessions = await apiFetch<CaisseSession[]>('/sessions/');
+  sessions.forEach(s => SessionManager.set(s));
 
   // Transactions + alertes
   const [transactions, alerts] = await Promise.all([
@@ -150,42 +119,20 @@ export async function fetchDashboard(): Promise<{
 
 // ─── fetchTransactions ────────────────────────────────────────────
 
-/** Toutes les transactions. GET /transactions/ */
+/** Toutes les transactions. GET /caisse-transactions/ */
 export async function fetchTransactions(): Promise<CaisseTransaction[]> {
-  if (API_AVAILABLE) {
-    try {
-      return await apiFetch<CaisseTransaction[]>('/caisse-transactions/');
-    } catch (err) {
-      console.warn('[caisse] fetchTransactions → mock', err);
-    }
-  }
-  return MOCK_TRANSACTIONS;
+  return apiFetch<CaisseTransaction[]>('/caisse-transactions/');
 }
 
 /** Transactions d'une session. GET /sessions/{id}/transactions/ */
 export async function fetchTransactionsBySession(sessionId: string): Promise<CaisseTransaction[]> {
-  if (API_AVAILABLE) {
-    try {
-      return await apiFetch<CaisseTransaction[]>(`/sessions/${sessionId}/transactions/`);
-    } catch (err) {
-      console.warn(`[caisse] fetchTransactionsBySession(${sessionId}) → mock`, err);
-    }
-  }
-  // Filtre les mocks par session pour simuler le comportement
-  return MOCK_TRANSACTIONS.filter(tx => tx.session_id === sessionId);
+  return apiFetch<CaisseTransaction[]>(`/sessions/${sessionId}/transactions/`);
 }
 
 // ─── fetchAlerts ──────────────────────────────────────────────────
 
 export async function fetchAlerts(): Promise<CaisseAlert[]> {
-  if (API_AVAILABLE) {
-    try {
-      return await apiFetch<CaisseAlert[]>('/alerts/');
-    } catch (err) {
-      console.warn('[caisse] fetchAlerts → mock', err);
-    }
-  }
-  return MOCK_ALERTS;
+  return apiFetch<CaisseAlert[]>('/alerts/');
 }
 
 // ─── fetchActiveSession ───────────────────────────────────────────
@@ -198,7 +145,7 @@ export async function fetchActiveSession(): Promise<CaisseSession | null> {
 // ─── openSession ──────────────────────────────────────────────────
 
 export async function openSession(payload: OpenSessionPayload): Promise<CaisseSession> {
-  // Délègue entièrement à SessionManager (gère l'API + le fallback local)
+  // Délègue entièrement à SessionManager (gère l'API)
   return SessionManager.open(payload);
 }
 
@@ -208,7 +155,7 @@ export async function closeSession(
   sessionId: string,
   payload: { montant_fermeture: number }
 ): Promise<CaisseSession> {
-  // Délègue entièrement à SessionManager (gère l'API + le fallback local)
+  // Délègue entièrement à SessionManager (gère l'API)
   return SessionManager.close(sessionId, payload);
 }
 
@@ -220,10 +167,12 @@ export async function closeSession(
  * Règles métier appliquées ici (front) :
  *   1. Une session DOIT être ouverte → sinon erreur claire
  *   2. La session est injectée automatiquement si non fournie
- *   3. Si l'API échoue (réseau, serveur) → mise en file offline
- *   4. Ne plante JAMAIS si l'API Django n'est pas disponible
+ *   3. Si l'API échoue → l'erreur remonte telle quelle (aucune
+ *      mise en file d'attente, aucun mock : l'appelant doit
+ *      afficher le message d'erreur à l'utilisateur)
  *
  * @throws {Error} 'NO_ACTIVE_SESSION' si aucune session ouverte
+ * @throws {Error} message explicite si l'API est injoignable ou en erreur
  */
 export async function createTransaction(payload: {
   type:         string;
@@ -231,7 +180,7 @@ export async function createTransaction(payload: {
   description?: string;
   session?:     string;   // optionnel : injecté depuis SessionManager si absent
   note?:        string;
-}): Promise<CaisseTransaction | { _offline: true; queued: ReturnType<typeof OfflineQueue.enqueue> }> {
+}): Promise<CaisseTransaction> {
 
   // ── 1. Résolution de la session ───────────────────────────────────
   let sessionId = payload.session;
@@ -252,26 +201,9 @@ export async function createTransaction(payload: {
   // ── 2. Construction du body ───────────────────────────────────────
   const body = { ...payload, session: sessionId };
 
-  // ── 3. Appel API ──────────────────────────────────────────────────
-  if (API_AVAILABLE) {
-    try {
-      const tx = await apiFetch<CaisseTransaction>('/caisse-transactions/', {
-        method: 'POST',
-        body:   JSON.stringify(body),
-      });
-      return tx;
-    } catch (err) {
-      const isOffline =
-        err instanceof TypeError ||                    // NetworkError
-        (err instanceof Error && err.message.startsWith('HTTP 5')); // 5xx serveur
-
-      if (!isOffline) throw err; // Erreur métier (400, 403…) → on remonte
-
-      console.warn('[caisse] createTransaction → API hors ligne, mise en queue', err);
-    }
-  }
-
-  // ── 4. Fallback offline ───────────────────────────────────────────
-  const queued = OfflineQueue.enqueue('createTransaction', body, sessionId);
-  return { _offline: true, queued };
+  // ── 3. Appel API — toute erreur remonte avec un message clair ─────
+  return apiFetch<CaisseTransaction>('/caisse-transactions/', {
+    method: 'POST',
+    body:   JSON.stringify(body),
+  });
 }

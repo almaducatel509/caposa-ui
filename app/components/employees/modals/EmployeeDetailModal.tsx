@@ -79,7 +79,7 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               </span>
             </div>
             <p className="text-xs text-gray-400 mt-0.5">
-              {employee.user?.username} · Réf: {employee.payment_ref}
+              {employee.user?.username} 
             </p>
           </div>
         </div>
@@ -100,9 +100,8 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             <InfoRow label="Genre" value={formatGender(employee.gender)} />
             <InfoRow label="Date de naissance"
               value={age
-                ? <>{formatDate(employee.date_of_birth)} <span className="text-gray-400">({age} ans)</span></>
+                ? <div>{formatDate(employee.date_of_birth)} <span className="text-gray-400">({age} ans)</span></div>
                 : formatDate(employee.date_of_birth)} />
-            <InfoRow label="Référence de paiement" value={employee.payment_ref} mono />
           </div>
         </div>
 

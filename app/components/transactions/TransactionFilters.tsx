@@ -126,7 +126,7 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
 
           {/* ACTIVE BADGE */}
           {activeCount > 0 && (
-            <>
+            <div>
               <span className="px-3 py-1 rounded-lg bg-yellow-100 text-yellow-800 text-sm font-semibold">
                 {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
               </span>
@@ -136,7 +136,7 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
               >
                 Réinitialiser
               </button>
-            </>
+            </div>
           )}
 
         </div>

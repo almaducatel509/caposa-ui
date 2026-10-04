@@ -103,7 +103,7 @@ export default function DashboardStats({
   volumeData, typeData,
 }: DashboardStatsProps) {
   return (
-    <>
+    <div>
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <KPICard icon={ArrowDownCircle} label="Montant total"      value={formatHTG(totalAmount)}              accent={C.green} />
@@ -207,6 +207,6 @@ export default function DashboardStats({
         </div>
 
       </div>
-    </>
+    </div>
   );
 }

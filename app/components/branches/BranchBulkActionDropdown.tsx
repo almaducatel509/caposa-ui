@@ -31,11 +31,13 @@ const ACTIONS: {
   danger?: boolean;
   section: 'statut' | 'horaire' | 'autre';
 }[] = [
-  { id: 'activate',        label: 'Activer',              icon: <CheckCircle2 className="w-3.5 h-3.5" />, section: 'statut'  },
-  { id: 'deactivate',      label: 'Désactiver',           icon: <XCircle      className="w-3.5 h-3.5" />, section: 'statut'  },
-  { id: 'assign_schedule', label: 'Assigner horaire',     icon: <Clock        className="w-3.5 h-3.5" />, section: 'horaire' },
-  { id: 'export',          label: 'Exporter la sélection',icon: <Download     className="w-3.5 h-3.5" />, section: 'autre'   },
-  { id: 'archive',         label: 'Archiver',             icon: <Archive      className="w-3.5 h-3.5" />, danger: true, section: 'autre' },
+  // "Activer" cible les branches INACTIVES sans horaire → leur donne un horaire auto + passe en active
+  { id: 'activate',        label: 'Activer (config auto)',  icon: <CheckCircle2 className="w-3.5 h-3.5" />, section: 'statut'  },
+  { id: 'deactivate',      label: 'Désactiver',            icon: <XCircle      className="w-3.5 h-3.5" />, section: 'statut'  },
+  // "Assigner horaire" cible les branches qui ont DÉJÀ un horaire et veulent le modifier
+  { id: 'assign_schedule', label: 'Modifier horaire',      icon: <Clock        className="w-3.5 h-3.5" />, section: 'horaire' },
+  { id: 'export',          label: 'Exporter la sélection', icon: <Download     className="w-3.5 h-3.5" />, section: 'autre'   },
+  { id: 'archive',         label: 'Archiver',              icon: <Archive      className="w-3.5 h-3.5" />, danger: true, section: 'autre' },
 ];
 
 const SECTIONS: { id: 'statut' | 'horaire' | 'autre'; label: string }[] = [

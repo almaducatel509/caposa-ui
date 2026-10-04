@@ -148,7 +148,6 @@ const WithdrawalFilterBar: React.FC<WithdrawalFilterBarProps> = ({
             filename="retraits"
             columns={['code', 'compte', 'membre', 'type', 'motif', 'montant', 'statut', 'caisse', 'traite_par', 'valide_par', 'date']}
             headerLabels={{
-              code:       "Code d'autorisation",
               compte:     'N° de compte',
               membre:     'Membre',
               type:       'Type',

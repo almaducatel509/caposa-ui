@@ -2,21 +2,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, ShieldCheck, TrendingUp, Users, PiggyBank } from 'lucide-react';
 import Link from 'next/link';
-import AxiosInstance from './lib/axiosInstance';
-
-function verifyData() {
-  AxiosInstance.get('/branches')
-    .then(res => console.log("✅ Branches:", res.data))
-    .catch(err => console.error("❌ Branches error:", err));
-
-  AxiosInstance.get('/posts')
-    .then(res => console.log("✅ Posts:", res.data))
-    .catch(err => console.error("❌ Posts error:", err));
-
-  AxiosInstance.get('/employees')
-    .then(res => console.log("✅ Employés:", res.data))
-    .catch(err => console.error("❌ Employés error:", err));
-}
 
 export default function Page() {
   const [mounted, setMounted] = useState(false);
@@ -110,12 +95,6 @@ export default function Page() {
                   <span>Connexion Employé</span>
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                <button 
-                  onClick={verifyData}
-                  className="inline-flex items-center justify-center space-x-2 bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3.5 px-6 rounded-xl border-2 border-gray-200 transition-all duration-200"
-                >
-                  <span>Guide d'utilisation</span>
-                </button>
               </div>
             </div>
 

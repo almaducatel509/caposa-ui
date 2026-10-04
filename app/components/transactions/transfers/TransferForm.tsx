@@ -273,7 +273,7 @@ export default function TransferForm({ members: propMembers, onSubmit, onCancel,
   // ── Écrans succès & confirmation ──
   if (step === 'success') {
     return (
-      <>
+      <div>
         <style>{`
           @media print {
             body * { visibility: hidden; }
@@ -411,7 +411,7 @@ export default function TransferForm({ members: propMembers, onSubmit, onCancel,
             </button>
           </div>
         </div>
-      </>
+      </div>
     );
   }
   // confirm
@@ -451,8 +451,8 @@ export default function TransferForm({ members: propMembers, onSubmit, onCancel,
           <button type="button" onClick={handleConfirm} disabled={submitting}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg disabled:opacity-50">
             {submitting
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Traitement…</>
-              : <><CheckCircle2 className="w-4 h-4" /> Valider</>}
+              ? <div><Loader2 className="w-4 h-4 animate-spin" /> Traitement…</div>
+              : <div><CheckCircle2 className="w-4 h-4" /> Valider</div>}
           </button>
         </div>
       </div>
@@ -773,15 +773,15 @@ export default function TransferForm({ members: propMembers, onSubmit, onCancel,
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg disabled:opacity-60"
         >
           {isSubmitting ? (
-            <>
+            <div>
               <Loader2 className="w-4 h-4 animate-spin" />
               Traitement...
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <ArrowLeftRight className="w-4 h-4" />
               Soumettre
-            </>
+            </div>
           )}
         </button>
       </div>

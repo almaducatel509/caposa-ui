@@ -25,6 +25,9 @@ import BrancheTable from "./BrancheTable";
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
 import { Holiday, HolidayData } from "../holidays/validations";
 import { Loader2 } from "lucide-react";
+import { EmployeeData, PostData } from "../employees/validations";
+import { fetchEmployees } from "@/app/lib/api/employee";
+import { fetchPosts } from "@/app/lib/api/post";
 
 /* ─── Type local pour les onglets ──────────────────────────────────────── */
 type BranchTabId = "active" | "inactive" | "archive";
@@ -55,46 +58,39 @@ const BranchesGrid: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal,  setShowDeleteModal]  = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [posts, setPosts] = useState<PostData[]>([]);
 
   /* ── Chargement (branches + horaires + fériés en parallèle) ── */
+  const [employees, setEmployees] = useState<EmployeeData[]>([]);
+
   const loadBranches = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [bra, h, oh] = await Promise.all([
+      const [bra, h, oh, emp, pos] = await Promise.all([
         fetchBranches(),
         fetchHolidays(),
         fetchOpeningHours(),
+        fetchEmployees(), // ← nouveau
+        fetchPosts(), // ← nouveau
+
       ]);
       setBranches(bra);
       setHolidays(h);
       setOpeningHours(oh);
+      setEmployees(emp); // ← nouveau
+      setPosts(pos); // ← nouveau
+
     } catch (err) {
       console.error("Erreur loadBranches:", err);
-      setError("Impossible de charger les données. Branche, Horaire, Jour férié.");
+      setError("Impossible de charger les données. Branche, Horaire, Jour férié, Employé.");
     } finally {
       setIsLoading(false);
     }
-      branches.forEach((b, i) => {
-      const raw = (b as any).statusBranch ?? b.statusBranche;
-      const normalized = typeof raw === "string" ? raw.toLowerCase() : raw;
-      const effective = getEffectiveStatus(b);
-
-      // ─── MODIF : `b.name` → `b.branch_name` ────────────────────────────
-      // Le champ `name: any` a été supprimé de l'interface Branch
-      // (redondant avec `branch_name`, et `any` désactivait TypeScript).
-      console.log(`Branch #${i + 1}`, {
-        id: b.id,
-        name: b.branch_name,
-        rawStatus: raw,
-        normalizedStatus: normalized,
-        effectiveStatus: effective,
-      });
-    });
   }, []);
 
   useEffect(() => {
-        loadBranches();
+    loadBranches();
   }, [loadBranches]);
 
   /* ── Debounce de la recherche ── */
@@ -121,7 +117,6 @@ const BranchesGrid: React.FC = () => {
           ...h,
           type: h.type ?? "autre",
           scope: h.scope ?? "autre",
-          pending_assignment: h.pending_assignment ?? false,
         })
       ),
     }),
@@ -163,36 +158,18 @@ const BranchesGrid: React.FC = () => {
     }
 
     // Filtre par statut effectif
-    // if (selectedStatus !== "all") {
-    //   filtered = filtered.filter((b) => getEffectiveStatus(b) === selectedStatus);
-    // }
-
     if (selectedStatus !== "all") {
-      filtered = filtered.filter((b) => {
-        const eff = getEffectiveStatus(b);
-        console.log('[Filter]', {
-          branchName: b.branch_name,
-          effectiveStatus: eff,
-          selectedStatus: selectedStatus,
-          match: eff === selectedStatus
-        });
-        return eff === selectedStatus;
-      });
+      filtered = filtered.filter((b) => getEffectiveStatus(b) === selectedStatus);
     }
+
     return filtered.sort((a, b) => a.branch_name.localeCompare(b.branch_name));
   }, [branches, debouncedSearch, selectedSize, selectedStatus]);
 
   /* ─── Hydratation APRÈS filtrage ──────────────────────────────────────
-     Ce qu'on passe au tableau = ce que l'utilisateur a filtré.
+     Important : on hydrate uniquement ce que l'utilisateur a filtré,
+     pas la liste complète — sinon le filtre n'a aucun effet visible
+     sur ce qui est affiché.
   */
-  // ─── Ancienne version (commentée pour référence) ─────────────────────
-  // const hydratedBranches = useMemo(
-  //   () => branches.map(hydrateBranch),  // ❌ hydrate TOUTES, pas filtered
-  //   [branches, hydrateBranch]
-  // );
-  //
-  // ❌ Bug : on calculait filteredBranches mais on passait hydratedBranches
-  //         au tableau → le filtre n'avait aucun effet visible.
   const hydratedFilteredBranches = useMemo(
     () => filteredBranches.map(hydrateBranch),
     [filteredBranches, hydrateBranch]
@@ -253,17 +230,11 @@ const BranchesGrid: React.FC = () => {
     setShowCreateModal(true);
   };
 
-    const handleEdit = (branch: BranchData) => {
+  const handleEdit = (branch: BranchData) => {
     setSelectedBranch(branch);
-    // setEditSubMode("edit");  ← optionnel
     setShowEditModal(true);
   };
 
-  /**
-   * "Activer" depuis la liste = ouvrir le modal d'édition en mode "activate"
-   * (pré-sélectionne l'horaire par défaut + highlight la section qui manque)
-   */
-  
   const handleDelete = (branch: BranchData) => {
     setSelectedBranch(branch);
     setShowDeleteModal(true);
@@ -287,11 +258,11 @@ const BranchesGrid: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
-          {/* <p className="text-sm text-gray-500">Chargement des succursales…</p> */}
         </div>
       </div>
     );
   }
+
   /* ─── Render ────────────────────────────────────────────────────────── */
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
@@ -320,18 +291,16 @@ const BranchesGrid: React.FC = () => {
         onSearchChange={setSearch}
         onClear={() => setSearch("")}
         onSizeChange={setSelectedSize}
-        // ─── Aligné sur AccountGrid : handleStatusChange synchronise dropdown + onglet ──
         onAdd={handleAdd}
-    />
+      />
 
-     <BrancheTable
+      <BrancheTable
         branches={hydratedFilteredBranches}
-        allBranches={hydratedAllBranches}    // ← nouvelle prop
+        allBranches={hydratedAllBranches}
         isLoading={isLoading}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        // onActivate retiré
         activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
@@ -385,6 +354,9 @@ const BranchesGrid: React.FC = () => {
           openingHours={openingHours}
           holidays={holidays}
           isLoadingData={isLoading}
+          employees={employees}    // ← nouveau
+          error={error}             // ← tant qu'à faire, connecte enfin l'erreur au modal
+          posts={posts} // ← nouveau
         />
       )}
     </div>

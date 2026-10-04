@@ -2,24 +2,25 @@
 
 import React, { useRef, useEffect } from 'react';
 import {
-  ChevronDown, CheckCircle2, XCircle,
+  ChevronDown, CheckCircle2,
   MapPin, Briefcase, Archive, Download,
 } from 'lucide-react';
 
 export type EmployeeBulkAction =
   | 'activate'
-  | 'deactivate'
   | 'change_branch'
   | 'change_post'
   | 'archive'
   | 'export';
 
+type DropdownContext = 'actif' | 'archive';
 
 interface BulkActionDropdownProps {
   selectedCount: number;
   isOpen:        boolean;
   onToggle:      () => void;
   onAction:      (action: EmployeeBulkAction) => void;
+  context:       DropdownContext;
 }
 
 const ACTIONS: {
@@ -28,13 +29,13 @@ const ACTIONS: {
   icon:    React.ReactNode;
   danger?: boolean;
   section: 'statut' | 'organisation' | 'autre';
+  contexts: DropdownContext[];   // ← sur quel(s) onglet(s) cette action a du sens
 }[] = [
-  { id: 'activate',      label: 'Activer',              icon: <CheckCircle2 className="w-3.5 h-3.5" />, section: 'statut'       },
-  { id: 'deactivate',    label: 'Desactiver',            icon: <XCircle      className="w-3.5 h-3.5" />, section: 'statut'       },
-  { id: 'change_branch', label: 'Changer la succursale', icon: <MapPin       className="w-3.5 h-3.5" />, section: 'organisation' },
-  { id: 'change_post',   label: 'Assigner un poste',     icon: <Briefcase    className="w-3.5 h-3.5" />, section: 'organisation' },
-  { id: 'export',        label: 'Exporter la selection', icon: <Download     className="w-3.5 h-3.5" />, section: 'autre'        },
-  { id: 'archive',       label: 'Archiver',              icon: <Archive      className="w-3.5 h-3.5" />, danger: true, section: 'autre' },
+  { id: 'activate',      label: 'Reactiver',             icon: <CheckCircle2 className="w-3.5 h-3.5" />, section: 'statut',       contexts: ['archive'] },
+  { id: 'change_branch', label: 'Changer la succursale', icon: <MapPin       className="w-3.5 h-3.5" />, section: 'organisation', contexts: ['actif']   },
+  { id: 'change_post',   label: 'Assigner un poste',     icon: <Briefcase    className="w-3.5 h-3.5" />, section: 'organisation', contexts: ['actif']   },
+  { id: 'export',        label: 'Exporter la selection', icon: <Download     className="w-3.5 h-3.5" />, section: 'autre',        contexts: ['actif', 'archive'] },
+  { id: 'archive',       label: 'Archiver',              icon: <Archive      className="w-3.5 h-3.5" />, danger: true, section: 'autre', contexts: ['actif'] },
 ];
 
 const SECTIONS: { id: 'statut' | 'organisation' | 'autre'; label: string }[] = [
@@ -44,7 +45,7 @@ const SECTIONS: { id: 'statut' | 'organisation' | 'autre'; label: string }[] = [
 ];
 
 const BulkActionDropdown: React.FC<BulkActionDropdownProps> = ({
-  selectedCount, isOpen, onToggle, onAction,
+  selectedCount, isOpen, onToggle, onAction, context,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -55,6 +56,8 @@ const BulkActionDropdown: React.FC<BulkActionDropdownProps> = ({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen, onToggle]);
+
+  const visibleActions = ACTIONS.filter(a => a.contexts.includes(context));
 
   return (
     <div className="relative" ref={ref}>
@@ -69,7 +72,8 @@ const BulkActionDropdown: React.FC<BulkActionDropdownProps> = ({
       {isOpen && (
         <div className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-gray-100 rounded-2xl shadow-lg z-50 overflow-hidden py-1">
           {SECTIONS.map((section, si) => {
-            const items = ACTIONS.filter(a => a.section === section.id);
+            const items = visibleActions.filter(a => a.section === section.id);
+            if (items.length === 0) return null;
             return (
               <React.Fragment key={section.id}>
                 {si > 0 && <div className="h-px bg-gray-100 my-1" />}

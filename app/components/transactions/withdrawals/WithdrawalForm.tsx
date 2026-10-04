@@ -20,7 +20,7 @@ interface AccountOption {
   account_number: string;
   typeCompte:     'epargne' | 'cheques' | 'terme';
   soldeActuel:    number;
-  statutCompte:   'actif' | 'suspendu' | 'ferme';
+  account_status:   'actif' | 'suspendu' | 'ferme';
 }
 
 export interface WithdrawalFormProps {
@@ -58,16 +58,16 @@ const MOCK_MEMBERS: MemberOption[] = [
 
 const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
   'dcb21971': [
-    { id: 'acc1', account_number: '636-922-093-4469', typeCompte: 'epargne', soldeActuel: 15000, statutCompte: 'actif'    },
-    { id: 'acc2', account_number: '789-123-456-7890', typeCompte: 'cheques', soldeActuel: 5500,  statutCompte: 'actif'    },
-    { id: 'acc3', account_number: '111-222-333-4444', typeCompte: 'terme',   soldeActuel: 25000, statutCompte: 'actif'    },
-    { id: 'acc4', account_number: '222-333-444-5555', typeCompte: 'epargne', soldeActuel: 1200,  statutCompte: 'suspendu' },
+    { id: 'acc1', account_number: '636-922-093-4469', typeCompte: 'epargne', soldeActuel: 15000, account_status: 'actif'    },
+    { id: 'acc2', account_number: '789-123-456-7890', typeCompte: 'cheques', soldeActuel: 5500,  account_status: 'actif'    },
+    { id: 'acc3', account_number: '111-222-333-4444', typeCompte: 'terme',   soldeActuel: 25000, account_status: 'actif'    },
+    { id: 'acc4', account_number: '222-333-444-5555', typeCompte: 'epargne', soldeActuel: 1200,  account_status: 'suspendu' },
   ],
-  'a1b2c3d4': [{ id: 'acc5', account_number: '321-654-987-0123', typeCompte: 'terme',   soldeActuel: 50000, statutCompte: 'actif' }],
-  'b3c4d5e6': [{ id: 'acc6', account_number: '456-789-012-3456', typeCompte: 'epargne', soldeActuel: 8750,  statutCompte: 'actif' }],
-  'c4d5e6f7': [{ id: 'acc7', account_number: '567-890-123-4567', typeCompte: 'cheques', soldeActuel: 2300,  statutCompte: 'actif' }],
-  'd5e6f7a8': [{ id: 'acc8', account_number: '678-901-234-5678', typeCompte: 'epargne', soldeActuel: 32000, statutCompte: 'actif' }],
-  'e6f7a8b9': [{ id: 'acc9', account_number: '890-123-456-7891', typeCompte: 'terme',   soldeActuel: 100000,statutCompte: 'actif' }],
+  'a1b2c3d4': [{ id: 'acc5', account_number: '321-654-987-0123', typeCompte: 'terme',   soldeActuel: 50000, account_status: 'actif' }],
+  'b3c4d5e6': [{ id: 'acc6', account_number: '456-789-012-3456', typeCompte: 'epargne', soldeActuel: 8750,  account_status: 'actif' }],
+  'c4d5e6f7': [{ id: 'acc7', account_number: '567-890-123-4567', typeCompte: 'cheques', soldeActuel: 2300,  account_status: 'actif' }],
+  'd5e6f7a8': [{ id: 'acc8', account_number: '678-901-234-5678', typeCompte: 'epargne', soldeActuel: 32000, account_status: 'actif' }],
+  'e6f7a8b9': [{ id: 'acc9', account_number: '890-123-456-7891', typeCompte: 'terme',   soldeActuel: 100000,account_status: 'actif' }],
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ export default function WithdrawalForm({
       setForm(f => ({ ...f, [key]: e.target.value }));
 
   const amount       = parseFloat(form.montantTransaction) || 0;
-  const isBlocked    = selectedAccount !== null && selectedAccount.statutCompte !== 'actif';
+  const isBlocked    = selectedAccount !== null && selectedAccount.account_status !== 'actif';
   const insufficient = selectedAccount ? amount > selectedAccount.soldeActuel : false;
   const needsVerif   = amount > 50000;
 
@@ -174,7 +174,7 @@ export default function WithdrawalForm({
   };
 
   const handleAccountSelect = (acc: AccountOption) => {
-    if (acc.statutCompte !== 'actif') return;
+    if (acc.account_status !== 'actif') return;
     setSelectedAccount(acc);
     setForm(f => ({ ...f, idCompte: acc.account_number }));
     setErrors(e => ({ ...e, idCompte: '' }));
@@ -347,7 +347,7 @@ if (submitted && submittedData) {
               <div className="flex flex-col gap-1.5 mt-1">
                 {memberAccounts.map(acc => {
                   const tCfg  = TYPE_LABEL[acc.typeCompte];
-                  const isAct = acc.statutCompte === 'actif';
+                  const isAct = acc.account_status === 'actif';
                   const isSel = selectedAccount?.id === acc.id;
                   return (
                     <button key={acc.id} type="button" disabled={!isAct}
@@ -454,26 +454,7 @@ if (submitted && submittedData) {
       </div>
 
       {/* ── 3. Autorisation superviseur ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <SectionHeader step={3} title="Autorisation superviseur" icon={ShieldCheck} />
-        <div className="flex items-start gap-3 mb-4 px-3 py-2.5 bg-[#EBF2F8] border border-[#355C7D]/20 rounded-xl">
-          <ShieldCheck className="w-4 h-4 text-[#355C7D] shrink-0 mt-0.5" />
-          <p className="text-xs text-[#355C7D] font-medium">
-            Le code d'autorisation est fourni par le superviseur ou le chef de caisse. Le caissier ne peut pas autoriser sa propre transaction.
-          </p>
-        </div>
-        <Field label="Code d'autorisation" required error={errors.code}
-          hint="Saisie manuelle obligatoire — remis par un responsable autorisé.">
-          <div className="relative">
-            <Hash className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <StyledInput placeholder="Code remis par le superviseur" hasError={!!errors.code}
-              className="pl-9 font-mono"
-              value={form.codeAutorisation}
-              onChange={e => { setForm(f => ({ ...f, codeAutorisation: e.target.value })); setErrors(er => ({ ...er, code: '' })); }} />
-          </div>
-        </Field>
-      </div>
-
+      
       {/* ── Footer ── */}
      <div className="flex items-center justify-between gap-3 pt-1">
         <button type="button" onClick={onCancel}
@@ -483,8 +464,8 @@ if (submitted && submittedData) {
         <button type="submit" disabled={submitting || isLoading || isBlocked}
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           {submitting || isLoading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
-            : <><ArrowDownCircle className="w-4 h-4" /> Enregistrer le dépôt</>
+            ? <div><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</div>
+            : <div><ArrowDownCircle className="w-4 h-4" /> Enregistrer le dépôt</div>
           }
         </button>
       </div>

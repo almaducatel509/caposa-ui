@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
 import type { DepartmentCode } from '@/app/data/haitiLocations';
 
-import { BranchData, Post, EmployeeFormData, ErrorMessages } from './validations';
+import { BranchData, EmployeeFormData, ErrorMessages } from './validations';
 import { EmailField } from './EmailField';
 import EmployeePhotoField from './EmployeePhotoField';
 import {
@@ -12,6 +12,7 @@ import {
   Briefcase, CheckCircle2, AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import PhotoSelector from '../core/upload-file';
+import { Post } from '../postes/PostTable';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -143,7 +144,6 @@ const EmployeeFormFields: React.FC<{
       formData.first_name, formData.last_name,
       formData.date_of_birth, formData.phone_number,
       formData.address, formData.gender,
-      formData.payment_ref, formData.branch,
       formData.posts?.length > 0 ? 'has_posts' : '',
     ];
     if (!isEditMode) {
@@ -260,7 +260,7 @@ const EmployeeFormFields: React.FC<{
               )}
             </div>
           ) : (
-            <>
+            <div>
               <Field label="Mot de passe" required error={errors.password}>
                 {/* // Password création */}
 
@@ -284,7 +284,7 @@ const EmployeeFormFields: React.FC<{
                   hasError={!!errors.confirm_password}
                 />
               </Field>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -342,11 +342,7 @@ const EmployeeFormFields: React.FC<{
             </div>
           </Field>
 
-          <Field label="Référence de paiement" required error={errors.payment_ref}>
-            <Input type="text" value={formData.payment_ref}
-              onChange={e => setFormData({ payment_ref: e.target.value })}
-              placeholder="Référence de paiement" hasError={!!errors.payment_ref} />
-          </Field>
+         
 
           {/* Adresse Haïti */}
           <Field label="Département" required>

@@ -697,12 +697,12 @@ export default function SessionDetailModal({ session, onClose }: Props) {
               <div className="w-6 h-6 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <>
+            <div>
               {tab === 'resume'       && <ResumeTab       session={session} transactions={transactions} />}
               {tab === 'timeline'     && <TimelineTab     session={session} transactions={transactions} />}
               {tab === 'transactions' && <TransactionsTab session={session} transactions={transactions} />}
               {tab === 'audit'        && <AuditTab        session={session} />}
-            </>
+            </div>
           )}
         </div>
 

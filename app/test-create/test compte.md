@@ -9,7 +9,7 @@
 //   const [formData, setFormData] = useState({
 //     id_membre: "",
 //     typeCompte: "" as "epargne" | "cheques" | "terme" | "",
-//     statutCompte: "actif" as "actif" | "ferme" | "suspendu",
+//     account_status: "actif" as "actif" | "ferme" | "suspendu",
 //     dateOuverture: new Date().toISOString().split('T')[0],
 //     tauxInteret: null as number | null,
 //     limiteTrait: null as number | null,
@@ -44,7 +44,7 @@
 //     const payload = {
 //       id_membre: formData.id_membre,
 //       typeCompte: formData.typeCompte,
-//       statutCompte: formData.statutCompte,
+//       account_status: formData.account_status,
 //       dateOuverture: formData.dateOuverture,
 //       tauxInteret: formData.tauxInteret,
 //       limiteTrait: formData.limiteTrait,
@@ -91,7 +91,7 @@
 //     setFormData({
 //       id_membre: "",
 //       typeCompte: "",
-//       statutCompte: "actif",
+//       account_status: "actif",
 //       dateOuverture: new Date().toISOString().split('T')[0],
 //       tauxInteret: null,
 //       limiteTrait: null,
@@ -179,14 +179,14 @@
 //           </pre>
           
 //           {Object.keys(errors).length > 0 && (
-//             <>
+//             <div>
 //               <h4 className="text-md font-bold text-red-400 mt-4 mb-2">
 //                 ❌ Erreurs de validation
 //               </h4>
 //               <pre className="text-xs text-red-400 overflow-auto">
 // {JSON.stringify(errors, null, 2)}
 //               </pre>
-//             </>
+//             </div>
 //           )}
 //         </div>
 

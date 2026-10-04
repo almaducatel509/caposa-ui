@@ -89,12 +89,15 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
   const [copied,        setCopied]        = useState(false);
 
   // ── Filtre membres ───────────────────────────────────────────────────────
-  const filteredMembers = useMemo(() =>
-    members.filter(m =>
-      m.member_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
-      m.id_number.includes(memberSearch)
-    ), [members, memberSearch]);
-
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return []; // ne rien montrer tant qu'on n'a pas tapé
+    return members
+      .filter(m =>
+        m.member_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+        m.id_number.includes(memberSearch)
+      )
+      .slice(0, 8); // cap l'affichage à 8 résultats
+  }, [members, memberSearch]);
   // ── Reset ────────────────────────────────────────────────────────────────
   const resetAll = () => {
     setSelectedMember(null);
@@ -321,8 +324,10 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
                             <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                             <p className="text-xs text-gray-400">Chargement des membres…</p>
                           </div>
+                        : !memberSearch.trim()
+                        ? <p className="text-xs text-gray-400 text-center py-4">Tapez un nom ou un N° pour rechercher</p>
                         : filteredMembers.length === 0
-                        ? <p className="text-xs text-gray-400 text-center py-4">Aucun membre trouvé</p>
+                        ? <p className="text-xs text-gray-400 text-center py-4">Aucun membre trouvé pour « {memberSearch} »</p>
                         : filteredMembers.map(m => (
                             <button
                               key={m.id}
@@ -347,7 +352,7 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
 
               {/* Récap membre + status éligibilité */}
               {selectedMember && (
-                <>
+                <div>
                   <div className="flex items-center gap-3 px-3 py-2 bg-[#F9F9F6] rounded-xl border border-gray-100 text-xs text-gray-500 mt-1">
                     <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <span>ID : <span className="font-mono font-semibold text-gray-700">{selectedMember.id_number}</span></span>
@@ -364,10 +369,10 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
                   {!eligibilityChecking && eligibleOK && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-[#DDEAD5]/40 border border-[#2E7D32]/20 rounded-xl mt-1">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />
-                      <p className="text-xs text-[#1B5E20] font-medium">Membre éligible — vous pouvez choisir un type de compte.</p>
+                      <p className="text-xs text-[#1B5E20] font-medium">Membre éligible. Vous pouvez choisir un type de compte.</p>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </Field>
           </div>
@@ -462,8 +467,8 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Création…</>
-              : <><Wallet className="w-4 h-4" /> Créer le compte</>
+              ? <div><Loader2 className="w-4 h-4 animate-spin" /> Création…</div>
+              : <div><Wallet className="w-4 h-4" /> Créer le compte</div>
             }
           </button>
         </div>

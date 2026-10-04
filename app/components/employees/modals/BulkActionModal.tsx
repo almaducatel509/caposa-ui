@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  X, AlertTriangle, CheckCircle2, XCircle,
+  X, AlertTriangle, CheckCircle2,
   MapPin, Briefcase, Archive, Loader2, CheckCheck,
 } from 'lucide-react';
 import { EmployeeData, PostData, BranchData } from '@/app/components/employees/validations';
@@ -16,7 +16,7 @@ interface BulkActionModalProps {
   branches:  BranchData[];
   posts: PostData[];
   onClose:   () => void;
-  onConfirm: (action: EmployeeBulkAction,eligibleIds: string[], payload?: string, ) => Promise<void>;
+  onConfirm: (action: EmployeeBulkAction, eligibleIds: string[], payload?: string) => Promise<void>;
 }
 
 // ─── Config par action ─────────────────────────────────────────────────────────
@@ -33,21 +33,12 @@ type ActionConfig = {
 
 const ACTION_CONFIG: Record<EmployeeBulkAction, ActionConfig> = {
   activate: {
-    title:        (n) => `Activer ${n} employe${n > 1 ? 's' : ''}`,
-    description:  (n) => `Ces ${n} employe${n > 1 ? 's' : ''} seront marques comme Actifs et pourront operer des transactions.`,
+    title:        (n) => `Reactiver ${n} employe${n > 1 ? 's' : ''}`,
+    description:  (n) => `Ces ${n} employe${n > 1 ? 's' : ''} seront marques comme Actifs et pourront a nouveau operer des transactions.`,
     icon:         <CheckCircle2 className="w-5 h-5 text-[#2E7D32]" />,
-    confirmLabel: (n) => `Activer ${n} employe${n > 1 ? 's' : ''}`,
+    confirmLabel: (n) => `Reactiver ${n} employe${n > 1 ? 's' : ''}`,
     danger:       false,
     color:        'bg-[#DDEAD5]',
-    needsSelect:  false,
-  },
-  deactivate: {
-    title:        (n) => `Desactiver ${n} employe${n > 1 ? 's' : ''}`,
-    description:  (n) => `Ces ${n} employe${n > 1 ? 's' : ''} seront marques comme Inactifs. Ils ne pourront plus ouvrir de caisse.`,
-    icon:         <XCircle className="w-5 h-5 text-yellow-500" />,
-    confirmLabel: (n) => `Desactiver ${n} employe${n > 1 ? 's' : ''}`,
-    danger:       false,
-    color:        'bg-yellow-50',
     needsSelect:  false,
   },
   change_branch: {
@@ -78,42 +69,25 @@ const ACTION_CONFIG: Record<EmployeeBulkAction, ActionConfig> = {
     needsSelect:  false,
   },
   export: {
-    title: (n) => `Exporter ${n} membre${n > 1 ? 's' : ''}`,
-    description: (n) => `Les donnees de ${n} membre${n > 1 ? 's' : ''} seront exportees en CSV.`,
+    title: (n) => `Exporter ${n} employe${n > 1 ? 's' : ''}`,
+    description: (n) => `Les donnees de ${n} employe${n > 1 ? 's' : ''} seront exportees en CSV.`,
     icon: <CheckCircle2 className="w-5 h-5 text-[#2E7D32]" />,
     confirmLabel: (_n) => `Exporter en CSV`,
     danger: false,
     color: 'bg-[#DDEAD5]',
-    needsSelect: false
+    needsSelect: false,
   },
 };
-
-// ─── Normalisation du statut ───────────────────────────────────────────────────
-
-function normalizeEmpStatus(raw: string | undefined): 'active' | 'inactive' | 'archived' | string {
-  switch ((raw ?? '').toLowerCase().trim()) {
-    case 'active':
-    case 'actif':
-    case 'actif(ve)':
-      return 'active';
-    case 'inactive':
-    case 'inactif':
-      return 'inactive';
-    case 'archived':
-    case 'archive':
-    case 'suspendu':
-    case 'suspended':
-      return 'archived';
-    default:
-      return (raw ?? '').toLowerCase().trim();
-  }
-}
 
 // ─── Règles métier ─────────────────────────────────────────────────────────────
 
 interface EligibilityResult {
   eligible: EmployeeData[];
   refused:  { employee: EmployeeData; reasons: string[] }[];
+}
+
+function isArchived(emp: EmployeeData): boolean {
+  return emp.is_active === false;
 }
 
 function checkEmployeeEligibility(
@@ -125,44 +99,19 @@ function checkEmployeeEligibility(
 
   for (const emp of employees) {
     const reasons: string[] = [];
-    const status = normalizeEmpStatus(emp.statutEmploye);
+    const archived = isArchived(emp);
 
-    // ── Activation ────────────────────────────────────────────────────────────
-    if (action === 'activate') {
-      if (status === 'active')
-        reasons.push('Employe deja actif');
-      if (status === 'archived')
-        reasons.push('Employe archive — reactivation manuelle requise');
-    }
+    if (action === 'activate' && !archived)
+      reasons.push('Employe deja actif');
 
-    // ── Desactivation ─────────────────────────────────────────────────────────
-    if (action === 'deactivate') {
-      if (status === 'inactive')
-        reasons.push('Employe deja inactif');
-      if (status === 'archived')
-        reasons.push('Employe archive — desactivation non applicable');
-    }
+    if (action === 'change_branch' && archived)
+      reasons.push('Employe archive — transfert impossible');
 
-    // ── Transfert de branche ──────────────────────────────────────────────────
-    if (action === 'change_branch') {
-      if (status === 'archived')
-        reasons.push('Employe archive — transfert impossible');
-    }
+    if (action === 'change_post' && archived)
+      reasons.push('Employe archive — changement de poste impossible');
 
-    // ── Changement de poste ───────────────────────────────────────────────────
-    if (action === 'change_post') {
-      if (status === 'archived')
-        reasons.push('Employe archive — changement de poste impossible');
-    }
-
-    // ── Archivage ─────────────────────────────────────────────────────────────
-    if (action === 'archive') {
-      if (status === 'archived')
-        reasons.push('Employe deja archive');
-      // Optionnel — decommenter si la caisse l'exige :
-      // if (status === 'active' && emp.has_open_session)
-      //   reasons.push("Session de caisse ouverte — fermez la caisse avant d'archiver");
-    }
+    if (action === 'archive' && archived)
+      reasons.push('Employe deja archive');
 
     if (reasons.length > 0) refused.push({ employee: emp, reasons });
     else eligible.push(emp);
@@ -207,7 +156,7 @@ const BulkActionModal: React.FC<BulkActionModalProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      await onConfirm(action, eligible.map((m) => m.id as string));
+      await onConfirm(action, eligible.map((m) => m.id as string), cfg.needsSelect ? selectedValue : undefined);
       onClose();
     } catch (e: any) {
       setError(e?.message ?? 'Une erreur est survenue.');
@@ -286,11 +235,11 @@ const BulkActionModal: React.FC<BulkActionModalProps> = ({
                         {emp.first_name} {emp.last_name}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {(emp as any).employee_number ?? (emp as any).posts_details?.[0]?.name ?? '—'}
+                        {(emp as any).posts_details?.[0]?.name ?? '—'}
                       </p>
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-[#DDEAD5] text-[#1B5E20] font-medium capitalize">
-                      {emp.statutEmploye ?? 'active'}
+                      {isArchived(emp) ? 'Archive' : 'Actif'}
                     </span>
                   </div>
                 ))}
@@ -319,9 +268,6 @@ const BulkActionModal: React.FC<BulkActionModalProps> = ({
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-semibold text-gray-700">
                         {employee.first_name} {employee.last_name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {(employee as any).employee_number ?? '—'}
                       </p>
                     </div>
                     {reasons.map((r, ri) => (
@@ -384,4 +330,4 @@ const BulkActionModal: React.FC<BulkActionModalProps> = ({
   );
 };
 
-export default BulkActionModal;
+export default BulkActionModal; 

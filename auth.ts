@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { authConfig } from "./auth.config";
 // petit helper pour décoder le JWT sans dépendance externe
+//C:\Users\alma2\Documents\Final Project\caposa-ui\auth.ts
 // pour décoder un JWT dans un environnement moderne (NextAuth v5, Next.js 16, Edge Runtime).
 export function decodeJwt<T = any>(token: string): T {
   const [, payload] = token.split(".");

@@ -59,7 +59,7 @@ const escapeCSVValue = (val: unknown): string => {
 export const ExportAllButton = <T extends object>({
   data,
   filename = "export",
-  label = "Exporter tout",
+  label = "Exporter",
   columns,
   headerLabels,
   separator = ",",
@@ -124,15 +124,15 @@ export const ExportAllButton = <T extends object>({
       className="flex items-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? (
-        <>
+        <div>
           <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
           Export…
-        </>
+        </div>
       ) : (
-        <>
+        <div>
           <Download className="w-4 h-4" />
           {label}
-        </>
+        </div>
       )}
     </button>
   );

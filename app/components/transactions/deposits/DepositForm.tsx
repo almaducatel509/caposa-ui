@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Search, X, ChevronDown, ArrowDownCircle,
-  Banknote, FileCheck, ArrowLeftRight, MoreHorizontal,
-  User, CreditCard, Hash, FileText, Clock, ShieldCheck,
-  CheckCircle2, AlertTriangle, Loader2, RefreshCw,
+  Search, X, ArrowDownCircle,
+  Banknote, FileCheck,
+  User, CreditCard, Hash, FileText,
+  CheckCircle2, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { depositSchema, DepositSubtype, type DepositFormValidated } from '../validation/deposit';
 import DepositReceipt from './DepositReceipt';
@@ -13,20 +13,27 @@ import { MemberOption } from '../../members/validations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-
+// interface AccountOption {
+//   id: string;
+//   account_number: string;
+//   typeCompte: 'epargne' | 'cheques' | 'terme';
+//   soldeActuel: number;
+//   account_status: 'actif' | 'suspendu' | 'ferme';
+// }
 interface AccountOption {
   id: string;
   account_number: string;
-  typeCompte: 'epargne' | 'cheques' | 'terme';
+  typeCompte: string;            // l'API peut renvoyer 'epargne' ou 'SAVINGS'
   soldeActuel: number;
-  statutCompte: 'actif' | 'suspendu' | 'ferme';
+  account_status: string;        // 'actif' | 'en_attente' | 'gele' | 'ferme'…
 }
-
 interface DepositFormProps {
-  members?:   MemberOption[];
-  onSubmit:   (data: DepositFormValidated) => Promise<void>;
-  onCancel:   () => void;
-  isLoading?: boolean;
+  members:              MemberOption[];
+  /** Doit appeler l'API réelle et lever une Error avec un message explicite en cas d'échec. */
+  fetchMemberAccounts:  (memberId: string) => Promise<AccountOption[]>;
+  onSubmit:             (data: DepositFormValidated) => Promise<void>;
+  onCancel:             () => void;
+  isLoading?:           boolean;
 }
 
 // ─── Config ────────────────────────────────────────────────────────────────────
@@ -40,33 +47,21 @@ const TYPE_LABEL: Record<string, { label: string; bg: string; text: string }> = 
   cheques: { label: 'Chèques', bg: 'bg-blue-50',    text: 'text-[#355C7D]'  },
   terme:   { label: 'Terme',   bg: 'bg-yellow-50',  text: 'text-yellow-700' },
 };
+const TYPE_ALIAS: Record<string, string> = { savings: 'epargne', checking: 'cheques', term: 'terme' };
+
+function getTypeCfg(raw?: string) {
+  const key = String(raw ?? '').toLowerCase();
+  return TYPE_LABEL[TYPE_ALIAS[key] ?? key]
+    ?? { label: raw || 'Compte', bg: 'bg-gray-100', text: 'text-gray-500' };
+}
+
+// Un compte en_attente doit pouvoir recevoir son premier dépôt (qui l'active)
+const peutRecevoirDepot = (status?: string) =>
+  ['actif', 'en_attente'].includes(String(status ?? '').toLowerCase());
 
 function formatHTG(n: number) {
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
 }
-
-// ─── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_MEMBERS: MemberOption[] = [
-  { id: 'dcb21971', member_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: 'a1b2c3d4', member_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-  { id: 'b3c4d5e6', member_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
-  { id: 'c4d5e6f7', member_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
-  { id: 'd5e6f7a8', member_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
-  { id: 'e6f7a8b9', member_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
-];
-
-const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
-  'dcb21971': [
-    { id: 'acc1', account_number: '636-922-093-4469', typeCompte: 'epargne', soldeActuel: 15000, statutCompte: 'actif'    },
-    { id: 'acc2', account_number: '789-123-456-7890', typeCompte: 'cheques', soldeActuel: 5500,  statutCompte: 'actif'    },
-    { id: 'acc3', account_number: '111-222-333-4444', typeCompte: 'epargne', soldeActuel: 1200,  statutCompte: 'suspendu' },
-  ],
-  'a1b2c3d4': [{ id: 'acc4', account_number: '321-654-987-0123', typeCompte: 'terme',   soldeActuel: 50000,  statutCompte: 'actif' }],
-  'b3c4d5e6': [{ id: 'acc5', account_number: '456-789-012-3456', typeCompte: 'epargne', soldeActuel: 8750,   statutCompte: 'actif' }],
-  'c4d5e6f7': [{ id: 'acc6', account_number: '567-890-123-4567', typeCompte: 'cheques', soldeActuel: 2300,   statutCompte: 'actif' }],
-  'd5e6f7a8': [{ id: 'acc7', account_number: '678-901-234-5678', typeCompte: 'epargne', soldeActuel: 32000,  statutCompte: 'actif' }],
-  'e6f7a8b9': [{ id: 'acc8', account_number: '890-123-456-7891', typeCompte: 'terme',   soldeActuel: 100000, statutCompte: 'actif' }],
-};
 
 // ─── Small components ──────────────────────────────────────────────────────────
 function Field({ label, required, error, hint, children }: {
@@ -115,9 +110,20 @@ function SectionHeader({ step, title, icon: Icon }: { step: number; title: strin
   );
 }
 
+/** Bannière d'erreur générique (API indisponible, échec de soumission, etc.) */
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 export default function DepositForm({
-  members   = MOCK_MEMBERS,
+  members,
+  fetchMemberAccounts,
   onSubmit,
   onCancel,
   isLoading = false,
@@ -127,9 +133,12 @@ export default function DepositForm({
   const [memberOpen,      setMemberOpen]      = useState(false);
   const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
   const [memberAccounts,  setMemberAccounts]  = useState<AccountOption[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError,   setAccountsError]   = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
   const [submitted,       setSubmitted]       = useState(false);
   const [submitting,      setSubmitting]      = useState(false);
+  const [submitError,     setSubmitError]     = useState<string | null>(null);
   const [errors,          setErrors]          = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     idCompte: '',
@@ -158,10 +167,9 @@ export default function DepositForm({
     issuePlace: '',
   });
 
-
   // Calculs automatiques
-  const amount     = parseFloat(form.montantTransaction) || 0;
-
+  const amount = parseFloat(form.montantTransaction) || 0;
+  const solde             = selectedAccount?.soldeActuel ?? 0;
   // hold period : 3 jours pour chèque, 0 pour cash
   const hold = form.depositSubtype === 'check' ? 3 : 0;
 
@@ -169,12 +177,15 @@ export default function DepositForm({
   const needsVerif = form.depositSubtype === 'check' || amount > 50000;
 
   // montant disponible immédiatement : 30% si chèque, 100% si cash
-  const availImm   = hold > 0 ? Math.floor(amount * 0.3) : amount;
+  const availImm = hold > 0 ? Math.floor(amount * 0.3) : amount;
 
   // compte bloqué ?
-  const isBlocked  =
-    selectedAccount !== null &&
-    selectedAccount.statutCompte !== 'actif';
+  // const isBlocked =
+  //   selectedAccount !== null &&
+  //   selectedAccount.account_status !== 'actif';
+  const isBlocked =
+  selectedAccount !== null &&
+  !peutRecevoirDepot(selectedAccount.account_status);
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -186,17 +197,33 @@ export default function DepositForm({
       m.id_number.includes(memberSearch)
     ), [members, memberSearch]);
 
-  const handleMemberSelect = (m: MemberOption) => {
+  const handleMemberSelect = async (m: MemberOption) => {
     setSelectedMember(m);
     setMemberOpen(false);
     setMemberSearch('');
     setSelectedAccount(null);
     setForm(f => ({ ...f, idCompte: '' }));
-    setMemberAccounts(MOCK_ACCOUNTS[m.id] ?? []);
+    setMemberAccounts([]);
+    setAccountsError(null);
+    setAccountsLoading(true);
+
+    try {
+      const accounts = await fetchMemberAccounts(m.id);
+      setMemberAccounts(accounts);
+    } catch (err) {
+      setAccountsError(
+        err instanceof Error
+          ? err.message
+          : "Impossible de charger les comptes de ce membre."
+      );
+    } finally {
+      setAccountsLoading(false);
+    }
   };
 
   const handleAccountSelect = (acc: AccountOption) => {
-    if (acc.statutCompte !== 'actif') return;
+    if (!peutRecevoirDepot(acc.account_status)) return;
+    // if (acc.account_status !== 'actif') return;
     setSelectedAccount(acc);
     setForm(f => ({ ...f, idCompte: acc.account_number }));
     setErrors(e => ({ ...e, idCompte: '' }));
@@ -206,24 +233,15 @@ export default function DepositForm({
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
+    setAccountsError(null);
     setForm(f => ({ ...f, idCompte: '' }));
   };
-  
+
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    console.log("🟢 Form complète :", form);
-
-      console.log("🟢 Valeurs importantes :", {
-        membre: selectedMember,
-        compte: selectedAccount,
-        montant: form.montantTransaction,
-        mode: form.depositSubtype,
-        source: form.source,
-        description: form.description,
-      });
-    console.log("📤 Données brutes du formulaire :", form);
 
     const payload = {
+      accountId: selectedAccount?.id ?? '',
       idCompte:             form.idCompte,
       typeTransaction:      'DEPOSIT' as const,
       codeAutorisation:     form.codeAutorisation,
@@ -249,20 +267,11 @@ export default function DepositForm({
       beneficiary:          form.beneficiary || null,
       amountWords:          form.amountWords || null,
       issuePlace:           form.issuePlace || null,
-
-      // // Système
-      // holdPeriod:           hold,
-      // requiresVerification: needsVerif,
-      // availableImmediately: availImm,
     };
-
-    console.log("📦 Payload avant validation :", payload);
 
     const result = depositSchema.safeParse(payload);
 
     if (!result.success) {
-      console.log("❌ Erreurs de validation :", result.error.format());
-
       const fieldErrors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
         const key = String(err.path[0]);
@@ -273,16 +282,21 @@ export default function DepositForm({
       return;
     }
 
-    console.log("✅ Données validées envoyées au backend :", result.data);
-
     setErrors({});
+    setSubmitError(null);
     setSubmitting(true);
 
     try {
-      const response = await onSubmit(result.data);
-      console.log("📥 Réponse backend :", response);
+      await onSubmit(result.data);
       setSubmittedData(result.data);
       setSubmitted(true);
+    } catch (err) {
+      // Aucune soumission "silencieuse" : on affiche le vrai problème à l'utilisateur
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Une erreur est survenue lors de l'enregistrement du dépôt."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -316,10 +330,12 @@ export default function DepositForm({
       amountWords: '',
       issuePlace: '',
     });
-setSubmittedData(null)
+    setSubmittedData(null);
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
+    setAccountsError(null);
+    setSubmitError(null);
     setErrors({});
   };
 
@@ -332,10 +348,11 @@ setSubmittedData(null)
       />
     );
   }
+
   // ── Formulaire ──────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-
+      
       {/* ── 1. Membre + Compte ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={1} title="Membre et compte cible" icon={User} />
@@ -415,17 +432,33 @@ setSubmittedData(null)
           <Field label="Compte cible" required error={errors.idCompte}
             hint={!selectedMember ? "Sélectionnez un membre d'abord" : undefined}>
             <Input placeholder="Ex: 636-922-093-4469" hasError={!!errors.idCompte}
-              disabled={!selectedMember} value={form.idCompte}
+              disabled={!selectedMember || accountsLoading} value={form.idCompte}
               onChange={e => {
                 setForm(f => ({ ...f, idCompte: e.target.value }));
                 const match = memberAccounts.find(a => a.account_number === e.target.value);
                 setSelectedAccount(match ?? null);
               }} />
-            {memberAccounts.length > 0 && (
+
+            {accountsLoading && (
+              <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Chargement des comptes du membre…
+              </div>
+            )}
+
+            {accountsError && (
+              <div className="mt-1">
+                <ErrorBanner message={accountsError} />
+              </div>
+            )}
+
+            {!accountsLoading && !accountsError && memberAccounts.length > 0 && (
               <div className="flex flex-col gap-1.5 mt-1">
                 {memberAccounts.map(acc => {
-                  const tCfg  = TYPE_LABEL[acc.typeCompte];
-                  const isAct = acc.statutCompte === 'actif';
+                  // const tCfg  = TYPE_LABEL[acc.typeCompte];
+                  // const isAct = acc.account_status === 'actif';
+                  const tCfg  = getTypeCfg(acc.typeCompte);
+                  const isAct = peutRecevoirDepot(acc.account_status);
                   const isSel = selectedAccount?.id === acc.id;
                   return (
                     <button key={acc.id} type="button" disabled={!isAct}
@@ -440,12 +473,17 @@ setSubmittedData(null)
                         <p className="text-xs text-gray-400">{formatHTG(acc.soldeActuel)}</p>
                       </div>
                       <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${tCfg.bg} ${tCfg.text}`}>{tCfg.label}</span>
-                      {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">Suspendu</span>}
+                      {/* {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">Suspendu</span>} */}
+                      {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">{acc.account_status}</span>}
                       {isSel  && <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />}
                     </button>
                   );
                 })}
               </div>
+            )}
+
+            {!accountsLoading && !accountsError && selectedMember && memberAccounts.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">Ce membre n'a aucun compte.</p>
             )}
           </Field>
 
@@ -466,42 +504,29 @@ setSubmittedData(null)
             </div>
             {amount > 0 && <p className="text-xs text-[#2E7D32] font-semibold text-right">{formatHTG(amount)}</p>}
           </Field>
-
-          <Field label="Code d'autorisation" required error={errors.codeAutorisation}
-            hint="Fourni par le superviseur ou le chef de caisse — saisie manuelle obligatoire.">
-            <div className="relative">
-              <Hash className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Input placeholder="Code remis par le superviseur" hasError={!!errors.codeAutorisation}
-                className="pl-9 font-mono"
-                value={form.codeAutorisation} onChange={set('codeAutorisation')} />
+          <Field label="type de dépôt" required error={errors.depositSubtype}>
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
+              {(Object.keys(SUBTYPE_CFG) as DepositSubtype[]).map(sub => {
+                const cfg    = SUBTYPE_CFG[sub as keyof typeof SUBTYPE_CFG];
+                const Icon   = cfg.icon;
+                const active = form.depositSubtype === sub;
+                return (
+                  <button key={sub} type="button"
+                    onClick={() => setForm(f => ({ ...f, depositSubtype: sub }))}
+                    className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-center transition-all
+                      ${active ? 'border-[#2E7D32] bg-[#DDEAD5]/40 text-[#1B5E20]'
+                              : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}>
+                    <Icon className={`w-5 h-5 ${active ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+                    <span className="text-xs font-semibold">{cfg.label}</span>
+                    <span className="text-xs text-gray-400 leading-tight hidden sm:block">{cfg.desc}</span>
+                  </button>
+                );
+              })}
             </div>
           </Field>
-
         </div>
-
-        <Field label="Mode de dépôt" required error={errors.depositSubtype}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(Object.keys(SUBTYPE_CFG) as DepositSubtype[]).map(sub => {
-              const cfg    = SUBTYPE_CFG[sub as keyof typeof SUBTYPE_CFG];
-              const Icon   = cfg.icon;
-              const active = form.depositSubtype === sub;
-              return (
-                <button key={sub} type="button"
-                  onClick={() => setForm(f => ({ ...f, depositSubtype: sub }))}
-                  className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-center transition-all
-                    ${active ? 'border-[#2E7D32] bg-[#DDEAD5]/40 text-[#1B5E20]'
-                             : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}>
-                  <Icon className={`w-5 h-5 ${active ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
-                  <span className="text-xs font-semibold">{cfg.label}</span>
-                  <span className="text-xs text-gray-400 leading-tight hidden sm:block">{cfg.desc}</span>
-                </button>
-              );
-            })}
-          </div>
-        </Field>
       </div>
 
-      {/* ── 3. Détails ── */}
       {/* ── 3. Détails ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={3} title="Détails" icon={FileText} />
@@ -528,9 +553,8 @@ setSubmittedData(null)
           </Field>
 
           {/* Champs spécifiques au chèque */}
-          {/* Champs spécifiques au chèque */}
           {form.depositSubtype === 'check' && (
-            <>
+            <div>
               {/* Numéro du chèque (imprimé) */}
               <Field label="Numéro du chèque (imprimé)" required error={errors.checkNumber}>
                 <Input
@@ -649,12 +673,14 @@ setSubmittedData(null)
                   onChange={set('checkDate')}
                 />
               </Field>
-            </>
+            </div>
           )}
-
 
         </div>
       </div>
+
+      {/* ── Erreur de soumission (API indisponible, erreur métier, etc.) ── */}
+      {submitError && <ErrorBanner message={submitError} />}
 
       {/* ── Footer ── */}
       <div className="flex items-center justify-between gap-3 pt-1">
@@ -665,8 +691,8 @@ setSubmittedData(null)
         <button type="submit" disabled={submitting || isLoading || isBlocked}
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           {submitting || isLoading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
-            : <><ArrowDownCircle className="w-4 h-4" /> Enregistrer le dépôt</>
+            ? <div className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</div>
+            : <div className="flex items-center gap-2"><ArrowDownCircle className="w-4 h-4" /> Enregistrer le dépôt</div>
           }
         </button>
       </div>
@@ -678,4 +704,4 @@ setSubmittedData(null)
       )}
     </form>
   );
-} 
+}

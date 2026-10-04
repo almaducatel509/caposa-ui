@@ -5,6 +5,19 @@ import AxiosInstance from "@/app/lib/axiosInstance";
 
 import type { MemberData } from "@/app/components/members/validations";
 
+export type TxType   = 'depot' | 'retrait' | 'interet' | 'frais';
+export type TxStatus = 'completed' | 'pending' | 'cancelled';
+
+export interface Transaction {
+  id: string;
+  type: TxType;
+  amount: number;
+  description: string;
+  date: string;
+  status: TxStatus;
+  createdBy: string;
+}
+
 function mapApiMember(m: any): MemberData {
   let status: MemberData['status'] = 'inactif';
   if (m.status === true || m.status === 'true' || m.status === 'active' || m.status === 'actif') {
@@ -36,6 +49,7 @@ export const fetchMembers = async (): Promise<MemberData[]> => {
     return [];
   }
 };
+
 export const fetchMemberAccounts = async (memberId: string): Promise<any[]> => {
   try {
     const response = await AxiosInstance.get(`/members/${memberId}/accounts/`);
@@ -46,6 +60,38 @@ export const fetchMemberAccounts = async (memberId: string): Promise<any[]> => {
   }
 };
 
+
+
+function mapApiTransaction(t: any): Transaction {
+  return {
+    id:          String(t.id ?? t.id_transaction ?? ''),
+    type:        t.type ?? t.transaction_type ?? 'depot',
+    amount:      Number(t.amount ?? t.montant ?? 0),
+    description: t.description ?? t.libelle ?? '',
+    date:        t.date ?? t.created_at ?? t.date_transaction ?? '',
+    status:      t.status ?? 'completed',
+    createdBy:   t.created_by ?? t.createdBy ?? t.agent ?? 'Système',
+  };
+}
+
+/** LIST — historique des transactions d'un compte */
+/** LIST — historique des transactions d'un compte */
+export const fetchAccountTransactions = async (accountId: string | number): Promise<Transaction[]> => {
+  try {
+    const response = await AxiosInstance.get(`/transactions/`, {
+      params: { account_id: accountId },
+    });
+    const raw = (response.data as any)?.results ?? response.data;
+    console.group('🌐 API /transactions/?account_id=');
+    console.log('1er élément:', raw?.[0]);
+    console.log('Clés:', Object.keys(raw?.[0] ?? {}));
+    console.groupEnd();
+    return (raw as any[]).map(mapApiTransaction);
+  } catch (e) {
+    console.error("❌ Erreur récupération transactions:", e);
+    return [];
+  }
+};
 
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
   if (error?.response?.data?.message) return error.response.data.message;

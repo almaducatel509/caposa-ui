@@ -121,9 +121,9 @@ export default function DeleteHolidayModal({
                      shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isDeleting ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Suppression…</>
+            <div><Loader2 className="w-4 h-4 animate-spin" /> Suppression…</div>
           ) : (
-            <><Trash2 className="w-4 h-4" /> Supprimer</>
+            <div><Trash2 className="w-4 h-4" /> Supprimer</div>
           )}
         </button>
       </div>

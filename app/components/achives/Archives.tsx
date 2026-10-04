@@ -153,8 +153,8 @@ function SoftDeleteModal({ archive, onConfirm, onClose }: {
             <button onClick={handleConfirm} disabled={!motif.trim() || confirming}
               className="flex-1 py-2.5 rounded-xl bg-[#EF4444] text-white text-sm font-semibold hover:bg-[#DC2626] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {confirming
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Désactivation…</>
-                : <><Lock className="w-4 h-4" /> Confirmer</>
+                ? <div><Loader2 className="w-4 h-4 animate-spin" /> Désactivation…</div>
+                : <div><Lock className="w-4 h-4" /> Confirmer</div>
               }
             </button>
           </div>
@@ -214,8 +214,8 @@ function RestoreModal({ archive, onConfirm, onClose }: {
             <button onClick={handleConfirm} disabled={confirming}
               className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {confirming
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Restauration…</>
-                : <><RotateCcw className="w-4 h-4" /> Restaurer</>
+                ? <div><Loader2 className="w-4 h-4 animate-spin" /> Restauration…</div>
+                : <div><RotateCcw className="w-4 h-4" /> Restaurer</div>
               }
             </button>
           </div>
@@ -461,7 +461,7 @@ export default function ArchivesPage() {
                     <div className="col-span-1 flex items-center justify-center gap-1.5">
                       {archive.isDeleted ? (
                         // Désactivée : Eye → page désactivation + RotateCcw
-                        <>
+                        <div>
                           <button title="Voir la désactivation"
                             onClick={() => router.push(`/dashboard/archives/${archive.id}/desactivation`)}
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-[#FEF9EC] hover:text-[#B45309] transition-colors">
@@ -471,10 +471,10 @@ export default function ArchivesPage() {
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32] transition-colors">
                             <RotateCcw className="w-4 h-4" />
                           </button>
-                        </>
+                        </div>
                       ) : !estDesactivable(archive) ? (
                         // Verrouillée : Eye → détail + cadenas non-cliquable avec tooltip
-                        <>
+                        <div>
                           <button title="Voir les détails" onClick={() => handleViewDetails(archive)}
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-[#EBF2F8] hover:text-[#355C7D] transition-colors">
                             <Eye className="w-4 h-4" />
@@ -487,10 +487,10 @@ export default function ArchivesPage() {
                               {getRaisonVerrouillage(archive.type)}
                             </div>
                           </div>
-                        </>
+                        </div>
                       ) : (
                         // Active désactivable : Eye → détail + Trash
-                        <>
+                        <div>
                           <button title="Voir les détails" onClick={() => handleViewDetails(archive)}
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-[#EBF2F8] hover:text-[#355C7D] transition-colors">
                             <Eye className="w-4 h-4" />
@@ -499,7 +499,7 @@ export default function ArchivesPage() {
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-[#EF4444] transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -512,7 +512,7 @@ export default function ArchivesPage() {
           <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
             <p className="text-xs text-gray-400">
               <span className="font-semibold text-gray-600">{filtered.length}</span> archive{filtered.length !== 1 ? 's' : ''}
-              {searchTerm && <> · Recherche : <b>"{searchTerm}"</b></>}
+              {searchTerm && <div> · Recherche : <b>"{searchTerm}"</b></div>}
             </p>
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <Lock className="w-3.5 h-3.5" />

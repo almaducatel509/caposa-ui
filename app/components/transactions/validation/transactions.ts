@@ -9,7 +9,6 @@ export const transactionSchema = z.object({
   noCompte: z.string().min(1, "Numéro de Compte est requis"),
   idCredit: z.string().nullable(),
   typeTransaction: z.string().min(1, "Type de Transaction est requis"),
-  codeAutorisation: z.string().min(1, "Code d'Autorisation est requis"),
   montantTransaction: z.number().min(0, "Montant doit être positif"),
 });
 

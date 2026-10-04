@@ -29,6 +29,7 @@ import { ExportAllButton } from '@/app/ExportAllButton';
 import DifferedDepositModal from '../transactions/deposits/Differeddepositmodal';
 import { useSession } from 'next-auth/react';
 import { fetchCaisses } from '@/app/lib/api/caisse';
+import { EmployeeData } from '../employees/validations';
 
 // ═══════════════════════════════════════════════════════════════
 // MOCK_SESSIONS — données réalistes pour développement UI
@@ -38,24 +39,6 @@ import { fetchCaisses } from '@/app/lib/api/caisse';
 const now = Date.now();
 const h = (n: number) => n * 60 * 60 * 1000;
 const d = (n: number) => n * 24 * 60 * 60 * 1000;
-
-const MOCK_SESSIONS: CaisseSession[] = [
-  // ─── 1. OUVERTE — Port-au-Prince HTG ─────────────────────
-  {
-    id: 'sess-001', username: 'jean.dupont', caissier_nom: 'Jean Dupont',
-    numero_caisse: 'C-01', branch: 'uuid-branch-pap', branch_name: 'Agence Port-au-Prince',
-    devise: 'HTG', superviseur: 'marie.joseph', id_responsable_cash: 'paul.martin',
-    montant_ouverture: 50000, montant_fermeture: undefined, statut: 'ouverte',
-    ouverture_at: new Date(now - h(3)).toISOString(), fermeture_at: undefined,
-    tentatives_ouverture: 0, remise_effectuee: false, reconciliation_effectuee: false,
-    actif: true, nom_caisse: 'Caisse principale', localisation: 'Rez-de-chaussée',
-    solde_actuel: 65000, solde_initial: 50000, nb_sessions: 1,
-    ip_address: '192.168.1.10', device_id: 'Chrome/124 · Windows 11',
-    nb_transactions: 12, derniere_session: undefined, created_at: undefined,
-  },
-  // … (j'ai raccourci ici — garde tes 8 sessions mock, je les omets juste pour la lisibilité)
-  // Colle ici tes sess-002 à sess-008 comme tu les avais
-];
 
 // ═══════════════════════════════════════════════════════════════
 // Wrapper Modal — Ouverture de session
@@ -95,27 +78,15 @@ function SessionModalWrapper({
       isOpen
       onClose={onClose}
       size="3xl"
-      title={
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
-            <LogIn className="w-5 h-5 text-[#2E7D32]" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Ouvrir une session caisse</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Renseignez les informations de la session</p>
-          </div>
+      title={<div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
+          <LogIn className="w-5 h-5 text-[#2E7D32]" />
         </div>
-      }
-    >
-      <div className="p-6 max-h-[90vh] overflow-y-auto">
-        <OpenSessionModal
-          onClose={onClose}
-          onConfirm={handleConfirm}
-          branches={branches}
-          openingHours={openingHours}
-          holidays={holidays}
-          onRequireOverride={handleRequireOverride} caisses={caisses}        />
-      </div>
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Ouvrir une session caisse</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Renseignez les informations de la session</p>
+        </div>
+      </div>} children={undefined}    >
     </Modal>
   );
 }
@@ -168,17 +139,15 @@ export default function SessionsComponent() {
     };
     loadRefData();
   }, []);
-
-  // ── Chargement des sessions ────────────────────────────────────
   const load = async (silent = false) => {
     silent ? setRefreshing(true) : setLoading(true);
     try {
       const { data } = await AxiosInstance.get<CaisseSession[]>('/sessions/');
-      data.forEach(s => SessionManager.set(s));
-      setSessions(data);
-    } catch {
-      // ⚠️ MOCK_SESSIONS utilisé en dev — à retirer quand l'API est prête
-      setSessions(MOCK_SESSIONS);
+      (data ?? []).forEach(s => SessionManager.set(s));  // ← garde-fou si data est null
+      setSessions(data ?? []);                             // ← garde-fou si data est null
+    } catch (err) {
+      console.error('Erreur chargement des sessions:', err);
+      setSessions([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -240,7 +209,7 @@ if (loading) {
     );
   }
   return (
-    <>
+    <div>
       {/* Modal ouverture */}
       {showOpen && (
         <SessionModalWrapper
@@ -257,7 +226,7 @@ if (loading) {
           title={
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
-                <LogOut className="text-red-500" size={15} />
+                <LogOut className="text-green-500" size={15} />
               </div>
               <div>
                 <h3 className="text-base font-bold text-gray-900">Fermer la session</h3>
@@ -377,16 +346,13 @@ if (loading) {
         {/* Banner — règles horaires/calendrier */}
         {openingRules && <SessionClosedBanner rules={openingRules} />}
 
-        
-
+                
         <SessionTable
-          sessions={sessions}
+          sessions={sessions}      
           isLoading={loading}
-          onView={(s) => router.push(`/dashboard/sessions/${s.id}/audit`)}
-          onClose={(s) => setCloseSession(s)}
           onBulkAction={handleBulkAction}
         />
       </div>
-    </>
+    </div>
   );
 }

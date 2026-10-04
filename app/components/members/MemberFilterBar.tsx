@@ -221,7 +221,7 @@ const membersForExport = members.map((m) => {
 
         {/* Réinitialiser */}
         {activeCount > 0 && (
-          <>
+          <div>
             <div className="h-5 w-px bg-gray-200" />
             <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
               {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
@@ -232,7 +232,7 @@ const membersForExport = members.map((m) => {
             >
               <X className="w-3 h-3" /> Effacer
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>

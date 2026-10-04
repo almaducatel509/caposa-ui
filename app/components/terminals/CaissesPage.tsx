@@ -102,8 +102,8 @@ function CaisseDetailModal({ caisse, onClose }: { caisse: Caisse; onClose: () =>
           caisse.actif ? 'bg-[#DDEAD5] text-[#1B5E20]' : 'bg-gray-100 text-gray-500'
         }`}>
           {caisse.actif
-            ? <><CheckCircle2 size={16} />Caisse active</>
-            : <><AlertCircle size={16} />Caisse inactive</>
+            ? <div><CheckCircle2 size={16} />Caisse active</div>
+            : <div><AlertCircle size={16} />Caisse inactive</div>
           }
         </div>
 

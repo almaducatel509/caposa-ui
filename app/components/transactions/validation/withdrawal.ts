@@ -6,7 +6,6 @@ export const withdrawalSchema = z.object({
 
   // Métadonnées transaction
   typeTransaction: z.literal("WITHDRAWAL"),
-  codeAutorisation: z.string().min(1, "Code d'autorisation requis"),
 
   // Montant (accepte string → number)
   montantTransaction: z.coerce.number().gt(0, "Montant doit être > 0"),

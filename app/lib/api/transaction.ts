@@ -20,7 +20,16 @@ export const fetchTransactionsBySession = async (sessionId: string) => {
     return [];
   }
 };
-
+// Récupérer les dernières transactions du dashboard (limitées)
+export const fetchRecentTransactions = async () => {
+  try {
+    const response = await AxiosInstance.get('/transactions/?limit=10&ordering=-created_at');
+    return response.data?.results ?? response.data ?? [];
+  } catch (error) {
+    console.error("Erreur dashboard transactions:", error);
+    return [];
+  }
+};
 // Ajouter à transaction.ts
 export const fetchAccountTransactions = async (accountId: string) => {
   try {

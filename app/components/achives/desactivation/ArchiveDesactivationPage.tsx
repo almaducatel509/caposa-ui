@@ -79,7 +79,7 @@ function RestoreModal({ archive, onConfirm, onClose }: {
             </button>
             <button onClick={handle} disabled={loading}
               className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Restauration…</> : <><RotateCcw className="w-4 h-4" />Restaurer</>}
+              {loading ? <div><Loader2 className="w-4 h-4 animate-spin" />Restauration…</div> : <div><RotateCcw className="w-4 h-4" />Restaurer</div>}
             </button>
           </div>
         </div>

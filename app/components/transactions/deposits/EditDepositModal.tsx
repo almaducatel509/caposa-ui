@@ -233,7 +233,7 @@ export default function EditDepositModal({ deposit, onClose, onSuccess }: Props)
             <p className="text-xs text-gray-400">La modification a été enregistrée avec audit complet.</p>
           </div>
         ) : (
-          <>
+          <div>
             {/* ── Corps scrollable ── */}
             <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5 bg-[#F9F9F6]">
 
@@ -404,12 +404,12 @@ export default function EditDepositModal({ deposit, onClose, onSuccess }: Props)
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Modification…</>
-                  : <><Pencil className="w-4 h-4" />Enregistrer la modification</>
+                  ? <div><Loader2 className="w-4 h-4 animate-spin" />Modification…</div>
+                  : <div><Pencil className="w-4 h-4" />Enregistrer la modification</div>
                 }
               </button>
             </div>
-          </>
+          </div>
         )}
 
       </div>

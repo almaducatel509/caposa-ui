@@ -59,7 +59,7 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setApiError(null);
-    const result = validateMemberUi(formData);
+    const result = validateMemberUi(formData, { isEditMode });
     if (!result.data) {
       setErrors(result.errors || {});
       setIsSubmitting(false);

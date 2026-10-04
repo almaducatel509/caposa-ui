@@ -3,20 +3,13 @@ import { z } from "zod";
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
-// DETTE TECHNIQUE RÉSOLUE : champ `branch_code` surchargé
+// RETRAIT : `pending_assignment`
+//   Décision produit : un jour férié existe dès sa création, l'assignation
+//   aux branches n'est plus trackée comme un état à part. Le nombre de
+//   branches concernées est affiché en frontend via getApplicableBranches().
 //
-// AVANT : un seul champ `branch_code` portait deux sens selon `scope` :
-//   - scope='regional' → contenait un code département (OUEST, NORD...)
-//   - scope='branch'   → contenait un vrai code de branche (PETV-001...)
-//   Le nom mentait, aucune validation de type, source de bugs.
-//
-// APRÈS : deux champs distincts, chacun avec son sens :
-//   - department_code : rempli SSI scope === 'regional'
-//   - branch_code     : rempli SSI scope === 'branch' | 'autre'
-//
-// ⚠ Le backend doit migrer les données existantes :
-//   Pour tous les Holiday avec scope='regional', déplacer la valeur de
-//   `branch_code` vers `department_code` puis vider `branch_code`.
+// DETTE TECHNIQUE RÉSOLUE (déjà en place) : `branch_code` surchargé
+//   → department_code (regional) / branch_code (branch|autre), deux champs distincts.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ================= TYPES UNION (source unique) =================
@@ -54,7 +47,6 @@ export const baseHolidaySchema = z.object({
     .enum(["national", "regional", "branch", "autre"])
     .default("national"),
 
-  // ── Deux champs distincts au lieu du `branch_code` polymorphe ──
   /** Code département (OUEST, NORD...) — rempli si scope === 'regional' */
   department_code: z.string().optional(),
   /** Code de branche réel — rempli si scope === 'branch' | 'autre' */
@@ -67,21 +59,12 @@ export const baseHolidaySchema = z.object({
     .optional(),
 
   modified_by: z.string().optional(),
-
-  /**
-   * 🎯 true tant que le férié n'a pas été assigné via AssignBranchesModal.
-   * Un brouillon ne bloque AUCUN caissier.
-   */
-  pending_assignment: z.boolean().default(true),
 });
 
 export type ErrorMessages<T> = Partial<Record<keyof T, string>>;
 
 // ================= SCHEMA AVEC VALIDATION CONDITIONNELLE =================
 export const holidaySchema = baseHolidaySchema.superRefine((data, ctx) => {
-  // Brouillon → aucune validation de scope_code requise
-  if (data.pending_assignment) return;
-
   // scope='regional' exige department_code
   if (data.scope === "regional" && !data.department_code) {
     ctx.addIssue({
@@ -121,7 +104,6 @@ export interface HolidayData {
   modified_by?: string;
   created_at?: string;
   updated_at?: string;
-  pending_assignment: boolean;
 }
 
 /**
@@ -139,7 +121,6 @@ export interface HolidayFormData {
   department_code?: string;
   branch_code?: string;
   comment?: string;
-  pending_assignment?: boolean;
 }
 
 // ================= LABELS =================
@@ -158,39 +139,4 @@ export const HOLIDAY_SCOPE_LABELS: Record<HolidayScope, string> = {
   regional: "Régional",
   branch: "Succursale",
   autre: "Autre",
-};
-
-// ================= HELPERS =================
-
-export const isPendingAssignment = (
-  holiday: HolidayData | HolidayFormData
-): boolean => holiday.pending_assignment === true;
-
-/**
- * Indique quel champ de localisation est requis selon le scope.
- * Renvoie 'department_code' | 'branch_code' | null.
- */
-export const getRequiredScopeCodeField = (
-  scope: HolidayScope,
-  pendingAssignment: boolean
-): "department_code" | "branch_code" | null => {
-  if (pendingAssignment) return null;
-  if (scope === "regional") return "department_code";
-  if (scope === "branch" || scope === "autre") return "branch_code";
-  return null;
-};
-
-export const isCommentRequired = (
-  originalHoliday: HolidayData,
-  updatedHoliday: Partial<HolidayData>
-): boolean => {
-  if (originalHoliday.pending_assignment) return false;
-  return (
-    (updatedHoliday.type !== undefined &&
-      updatedHoliday.type !== originalHoliday.type) ||
-    (updatedHoliday.scope !== undefined &&
-      updatedHoliday.scope !== originalHoliday.scope) ||
-    (updatedHoliday.date !== undefined &&
-      updatedHoliday.date !== originalHoliday.date)
-  );
 };

@@ -1,71 +1,42 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal } from "@/app/components/ui/Modal";
 import {
-  X, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Download, History, Banknote, Clock, UserCheck,
+  X, TrendingUp, ArrowUpRight, ArrowDownRight, ArrowLeftRight,
+  Download, History, Banknote, Loader2, AlertCircle,
 } from "lucide-react";
-import UserAvatar from '@/app/components/core/UserAvatar'; //important
+import UserAvatar from '@/app/components/core/UserAvatar';
+import { Transaction } from '@/types/data';
+import { fetchEmployeeTransactions } from '@/app/lib/api/employee';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-type TxType   = 'payment' | 'bonus' | 'deduction' | 'reimbursement';
-type TxStatus = 'completed' | 'pending' | 'cancelled';
-
-interface Transaction {
-  id: string; type: TxType; amount: number; currency: string;
-  description: string; date: string; status: TxStatus; createdBy: string;
-}
-
-interface ActivityLog {
-  id: string; action: string; field?: string;
-  oldValue?: string; newValue?: string;
-  date: string; modifiedBy: string;
-}
 
 interface EmployeeTransactionModalProps {
   isOpen:    boolean;
   onClose:   () => void;
   employee: {
     id: string; first_name: string; last_name: string;
-    photo_profil: string | null; payment_ref: string;
+    photo_profil: string | null;
   } | null;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Config par type de transaction bancaire ─────────────────────────────────
 
-const MOCK_TX = (): Transaction[] => [
-  { id:'1', type:'payment',       amount:2500,  currency:'USD', description:'Salaire mensuel — Janvier 2025',    date:'2025-01-15T14:30:00', status:'completed', createdBy:'Système RH'             },
-  { id:'2', type:'bonus',         amount:500,   currency:'USD', description:'Prime de performance Q4 2024',      date:'2025-01-10T10:00:00', status:'completed', createdBy:'Marie Martin (Manager)' },
-  { id:'3', type:'reimbursement', amount:150,   currency:'USD', description:'Remboursement frais de transport',  date:'2025-01-08T16:45:00', status:'completed', createdBy:'Comptabilité'           },
-  { id:'4', type:'deduction',     amount:-50,   currency:'USD', description:'Cotisation assurance santé',        date:'2025-01-05T09:00:00', status:'completed', createdBy:'Système RH'             },
-  { id:'5', type:'payment',       amount:2500,  currency:'USD', description:'Salaire mensuel — Décembre 2024',   date:'2024-12-15T14:30:00', status:'completed', createdBy:'Système RH'             },
-];
-
-const MOCK_LOGS = (): ActivityLog[] => [
-  { id:'1', action:'update', field:'phone_number', oldValue:'+1234567890', newValue:'+0987654321', date:'2025-01-12T11:20:00', modifiedBy:'Jean Dupont (Admin)'   },
-  { id:'2', action:'update', field:'address',      oldValue:'123 Rue Principale', newValue:'456 Avenue Centrale', date:'2025-01-10T15:30:00', modifiedBy:'Marie Martin (RH)'    },
-  { id:'3', action:'update', field:'posts',        oldValue:'Developer',   newValue:'Senior Developer', date:'2025-01-05T09:15:00', modifiedBy:'Pierre Durand (Manager)'},
-  { id:'4', action:'create',                                                                             date:'2024-06-15T10:00:00', modifiedBy:'Admin Système'             },
-];
-
-// ─── Config types de transaction ─────────────────────────────────────────────
-
-const TX_CFG: Record<TxType, { bg: string; iconColor: string; badge: string; label: string }> = {
-  payment:       { bg: 'bg-[#DDEAD5]', iconColor: 'text-[#2E7D32]', badge: 'bg-[#DDEAD5] text-[#1B5E20]',  label: 'Paiement'        },
-  bonus:         { bg: 'bg-blue-50',   iconColor: 'text-[#355C7D]', badge: 'bg-blue-50 text-[#355C7D]',     label: 'Bonus'           },
-  deduction:     { bg: 'bg-red-50',    iconColor: 'text-red-600',   badge: 'bg-red-50 text-red-700',         label: 'Déduction'       },
-  reimbursement: { bg: 'bg-yellow-50', iconColor: 'text-yellow-700',badge: 'bg-yellow-50 text-yellow-700',  label: 'Remboursement'   },
+const TX_CFG: Record<Transaction['transaction_type'], { bg: string; iconColor: string; badge: string; label: string; credit: boolean }> = {
+  deposit:    { bg: 'bg-[#DDEAD5]', iconColor: 'text-[#2E7D32]', badge: 'bg-[#DDEAD5] text-[#1B5E20]', label: 'Dépôt',    credit: true  },
+  withdrawal: { bg: 'bg-red-50',    iconColor: 'text-red-600',   badge: 'bg-red-50 text-red-700',       label: 'Retrait',  credit: false },
+  transfer:   { bg: 'bg-blue-50',   iconColor: 'text-[#355C7D]', badge: 'bg-blue-50 text-[#355C7D]',    label: 'Transfert',credit: false },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmtUSD(n: number) {
+// NB: pas de champ `currency` sur Transaction — HTG à confirmer, USD en attendant
+function fmtAmount(n: number) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(n);
 }
 
-function fmtDate(d: string) {
+function fmtDate(d: string | Date) {
   return new Date(d).toLocaleDateString('fr-FR', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -78,18 +49,41 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
   isOpen, onClose, employee,
 }) => {
   const [tab, setTab] = useState<'transactions' | 'activity'>('transactions');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async (employeeId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const tx = await fetchEmployeeTransactions(employeeId);
+      setTransactions(tx);
+    } catch {
+      setError("Impossible de charger les transactions.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && employee?.id) {
+      loadData(employee.id);
+    }
+    if (!isOpen) {
+      setTransactions([]);
+      setError(null);
+      setTab('transactions');
+    }
+  }, [isOpen, employee?.id, loadData]);
 
   if (!employee) return null;
 
-  const transactions = MOCK_TX();
-  const logs         = MOCK_LOGS();
-
   const stats = {
-    payment:       transactions.filter(t => t.type === 'payment'       && t.status === 'completed').reduce((s,t) => s+t.amount, 0),
-    bonus:         transactions.filter(t => t.type === 'bonus'                                     ).reduce((s,t) => s+t.amount, 0),
-    deduction:     Math.abs(transactions.filter(t => t.type === 'deduction'                        ).reduce((s,t) => s+t.amount, 0)),
-    reimbursement: transactions.filter(t => t.type === 'reimbursement'                             ).reduce((s,t) => s+t.amount, 0),
-    total:         transactions.filter(t => t.status === 'completed'                               ).reduce((s,t) => s+t.amount, 0),
+    deposits:    transactions.filter(t => t.transaction_type === 'deposit'   ).reduce((s,t) => s+t.amount, 0),
+    withdrawals: transactions.filter(t => t.transaction_type === 'withdrawal').reduce((s,t) => s+t.amount, 0),
+    transfers:   transactions.filter(t => t.transaction_type === 'transfer'  ).reduce((s,t) => s+t.amount, 0),
+    count:       transactions.length,
   };
 
   return (
@@ -102,9 +96,9 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
             <UserAvatar user={employee} size="xl" type="employee" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-900">Transactions & Historique</h3>
+            <h3 className="text-base font-bold text-gray-900">Transactions traitées</h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              {employee.first_name} {employee.last_name} · Réf: {employee.payment_ref}
+              {employee.first_name} {employee.last_name}
             </p>
           </div>
         </div>
@@ -114,37 +108,34 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
         </button>
       </div>
 
+      {/* ── Erreur ── */}
+      {error && (
+        <div className="mx-6 mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
       {/* ── KPI cards ── */}
       <div className="px-6 pt-5 pb-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {([
-          { label: 'Paiements',      value: stats.payment,       color: 'text-[#2E7D32]'  },
-          { label: 'Bonus',          value: stats.bonus,         color: 'text-[#355C7D]'  },
-          { label: 'Déductions',     value: stats.deduction,     color: 'text-red-600'    },
-          { label: 'Remboursements', value: stats.reimbursement, color: 'text-yellow-700' },
+          { label: 'Dépôts',      value: fmtAmount(stats.deposits),    color: 'text-[#2E7D32]' },
+          { label: 'Retraits',    value: fmtAmount(stats.withdrawals), color: 'text-red-600'    },
+          { label: 'Transferts',  value: fmtAmount(stats.transfers),   color: 'text-[#355C7D]'  },
+          { label: 'Opérations',  value: String(stats.count),          color: 'text-gray-700'   },
         ] as const).map(s => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
             <p className="text-xs text-gray-400 mb-1">{s.label}</p>
-            <p className={`text-sm font-bold ${s.color}`}>{fmtUSD(s.value)}</p>
+            <p className={`text-sm font-bold ${s.color}`}>{loading ? '—' : s.value}</p>
           </div>
         ))}
-      </div>
-
-      {/* ── Total balance card ── */}
-      <div className="px-6 pb-3">
-        <div className="bg-[#DDEAD5]/40 rounded-xl border border-[#2E7D32]/20 px-4 py-3 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Solde total</p>
-            <p className="text-xl font-bold text-[#2E7D32]">{fmtUSD(stats.total)}</p>
-          </div>
-          <TrendingUp className="w-5 h-5 text-[#2E7D32]" />
-        </div>
       </div>
 
       {/* ── Tabs ── */}
       <div className="flex items-center gap-1 px-6 border-b border-gray-100">
         {([
           { key: 'transactions', label: 'Transactions', count: transactions.length, Icon: Banknote },
-          { key: 'activity',     label: 'Historique',   count: logs.length,         Icon: History  },
+          { key: 'activity',     label: 'Historique',   count: 0,                   Icon: History  },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={[
@@ -165,22 +156,33 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
       {/* ── Body ── */}
       <div className="overflow-y-auto max-h-[40vh] px-6 py-4 flex flex-col gap-2">
 
-        {tab === 'transactions' ? transactions.map(tx => {
-          const cfg = TX_CFG[tx.type];
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <p className="text-sm">Chargement...</p>
+          </div>
+        )}
+
+        {!loading && tab === 'transactions' && transactions.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-12">Aucune transaction traitée par cet employé.</p>
+        )}
+
+        {!loading && tab === 'transactions' && transactions.map(tx => {
+          const cfg = TX_CFG[tx.transaction_type];
+          const Icon = tx.transaction_type === 'transfer' ? ArrowLeftRight
+            : cfg.credit ? ArrowUpRight : ArrowDownRight;
           return (
             <div key={tx.id} className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-all p-4 flex items-center gap-4">
               <div className={`w-9 h-9 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0`}>
-                {tx.amount > 0
-                  ? <ArrowUpRight className={`w-4 h-4 ${cfg.iconColor}`} />
-                  : <ArrowDownRight className={`w-4 h-4 ${cfg.iconColor}`} />}
+                <Icon className={`w-4 h-4 ${cfg.iconColor}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{tx.description}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{tx.createdBy} · {fmtDate(tx.date)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Compte {tx.account_number} · {fmtDate(tx.date)}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${tx.amount > 0 ? 'text-[#2E7D32]' : 'text-red-600'}`}>
-                  {tx.amount > 0 ? '+' : ''}{fmtUSD(tx.amount)}
+                <p className={`text-sm font-bold ${cfg.credit ? 'text-[#2E7D32]' : 'text-red-600'}`}>
+                  {cfg.credit ? '+' : '-'}{fmtAmount(tx.amount)}
                 </p>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${cfg.badge}`}>
                   {cfg.label}
@@ -188,32 +190,13 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
               </div>
             </div>
           );
-        }) : logs.map(log => (
-          <div key={log.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-start gap-4">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-              <UserCheck className="w-4 h-4 text-[#355C7D]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {log.action === 'create' ? (
-                <p className="text-sm font-medium text-gray-900">Création du profil employé</p>
-              ) : (
-                <>
-                  <p className="text-sm font-medium text-gray-900">
-                    Modification du champ <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{log.field}</span>
-                  </p>
-                  {log.oldValue && log.newValue && (
-                    <div className="flex items-center gap-2 mt-1.5 text-xs">
-                      <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded line-through">{log.oldValue}</span>
-                      <span className="text-gray-400">→</span>
-                      <span className="px-2 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded font-medium">{log.newValue}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              <p className="text-xs text-gray-400 mt-1.5">{log.modifiedBy} · {fmtDate(log.date)}</p>
-            </div>
-          </div>
-        ))}
+        })}
+
+        {tab === 'activity' && (
+          <p className="text-sm text-gray-400 text-center py-12">
+            Historique des modifications — pas encore disponible (aucun modèle confirmé côté backend).
+          </p>
+        )}
 
       </div>
 
@@ -223,7 +206,9 @@ const EmployeeTransactionModal: React.FC<EmployeeTransactionModalProps> = ({
           className="px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
           Fermer
         </button>
-        <button className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all">
+        <button
+          disabled={loading || transactions.length === 0}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
           <Download className="w-4 h-4" /> Exporter PDF
         </button>
       </div>

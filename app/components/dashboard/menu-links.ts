@@ -90,7 +90,7 @@ export const links: MainLink[] = [
   },
 //Terminal
   { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },
-  { name: 'Branches', href: '/dashboard/branches', icon: AiOutlineBranches },
+  { name: 'Succursales', href: '/dashboard/branches', icon: AiOutlineBranches },
   { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
   { name: 'Calendrier', href: '/dashboard/holidays', icon: AiOutlineSchedule  },
 

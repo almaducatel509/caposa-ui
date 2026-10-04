@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Search, X, Plus, Download, Building2 } from "lucide-react";
-import { MOCK_BRANCHES } from "../OpeningHours/mock";
+import { MOCK_BRANCHES } from "../../mock";
 
 interface HolidayCalendarFilterBarProps {
   filterValue: string;

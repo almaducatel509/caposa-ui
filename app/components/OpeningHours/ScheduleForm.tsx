@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { AlertCircle, CheckCircle, Loader2, X } from "lucide-react";
 import { openingHoursSchema, OpeningHours, ErrorMessages } from "./validations";
 import { DAYS } from "./validations";
+import { createOpeningHours } from "@/app/lib/api/opening_hour";
 
 interface ScheduleFormProps {
   branchId: string;
@@ -21,6 +22,8 @@ export default function ScheduleForm({
   });
   const [errors, setErrors] = useState<ErrorMessages<OpeningHours>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const result = openingHoursSchema.safeParse({
@@ -43,18 +46,34 @@ export default function ScheduleForm({
     setErrors({});
     return true;
   };
+  const submittingRef = useRef(false);
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (submittingRef.current) return; // bloque immédiatement tout clic supplémentaire
+    submittingRef.current = true;
+    if (!validate()) { submittingRef.current = false; return; }
     setIsSubmitting(true);
     try {
-      await new Promise(r => setTimeout(r, 1200));
-      console.log("Creating schedule for branch:", branchId, fields);
+      const payload = {
+        branch: branchId,
+        monday: fields.monday,
+        tuesday: fields.tuesday,
+        wednesday: fields.wednesday,
+        thursday: fields.thursday,
+        friday: fields.friday,
+        saturday: fields.saturday || null,
+        sunday: fields.sunday || null,
+        status: 'active' as const,
+      };
+      await createOpeningHours(payload);
+      setSubmitStatus('success');
       onSuccess();
-    } catch {
-      // handle error
+    } catch (error: any) {
+      setSubmitStatus('error');
+      setSubmitError(error?.response?.data?.detail ?? "Erreur lors de la création de l'horaire.");
     } finally {
       setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -138,9 +157,9 @@ export default function ScheduleForm({
                      hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Création en cours…</>
+            <div><Loader2 className="w-4 h-4 animate-spin" /> Création en cours…</div>
           ) : (
-            <><CheckCircle className="w-4 h-4" /> Créer l'horaire régulier</>
+            <div><CheckCircle className="w-4 h-4" /> Créer l'horaire régulier</div>
           )}
         </button>
         <button

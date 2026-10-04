@@ -134,18 +134,28 @@ export interface CaisseAlert {
 
 // ─── Payload ouverture ───────────────────────────────────────────
 
-export interface OpenSessionPayload {
-  caissier_nom: string | undefined;
-  username:            string;     // FK User.username (caissier)
-  numero_caisse:       string;
-  branch:              string;     // UUID agence
-  superviseur:         string;
-  id_responsable_cash: string;
-  montant_ouverture:   number;
-  ip_address?:         string;     // collecté côté front avant envoi
-  device_id?:          string;     // navigator.userAgent ou fingerprintjs
-}
+// export interface OpenSessionPayload {
+//   caissier_nom: string | undefined;
+//   username:            string;     // FK User.username (caissier)
+//   numero_caisse:       string;
+//   branch:              string;     // UUID agence
+//   superviseur:         string;
+//   id_responsable_cash: string;
+//   montant_ouverture:   number;
+//   ip_address?:         string;     // collecté côté front avant envoi
+//   device_id?:          string;     // navigator.userAgent ou fingerprintjs
+// }
 
+export interface OpenSessionPayload {
+  username:            string;
+  caissier_nom:        string;
+  numero_caisse:       string;
+  branch:              string;
+  devise:              string;
+  superviseur:         string;
+  id_responsable_cash: string; // ⚠️ nom de champ fixe côté API Django — ne pas renommer sans vérifier api/caisse/serializers.py
+  montant_ouverture:   number;
+}
 // ─── Payload fermeture normale ───────────────────────────────────
 
 export interface CloseSessionPayload {

@@ -148,7 +148,7 @@ export default function BranchScheduleManager() {
 
       {/* List view */}
       {!isLoadingBranches && !selectedBranch && !isLoading && (
-        <>
+        <div>
           {/* Filters */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
             <div className="flex items-center gap-2 mb-4">
@@ -243,13 +243,13 @@ export default function BranchScheduleManager() {
                   <p className="text-xs text-gray-400 font-mono mb-4">Code : {branch.branch_code}</p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border
+                    <span className={`text-xs font-semibold px-2.5 py-1 
                       ${branch.opening_hour_details
-                        ? "bg-[#DDEAD5] text-[#1B5E20] border-[#2E7D32]/20"
-                        : "bg-yellow-50 text-yellow-700 border-yellow-200"}`}>
+                        ? "text-[#1B5E20]"
+                        : "text-yellow-700 border-yellow-200"}`}>
                       {branch.opening_hour_details ? "Horaire configuré" : "À configurer"}
                     </span>
-                    <span className="flex items-center gap-1 text-xs font-semibold text-[#2E7D32] group-hover:translate-x-0.5 transition-transform">
+                    <span className="flex items-center gap-1 text-xs font-semibold text-gray-500 group-hover:translate-x-0.5 transition-transform">
                       Voir détails <ChevronRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
@@ -264,7 +264,7 @@ export default function BranchScheduleManager() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* Loading sélection */}

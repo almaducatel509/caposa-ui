@@ -2,12 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Eye, LogOut, Clock,
-  User, ShieldCheck, Building2, Hash, Banknote,
+  Clock, User, ShieldCheck, Building2, Hash, Banknote,
   ChevronUp, ChevronDown, ChevronsUpDown,
   Check, CheckCircle2, X,
   LayoutGrid, LogIn, Archive,
   AlertTriangle, TrendingUp, TrendingDown,
+  MapPin, Monitor,
 } from 'lucide-react';
 import { CaisseSession } from '@/types/caisse';
 import SessionBulkActionModal from './modals/SessionBulkActionModal';
@@ -18,16 +18,14 @@ type TabId = 'toutes' | 'ouverte' | 'fermée' | 'interrompue';
 interface SessionTableProps {
   sessions:     CaisseSession[];
   isLoading:    boolean;
-  onView:       (s: CaisseSession) => void;
-  onClose?:     (s: CaisseSession) => void;
   onBulkAction: (action: SessionBulkAction, ids: string[]) => Promise<void>;
   activeTab?:   TabId;
   onTabChange?: (tab: TabId) => void;
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
-
-const GRID = '40px 2fr 1.5fr 1.2fr 1.2fr 1fr 1fr 130px';
+// Checkbox | Caissier | Superviseur | Agence | Caisse | Montant | Ouverte | Chevron
+const GRID = '40px 2fr 1.5fr 1.2fr 1.2fr 1fr 1fr 32px';
 
 const COLS = [
   { label: 'Caissier',    field: 'caissier_nom' as keyof CaisseSession },
@@ -98,8 +96,18 @@ function SkeletonRow() {
       {[...Array(5)].map((_, i) => (
         <div key={i} className="h-3 w-20 bg-gray-100 animate-pulse rounded" />
       ))}
-      <div className="flex justify-center gap-1">
-        {[...Array(2)].map((_, i) => <div key={i} className="w-7 h-7 rounded-lg bg-gray-100 animate-pulse" />)}
+      <div className="w-4 h-4 bg-gray-100 animate-pulse rounded" />
+    </div>
+  );
+}
+
+function InfoField({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-gray-400 mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</p>
+        <p className="text-sm text-gray-700 truncate">{value}</p>
       </div>
     </div>
   );
@@ -109,7 +117,7 @@ function SkeletonRow() {
 
 const SessionTable: React.FC<SessionTableProps> = ({
   sessions, isLoading, activeTab: externalTab,
-  onView, onClose, onBulkAction, onTabChange,
+  onBulkAction, onTabChange,
 }) => {
   const [localTab,     setLocalTab]     = useState<TabId>('toutes');
   const [sortField,    setSortField]    = useState<keyof CaisseSession>('ouverture_at');
@@ -117,24 +125,23 @@ const SessionTable: React.FC<SessionTableProps> = ({
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<SessionBulkAction | null>(null);
+  const [openId,       setOpenId]       = useState<string | null>(null);
 
   const activeTab = externalTab ?? localTab;
 
   // ── Counts ────────────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
-    toutes:  sessions.length,
-    ouverte: sessions.filter(s => s.statut === 'ouverte').length,
-    fermée:  sessions.filter(s => s.statut === 'fermée').length,
-    // AJOUTER
+    toutes:      sessions.length,
+    ouverte:     sessions.filter(s => s.statut === 'ouverte').length,
+    fermée:      sessions.filter(s => s.statut === 'fermée').length,
     interrompue: sessions.filter(s => s.statut === 'interrompue').length,
   }), [sessions]);
 
   // ── Tab filter ────────────────────────────────────────────────────────────
   const tabSessions = useMemo(() => sessions.filter(s => {
-    if (activeTab === 'toutes')  return true;
-    if (activeTab === 'ouverte') return s.statut === 'ouverte';
-    if (activeTab === 'fermée')  return s.statut === 'fermée';
-    // AJOUTER
+    if (activeTab === 'toutes')      return true;
+    if (activeTab === 'ouverte')     return s.statut === 'ouverte';
+    if (activeTab === 'fermée')      return s.statut === 'fermée';
     if (activeTab === 'interrompue') return s.statut === 'interrompue';
     return false;
   }), [sessions, activeTab]);
@@ -167,7 +174,10 @@ const SessionTable: React.FC<SessionTableProps> = ({
     setLocalTab(tab);
     onTabChange?.(tab);
     setSelected(new Set());
+    setOpenId(null);
   };
+
+  const toggleAccordion = (id: string) => setOpenId(prev => (prev === id ? null : id));
 
   const selectedSessions = useMemo(
     () => sorted.filter(s => selected.has(s.id)),
@@ -182,15 +192,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
         {([
           { id: 'toutes'  as TabId, label: 'Toutes',   icon: LayoutGrid, active: 'border-[#2E7D32] text-[#1B5E20]',  badge: 'bg-[#DDEAD5] text-[#1B5E20]',  count: counts.toutes  },
           { id: 'ouverte' as TabId, label: 'Ouvertes', icon: LogIn,      active: 'border-green-500 text-green-700',  badge: 'bg-green-50 text-green-700',   count: counts.ouverte },
-          { id: 'fermée'  as TabId, label: 'Fermées',  icon: Archive,    active: 'border-gray-500 text-gray-700',    badge: 'bg-gray-100 text-gray-600',    count: counts.fermée  },// AJOUTER dans le .map([...])
-          { 
-            id: 'interrompue' as TabId, 
-            label: 'Interrompues', 
-            icon: AlertTriangle,          // déjà importé ✓
-            active: 'border-red-500 text-red-700', 
-            badge: 'bg-red-50 text-red-700', 
-            count: counts.interrompue 
-          },
+          { id: 'fermée'  as TabId, label: 'Fermées',  icon: Archive,    active: 'border-gray-500 text-gray-700',    badge: 'bg-gray-100 text-gray-600',    count: counts.fermée  },
+          { id: 'interrompue' as TabId, label: 'Interrompues', icon: AlertTriangle, active: 'border-red-500 text-red-700', badge: 'bg-red-50 text-red-700', count: counts.interrompue },
         ]).map(tab => {
           const Icon = tab.icon;
           const isCurrent = activeTab === tab.id;
@@ -253,10 +256,10 @@ const SessionTable: React.FC<SessionTableProps> = ({
             <SortIcon field={col.field as string} sortField={sortField as string} sortDir={sortDir} />
           </button>
         ))}
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 text-center">Actions</span>
+        <span />
       </div>
 
-      {/* ── Lignes ── */}
+      {/* ── Lignes accordéon ── */}
       <div className="divide-y divide-gray-50">
         {isLoading && [...Array(6)].map((_, i) => <SkeletonRow key={i} />)}
 
@@ -265,58 +268,55 @@ const SessionTable: React.FC<SessionTableProps> = ({
             <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3 bg-[#DDEAD5]">
               <LayoutGrid className="w-7 h-7 text-[#2E7D32]" />
             </div>
-            <p className="text-sm font-semibold text-gray-900 mb-1">
-              Aucune session trouvée
-            </p>
-            <p className="text-xs text-gray-400">
-              Aucune session dans cet onglet pour le moment
-            </p>
+            <p className="text-sm font-semibold text-gray-900 mb-1">Aucune session trouvée</p>
+            <p className="text-xs text-gray-400">Aucune session dans cet onglet pour le moment</p>
           </div>
         )}
 
         {!isLoading && sorted.map((session, i) => {
           const isSelected = selected.has(session.id);
-          const isOpen     = session.statut === 'ouverte';
-          const isForcee   = !!session.forcee_par;
+          const isRowOpen  = openId === session.id;
           const ecart      = session.montant_fermeture != null
             ? session.montant_fermeture - session.montant_ouverture
             : null;
 
           return (
-            <div key={session.id}
-              className={`grid items-center px-5 py-3.5 transition-all duration-150 group ${
-                isSelected
-                  ? 'bg-[#DDEAD5]/50 border-l-2 border-[#2E7D32]'
-                  : i % 2 === 0 ? 'bg-white hover:bg-[#DDEAD5]/10' : 'bg-gray-50/40 hover:bg-[#DDEAD5]/10'
-              }`}
-              style={{ gridTemplateColumns: GRID }}>
-
-              {/* Checkbox */}
-              <div className="flex items-center justify-center">
-                <button onClick={() => toggleRow(session.id)}
-                  className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
-                    isSelected ? 'bg-[#2E7D32] border-[#2E7D32]' : 'bg-white border-gray-300 hover:border-[#2E7D32]'
-                  }`}>
-                  {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-                </button>
-              </div>
-
-              {/* Caissier */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`... ${
-                    session.statut === 'ouverte'      ? 'bg-[#DDEAD5] text-[#1B5E20]' :
-                    session.statut === 'interrompue'  ? 'bg-red-50 text-red-600' :
-                    'bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  {getInitials(session.caissier_nom)}
+            <div key={session.id}>
+              <div
+                className={`grid items-center px-5 py-3.5 transition-all duration-150 group cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#DDEAD5]/50 border-l-2 border-[#2E7D32]'
+                    : i % 2 === 0 ? 'bg-white hover:bg-[#DDEAD5]/10' : 'bg-gray-50/40 hover:bg-[#DDEAD5]/10'
+                }`}
+                style={{ gridTemplateColumns: GRID }}
+                onClick={() => toggleAccordion(session.id)}
+              >
+                {/* Checkbox */}
+                <div className="flex items-center justify-center">
+                  <button onClick={(e) => { e.stopPropagation(); toggleRow(session.id); }}
+                    className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+                      isSelected ? 'bg-[#2E7D32] border-[#2E7D32]' : 'bg-white border-gray-300 hover:border-[#2E7D32]'
+                    }`}>
+                    {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                  </button>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
-                    {session.caissier_nom ?? session.username}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {session.statut === 'ouverte' && (
+
+                {/* Caissier */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                      session.statut === 'ouverte'      ? 'bg-[#DDEAD5] text-[#1B5E20]' :
+                      session.statut === 'interrompue'  ? 'bg-red-50 text-red-600' :
+                      'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {getInitials(session.caissier_nom)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                      {session.caissier_nom ?? session.username}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {session.statut === 'ouverte' && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-green-50 text-green-700">
                           <span className="w-1 h-1 rounded-full bg-green-500" /> En cours
                         </span>
@@ -331,70 +331,96 @@ const SessionTable: React.FC<SessionTableProps> = ({
                           <span className="w-1 h-1 rounded-full bg-red-500" /> Interrompue
                         </span>
                       )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Superviseur */}
-              <div className="flex items-center gap-1.5 min-w-0">
-                <ShieldCheck className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                <span className="text-sm text-gray-600 truncate">
-                  {session.superviseur}
-                </span>
-              </div>
+                {/* Superviseur */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ShieldCheck className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                  <span className="text-sm text-gray-600 truncate">{session.superviseur}</span>
+                </div>
 
-              {/* Agence */}
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Building2 className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                <span className="text-sm text-gray-600 truncate">
-                  {session.branch_name ?? session.branch}
-                </span>
-              </div>
+                {/* Agence */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Building2 className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                  <span className="text-sm text-gray-600 truncate">{session.branch_name ?? session.branch}</span>
+                </div>
 
-              {/* Caisse */}
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
-                  <Hash className="w-2.5 h-2.5" />
-                  {session.numero_caisse}
-                </span>
-                <span className="text-[10px] text-gray-400 font-medium">
-                  {session.devise}
-                </span>
-              </div>
-
-              {/* Montant + écart */}
-              <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm font-semibold text-[#1B5E20]">
-                  {formatMoney(session.montant_ouverture, session.devise)}
-                </span>
-                {ecart != null && ecart !== 0 && (
-                  <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
-                    ecart > 0 ? 'text-blue-600' : 'text-red-600'
-                  }`}>
-                    {ecart > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-                    Écart {ecart > 0 ? '+' : ''}{formatMoney(ecart, session.devise)}
+                {/* Caisse */}
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
+                    <Hash className="w-2.5 h-2.5" />
+                    {session.numero_caisse}
                   </span>
-                )}
+                  <span className="text-[10px] text-gray-400 font-medium">{session.devise}</span>
+                </div>
+
+                {/* Montant + écart */}
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-sm font-semibold text-[#1B5E20]">
+                    {formatMoney(session.montant_ouverture, session.devise)}
+                  </span>
+                  {ecart != null && ecart !== 0 && (
+                    <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
+                      ecart > 0 ? 'text-blue-600' : 'text-red-600'
+                    }`}>
+                      {ecart > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                      Écart {ecart > 0 ? '+' : ''}{formatMoney(ecart, session.devise)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Ouverte */}
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-sm text-gray-700">{formatDate(session.ouverture_at)}</span>
+                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5" />
+                    {formatTime(session.ouverture_at)} · {duree(session.ouverture_at, session.fermeture_at)}
+                  </span>
+                </div>
+
+                {/* Chevron accordéon */}
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
+                    isRowOpen ? 'rotate-180' : ''
+                  }`}
+                />
               </div>
 
-              {/* Ouverte */}
-              <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm text-gray-700">
-                  {formatDate(session.ouverture_at)}
-                </span>
-                <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                  <Clock className="w-2.5 h-2.5" />
-                  {formatTime(session.ouverture_at)} · {duree(session.ouverture_at, session.fermeture_at)}
-                </span>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-center gap-1">
-                <button title="Voir détails" onClick={() => onView(session)}
-                  className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-blue-50 hover:text-blue-500">
-                  <Eye className="w-3.5 h-3.5" />
-                </button>
-                
+              {/* ── Panneau déplié — toutes les infos de la session ── */}
+              <div
+                className="grid transition-[grid-template-rows] duration-200 ease-out"
+                style={{ gridTemplateRows: isRowOpen ? '1fr' : '0fr' }}
+              >
+                <div className="overflow-hidden">
+                  <div className="px-5 pb-5 pt-1 bg-gray-50/40">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">
+                      Informations de la session
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                      <InfoField icon={<User className="w-3.5 h-3.5" />} label="Caissier" value={session.caissier_nom ?? session.username} />
+                      <InfoField icon={<ShieldCheck className="w-3.5 h-3.5" />} label="Superviseur" value={session.superviseur ?? '—'} />
+                      <InfoField icon={<ShieldCheck className="w-3.5 h-3.5" />} label="Responsable cash" value={session.id_responsable_cash ?? '—'} />
+                      <InfoField icon={<Building2 className="w-3.5 h-3.5" />} label="Agence" value={session.branch_name ?? session.branch ?? '—'} />
+                      <InfoField icon={<Banknote className="w-3.5 h-3.5" />} label="Montant d'ouverture" value={formatMoney(session.montant_ouverture, session.devise)} />
+                      {session.montant_fermeture != null && (
+                        <InfoField icon={<Banknote className="w-3.5 h-3.5" />} label="Montant de fermeture" value={formatMoney(session.montant_fermeture, session.devise)} />
+                      )}
+                      <InfoField icon={<Clock className="w-3.5 h-3.5" />} label="Ouverte le" value={`${formatDate(session.ouverture_at)} · ${formatTime(session.ouverture_at)}`} />
+                      {session.fermeture_at && (
+                        <InfoField icon={<Clock className="w-3.5 h-3.5" />} label="Fermée le" value={`${formatDate(session.fermeture_at)} · ${formatTime(session.fermeture_at)}`} />
+                      )}
+                      <InfoField icon={<MapPin className="w-3.5 h-3.5" />} label="Localisation" value={session.localisation ?? '—'} />
+                      <InfoField icon={<Monitor className="w-3.5 h-3.5" />} label="Appareil" value={session.device_id ?? '—'} />
+                      <InfoField icon={<Monitor className="w-3.5 h-3.5" />} label="Adresse IP" value={session.ip_address ?? '—'} />
+                      <InfoField icon={<Archive className="w-3.5 h-3.5" />} label="Transactions" value={session.nb_transactions ?? 0} />
+                      {session.forcee_par && (
+                        <InfoField icon={<AlertTriangle className="w-3.5 h-3.5" />} label="Forcée par" value={session.forcee_par} />
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           );
@@ -416,7 +442,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {counts.fermée} Fermée{counts.fermée !== 1 ? 's' : ''}
               </span>
             )}
-            {/* AJOUTER après le badge fermées */}
             {counts.interrompue > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {counts.interrompue} Interrompue{counts.interrompue !== 1 ? 's' : ''}

@@ -17,7 +17,7 @@ import UserAvatar from '../core/UserAvatar';
 // MODIFICATIONS apportées à ce fichier :
 //
 // 1. Suppression COMPLÈTE des références à 'en_attente', 'archive', 'suspendu',
-//    'inactif', 'ferme' et `statutCompte`.
+//    'inactif', 'ferme' et `account_status`.
 //
 // 2. Modèle unifié : 3 statuts seulement → 'ouvert' | 'gelé' | 'fermé'.
 //    Onglet "Archive" est juste le LABEL UI pour le statut métier 'fermé'.
@@ -42,7 +42,8 @@ interface AccountTableProps {
   onSuspend:          (a: AccountData) => void;
   onClose:            (a: AccountData) => void;
   onViewTransactions: (a: AccountData) => void;
-  onBulkAction:       (action: AccountBulkAction, ids: string[]) => Promise<void>;
+  // onBulkAction:       (action: AccountBulkAction, ids: string[]) => Promise<void>;
+  onBulkAction: (action: AccountBulkAction, ids: string[],) => Promise<void>;
   activeTab?:         TabId;
   onTabChange?:       (tab: TabId) => void;
 }
@@ -328,12 +329,12 @@ return (
           const status      = acc.account_status;
           const tab         = getTab(status);
           const statusCfg   = STATUS_CFG[tab];
-          const isPending   = status === 'en_attente';
+          const solde       = acc.soldeActuel ?? 0;        // ← déplace ceci plus haut
+          const isPending   = solde === 0;                  // ← utilise solde ici
           const typeCfg     = acc.typeCompte
             ? (TYPE_CFG[acc.typeCompte] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: acc.typeCompte })
             : { bg: 'bg-gray-100', text: 'text-gray-500', label: '—' };
           const isSelected  = selected.has(acc.id as string);
-          const solde       = acc.soldeActuel ?? 0;
 
           return (
             <div key={acc.id}
@@ -370,12 +371,12 @@ return (
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isArchiveTab ? 'text-gray-400' : 'text-gray-900'}`}>
+                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isArchiveTab ? 'text-gray-400' : 'text-red-900'}`}>
                       {acc.account_number}
                     </p>
                     {isPending && (
                       <span
-                        title="En attente d'activation"
+                        title="Solde à 0 HTG"
                         className="w-2 h-2 rounded-full bg-amber-500 shrink-0"
                       />
                     )}
@@ -451,7 +452,7 @@ return (
                 </button>
 
                 {(status === 'actif' || status === 'en_attente') && (
-                  <>
+                  <div>
                     <button title="Geler" onClick={() => onSuspend(acc)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-blue-50 hover:text-[#355C7D]">
                       <ShieldOff className="w-3.5 h-3.5" />
@@ -460,11 +461,11 @@ return (
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
                       <XCircle className="w-3.5 h-3.5" />
                     </button>
-                  </>
+                  </div>
                 )}
 
                 {status === 'gele' && (
-                  <>
+                  <div>
                     <button title="Débloquer" onClick={() => onSuspend(acc)}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
                       <ShieldCheck className="w-3 h-3" />
@@ -473,7 +474,7 @@ return (
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
                       <XCircle className="w-3.5 h-3.5" />
                     </button>
-                  </>
+                  </div>
                 )}
 
                 {(status === 'ferme' || status === 'archive') && (
@@ -519,15 +520,14 @@ return (
           </div>
         </div>
       )}
-
       <AccountBulkActionModal
         action={activeAction}
         accounts={selectedAccounts}
         onClose={() => setActiveAction(null)}
         onConfirm={async (action, eligibleIds) => {
           await onBulkAction(action, eligibleIds);
-          setSelected(new Set());
           setActiveAction(null);
+          setSelected(new Set());
         }}
       />
     </div>

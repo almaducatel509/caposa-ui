@@ -1,21 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal } from "@/app/components/ui/Modal";
 import {
   X, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Download, History, Banknote, CreditCard,
+  Download, History, Banknote, CreditCard, Loader2, AlertCircle,
 } from "lucide-react";
 import UserAvatar from '@/app/components/core/UserAvatar';
 import { MemberData, accountTypeLabel, formatMoney } from '../validations';
-
-type TxType   = 'depot' | 'retrait' | 'interet' | 'frais';
-type TxStatus = 'completed' | 'pending' | 'cancelled';
-
-interface Transaction {
-  id: string; type: TxType; amount: number;
-  description: string; date: string; status: TxStatus; createdBy: string;
-}
+import { fetchAccountTransactions, type Transaction, type TxType } from "@/app/lib/api/members";
 
 interface MemberTransactionModalProps {
   isOpen:   boolean;
@@ -29,13 +22,6 @@ const TX_CFG: Record<TxType, { bg: string; iconColor: string; badge: string; lab
   interet: { bg: 'bg-blue-50',   iconColor: 'text-[#355C7D]', badge: 'bg-blue-50 text-[#355C7D]',     label: 'Intérêt'  },
   frais:   { bg: 'bg-yellow-50', iconColor: 'text-yellow-700',badge: 'bg-yellow-50 text-yellow-700',  label: 'Frais'    },
 };
-
-const MOCK_TX = (): Transaction[] => [
-  { id:'1', type:'depot',   amount: 50000, description:'Dépôt initial',           date:'2025-01-15T14:30:00', status:'completed', createdBy:'Caissier A' },
-  { id:'2', type:'interet', amount: 1250,  description:'Intérêt mensuel Jan 2025', date:'2025-01-31T10:00:00', status:'completed', createdBy:'Système'    },
-  { id:'3', type:'retrait', amount:-15000, description:'Retrait guichet',          date:'2025-02-05T09:15:00', status:'completed', createdBy:'Caissier B' },
-  { id:'4', type:'frais',   amount:-500,   description:'Frais de service mensuel', date:'2025-02-28T08:00:00', status:'completed', createdBy:'Système'    },
-];
 
 function fmtHTG(n: number) {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(Math.abs(n)) + ' HTG';
@@ -51,9 +37,40 @@ const MemberTransactionModal: React.FC<MemberTransactionModalProps> = ({
   isOpen, onClose, member,
 }) => {
   const [activeAccount, setActiveAccount] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const activeAccountId = member?.accounts?.[activeAccount]?.id;
+
+  const fetchTransactions = useCallback(async (accountId: string | number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchAccountTransactions(accountId);
+      setTransactions(data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des transactions:', err);
+      setError("Impossible de charger l'historique des transactions.");
+      setTransactions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && activeAccountId != null) {
+      fetchTransactions(activeAccountId);
+    }
+    if (!isOpen) {
+      setTransactions([]);
+      setActiveAccount(0);
+      setError(null);
+    }
+  }, [isOpen, activeAccountId, fetchTransactions]);
+
   if (!member) return null;
 
-  const transactions = MOCK_TX();
   const stats = {
     depot:   transactions.filter(t => t.type === 'depot').reduce((s,t)  => s + t.amount, 0),
     retrait: transactions.filter(t => t.type === 'retrait').reduce((s,t) => s + Math.abs(t.amount), 0),
@@ -148,7 +165,34 @@ const MemberTransactionModal: React.FC<MemberTransactionModalProps> = ({
       </div>
 
       <div className="overflow-y-auto max-h-[35vh] px-6 pb-4 flex flex-col gap-2">
-        {transactions.map(tx => {
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <p className="text-xs">Chargement des transactions...</p>
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="flex flex-col items-center justify-center py-10 text-red-500 gap-2">
+            <AlertCircle className="w-5 h-5" />
+            <p className="text-xs">{error}</p>
+            <button
+              onClick={() => activeAccountId != null && fetchTransactions(activeAccountId)}
+              className="text-xs font-medium text-[#2E7D32] hover:underline mt-1"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !error && transactions.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+            <History className="w-5 h-5" />
+            <p className="text-xs">Aucune transaction pour ce compte.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && transactions.map(tx => {
           const cfg = TX_CFG[tx.type];
           return (
             <div key={tx.id}

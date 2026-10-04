@@ -103,7 +103,7 @@ export default function TransferStats({
   volumeData, typeData,
 }: TransferStatsProps) {
   return (
-    <>
+    <div>
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <KPICard icon={ArrowLeftRight} label="Montant total"      value={formatHTG(totalAmount)}                    accent={C.green} />
@@ -207,6 +207,6 @@ export default function TransferStats({
         </div>
 
       </div>
-    </>
+    </div>
   );
 }

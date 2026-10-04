@@ -1,17 +1,19 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * app/lib/auth.ts — Rôles et routes CAPOSA
+caposa-ui\app\components\AuthGuard.tsx *
+ * Utilise NextAuth — le rôle vient du JWT Django décodé dans auth.ts (NextAuth).
+ * ───────────────────────────────────────────────────────────────────────────── */
+// AuthGuard.tsx
+/* ─────────────────────────────────────────────────────────────────────────────
+ * caposa-ui\app\components\AuthGuard.tsx
  *
  * Utilise NextAuth — le rôle vient du JWT Django décodé dans auth.ts (NextAuth).
  * ───────────────────────────────────────────────────────────────────────────── */
+import { UserRole, ROLE_ROUTES,  } from '@/app/lib/auth';
 
-export type UserRole = 'caissier' | 'directeur' | 'superviseur' | 'tresorier';
+// ── le reste de la logique du guard (non montré ici) continue d'utiliser
+//    UserRole / ROLE_ROUTES / getRole importés, sans les redéfinir localement
 
-export const ROLE_ROUTES: Record<UserRole, string> = {
-  caissier:    '/dashboard/cashier',
-  directeur:   '/dashboard/director',
-  superviseur: '/dashboard/supervisor',
-  tresorier:   '/dashboard/tresorier',
-};
+
 
 /* ─── Temporaire — hardcodé pour tester sans API ─────────────────────────── */
 /* ↓↓↓ Change cette valeur pour tester un autre dashboard ↓↓↓ */
@@ -24,5 +26,6 @@ export function getRole(): UserRole {
    * import { useSession } from 'next-auth/react';
    * const { data: session } = useSession();
    * return (session?.user?.role as UserRole) ?? 'caissier';
+   * C:\Users\alma2\Documents\Final Project\caposa-ui\app\components\AuthGuard.tsx
    */
 }

@@ -9,6 +9,7 @@ import {
   Landmark,
   Repeat,
 } from 'lucide-react';
+import { fetchPosts } from '@/app/lib/api/post'; // ajuste le chemin réel selon où se trouve fetchPosts
 
 import { fetchDashboard, fetchTransactions, openSession, closeSession, fetchCaisses } from '@/app/lib/api/caisse';
 import type { TransactionData } from '@/app/components/transactions/types';
@@ -17,7 +18,7 @@ import type {
   CaisseAlert, CaisseSession, CaisseStatus, OpenSessionPayload,
 } from '@/types/caisse';
 
-// ✅ On réutilise le composant Stats de la page Dépôts
+import { fetchEmployees } from '@/app/lib/api/employee';
 
 import OpenSessionModal  from '../../sessions/modals/Opensessionmodal';
 import CloseSessionModal from '../../sessions/modals/Closesessionmodal';
@@ -29,8 +30,12 @@ import { OpeningHour } from '@/types/branche';
 import { fetchBranches, fetchOpeningHours, fetchHolidays } from '@/app/lib/api/branche';
 import { BranchData } from '../../branches/validations';
 import { Holiday } from '../../holidays/validations';
+import { fetchRecentTransactions } from '@/app/lib/api/transaction';
+import { FEATURES } from '@/app/lib/features';
 
-// ─── Constantes ──────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Constantes
+// ─────────────────────────────────────────────────────────────────
 
 const C = {
   green:     '#2E7D32',
@@ -40,9 +45,19 @@ const C = {
   red:       '#DC2626',
 };
 
-// Configuration des types de transaction pour les graphiques.
-// Les clés correspondent à TransactionData['type'] et aux clés
-// ajoutées dans SUBTYPE_CFG de DepositStats.
+// Shape légère utilisée uniquement pour les "dernières transactions"
+// des Actions rapides (recentTx) — pas le même type que TransactionData
+// utilisé pour les stats/graphiques plus bas. Les deux coexistent
+// volontairement, ne pas les fusionner sans vérifier les deux usages.
+type Transaction = {
+  id: string;
+  transaction_type: 'deposit' | 'withdrawal' | 'transfer' | 'loan_repayment';
+  amount: string;
+  created_at: string; // ISO string
+};
+
+// Config d'affichage (libellé + couleur) pour les graphiques DashboardStats.
+// Clés alignées sur TransactionData['type'].
 const TX_TYPE_META: Record<TransactionData['type'], { label: string; color: string }> = {
   deposit:    { label: 'Dépôt',     color: C.green },
   withdrawal: { label: 'Retrait',   color: C.red   },
@@ -50,29 +65,20 @@ const TX_TYPE_META: Record<TransactionData['type'], { label: string; color: stri
   loan:       { label: 'Prêt',      color: C.gold  },
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────
+// Config d'affichage (signe + couleur texte) pour le bloc "Actions rapides".
+// ⚠️ Utilise 'loan_repayment' (type de `recentTx`) contrairement à TX_TYPE_META
+// et TX_ROW_CFG qui utilisent 'loan' (type de `TransactionData`). C'est
+// volontaire vu que ces deux sections lisent deux sources différentes
+// (recentTx vs transactions) — attention si tu unifies un jour ces types.
+const typeConfig: Record<string, { sign: string; color: string }> = {
+  deposit:         { sign: '+', color: 'text-green-600' },
+  withdrawal:      { sign: '-', color: 'text-red-600'   },
+  transfer:        { sign: '+', color: 'text-blue-600'  },
+  loan_repayment:  { sign: '-', color: 'text-yellow-600'},
+};
 
-function formatHTG(v: number) {
-  return new Intl.NumberFormat('fr-CA', {
-    style: 'currency', currency: 'HTG', minimumFractionDigits: 0,
-  }).format(v);
-}
-function getNow() {
-  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
-function getDate() {
-  return new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  });
-}
-function getGreeting() {
-  const h = new Date().getHours();
-  return h < 12 ? { text: 'Bonjour',        icon: Sun    }
-       : h < 18 ? { text: 'Bon après-midi', icon: Sun    }
-       :          { text: 'Bonsoir',        icon: Sunset };
-}
-
-// Config pour la liste des transactions (icônes, couleurs)
+// Config d'affichage (icône + couleurs) pour chaque ligne de la liste
+// de transactions (TxRow), basée sur TransactionData['type'].
 const TX_ROW_CFG: Record<TransactionData['type'], {
   icon: React.ElementType; color: string; bg: string; label: string;
 }> = {
@@ -82,7 +88,39 @@ const TX_ROW_CFG: Record<TransactionData['type'], {
   loan:       { icon: HandCoins,       color: 'text-[#D4AF37]', bg: 'bg-yellow-50', label: 'Prêt'      },
 };
 
-// ─── Petits composants ───────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+
+function formatHTG(v: number) {
+  return new Intl.NumberFormat('fr-CA', {
+    style: 'currency', currency: 'HTG', minimumFractionDigits: 0,
+  }).format(v);
+}
+
+function getNow() {
+  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function getDate() {
+  return new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  return h < 12 ? { text: 'Bonjour',        icon: Sun    }
+       : h < 18 ? { text: 'Bon après-midi', icon: Sun    }
+       :          { text: 'Bonsoir',        icon: Sunset };
+}
+
+const fmtTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('fr-HT', { hour: '2-digit', minute: '2-digit' });
+
+// ─────────────────────────────────────────────────────────────────
+// Petits composants
+// ─────────────────────────────────────────────────────────────────
 
 function TxRow({ tx }: { tx: TransactionData }) {
   const cfg  = TX_ROW_CFG[tx.type];
@@ -128,6 +166,7 @@ function AlertsBell({ alerts }: { alerts: CaisseAlert[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Ferme le popover au clic en dehors du composant (ref).
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -179,58 +218,96 @@ function AlertsBell({ alerts }: { alerts: CaisseAlert[] }) {
   );
 }
 
-// ─── Dashboard principal ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Dashboard principal
+// ─────────────────────────────────────────────────────────────────
 
 export default function DashboardCaissier() {
+  // ── State: données caisse / session ──
   const [sessions,       setSessions]      = useState<CaisseSession[]>([]);
   const [transactions,   setTransactions]  = useState<TransactionData[]>([]);
-  const [alerts,         setAlerts]        = useState<CaisseAlert[]>([]);
+  const [alerts, setAlerts] = useState<CaisseAlert[] | null>(null);
   const [montantCaisse,  setMontantCaisse] = useState(0);
   const [caisseStatus,   setCaisseStatus]  = useState<CaisseStatus>('fermée');
   const [isLoading,      setIsLoading]     = useState(true);
+// ...
+const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si le type est importable ici
+  // ── State: modals ──
   const [showOpenModal,  setShowOpenModal]  = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [time,           setTime]          = useState(getNow());
-  const [period,         setPeriod]        = useState<'day' | 'week' | 'month'>('week');
+
+  // ── State: UI (horloge, filtre période) ──
+  const [time,   setTime]   = useState(getNow());
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+
+  // ── State: données de référence pour OpenSessionModal ──
+  // (succursales, horaires, jours fériés, caisses, employés)
+  const [branches,     setBranches]     = useState<BranchData[]>([]);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
+  const [holidays,     setHolidays]     = useState<Holiday[]>([]);
+  const [caisses,      setCaisses]      = useState<Caisse[]>([]);
+  const [employees,    setEmployees]    = useState<any[]>([]); // ← ajouté : nécessaire pour les selects Superviseur / Responsable cash
+
+  // ── State: "Actions rapides" (dernière transaction par type) ──
+  const [recentTx,  setRecentTx]  = useState<Transaction[]>([]);
+  const [txLoading, setTxLoading] = useState(true);
 
   const activeSession = sessions.find(s => s.statut === 'ouverte') ?? null;
   const greeting  = getGreeting();
   const GreetIcon = greeting.icon;
   const { data: session } = useSession();
-  const [caisses, setCaisses] = useState<Caisse[]>([]);
-  const [branches,     setBranches]     = useState<BranchData[]>([]);
-  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
-  const [holidays,     setHolidays]     = useState<Holiday[]>([]);
+  const [dashError, setDashError] = useState<string | null>(null);
 
+  // Chargement des dernières transactions (bloc "Actions rapides").
+  // Indépendant du chargement principal ci-dessous car il alimente
+  // une autre partie de l'écran et n'a pas besoin de bloquer isLoading.
+  useEffect(() => {
+    fetchRecentTransactions().then((data) => {
+      setRecentTx(data);
+      setTxLoading(false);
+    });
+  }, []);
+
+  // Dernière transaction connue pour un type donné (Actions rapides).
+  const last = (type: string) =>
+    recentTx.find((t) => t.transaction_type === type);
+
+  // Horloge de l'en-tête, rafraîchie chaque minute.
   useEffect(() => {
     const t = setInterval(() => setTime(getNow()), 60000);
     return () => clearInterval(t);
   }, []);
 
+  // Chargement initial de toutes les données du dashboard en parallèle.
+  // fetchDashboard a son propre fallback pour ne pas faire échouer
+  // tout le Promise.all si le endpoint dashboard tombe.
   useEffect(() => {
-    Promise.all([
-      fetchBranches(),
-      fetchOpeningHours(),
-      fetchHolidays(),
-      fetchCaisses(),        // ← ajouter
-    ]).then(([b, oh, h, c]) => {
-      console.log('caisses reçues:', c); // ← vérifier ici
-      setBranches(Array.isArray(b) ? b : (b?.results ?? []));
-      setOpeningHours(Array.isArray(oh) ? oh : (oh?.results ?? []));
-      setHolidays(Array.isArray(h) ? h : (h?.results ?? []));
-      setCaisses(Array.isArray(c) ? c : []);
-    });
-  }, []);
-  
-  useEffect(() => {
-    fetchDashboard().then(data => {
-      setSessions(data.sessions);
-      setTransactions(data.transactions);
-      setAlerts(data.alerts);
-      setMontantCaisse(data.montant_caisse);
-      setCaisseStatus(data.sessions.some(s => s.statut === 'ouverte') ? 'ouverte' : 'fermée');
-    }).finally(() => setIsLoading(false));
-  }, []);
+  Promise.all([
+    fetchDashboard().catch((err: Error) => {
+      setDashError(err.message);
+      return { sessions: [], transactions: [], alerts: null, montant_caisse: 0 };
+    }),
+    fetchBranches(),
+    fetchOpeningHours(),
+    fetchHolidays(),
+    fetchCaisses(),
+    fetchEmployees(),
+    fetchPosts(),
+  ]).then(([dash, b, oh, h, c, emp, p]) => {
+    setSessions(dash.sessions);
+    setTransactions(dash.transactions);
+    setAlerts(dash.alerts);
+    setMontantCaisse(dash.montant_caisse);
+    setCaisseStatus(dash.sessions.some((s: CaisseSession) => s.statut === 'ouverte') ? 'ouverte' : 'fermée');
+
+    setBranches(Array.isArray(b) ? b : (b?.results ?? []));
+    setOpeningHours(Array.isArray(oh) ? oh : (oh?.results ?? []));
+    setHolidays(Array.isArray(h) ? h : (h?.results ?? []));
+    setCaisses(Array.isArray(c) ? c : []);
+    setEmployees(Array.isArray(emp) ? emp : (emp?.results ?? []));
+    setPosts(Array.isArray(p) ? p : (p?.results ?? []));
+  }).finally(() => setIsLoading(false));
+}, []);
 
   const handleOpenSession = async (payload: OpenSessionPayload) => {
     const s = await openSession(payload);
@@ -240,8 +317,8 @@ export default function DashboardCaissier() {
   };
 
   const handleCloseSession = async (payload: {
-    montant_fermeture: number; note_fermeture?: string;
-    remise_effectuee: boolean; reconciliation_effectuee: boolean;
+    montant_fermeture: number;
+    note_fermeture?:   string;
   }) => {
     if (!activeSession) return;
     const closed = await closeSession(activeSession.id, payload);
@@ -255,8 +332,7 @@ export default function DashboardCaissier() {
     role: (session?.user as any)?.role ?? 'Caissier',
   };
 
-  // ─── Filtre transactions selon période ─────────────────────────
-
+  // ── Filtre transactions selon la période sélectionnée ──
   const filteredTx = useMemo(() => {
     const now      = new Date();
     const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
@@ -266,40 +342,41 @@ export default function DashboardCaissier() {
     return transactions.filter(tx => new Date(tx.created_at) >= cutoff);
   }, [transactions, period]);
 
-  // ─── KPIs pour DepositStats ────────────────────────────────────
-
-  const completed       = filteredTx.filter(t => t.status === 'completed');
-  const totalAmount     = montantCaisse;                                                // Solde caisse (net)
-  const transactionCount = filteredTx.length;                                            // Nombre transactions
-  const completedCount  = completed.length;                                              // Pour le sub "X complétées"
-  const avgAmount       = completed.length
+  // ── KPIs passés à DashboardStats ──
+  const completed         = filteredTx.filter(t => t.status === 'completed');
+  const totalAmount       = montantCaisse;                                   // Solde caisse (net, pas filtré par période)
+  const transactionCount  = filteredTx.length;
+  const completedCount    = completed.length;
+  const avgAmount         = completed.length
     ? completed.reduce((s, t) => s + t.amount, 0) / completed.length
     : 0;
-  const uniqueMembers   = new Set(filteredTx.map(t => t.member_name).filter(Boolean)).size;
-  const pendingCount    = filteredTx.filter(t => t.status === 'pending').length;
-  const completionRate  = filteredTx.length
+  const uniqueMembers     = new Set(filteredTx.map(t => t.member_name).filter(Boolean)).size;
+  const pendingCount      = filteredTx.filter(t => t.status === 'pending').length;
+  const completionRate    = filteredTx.length
     ? (completedCount / filteredTx.length) * 100
     : 0;
 
-  // ─── volumeData pour les graphes Volume + Tendance ─────────────
-
+  // ── Données pour les graphes Volume + Tendance ──
+  // Construit d'abord des "buckets" vides (par heure si period='day',
+  // sinon par jour ouvré), puis y agrège les transactions complétées.
   const volumeData = useMemo((): VolumePoint[] => {
     const days: VolumePoint[] = [];
 
     if (period === 'day') {
-      // Étalement par heure de 9h à 17h
+      // Étalement par heure de 9h à 17h (horaires d'ouverture standard)
       for (let h = 9; h <= 17; h++) {
         const d = new Date(); d.setHours(h, 0, 0, 0);
         days.push({ label: `${h}h`, date: d.toISOString(), count: 0, amount: 0 });
       }
     } else {
-      // Jours ouvrés sur la période
+      // Jours ouvrés (lun-ven) sur la période, en remontant depuis aujourd'hui.
+      // `back < 60` est un garde-fou pour éviter une boucle infinie.
       const target = period === 'week' ? 5 : 22;
       let back = 0;
       while (days.length < target && back < 60) {
         back++;
         const d = new Date(); d.setDate(d.getDate() - back);
-        if (d.getDay() === 0 || d.getDay() === 6) continue;
+        if (d.getDay() === 0 || d.getDay() === 6) continue; // saute weekends
         days.unshift({
           label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
           date:  d.toISOString().split('T')[0],
@@ -326,8 +403,7 @@ export default function DashboardCaissier() {
     return days;
   }, [filteredTx, period]);
 
-  // ─── typeData pour le donut "Répartition par type" ─────────────
-
+  // ── Données pour le donut "Répartition par type" ──
   const typeData = useMemo((): TypePoint[] =>
     (['deposit', 'withdrawal', 'transfer', 'loan'] as const).map(key => {
       const items = filteredTx.filter(t => t.type === key);
@@ -338,10 +414,10 @@ export default function DashboardCaissier() {
         amount: items.reduce((s, t) => s + t.amount, 0),
         color:  TX_TYPE_META[key].color,
       };
-    }).filter(t => t.value > 0),  // ← cache les types absents pour ne pas avoir des parts à 0
+    }).filter(t => t.value > 0), // cache les types absents (évite les parts à 0 dans le donut)
   [filteredTx]);
 
-  // ─── Render ────────────────────────────────────────────────────
+  // ── Render ──
 
   if (isLoading) {
     return (
@@ -367,10 +443,15 @@ export default function DashboardCaissier() {
           <h1 className="text-2xl font-bold text-gray-900">Dashboard Caissier</h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">{getDate()} · {time}</p>
         </div>
-        <AlertsBell alerts={alerts} />
+          {FEATURES.alerts && alerts && <AlertsBell alerts={alerts} />}
       </div>
-
-      {/* ── Bannière caisse ── */}
+      {/* juste sous le header */}
+      {dashError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {dashError}
+        </div>
+      )}
+      {/* ── Bannière statut caisse (ouverte/fermée) ── */}
       <div className={`rounded-2xl border-2 p-5 transition-all ${
         caisseStatus === 'fermée' ? 'bg-orange-50 border-orange-200' : 'bg-[#DDEAD5] border-[#2E7D32]/40'
       }`}>
@@ -391,7 +472,7 @@ export default function DashboardCaissier() {
               </span>
               <p className="text-base font-bold text-gray-900 mt-1">
                 {caisseStatus === 'fermée'
-                  ? 'Caisse non ouverte — action requise'
+                  ? 'Caisse non ouverte. Action requise'
                   : `Caisse ouverte · ${activeSession?.numero_caisse ?? ''}`}
               </p>
               <p className="text-xs text-gray-500">
@@ -413,7 +494,7 @@ export default function DashboardCaissier() {
         </div>
       </div>
 
-      {/* ── Filtre période ── */}
+      {/* ── Filtre période (agit sur filteredTx, volumeData, typeData) ── */}
       <div className="flex gap-2">
         {(['day', 'week', 'month'] as const).map(p => (
           <button key={p} onClick={() => setPeriod(p)}
@@ -425,7 +506,7 @@ export default function DashboardCaissier() {
         ))}
       </div>
 
-      {/* ── Stats (KPIs + Graphiques) — réutilise DepositStats ── */}
+      {/* ── Stats (KPIs + Graphiques) ── */}
       <DashboardStats
         totalAmount={totalAmount}
         depositCount={transactionCount}
@@ -438,84 +519,53 @@ export default function DashboardCaissier() {
         typeData={typeData}
       />
 
-     {/* ── Actions rapides ── */}
+      {/* ── Actions rapides (raccourcis + dernière transaction par type) ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-gray-500" />
-            <h2 className="font-semibold text-gray-900">Actions rapides</h2>
-          </div>
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+          <TrendingUp className="w-4 h-4 text-gray-500" />
+          <h2 className="font-semibold text-gray-900">Actions rapides</h2>
         </div>
 
         <div className="divide-y divide-gray-50">
+          {[
+            { type: 'deposit',        href: '/dashboard/transactions/deposits',    icon: <ArrowDownCircle className="w-5 h-5 text-green-600"  />, label: 'Dépôt',     sub: 'Enregistrer un dépôt'       },
+            { type: 'withdrawal',     href: '/dashboard/transactions/withdrawals', icon: <ArrowUpCircle   className="w-5 h-5 text-red-600"    />, label: 'Retrait',   sub: 'Effectuer un retrait'       },
+            { type: 'transfer',       href: '/dashboard/transactions/transfers',   icon: <Repeat          className="w-5 h-5 text-blue-600"   />, label: 'Transfert', sub: 'Transférer entre comptes'   },
+            { type: 'loan_repayment', href: '/dashboard/loans',                    icon: <Landmark        className="w-5 h-5 text-yellow-600" />, label: 'Prêt',      sub: 'Remboursement ou demande'   },
+          ].map(({ type, href, icon, label, sub }) => {
+            const tx  = last(type);
+            const cfg = typeConfig[type];
+            return (
+              <Link key={type} href={href} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+                <div className="flex items-center gap-3">
+                  {icon}
+                  <div>
+                    <p className="font-medium text-gray-900">{label}</p>
+                    <p className="text-xs text-gray-500">{sub}</p>
+                  </div>
+                </div>
 
-          {/* Dépôt */}
-          <Link href="/dashboard/transactions/deposits" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-            <div className="flex items-center gap-3">
-              <ArrowDownCircle className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="font-medium text-gray-900">Dépôt</p>
-                <p className="text-xs text-gray-500">Enregistrer un dépôt</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-green-600 font-semibold">+ 12 500 HTG</p>
-              <p className="text-xs text-gray-400">08:42</p>
-            </div>
-          </Link>
-
-          {/* Retrait */}
-          <Link href="/dashboard/transactions/withdrawals" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-            <div className="flex items-center gap-3">
-              <ArrowUpCircle className="w-5 h-5 text-red-600" />
-              <div>
-                <p className="font-medium text-gray-900">Retrait</p>
-                <p className="text-xs text-gray-500">Effectuer un retrait</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-red-600 font-semibold">- 4 000 HTG</p>
-              <p className="text-xs text-gray-400">09:10</p>
-            </div>
-          </Link>
-
-          {/* Transfert */}
-          <Link href="/dashboard/transactions/transfers" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-            <div className="flex items-center gap-3">
-              <Repeat className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="font-medium text-gray-900">Transfert</p>
-                <p className="text-xs text-gray-500">Transférer entre comptes</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-blue-600 font-semibold">+ 7 800 HTG</p>
-              <p className="text-xs text-gray-400">10:05</p>
-            </div>
-          </Link>
-
-          {/* Prêt */}
-          <Link href="/dashboard/loans" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
-            <div className="flex items-center gap-3">
-              <Landmark className="w-5 h-5 text-yellow-600" />
-              <div>
-                <p className="font-medium text-gray-900">Prêt</p>
-                <p className="text-xs text-gray-500">Remboursement ou demande</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-yellow-600 font-semibold">- 25 000 HTG</p>
-              <p className="text-xs text-gray-400">07:55</p>
-            </div>
-          </Link>
-
+                <div className="text-right">
+                  {txLoading ? (
+                    <p className="text-xs text-gray-400">…</p>
+                  ) : tx ? (
+                    <div>
+                      <p className={`font-semibold ${cfg.color}`}>
+                        {cfg.sign} {Number(tx.amount).toLocaleString('fr-HT')} HTG
+                      </p>
+                      <p className="text-xs text-gray-400">{fmtTime(tx.created_at)}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Aucune transaction</p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
-
-      {/* ── Modals ── */}
-      
-
+      {/* ── Modal : ouverture de session ── */}
       {showOpenModal && (
         <Modal isOpen size="3xl" onClose={() => setShowOpenModal(false)}
           title={
@@ -533,19 +583,22 @@ export default function DashboardCaissier() {
             <OpenSessionModal
               onClose={() => setShowOpenModal(false)}
               onConfirm={handleOpenSession}
-              branches={branches} // ✅ plus []
-              openingHours={openingHours} // ✅ plus []
-              holidays={holidays} // ✅ plus []
+              branches={branches}
+              openingHours={openingHours}
+              holidays={holidays}
+              caisses={caisses}
+              employees={employees}
+              posts={posts}          
               onRequireOverride={(reason, details) => {
                 console.warn('Override requis:', reason, details);
                 // TODO: ouvrir un modal d'approbation directeur
-              } } 
-              caisses={caisses}            
+              }}
             />
           </div>
         </Modal>
       )}
 
+      {/* ── Modal : fermeture de session ── */}
       {showCloseModal && activeSession && (
         <Modal isOpen size="lg" onClose={() => setShowCloseModal(false)}
           title={

@@ -195,15 +195,15 @@ const DeleteBranchModal: React.FC<ArchiveBranchModalProps> = ({
             className="flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all disabled:opacity-60 shadow-sm"
           >
             {isArchiving ? (
-              <>
+              <div>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Archivage…
-              </>
+              </div>
             ) : (
-              <>
+              <div>
                 <Archive className="w-4 h-4" />
                 Archiver la branche
-              </>
+              </div>
             )}
           </button>
         </div>

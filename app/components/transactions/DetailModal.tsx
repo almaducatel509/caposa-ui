@@ -317,10 +317,10 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               <Row icon={Banknote} label="Type"   value={DEPOSIT_SUBTYPE[transaction.depositSubtype ?? ''] ?? '—'} />
               <Row icon={Tag}      label="Source" value={transaction.source} />
               {transaction.depositSubtype === 'transfer' && (
-                <>
+                <div>
                   <Row icon={Hash} label="Référence virement" value={transaction.transferReference} mono />
                   <Row icon={User} label="Émetteur"            value={transaction.senderName} />
-                </>
+                </div>
               )}
               {(transaction.holdPeriod ?? 0) > 0 && (
                 <Row icon={Clock} label="Délai de compensation"
@@ -456,19 +456,6 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
             )}
           </Section>
 
-          {/* ── Autorisation ── */}
-          {transaction.codeAutorisation && (
-            <Section title="Autorisation superviseur">
-              <Row icon={ShieldCheck} label="Code d'autorisation"
-                value={transaction.codeAutorisation} mono accent="#355C7D" />
-              <div className="flex items-start gap-2 px-1 py-2.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#355C7D] shrink-0 mt-0.5" />
-                <p className="text-xs text-[#355C7D]">
-                  Code fourni par le superviseur ou le chef de caisse.
-                </p>
-              </div>
-            </Section>
-          )}
 
           {/* ── Avertissements ── */}
           {transaction.requiresVerification && (

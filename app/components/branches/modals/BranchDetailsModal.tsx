@@ -1,21 +1,22 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import {
+import React, { useEffect, useMemo, useState } from "react";import {
   FaPlayCircle, FaBuilding,
   FaCalendarAlt, FaClock, FaExternalLinkAlt,
 } from "react-icons/fa";
+
 import { BsTelephone, BsPeople } from "react-icons/bs";
 import { MdLocationOn, MdEmail } from "react-icons/md";
 // ─── NOUVEAU : icônes lucide pour remplacer les emojis ─────────────────────
-import { Loader2, Wallet, ClipboardList, Landmark } from "lucide-react";
+import { Loader2, Wallet, ClipboardList, Landmark, User } from "lucide-react";
 import type { OpeningHour } from "@/types/branche";
 import { Modal } from "../../ui/Modal";
 import { Holiday } from "../../holidays/validations";
 import { BranchData } from "../validations";
+import { EmployeeData } from "../../employees/validations";
+import { PostData } from "../../postes/validations";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-
 interface BranchDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,8 +25,10 @@ interface BranchDetailsModalProps {
   openingHours?: OpeningHour[];
   holidays?: Holiday[];
   isLoadingData?: boolean;
+  error?: string | null; // ← nouveau : erreur de chargement (réseau/API), différent d'un tableau vide légitime
+  employees?: EmployeeData[];
+  posts?: PostData[]; // ← nouveau
 }
-
 /* ─── Helpers schedule (inchangés) ───────────────────────────────────────── */
 
 const DAYS_OF_WEEK = [
@@ -62,6 +65,7 @@ const ScheduleDetailModal: React.FC<{
   onClose: () => void;
   branch: BranchData;
   openingHours: OpeningHour[];
+  
 }> = ({ isOpen, onClose, branch, openingHours }) => {
   const branchHours = openingHours.find((oh) => oh.id === branch?.opening_hour);
   const scheduleData = branchHours ? parseSchedule(branchHours.schedule) : {};
@@ -152,6 +156,7 @@ const ScheduleDetailModal: React.FC<{
 const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
   isOpen, onClose, branch, onEdit,
   openingHours = [], holidays: passedHolidays = [], isLoadingData = false,
+  error = null, employees = [], posts = [],
 }) => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
@@ -168,7 +173,29 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
       </Modal>
     );
   }
-
+/* ── Erreur de chargement (distincte d'une absence légitime de données) ── */
+  if (error) {
+    console.error("[BranchDetailsModal] Erreur de chargement des données :", error);
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <div className="p-12 flex flex-col items-center gap-4 text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <FaExternalLinkAlt className="text-red-500" size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Impossible de charger les données de la branche</p>
+            <p className="text-xs text-gray-500 mt-1">{error}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+          >
+            Fermer
+          </button>
+        </div>
+      </Modal>
+    );
+  }
   /* ── 🎯 LOGIQUE MÉTIER : statut calculé automatiquement ── */
   const hasOpeningHour = Boolean(branch.opening_hour);
   const hasHolidays = Array.isArray(branch.holidays) && branch.holidays.length > 0;
@@ -192,8 +219,39 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
     [openingHours, branch?.opening_hour]
   );
 
-  const totalStaff = branch.number_of_tellers + branch.number_of_clerks + branch.number_of_credit_officers;
+/* ── Employés réellement rattachés à cette branche ── */
+  /* ── Employés réellement rattachés à cette branche (comparaison par id, pas par nom) ── */
+  const branchEmployees = useMemo(
+    () => employees.filter((e) => e.branch === branch.id),
+    [employees, branch.id]
+  );
 
+  const positionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    branchEmployees.forEach((e) => {
+      const names = e.posts
+        ?.map((postId) => posts.find((p) => p.id === postId)?.name)
+        .filter((n): n is string => Boolean(n));
+
+      if (names && names.length > 0) {
+        names.forEach((name) => {
+          counts[name] = (counts[name] || 0) + 1;
+        });
+      } else {
+        counts["Poste non spécifié"] = (counts["Poste non spécifié"] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [branchEmployees, posts]);
+
+  const totalStaff = branchEmployees.length;
+
+  // Palette cyclique CAPOSA pour les cartes de poste (peu importe combien de postes distincts)
+  const POSITION_PALETTE = [
+    { bg: "bg-[#DDEAD5]/60", iconBg: "bg-[#2E7D32]", countColor: "text-[#1B5E20]" },
+    { bg: "bg-[#DDEAD5]/30", iconBg: "bg-[#1B5E20]", countColor: "text-[#1B5E20]" },
+    { bg: "bg-amber-50/60",  iconBg: "bg-[#D4AF37]", countColor: "text-[#B8860B]" },
+  ];
   // ─── Ancienne version (commentée) ────────────────────────────────────────
   // bg: "bg-[#2E7D32]" pour grandes/moyennes, "bg-[#D4AF37]" pour petites
   // ─── Nouvelle version : palette CAPOSA cohérente (déjà OK ici) ──────────
@@ -211,9 +269,22 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
       return d.toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric" });
     } catch { return dateString; }
   };
-
+  useEffect(() => {
+  if (branch) {
+    console.log("[BranchDetailsModal] Données affichées :", {
+      branch,
+      openingHours: branchOpeningHours ?? "non configuré",
+      holidays: displayHolidays,
+      employees: branchEmployees,
+      positionCounts,
+      totalStaff,
+      isActive,
+      missingItems,
+    });
+  }
+}, [branch, branchOpeningHours, displayHolidays, branchEmployees, positionCounts, totalStaff, isActive, missingItems]);
   return (
-    <>
+    <div>
       <Modal
         isOpen={isOpen}
         onClose={onClose}
@@ -376,68 +447,76 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* ── Personnel ───────────────────────────────────────────────── */}
-          {/* ─── Ancienne version (commentée) : border-amber-100 + emojis 💰📋🏦 ─── */}
-          {/* <div className="bg-white border-2 border-amber-100 rounded-2xl p-5">
-                  ...
-                  emoji: "💰" / "📋" / "🏦"
-                  from-blue-50 to-blue-100  ❌ bleu
-                  text-[#355C7D]            ❌ bleu
-                  text-amber-600            ❌ trop d'ambre
-          */}
-
-          {/* ─── Nouvelle version : icônes lucide + palette CAPOSA ────────── */}
+                 {/* ── Personnel (basé sur les vrais employés de la branche) ── */}
           <div className="bg-white border-2 border-[#DDEAD5] rounded-2xl p-5">
             <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-4 flex items-center gap-2">
               <BsPeople className="text-[#2E7D32]" />
               Répartition du personnel
-              <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">{totalStaff} employés</span>
+              <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">
+                {totalStaff} employé{totalStaff > 1 ? "s" : ""}
+              </span>
             </p>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                {
-                  Icon: Wallet,
-                  count: branch.number_of_tellers,
-                  label: "Caissiers",
-                  // Vert CAPOSA principal
-                  bg: "bg-[#DDEAD5]/60",
-                  iconBg: "bg-[#2E7D32]",
-                  iconColor: "text-white",
-                  countColor: "text-[#1B5E20]",
-                },
-                {
-                  Icon: ClipboardList,
-                  count: branch.number_of_clerks,
-                  label: "Commis",
-                  // Vert CAPOSA secondaire (plus doux)
-                  bg: "bg-[#DDEAD5]/30",
-                  iconBg: "bg-[#1B5E20]",
-                  iconColor: "text-white",
-                  countColor: "text-[#1B5E20]",
-                },
-                {
-                  Icon: Landmark,
-                  count: branch.number_of_credit_officers,
-                  label: "Agents crédit",
-                  // Or CAPOSA pour différencier (charte officielle)
-                  bg: "bg-amber-50/60",
-                  iconBg: "bg-[#D4AF37]",
-                  iconColor: "text-white",
-                  countColor: "text-[#B8860B]",
-                },
-              ].map(({ Icon, count, label, bg, iconBg, iconColor, countColor }) => (
-                <div key={label} className={`text-center p-4 ${bg} border border-gray-100 rounded-xl`}>
-                  <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center mx-auto mb-2`}>
-                    <Icon className={`w-5 h-5 ${iconColor}`} />
-                  </div>
-                  <div className={`text-3xl font-bold ${countColor}`}>{count}</div>
-                  <div className="text-xs text-gray-600 mt-1 font-medium">{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* ── Jours fériés ────────────────────────────────────────────── */}       
+            {totalStaff === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                <User className="text-gray-300 w-8 h-8 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 font-medium">Aucun employé assigné à cette branche</p>
+              </div>
+            ) : (
+              <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${Math.min(Object.keys(positionCounts).length, 3)}, minmax(0, 1fr))` }}>
+                {Object.entries(positionCounts).map(([position, count], i) => {
+                  const palette = POSITION_PALETTE[i % POSITION_PALETTE.length];
+                  return (
+                    <div key={position} className={`text-center p-4 ${palette.bg} border border-gray-100 rounded-xl`}>
+                      <div className={`w-10 h-10 rounded-xl ${palette.iconBg} flex items-center justify-center mx-auto mb-2`}>
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <div className={`text-3xl font-bold ${palette.countColor}`}>{count}</div>
+                      <div className="text-xs text-gray-600 mt-1 font-medium">{position}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* ── Jours fériés ────────────────────────────────────────────── */}  
+          {/* ── Jours fériés ────────────────────────────────────────────── */}
+          <div className="bg-white border-2 border-[#DDEAD5] rounded-2xl p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#2E7D32] mb-4 flex items-center gap-2">
+              <FaCalendarAlt className="text-[#2E7D32]" />
+              Jours fériés assignés
+              {hasHolidays && (
+                <span className="ml-1 px-2.5 py-0.5 bg-[#DDEAD5] text-[#1B5E20] rounded-lg text-xs font-semibold">
+                  {displayHolidays.length}
+                </span>
+              )}
+            </p>
+
+            {hasHolidays && displayHolidays.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {displayHolidays.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between p-3 bg-[#DDEAD5]/40 rounded-xl">
+                    <span className="text-sm font-medium text-gray-800">{h.description}</span>
+                    <span className="text-xs text-gray-600">{formatDate(h.date)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* ── Absence légitime de données : pas une erreur ── */
+              <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                <FaCalendarAlt className="text-gray-300 text-3xl mx-auto mb-3" />
+                <p className="text-sm text-gray-500 font-medium">Aucun jour férié assigné pour le moment</p>
+                {onEdit && (
+                  <button
+                    onClick={() => { onEdit(branch, "activate"); onClose(); }}
+                    className="mt-3 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold transition-colors"
+                  >
+                    Configurer
+                  </button>
+                )}
+              </div>
+            )}
+          </div>     
         </div>
 
         {/* ── Footer ── */}
@@ -465,7 +544,7 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
         branch={branch}
         openingHours={openingHours}
       />
-    </>
+    </div>
   );
 };
 

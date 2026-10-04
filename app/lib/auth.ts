@@ -4,14 +4,34 @@
  * Utilise NextAuth — le rôle vient du JWT Django décodé dans auth.ts (NextAuth).
  * ───────────────────────────────────────────────────────────────────────────── */
 
-export type UserRole = 'caissier' | 'directeur' | 'superviseur' | 'tresorier' | 'agent_credit';
+/* ─── Temporaire — hardcodé pour tester sans API ─────────────────────────── 
+app/lib/auth.ts (les rôles et routes) — Gestion du routing par rôle : UserRole, 
+ROLE_ROUTES (quel dashboard pour quel rôle), et getRole() qui est encore mocké en dur (MOCK_ROLE = 'caissier'). 
+Le TODO dans le fichier dit clairement qu'il faudra le brancher sur useSession() 
+une fois que session.user.role existe réellement.
+*/
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * app/lib/auth.ts — Rôles et routes CAPOSA
+ *
+ * Utilise NextAuth — le rôle vient du JWT Django décodé dans auth.ts (NextAuth).
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+export type UserRole =
+  | 'conseiller'
+  | 'caissier'
+  | 'superviseur'
+  | 'tresorier'
+  | 'administrateur'
+  | 'directeur';
 
 export const ROLE_ROUTES: Record<UserRole, string> = {
-  caissier: '/dashboard/cashier',
-  directeur: '/dashboard/director',
-  superviseur: '/dashboard/supervisor',
-  tresorier: '/dashboard/tresorier',
-  agent_credit: ""
+  conseiller:     '/dashboard/advisor',
+  caissier:       '/dashboard/cashier',
+  superviseur:    '/dashboard/supervisor',
+  tresorier:      '/dashboard/tresorier',
+  administrateur: '/dashboard/admin',
+  directeur:      '/dashboard/director',
 };
 
 /* ─── Temporaire — hardcodé pour tester sans API ─────────────────────────── */

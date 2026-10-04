@@ -139,7 +139,7 @@ function CaisseCard({ caisse, onSelect, selected }: {
       </div>
 
       {caisse.status !== 'fermée' && caisse.status !== 'en retard' ? (
-        <>
+        <div>
           <p className="text-xl font-bold text-gray-900">{formatCurrency(caisse.montant)}</p>
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-gray-400">{caisse.nbTx} tx · ouv. {caisse.ouvertureAt}</p>
@@ -149,7 +149,7 @@ function CaisseCard({ caisse, onSelect, selected }: {
               </span>
             )}
           </div>
-        </>
+        </div>
       ) : (
         <p className="text-sm text-gray-400 mt-1">
           {caisse.status === 'en retard' ? '⚠️ Non ouverte ce matin' : '🔒 Session fermée'}

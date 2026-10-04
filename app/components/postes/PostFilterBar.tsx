@@ -167,7 +167,7 @@ const PostFilterBar: React.FC<PostFilterBarProps> = ({
 
         {/* Reset */}
         {isActive && (
-          <>
+          <div>
             <div className="h-5 w-px bg-gray-200" />
             <button
               onClick={() => onTypeChange("all")}
@@ -176,7 +176,7 @@ const PostFilterBar: React.FC<PostFilterBarProps> = ({
               <X className="w-3 h-3" />
               Effacer
             </button>
-          </>
+          </div>
         )}
 
       </div>

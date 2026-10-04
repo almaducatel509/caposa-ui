@@ -350,7 +350,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
                   <Eye className="w-3.5 h-3.5" />
                 </button>
                 {!isArchiveTab ? (
-                  <>
+                  <div>
                     <button title="Modifier" onClick={() => onEdit(member)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32]">
                       <Edit className="w-3.5 h-3.5" />
@@ -365,7 +365,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <button title="Réactiver" onClick={() => onEdit(member)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">

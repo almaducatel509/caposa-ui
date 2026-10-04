@@ -5,6 +5,7 @@ import {
   CreateAccountInput,
   mapFormDataToCreatePayload,
   AccountData,
+  mapApiAccountToFormData,
 } from "@/app/components/accounts/validationsaccount";
 
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
@@ -18,7 +19,14 @@ function parseApiError(error: any, fallback = "Une erreur est survenue.") {
   return fallback;
 }
 
-const enrichOne  = (a: any): AccountData => a as AccountData;
+// const enrichOne  = (a: any): AccountData => a as AccountData;
+const enrichOne = (a: any): AccountData => {
+  console.log('🔍 RAW depuis API:', a);
+  const mapped = mapApiAccountToFormData(a as AccountData);
+  console.log('🔍 APRÈS mapApiAccountToFormData:', mapped);
+  return mapped;
+};
+
 const enrichMany = (arr: any[]): AccountData[] => (arr ?? []).map(enrichOne);
 
 // ─── READ ────────────────────────────────────────────────────────────────────
@@ -141,17 +149,24 @@ export const deleteAccount = async (id: string): Promise<void> => {
   }
 };
 
-// ─── Transitions de statut (3 seulement) ─────────────────────────────────────
+// ...........................................................
 
-/** Geler un compte ouvert (transactions bloquées temporairement) */
-export const suspendAccount = async (
-  id: string,
-  payload: { reason: string }
-): Promise<AccountData> => {
+export const activateAccount = async (id: string): Promise<AccountData> => {
   try {
     const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
-      account_status: 'gele',         // bon champ + sans accent
-      suspension_reason: payload.reason,
+      account_status: 'actif',
+    });
+    return enrichOne(data);
+  } catch (e: any) {
+    console.error("Erreur activateAccount:", e);
+    throw new Error(parseApiError(e, "Impossible de débloquer le compte."));
+  }
+};
+
+export const suspendAccount = async (id: string): Promise<AccountData> => {
+  try {
+    const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
+      account_status: 'gele',
     });
     return enrichOne(data);
   } catch (e: any) {
@@ -160,15 +175,10 @@ export const suspendAccount = async (
   }
 };
 
-/** Réactiver un compte gelé → retour à 'ouvert' */
-export const reactivateAccount = async (
-  id: string,
-  payload: { reason?: string }
-): Promise<AccountData> => {
+export const reactivateAccount = async (id: string): Promise<AccountData> => {
   try {
     const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
-      account_status: 'actif',        // 'ouvert' → 'actif'
-      reactivation_reason: payload.reason ?? '',
+      account_status: 'actif',
     });
     return enrichOne(data);
   } catch (e: any) {
@@ -177,18 +187,11 @@ export const reactivateAccount = async (
   }
 };
 
-/** Fermer un compte définitivement → 'fermé' (terminal, irréversible) */
-export const closeAccount = async (
-  id: string,
-  payload: { reason: string }
-): Promise<AccountData> => {
+export const closeAccount = async (id: string): Promise<AccountData> => {
   try {
     const { data } = await AxiosInstance.patch(`/accounts/${id}/`, {
-      account_status: 'ferme',        // sans accent
-      closure_reason: payload.reason,
-      dateFermeture: new Date().toISOString().split('T')[0],
+      account_status: 'ferme',
     });
-
     return enrichOne(data);
   } catch (e: any) {
     console.error("Erreur closeAccount:", e);

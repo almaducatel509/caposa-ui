@@ -207,8 +207,8 @@ const DeletePostModal: React.FC<DeletePostModalProps> = ({
           disabled={isArchiving || !employeeId.trim()}
           className="flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all disabled:opacity-50 shadow-sm">
           {isArchiving
-            ? <><Loader2 className="w-4 h-4 animate-spin" />Archivage…</>
-            : <><Archive size={14} />Archiver le poste</>
+            ? <div><Loader2 className="w-4 h-4 animate-spin" />Archivage…</div>
+            : <div><Archive size={14} />Archiver le poste</div>
           }
         </button>
       </div>

@@ -3,13 +3,34 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Clock, Calendar, RefreshCw } from "lucide-react";
 // Quand API prete : importer fetchOpeningHours, useState, useEffect, convertToOpeningHours
-import { MOCK_OPENING_HOURS } from "@/app/components/OpeningHours/mock";
 import PageHeader from "@/app/components/header";
-import StatsCards from "@/app/components/OpeningHours/StatsCards";
 import { computeStats, convertToOpeningHours, OpeningHrs } from "@/app/components/OpeningHours/validations";
 import BranchScheduleManager from "@/app/components/OpeningHours/BranchScheduleManager";
 import { fetchOpeningHours } from "@/app/lib/api/branche";
 
+interface OpeningHoursStats {
+  total: number;
+  active: number;
+  paused: number;
+  vacation: number;
+}
+
+interface StatsCardsProps {
+  stats: OpeningHoursStats;
+}
+
+
+export  function StatsCards({ stats }: StatsCardsProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <span className="text-xl  font-bold">
+        {stats.total === 1
+          ? "1 horaire trouvé"
+          : `${stats.total} horaires trouvés`}
+      </span>
+    </div>
+  );
+}
 export default function OpeningHoursPage() {
   // Quand API prete : remplacer par useState([]) + useEffect + fetchOpeningHours()
   // const stats = useMemo(() => computeStats(MOCK_OPENING_HOURS), []);
@@ -59,7 +80,7 @@ const stats = useMemo(() => computeStats(hours), [hours]);
         </div>
 
         {/* Stats */}
-        <div className="mb-6">
+        <div className="mb-6 ">
           <StatsCards stats={stats} />
         </div>
 

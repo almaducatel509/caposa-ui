@@ -1,5 +1,43 @@
 import AxiosInstance from '../axiosInstance';
 import { EmployeeFormData } from '@/app/components/employees/validations';
+import { Transaction } from '@/types/data';
+
+// ─── Types (alignés sur les conventions snake_case du backend, cf. employees.ts) ──
+
+
+export interface ActivityLog {
+  id: string;
+  action: string;
+  field?: string;
+  old_value?: string;
+  new_value?: string;
+  date: string;
+  modified_by: string;
+}
+
+// ─── Fetchers ──────────────────────────────────────────────────────────────
+
+export const fetchEmployeeTransactions = async (employeeId: string): Promise<Transaction[]> => {
+  try {
+    const response = await AxiosInstance.get('/transactions/', {
+      params: { employee_id: employeeId },
+    });
+    return Array.isArray(response.data) ? response.data : response.data?.results ?? [];
+  } catch (error) {
+    console.error("Erreur lors de la récupération des transactions de l'employé:", error);
+    return [];
+  }
+};
+
+export const fetchEmployeeActivityLogs = async (employeeId: string): Promise<ActivityLog[]> => {
+  try {
+    const response = await AxiosInstance.get(`/employees/${employeeId}/activity-logs/`);
+    return Array.isArray(response.data) ? response.data : response.data?.results ?? [];
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'historique employé:", error);
+    return [];
+  }
+};
 
 // Function to fetch all employees (SIMPLIFIÉ)
 export const fetchEmployees = async () => {
@@ -48,7 +86,6 @@ export const createEmployee = async (employeeData: EmployeeFormData): Promise<an
     formData.append('phone_number', employeeData.phone_number || '');
     formData.append('address', employeeData.address || '');
     formData.append('gender', employeeData.gender || 'M');
-    formData.append('payment_ref', employeeData.payment_ref || '');
     formData.append('branch', employeeData.branch || '');
     
     // 4. Ajouter le tableau posts (répéter la même clé)
@@ -137,7 +174,6 @@ export async function putEmployeeMultipart(
     fd.append('phone_number', merged.phone_number || '');
     fd.append('address', merged.address || '');
     fd.append('gender', merged.gender || 'M');
-    fd.append('payment_ref', merged.payment_ref || '');
     fd.append('branch', merged.branch || '');
 
     // Posts array
@@ -188,23 +224,17 @@ export async function putEmployeeMultipart(
 }
 //-------------------------------------------------------------------------------------------
 
-// Function to delete an employee (SIMPLIFIÉ)
-export const deleteEmployee = async (id: string) => {
+// Function to archiv an employee (SIMPLIFIÉ)
+export const archiveEmployee = async (id: string) => {
   try {
-    console.log('🗑️ Deleting employee:', id);
-    
     const response = await AxiosInstance.delete(`/employees/${id}/`);
-    
-    console.log('✅ Delete response:', response.data);
     return response.data;
-    
   } catch (error: any) {
-    console.error('❌ Delete error:', {
+    console.error('❌ Erreur archivage employé:', {
       status: error.response?.status,
       data: error.response?.data,
-      message: error.message
+      message: error.message,
     });
-    
-    throw new Error("Impossible de supprimer l'employé.");
+    throw new Error("Impossible d'archiver l'employé.");
   }
 };

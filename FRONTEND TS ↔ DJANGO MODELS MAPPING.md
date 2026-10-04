@@ -52,7 +52,6 @@ interface EmployeeData {
   gender: string;
   date_of_birth: string;
 
-  payment_ref: string;
 
   branch: Branch;
   posts: Post[];
@@ -80,7 +79,6 @@ class Employee(models.Model):
     gender = models.CharField()
     date_of_birth = models.DateField()
 
-    payment_ref = models.CharField()
 
     branch = ForeignKey(Branch)
     posts = ManyToManyField(Post)
@@ -105,7 +103,6 @@ class Employee(models.Model):
 | address       | address                   |
 | gender        | gender                    |
 | date_of_birth | date_of_birth             |
-| payment_ref   | payment_ref               |
 | branch        | branch (FK → Branch.id)   |
 | posts         | posts (M2M → Post.id[])   |
 | photo_profil  | photo_profil (ImageField) |

@@ -61,7 +61,6 @@ Définir les endpoints et formats d’échange entre Frontend (Next.js) et Backe
   "phone_number": "string",
   "address": "string",
   "gender": "string",
-  "payment_ref": "string",
   "branch": "uuid",
   "posts": ["uuid"],
   "photo_profil": "file|null"

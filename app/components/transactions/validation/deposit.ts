@@ -3,8 +3,7 @@ import { z } from 'zod';
 /* ─────────────────────────────────────────────
  * Types de dépôt supportés par CAPOSA
  * ───────────────────────────────────────────── */
-export const DepositSubtype = z.enum(['cash', 'check']);
-
+export type DepositSubtype = 'cash' | 'check';
 
 export type DepositStatus =
   | 'encaisse'
@@ -14,8 +13,6 @@ export type DepositStatus =
   | 'annule';
 
 export type SessionStatut = 'ouverte' | 'fermée';
-
-export type DepositSubtype = 'cash' | 'check'; // adapte si tu as d'autres valeurs
 
 export interface DepositData {
   id:                 number;
@@ -53,18 +50,13 @@ export interface DepositData {
   issuePlace?:        string;
 }
 
-/**
- * ⚠️ On garde ce type tel quel pour ne rien casser ailleurs.
- * Il reste utilisé là où tu l’utilises déjà.
- */
-export type DepositFormData = DepositFormValidated;
 /* ─────────────────────────────────────────────
  * Schéma INPUT du formulaire (ce que l'user saisit)
  * ───────────────────────────────────────────── */
 export const depositFormBaseSchema = z.object({
+  accountId: z.string().min(1, 'Sélectionnez un compte dans la liste'),
   idCompte:           z.string().min(1, 'Compte requis'),
   typeTransaction:    z.literal('DEPOSIT').optional(),
-  codeAutorisation:   z.string().min(1, "Code d'autorisation requis"),
   montantTransaction: z.number().positive('Montant invalide'),
   depositSubtype:     z.enum(['cash', 'check']),
   source:             z.string().min(1, 'Source requise'),
@@ -87,7 +79,6 @@ export const depositFormBaseSchema = z.object({
   beneficiary:        z.string().nullable().optional(),
   amountWords:        z.string().nullable().optional(),
   issuePlace:         z.string().nullable().optional(),
-
 });
 
 /* Le schéma utilisé par le formulaire = base + superRefine */
@@ -118,11 +109,15 @@ export const depositSchema = depositFormBaseSchema.superRefine((data, ctx) => {
       }
     }
   }
-  // (la branche cash interdisant les champs check, tu peux la garder ou la virer
-  //  — vu que tu envoies déjà null pour ces champs côté cash, elle ne déclenchera pas)
 });
 
 export type DepositFormValidated = z.infer<typeof depositSchema>;
+
+/**
+ * ⚠️ On garde ce type tel quel pour ne rien casser ailleurs.
+ * Il reste utilisé là où tu l'utilises déjà.
+ */
+export type DepositFormData = DepositFormValidated;
 
 /* ─────────────────────────────────────────────
  * Schéma COMPLET (données serveur) — pour les listes, détails, etc.
@@ -152,3 +147,99 @@ export const depositUpdateSchema = depositFormBaseSchema
   });
 
 export type DepositUpdateValidated = z.infer<typeof depositUpdateSchema>;
+
+/* ─────────────────────────────────────────────
+ * Mapping vers le payload API — session injectée séparément (voir composant)
+ * ───────────────────────────────────────────── */
+export function mapDepositFormToPayload(input: DepositFormValidated, sessionId: string) {
+  return {
+    account:            input.accountId,            // UUID du compte (ForeignKey Django)
+    amount:             input.montantTransaction,   // nom attendu par le serializer
+    session:            sessionId,
+    depositSubtype:     input.depositSubtype,
+    source:             input.source,
+    description:        input.description || null,
+    ...(input.depositSubtype === 'check'
+      ? {
+          checkNumber:       input.checkNumber,
+          issuingBank:       input.issuingBank,
+          checkIssuerName:   input.checkIssuerName,
+          checkDate:         input.checkDate,
+          micrSequence:      input.micrSequence,
+          bankCode:          input.bankCode,
+          accountNumberMicr: input.accountNumberMicr,
+          branchCode:        input.branchCode,
+          productCode:       input.productCode,
+          beneficiary:       input.beneficiary,
+          amountWords:       input.amountWords,
+          issuePlace:        input.issuePlace,
+        }
+      : {}),
+  };
+}
+
+// export function mapDepositFormToPayload(input: DepositFormValidated, sessionId: string) {
+//   return {
+//     idCompte:           input.idCompte,
+//     session:            sessionId,
+//     montantTransaction: input.montantTransaction,
+//     // codeAutorisation:   input.codeAutorisation,
+//     depositSubtype:     input.depositSubtype,
+//     source:             input.source,
+//     description:        input.description || null,
+//     ...(input.depositSubtype === 'check'
+//       ? {
+//           checkNumber:       input.checkNumber,
+//           issuingBank:       input.issuingBank,
+//           checkIssuerName:   input.checkIssuerName,
+//           checkDate:         input.checkDate,
+//           micrSequence:      input.micrSequence,
+//           bankCode:          input.bankCode,
+//           accountNumberMicr: input.accountNumberMicr,
+//           branchCode:        input.branchCode,
+//           productCode:       input.productCode,
+//           beneficiary:       input.beneficiary,
+//           amountWords:       input.amountWords,
+//           issuePlace:        input.issuePlace,
+//         }
+//       : {}),
+//   };
+// }
+
+export function mapApiTransactionToDeposit(t: any): DepositData {
+  const method = String(t.method ?? '').toLowerCase();
+  return {
+    ...t,
+    id:                 String(t.id),
+    montantTransaction: Number(t.amount ?? 0) || 0,
+    idCompte:           t.account_number ?? '',
+    depositSubtype:     method === 'check' || method === 'cheque' ? 'check' : 'cash',
+    status:             mapApiStatus(t.status),
+    member_name:        t.member_name ?? null,
+    source:             t.source ?? '',
+    description:        t.description ?? t.note ?? null,
+    created_at:         t.created_at ?? '',
+    session_id:         t.session_id ?? t.session ?? null,
+    holdPeriod:         method === 'check' ? 3 : 0,
+    processed_by:       t.created_by ?? null,
+  };
+}
+function mapApiStatus(s?: string): DepositData['status'] {
+  switch (String(s ?? '').toLowerCase()) {
+    case 'completed':
+    case 'encaisse':    return 'encaisse';
+    case 'pending':
+    case 'en_attente':  return 'en_attente';
+    case 'processing':
+    case 'in_progress':
+    case 'en_cours':    return 'en_cours';
+    case 'failed':
+    case 'echoue':      return 'echoue';
+    case 'cancelled':
+    case 'canceled':
+    case 'annule':      return 'annule';
+    default:
+      console.warn('[deposits] statut API inconnu :', s);
+      return 'en_attente';
+  }
+}

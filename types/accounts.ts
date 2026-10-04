@@ -4,7 +4,7 @@ export type AccountApiItem = {
   member_id: string;
   noCompte: string;
   typeCompte: string;
-  statutCompte: string;
+  account_status: string;
   dateOuverture: string;
   solde?: number;
 };

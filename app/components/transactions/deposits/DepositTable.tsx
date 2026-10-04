@@ -200,7 +200,6 @@ export default function DepositTable({
             {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
           </span>
           <div className="ml-auto flex items-center gap-2">
-           // APRÈS
             <ExportAllButton
               data={sorted
                 .filter(d => selected.has(d.id))
@@ -219,7 +218,6 @@ export default function DepositTable({
                 }))}
               filename="depots_selection"
               headerLabels={{
-                code:       "Code d'autorisation",
                 compte:     'N° de compte',
                 membre:     'Membre',
                 type:       'Type',
@@ -326,10 +324,10 @@ export default function DepositTable({
               {/* Membre (sans la date en sous-titre, on la garde uniquement dans la colonne Date) */}
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-[#2E7D32]">{dep.member_name[0]}</span>
+                  <span className="text-xs font-bold text-[#2E7D32]">{dep.member_name?.[0] ?? '?'}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{dep.member_name}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{dep.member_name ?? '—'}</p>
                   <p className="text-xs text-gray-400 truncate">{dep.codeAutorisation}</p>
                 </div>
               </div>

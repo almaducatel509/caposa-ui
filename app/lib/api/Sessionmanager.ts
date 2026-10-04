@@ -29,13 +29,28 @@ import { CaisseSession, OpenSessionPayload } from '@/types/caisse';
 // ─── Mapping front → Django ───────────────────────────────────────
 // Noms français du front  →  noms anglais attendus par Django
 // Tout changement de contrat API se fait ici uniquement.
-
 interface DjangoOpenPayload {
-  opening_balance:      number;
+  username:             string;
+  branch:               string;
+  devise:               string;
+  montant_ouverture:    number;
+  id_responsable_cash:  string;
   caissier_nom?:        string;
   numero_caisse?:       string;
   superviseur?:         string;
-  id_responsable_cash?: string;
+}
+
+function toApiOpenPayload(p: OpenSessionPayload): DjangoOpenPayload {
+  return {
+    username:            p.username,
+    branch:              p.branch,
+    devise:              p.devise,
+    montant_ouverture:   p.montant_ouverture,
+    id_responsable_cash: p.id_responsable_cash,   // ← voir ci-dessous, à faire correspondre côté modal
+    caissier_nom:        p.caissier_nom,
+    numero_caisse:        p.numero_caisse,
+    superviseur:          p.superviseur,
+  };
 }
 
 interface DjangoClosePayload {
@@ -49,16 +64,6 @@ export const SESSION_ERROR_CODES = {
   CLOSED_HOURS:      'SESSION_CLOSED_HOURS',
   NETWORK:           'SESSION_NETWORK_ERROR',
 } as const;
-
-function toApiOpenPayload(p: OpenSessionPayload): DjangoOpenPayload {
-  return {
-    opening_balance:     p.montant_ouverture,
-    caissier_nom:        p.caissier_nom,
-    numero_caisse:       p.numero_caisse,
-    superviseur:         p.superviseur,
-    id_responsable_cash: p.id_responsable_cash,
-  };
-}
 
 function toApiClosePayload(montantFermeture: number): DjangoClosePayload {
   return { counted_amount: montantFermeture };
@@ -159,7 +164,13 @@ class SessionManagerClass {
     return [...this.sessions];
   }
 
-  /** Session ouverte depuis le cache local, sans appel réseau. */
+  /**
+   * Session ouverte depuis le cache local, sans appel réseau.
+   * ⚠️ Ne fait pas autorité — peut être désynchronisée du serveur
+   * (ex. session fermée depuis un autre poste). Utiliser fetchActive()
+   * pour toute décision qui doit refléter l'état réel côté backend
+   * (notamment avant d'autoriser une ouverture de session).
+   */
   getActive(): CaisseSession | null {
     this.hydrate();
     return this.sessions.find(s => s.statut === 'ouverte') ?? null;
@@ -243,13 +254,19 @@ class SessionManagerClass {
 
   /**
    * Ouvre une session caisse.
-   *   • Bloque si une session est déjà ouverte localement
+   *   • Vérifie l'absence de session ouverte AUPRÈS DU SERVEUR (fetchActive),
+   *     pas seulement dans le cache local — évite les faux positifs/négatifs
+   *     quand le cache est désynchronisé (ex. session fermée depuis un autre
+   *     poste, ou jamais correctement invalidée après un fallback local).
    *   • POST /sessions/open/  avec mapping des champs Django
    *   • Fallback local si réseau/5xx (session marquée _local)
    *   • Remonte les erreurs 4xx à l'UI sans swallowing
    */
   async open(payload: OpenSessionPayload): Promise<CaisseSession> {
-    const existing = this.getActive();
+    // Avant : this.getActive() (cache local uniquement). Le backend fait
+    // autorité sur l'état réel de la session — fetchActive() interroge le
+    // serveur et ne retombe sur le cache qu'en cas de panne réseau/5xx.
+    const existing = await this.fetchActive();
     if (existing) {
       throw new Error(
         `SESSION_ALREADY_OPEN: Caisse ${existing.numero_caisse} déjà ouverte. ` +
@@ -265,7 +282,7 @@ class SessionManagerClass {
       this.set(data);
       return data;
     } catch (err) {
-      // 🆕 Cas spécifique : caisse fermée selon horaire/calendrier
+      // Cas spécifique : caisse fermée selon horaire/calendrier
       if (isAxiosError(err) && err.response?.status === 403) {
         const data = err.response.data as {
           code?: string;
@@ -280,7 +297,7 @@ class SessionManagerClass {
         );
       }
 
-      if (!isNetworkOrServerError(err)) throw err; // 4xx → remonter à l'UI
+      if (!isNetworkOrServerError(err)) throw err; // 4xx → remonter à l'UI (garde err.response intact)
 
       // Réseau/5xx → session locale temporaire (existant)
       console.warn('[SessionManager] open() → API hors ligne, session locale :', err);

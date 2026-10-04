@@ -87,14 +87,14 @@ export default function SessionCard({ session, onRefresh }: SessionCardProps) {
     : null;
 
   return (
-    <>
+    <div>
       {/* ── Modal fermeture ── */}
         {showClose && (
           <Modal isOpen onClose={() => setShowClose(false)} size="3xl"
             title={
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
-                  <LogOut className="text-red-500" size={15} />
+                  <LogOut className="text-green-500" size={15} />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-gray-900">Fermer la session</h3>
@@ -254,6 +254,6 @@ export default function SessionCard({ session, onRefresh }: SessionCardProps) {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

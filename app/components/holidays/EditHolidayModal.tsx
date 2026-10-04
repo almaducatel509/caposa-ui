@@ -252,17 +252,17 @@ export default function EditHolidayModal({
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
-            <>
+            <div>
               <Loader2 className="w-4 h-4 animate-spin" /> En cours...
-            </>
+            </div>
           ) : isEditMode ? (
-            <>
+            <div>
               <CheckCircle className="w-4 h-4" /> Sauvegarder
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <CheckCircle className="w-4 h-4" /> Créer le brouillon
-            </>
+            </div>
           )}
         </button>
       </div>

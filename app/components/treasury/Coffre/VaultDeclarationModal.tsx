@@ -108,7 +108,7 @@ const VaultDeclarationModal: React.FC<VaultDeclarationModalProps> = ({ isOpen, o
 
           {/* ── Étape 1 : Formulaire ── */}
           {step === 'form' && (
-            <>
+            <div>
               {/* Solde théorique */}
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between">
                 <div>
@@ -189,12 +189,12 @@ const VaultDeclarationModal: React.FC<VaultDeclarationModalProps> = ({ isOpen, o
                 <button onClick={handleClose} className={btnSecondary}>Annuler</button>
                 <button onClick={() => validateForm() && setStep('signatures')} className={btnPrimary}>Suivant →</button>
               </div>
-            </>
+            </div>
           )}
 
           {/* ── Étape 2 : Signatures ── */}
           {step === 'signatures' && (
-            <>
+            <div>
               <div className="p-4 bg-gray-50 rounded-xl grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-xs text-gray-500 mb-0.5">Montant compté</p>
@@ -243,12 +243,12 @@ const VaultDeclarationModal: React.FC<VaultDeclarationModalProps> = ({ isOpen, o
                 <button onClick={() => setStep('confirmation')} disabled={!(signatures.declaredBy && signatures.verifiedBy)}
                   className={btnPrimary}>Confirmer →</button>
               </div>
-            </>
+            </div>
           )}
 
           {/* ── Étape 3 : Confirmation ── */}
           {step === 'confirmation' && (
-            <>
+            <div>
               <div className="p-5 bg-gray-50 rounded-xl space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-200">
                   <div>
@@ -305,7 +305,7 @@ const VaultDeclarationModal: React.FC<VaultDeclarationModalProps> = ({ isOpen, o
                   Confirmer et Verrouiller
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

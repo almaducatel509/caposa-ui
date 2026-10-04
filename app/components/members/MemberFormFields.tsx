@@ -389,7 +389,7 @@ const MemberFormFields: React.FC<{
 
       </Section>
 
-      {/* ── 6. Consentement ── */}
+     {/* ── 6. Consentement ── */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex items-start gap-3 mb-4">
           <ShieldCheck className="w-5 h-5 text-[#2E7D32] shrink-0 mt-0.5" />
@@ -401,35 +401,55 @@ const MemberFormFields: React.FC<{
           </div>
         </div>
 
-        <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
-          formData.consent
-            ? 'bg-[#DDEAD5]/50 border-[#2E7D32]/30'
-            : errors.consent
-              ? 'border-red-300 bg-red-50'
-              : 'border-gray-200 hover:bg-gray-50'
-        }`}>
-          <input
-            type="checkbox"
-            checked={formData.consent === true}
-            onChange={e => {
-              setFormData({ consent: e.target.checked ? true : (undefined as any) });
-              clear('consent');
-            }}
-            className="mt-0.5 w-4 h-4 accent-[#2E7D32]"
-          />
-          <span className="text-xs text-gray-600 leading-relaxed">
-            J'accepte que la coopérative collecte et traite mes données personnelles dans le cadre
-            de mon adhésion et de la gestion de mon compte. Ces données ne seront pas partagées
-            avec des tiers sans mon consentement explicite.
-          </span>
-        </label>
-        {errors.consent && <p className="text-xs text-red-500 mt-2">{errors.consent}</p>}
+        {isEditMode ? (
+          // ── Édition : consentement déjà donné à l'adhésion, pas de re-signature ──
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-[#2E7D32]/30 bg-[#DDEAD5]/50">
+            <ShieldCheck className="w-4 h-4 text-[#2E7D32] shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-gray-700">
+                Consentement déjà enregistré à l'adhésion
+              </p>
+              {formData.signature && (
+                <p className="text-xs text-gray-500 mt-0.5 truncate">
+                  Signé par : <span className="font-medium text-gray-600">{formData.signature}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          // ── Création : consentement + signature obligatoires ──
+          <div>
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
+              formData.consent
+                ? 'bg-[#DDEAD5]/50 border-[#2E7D32]/30'
+                : errors.consent
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-gray-200 hover:bg-gray-50'
+            }`}>
+              <input
+                type="checkbox"
+                checked={formData.consent === true}
+                onChange={e => {
+                  setFormData({ consent: e.target.checked ? true : (undefined as any) });
+                  clear('consent');
+                }}
+                className="mt-0.5 w-4 h-4 accent-[#2E7D32]"
+              />
+              <span className="text-xs text-gray-600 leading-relaxed">
+                J'accepte que la coopérative collecte et traite mes données personnelles dans le cadre
+                de mon adhésion et de la gestion de mon compte. Ces données ne seront pas partagées
+                avec des tiers sans mon consentement explicite.
+              </span>
+            </label>
+            {errors.consent && <p className="text-xs text-red-500 mt-2">{errors.consent}</p>}
 
-        <SignatureField
-          value={formData.signature ?? ''}
-          onChange={(val) => setFormData({ signature: val })}
-          error={errors.signature}
-        />
+            <SignatureField
+              value={formData.signature ?? ''}
+              onChange={(val) => setFormData({ signature: val })}
+              error={errors.signature}
+            />
+          </div>
+        )}
       </div>
 
     </div>

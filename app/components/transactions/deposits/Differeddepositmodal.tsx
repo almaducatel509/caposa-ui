@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  AlertTriangle, Clock, User, CreditCard, Hash,
+  AlertTriangle, Clock, User, CreditCard,
   FileText, Search, ChevronDown, X, CheckCircle2,
   Loader2, ArrowDownCircle,
 } from 'lucide-react';
@@ -18,17 +18,18 @@ interface AccountOption {
   account_number: string;
   typeCompte:     'epargne' | 'cheques' | 'terme';
   soldeActuel:    number;
-  statutCompte:   'actif' | 'suspendu' | 'ferme';
+  account_status: 'actif' | 'suspendu' | 'ferme';
 }
 
 interface DifferedDepositModalProps {
-  sessionId:  string;
-  saisiPar:   string;           // UUID user connecté — auto-rempli
-  members?:   MemberOption[];
-  accounts?:  Record<string, AccountOption[]>;
-  onSubmit:   (data: TransactionDiffere) => Promise<void>;
-  onCancel:   () => void;
-  isLoading?: boolean;
+  sessionId:            string;
+  saisiPar:             string;   // UUID user connecté — auto-rempli
+  members:              MemberOption[];
+  /** Doit appeler l'API réelle et lever une Error avec un message explicite en cas d'échec. */
+  fetchMemberAccounts:  (memberId: string) => Promise<AccountOption[]>;
+  onSubmit:             (data: TransactionDiffere) => Promise<void>;
+  onCancel:             () => void;
+  isLoading?:           boolean;
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ function Input({ hasError, className = '', ...props }: React.InputHTMLAttributes
 function SectionHeader({ step, title, icon: Icon }: { step: number; title: string; icon: React.ElementType }) {
   return (
     <div className="flex items-center gap-3 mb-5">
-      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
+      <div className="w-6 h-6 rounded-lg bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center shrink-0">
         <span className="text-white text-xs font-bold">{step}</span>
       </div>
       <Icon className="w-4 h-4 text-gray-400" />
@@ -92,47 +93,46 @@ function SectionHeader({ step, title, icon: Icon }: { step: number; title: strin
   );
 }
 
-// ─── Mock data (à remplacer par les vraies props) ─────────────────────────────
-
-const MOCK_MEMBERS: MemberOption[] = [
-  { id: 'dcb21971', member_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: 'a1b2c3d4', member_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-];
-
-const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
-  'dcb21971': [
-    { id: 'acc1', account_number: '636-922-093-4469', typeCompte: 'epargne', soldeActuel: 15000, statutCompte: 'actif' },
-  ],
-  'a1b2c3d4': [
-    { id: 'acc4', account_number: '321-654-987-0123', typeCompte: 'terme',   soldeActuel: 50000, statutCompte: 'actif' },
-  ],
-};
+/** Bannière d'erreur générique (API indisponible, échec de soumission, etc.) */
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+      <span>{message}</span>
+    </div>
+  );
+}
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function DifferedDepositModal({
   sessionId,
   saisiPar,
-  members   = MOCK_MEMBERS,
-  accounts  = MOCK_ACCOUNTS,
+  members,
+  fetchMemberAccounts,
   onSubmit,
   onCancel,
   isLoading = false,
 }: DifferedDepositModalProps) {
 
-  // ── Sélection membre / compte (pattern identique à DepositForm) ──
+  // ── Sélection membre / compte ──
   const [memberSearch,    setMemberSearch]    = useState('');
   const [memberOpen,      setMemberOpen]      = useState(false);
   const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
   const [memberAccounts,  setMemberAccounts]  = useState<AccountOption[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError,   setAccountsError]   = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
   const [submitting,      setSubmitting]      = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [submitError,     setSubmitError]     = useState<string | null>(null);
+  const [success,         setSuccess]         = useState(false);
+
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<TransactionDiffere>({
     resolver: zodResolver(TransactionDiffereSchema),
     defaultValues: {
       session_id: sessionId,
       saisi_par:  saisiPar,
+      idCompte:   '',
       type:       'depot',
     },
   });
@@ -143,63 +143,65 @@ export default function DifferedDepositModal({
     m.id_number.includes(memberSearch)
   );
 
-  const handleMemberSelect = (m: MemberOption) => {
+  const handleMemberSelect = async (m: MemberOption) => {
     setSelectedMember(m);
     setMemberOpen(false);
     setMemberSearch('');
     setSelectedAccount(null);
-    setMemberAccounts(accounts[m.id] ?? []);
+    setValue('idCompte', '', { shouldValidate: false });
+    setMemberAccounts([]);
+    setAccountsError(null);
+    setAccountsLoading(true);
+
+    try {
+      const accs = await fetchMemberAccounts(m.id);
+      setMemberAccounts(accs);
+    } catch (err) {
+      setAccountsError(
+        err instanceof Error
+          ? err.message
+          : "Impossible de charger les comptes de ce membre."
+      );
+    } finally {
+      setAccountsLoading(false);
+    }
   };
 
   const handleAccountSelect = (acc: AccountOption) => {
-    if (acc.statutCompte !== 'actif') return;
+    if (acc.account_status !== 'actif') return;
     setSelectedAccount(acc);
-    // on stocke l'id du compte dans le champ session_id n'est pas le bon —
-    // adapter selon ton vrai schéma backend si besoin
+    setValue('idCompte', acc.account_number, { shouldValidate: true });
+  };
+
+  const handleClearMember = () => {
+    setSelectedMember(null);
+    setSelectedAccount(null);
+    setMemberAccounts([]);
+    setAccountsError(null);
+    setValue('idCompte', '', { shouldValidate: false });
   };
 
   // ── Submit ───────────────────────────────────────────────────────
-  // const onValid = async (data: TransactionDiffere) => {
-  //   setSubmitting(true);
-  //   try {
-  //     await onSubmit(data);
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
-  // const onValid = async (data: TransactionDiffere) => {
-  //   setSubmitting(true);
-  //   try {
-  //     console.log("[MOCK POST] /api/transactions/differe", {
-  //       payload: data,
-  //       sent_at: new Date().toISOString(),
-  //     });
-  //     await onSubmit(data);
-  //     setSuccess(true);   // ← affiche la confirmation
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
-  const onInvalid = (errors: any) => {
-  console.log("❌ Formulaire invalide :", errors);
-};
+  const onInvalid = () => {
+    // Erreurs de validation déjà affichées sous chaque champ via `errors`.
+  };
 
   const onValid = async (data: TransactionDiffere) => {
-     console.log("🔥 onValid appelé !");
-  console.log("Payload :", data);
-  setSubmitting(true);
-  try {
-    console.log("[MOCK POST] /api/transactions/differe", {
-      payload: data,
-      sent_at: new Date().toISOString(),
-    });
-
-    await onSubmit(data);
-    setSuccess(true);
-  } finally {
-    setSubmitting(false);
-  }
-};
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await onSubmit(data);
+      setSuccess(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Une erreur est survenue lors de l'enregistrement de la saisie différée."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (success) {
     return (
@@ -213,9 +215,6 @@ export default function DifferedDepositModal({
             La transaction a été soumise et sera traitée par le backend.
           </p>
         </div>
-        <div className="w-full bg-gray-50 rounded-xl border border-gray-100 p-4 text-left text-xs font-mono text-gray-500 max-h-40 overflow-y-auto">
-          <pre>{JSON.stringify({ status: 'mock_ok', message: 'En attente endpoint Django' }, null, 2)}</pre>
-        </div>
         <button onClick={onCancel}
           className="mt-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-amber-600 hover:bg-amber-700 text-white transition-colors">
           Fermer
@@ -225,15 +224,14 @@ export default function DifferedDepositModal({
   }
   // ─────────────────────────────────────────────────────────────────
 
-
   return (
-    <form onSubmit={handleSubmit(onValid,onInvalid)} noValidate className="flex flex-col gap-5">
+    <form onSubmit={handleSubmit(onValid, onInvalid)} noValidate className="flex flex-col gap-5">
 
       {/* ── Bandeau avertissement ── */}
       <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <p className="text-xs font-semibold text-amber-800">Saisie différée — action traçée</p>
+          <p className="text-xs font-semibold text-amber-800">Saisie différée — action tracée</p>
           <p className="text-xs text-amber-700 mt-0.5">
             Cette transaction sera enregistrée avec la date que vous indiquez.
             Un motif obligatoire sera conservé dans le journal d'audit.
@@ -241,7 +239,7 @@ export default function DifferedDepositModal({
         </div>
       </div>
 
-      {/* ── 1. Membre + Compte (même pattern que DepositForm) ── */}
+      {/* ── 1. Membre + Compte ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={1} title="Membre et compte cible" icon={User} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -258,7 +256,7 @@ export default function DifferedDepositModal({
                   {selectedMember?.member_name ?? 'Rechercher un membre…'}
                 </span>
                 {selectedMember
-                  ?  <span onClick={e => { e.stopPropagation(); setSelectedMember(null); setSelectedAccount(null); setMemberAccounts([]); }}
+                  ?  <span onClick={e => { e.stopPropagation(); handleClearMember(); }}
                         className="p-0.5 rounded-md hover:bg-[#c8e0bc] text-gray-500 cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                     </span>
@@ -300,17 +298,32 @@ export default function DifferedDepositModal({
           </Field>
 
           {/* Compte cible */}
-          <Field label="Compte cible" required
+          <Field label="Compte cible" required error={errors.idCompte?.message}
             hint={!selectedMember ? "Sélectionnez un membre d'abord" : undefined}>
             <Input placeholder="Ex: 636-922-093-4469"
-              disabled={!selectedMember}
+              hasError={!!errors.idCompte}
+              disabled={!selectedMember || accountsLoading}
               value={selectedAccount?.account_number ?? ''}
               readOnly />
-            {memberAccounts.length > 0 && (
+
+            {accountsLoading && (
+              <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Chargement des comptes du membre…
+              </div>
+            )}
+
+            {accountsError && (
+              <div className="mt-1">
+                <ErrorBanner message={accountsError} />
+              </div>
+            )}
+
+            {!accountsLoading && !accountsError && memberAccounts.length > 0 && (
               <div className="flex flex-col gap-1.5 mt-1">
                 {memberAccounts.map(acc => {
                   const tCfg  = TYPE_LABEL[acc.typeCompte];
-                  const isAct = acc.statutCompte === 'actif';
+                  const isAct = acc.account_status === 'actif';
                   const isSel = selectedAccount?.id === acc.id;
                   return (
                     <button key={acc.id} type="button" disabled={!isAct}
@@ -331,6 +344,10 @@ export default function DifferedDepositModal({
                   );
                 })}
               </div>
+            )}
+
+            {!accountsLoading && !accountsError && selectedMember && memberAccounts.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">Ce membre n'a aucun compte.</p>
             )}
           </Field>
 
@@ -386,8 +403,6 @@ export default function DifferedDepositModal({
             />
           </Field>
 
-         
-
           {/* Motif — pleine largeur */}
           <div className="sm:col-span-2">
             <Field label="Motif de la saisie différée" required error={errors.motif_saisie_differee?.message}
@@ -417,6 +432,9 @@ export default function DifferedDepositModal({
         </Field>
       </div>
 
+      {/* ── Erreur de soumission (API indisponible, erreur métier, etc.) ── */}
+      {submitError && <ErrorBanner message={submitError} />}
+
       {/* ── Footer ── */}
       <div className="flex items-center justify-between gap-3 pt-1">
         <button type="button" onClick={onCancel}
@@ -424,14 +442,13 @@ export default function DifferedDepositModal({
           Annuler
         </button>
         <button type="submit"
-          onClick={() => console.log("🟧 Bouton Saisie différée cliqué")}
           disabled={submitting || isLoading || !selectedAccount}
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold
             bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg transition-all
             disabled:opacity-50 disabled:cursor-not-allowed">
           {submitting || isLoading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
-            : <><Clock className="w-4 h-4" /> Enregistrer la saisie différée</>
+            ? <div className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</div>
+            : <div className="flex items-center gap-2"><Clock className="w-4 h-4" /> Enregistrer la saisie différée</div>
           }
         </button>
       </div>

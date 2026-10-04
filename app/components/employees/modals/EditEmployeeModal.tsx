@@ -32,7 +32,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const EMPTY_FORM: EmployeeFormData = {
     user: { username: '', email: '', password: '', confirm_password: '' },
     first_name: '', last_name: '', date_of_birth: '', phone_number: '',
-    address: '', gender: 'M', payment_ref: '', branch: '', posts: [],
+    address: '', gender: 'M', branch: '', posts: [],
     photo_profil: null,
   };
 
@@ -105,7 +105,6 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
           phone_number:  formData.phone_number,
           address:       formData.address,
           gender:        formData.gender,
-          payment_ref:   formData.payment_ref,
           branch:        formData.branch,
           posts:         formData.posts,
           user:          userPayload,
@@ -217,11 +216,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             errors={errors}
             setErrors={setErrors}
             branches={branchesToUse}
-            posts={postsToUse.map(p => ({
-              id:        p.id,
-              post_name: p.post_name || p.name || 'Poste inconnu',
-              name:      p.name      || p.post_name || 'Poste inconnu',
-            }))}
+            posts={postsToUse}
             isEditMode={isEditMode}
             onKeepPasswordChange={setKeepCurrentPassword}
           />

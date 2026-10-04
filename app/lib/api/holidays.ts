@@ -1,14 +1,11 @@
 // app/lib/api/holidays.ts
 import AxiosInstance from "@/app/lib/axiosInstance";
-import type { HolidayData, HolidayScope } from "@/app/components/holidays/validations";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Module dédié aux appels API holidays.
-// Avant : tout était mélangé dans /api/branche.ts. Maintenant les appels
-// holidays vivent ici, séparés et typés correctement.
-//
-// Le contrat backend correspondant est décrit dans note_holiday_backend.md.
-// ─────────────────────────────────────────────────────────────────────────────
+import {
+  holidayCreateSchema,
+  holidayUpdateSchema,
+  type HolidayData,
+  type HolidayFormData,
+} from "@/app/components/holidays/validations";
 
 function parseApiError(error: any, fallback = "Une erreur est survenue.") {
   if (error?.response?.status === 404) {
@@ -21,84 +18,56 @@ function parseApiError(error: any, fallback = "Une erreur est survenue.") {
   return fallback;
 }
 
-// ─── Mapper API → HolidayData ────────────────────────────────────────────────
-// Garantit qu'on a TOUS les champs (avec défauts pour les anciens enregistrements).
-function mapHoliday(item: any): HolidayData {
-  return {
-    id: item.id,
-    date: item.date,
-    description: item.description ?? "",
-    type: item.type ?? "autre",
-    scope: item.scope ?? "autre",
-    department_code: item.department_code ?? undefined,
-    branch_code: item.branch_code ?? undefined, // legacy, certaines données peuvent l'avoir
-    comment: item.comment ?? "",
-    modified_by: item.modified_by ?? "",
-    pending_assignment: item.pending_assignment ?? true,
-    created_at: item.created_at,
-    updated_at: item.updated_at,
-  };
-}
+const enrichOne  = (h: any): HolidayData => h as HolidayData;
+const enrichMany = (arr: any[]): HolidayData[] => (arr ?? []).map(enrichOne);
 
 // ─── READ ────────────────────────────────────────────────────────────────────
 
 export const fetchHolidays = async (): Promise<HolidayData[]> => {
   try {
     const { data } = await AxiosInstance.get("/holidays/");
-    return (data ?? []).map(mapHoliday);
+    return enrichMany(data);
   } catch (e) {
-    console.error("Erreur fetchHolidays:", e);
-    return [];
+    console.error("Erreur récupération jours fériés:", e);
+    throw new Error(parseApiError(e, "Impossible de charger les jours fériés."));
   }
 };
 
 export const fetchHolidayById = async (id: string): Promise<HolidayData | null> => {
   try {
     const { data } = await AxiosInstance.get(`/holidays/${id}/`);
-    return data ? mapHoliday(data) : null;
+    return data ? enrichOne(data) : null;
   } catch (e) {
     console.error("Erreur fetchHolidayById:", e);
     return null;
   }
 };
 
-/**
- * Récupère les UUIDs des branches assignées à un férié.
- * Le backend doit inclure `branch_ids` dans la réponse de fetchHolidays/fetchHolidayById.
- * Cette fonction est un fallback si on a juste un id et besoin de la liste M2M.
- */
-export const fetchHolidayBranchIds = async (id: string): Promise<string[]> => {
-  try {
-    const { data } = await AxiosInstance.get(`/holidays/${id}/`);
-    return data?.branch_ids ?? [];
-  } catch (e) {
-    console.error("Erreur fetchHolidayBranchIds:", e);
-    return [];
-  }
-};
-
 // ─── WRITE ───────────────────────────────────────────────────────────────────
 
-export const createHoliday = async (payload: Partial<HolidayData>): Promise<HolidayData> => {
+export const createHoliday = async (input: HolidayFormData): Promise<HolidayData> => {
+  const parsed = holidayCreateSchema.safeParse(input);
+  if (!parsed.success) throw parsed.error;
+
   try {
-    const { data } = await AxiosInstance.post("/holidays/", payload);
-    return mapHoliday(data);
+    const { data } = await AxiosInstance.post("/holidays/", parsed.data);
+    return enrichOne(data);
   } catch (e: any) {
-    console.error("❌ Erreur createHoliday:", e?.response?.data);
+    console.error("Erreur création jour férié:", e?.response?.data);
     throw new Error(parseApiError(e, "Impossible de créer le jour férié."));
   }
 };
 
 export const updateHoliday = async (
   id: string,
-  payload: Partial<HolidayData>
+  payload: Partial<HolidayFormData> & { reason?: string }
 ): Promise<HolidayData> => {
   try {
     const { data } = await AxiosInstance.patch(`/holidays/${id}/`, payload);
-    return mapHoliday(data);
+    return enrichOne(data);
   } catch (e: any) {
-    console.error("❌ Erreur updateHoliday:", e?.response?.data);
-    throw new Error(parseApiError(e, "Impossible de mettre à jour le jour férié."));
+    console.error("Erreur updateHoliday:", e);
+    throw new Error(parseApiError(e, "Impossible de modifier le jour férié."));
   }
 };
 
@@ -106,55 +75,67 @@ export const deleteHoliday = async (id: string): Promise<void> => {
   try {
     await AxiosInstance.delete(`/holidays/${id}/`);
   } catch (e: any) {
-    console.error("❌ Erreur deleteHoliday:", e?.response?.data);
+    console.error("Erreur deleteHoliday:", e);
     throw new Error(parseApiError(e, "Impossible de supprimer le jour férié."));
   }
 };
 
-// ─── ASSIGNATION (le cœur du modal) ──────────────────────────────────────────
+// ─── BranchHoliday (observance par branche) ─────────────────────────────────
+export const toggleBranchObservance = async (
+  branchId: string,
+  holidayId: string,
+  payload: { is_observed: boolean; reason: string }
+): Promise<void> => {
+  try {
+    await AxiosInstance.post(`/branches/${branchId}/assign-holidays/`, {
+      holidays: [
+        {
+          holiday_id: holidayId,
+          is_observed: payload.is_observed,
+          reason: payload.reason,
+        },
+      ],
+    });
+  } catch (e: any) {
+    console.error("Erreur toggleBranchObservance:", e);
+    throw new Error(parseApiError(e, "Impossible de mettre à jour l'observance."));
+  }
+};
 
+
+// ─── Assignation aux branches ────────────────────────────────────────────────
 export interface AssignHolidayPayload {
-  scope: HolidayScope;
-  /** Obligatoire si scope='regional'. Ignoré sinon. */
+  scope: "national" | "regional" | "branch" | "autre";
   department_code?: string;
-  /**
-   * Liste des UUIDs de branches.
-   * - Pour scope='branch' ou 'autre' : OBLIGATOIRE (ce que l'admin a coché).
-   * - Pour scope='national' ou 'regional' : envoyé quand même par sécurité,
-   *   mais le backend doit l'ignorer et déduire les branches du scope.
-   */
   branch_ids: string[];
-  /** Raison saisie par l'admin (audit). */
   comment?: string;
+  type?: HolidayFormData["type"];
 }
-
 /**
- * Assigne un férié à des branches selon le scope choisi.
- *
- * Logique côté backend (voir note_holiday_backend.md) :
- *   - national → backend lie à TOUTES les branches (ignore branch_ids du payload)
- *   - regional → backend lie aux branches du department_code (ignore branch_ids)
- *   - branch / autre → backend utilise branch_ids tel quel
- *
- * Dans tous les cas, le backend met pending_assignment=false.
+ * Applique un férié à plusieurs branches en appelant l'action branche-centrique
+ * de CS (POST /branches/{branchId}/assign-holidays/) une fois par branche ciblée.
+ * Pas de vrai endpoint bulk côté holiday — on boucle plutôt que d'en redemander un.
  */
 export const assignHolidayToBranches = async (
   holidayId: string,
   payload: AssignHolidayPayload
-): Promise<HolidayData> => {
-  const body = {
-    scope: payload.scope,
-    department_code: payload.scope === "regional" ? payload.department_code : null,
-    branch_ids: payload.branch_ids,
-    pending_assignment: false,
-    comment: payload.comment ?? "",
-  };
-
+): Promise<void> => {
   try {
-    const { data } = await AxiosInstance.patch(`/holidays/${holidayId}/`, body);
-    return mapHoliday(data);
+    await Promise.all(
+      payload.branch_ids.map((branchId) =>
+        AxiosInstance.post(`/branches/${branchId}/assign-holidays/`, {
+          holidays: [
+            {
+              holiday_id: holidayId,
+              is_observed: true,
+              reason: payload.comment || "",
+            },
+          ],
+        })
+      )
+    );
   } catch (e: any) {
-    console.error("❌ Erreur assignHolidayToBranches:", e?.response?.data);
-    throw new Error(parseApiError(e, "Impossible d'assigner le jour férié."));
+    console.error("Erreur assignHolidayToBranches:", e);
+    throw new Error(parseApiError(e, "Impossible d'assigner le jour férié aux branches."));
   }
 };

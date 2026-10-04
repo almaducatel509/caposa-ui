@@ -44,12 +44,18 @@ export type CaisseFormValues = z.infer<typeof CaisseSchema>;
 // ─── Ouverture de session ────────────────────────────────────────
 
 export const OpenSessionSchema = z.object({
-  // Identité
-  username: z
-    .string()
-    .min(1, "Le nom d'utilisateur est requis")
-    .max(150, 'Username trop long')
-    .regex(/^[\w.@+-]+$/, 'Username invalide'),
+  user: z.object({
+    username: z
+      .string()
+      .min(1, "Le nom d'utilisateur est requis")
+      .max(150, 'Username trop long')
+      .regex(/^[\w.@+-]+$/, 'Username invalide'),
+
+    password: z
+      .string()
+      .min(1, "Le mot de passe est requis")
+      .max(150, "Mot de passe trop long"),
+  }),
 
   numero_caisse: z
     .string()
@@ -60,23 +66,16 @@ export const OpenSessionSchema = z.object({
     .string()
     .uuid('Agence invalide — sélectionnez une agence'),
 
-
-  // Autorisation
   superviseur: z
     .string()
     .min(1, 'Le superviseur est requis')
     .max(150, 'Trop long'),
 
-  id_responsable_cash: z
-    .string()
-    .min(1, "L'ID responsable cash est requis")
-    .max(150, 'Trop long'),
-
-  // Montant
   montant_ouverture: z
     .number({ invalid_type_error: 'Doit être un nombre' })
     .min(1, "Le montant d'ouverture doit être positif"),
 });
+
 
 export type OpenSessionFormValues = z.infer<typeof OpenSessionSchema>;
 
@@ -100,6 +99,19 @@ export const CloseSessionSchema = z.object({
 
   reconciliation_effectuee: z
     .boolean({ required_error: 'Confirmez la réconciliation' }),
+    user: z.object({
+    username: z
+      .string()
+      .min(1, "Le nom d'utilisateur est requis")
+      .max(150, 'Username trop long')
+      .regex(/^[\w.@+-]+$/, 'Username invalide'),
+
+    password: z
+      .string()
+      .min(1, "Le mot de passe est requis")
+      .max(150, "Mot de passe trop long"),
+  }),
+
 });
 
 export type CloseSessionFormValues = z.infer<typeof CloseSessionSchema>;

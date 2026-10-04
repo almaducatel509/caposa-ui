@@ -44,7 +44,7 @@ const EmployeeGrid: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
 
   // ── Tab ───────────────────────────────────────────────────────────────────
-  const [activeEmplTab, setActiveEmplTab] = useState<'actif' | 'inactif' | 'archive'>('actif');
+  const [activeEmplTab, setActiveEmplTab] = useState<'actif' | 'archive'>('actif');
 
   // ── Modals ──
   const [selectedEmployee,     setSelectedEmployee]     = useState<EmployeeData | null>(null);
@@ -134,17 +134,14 @@ const EmployeeGrid: React.FC = () => {
         e.first_name?.toLowerCase().includes(v)   ||
         e.last_name?.toLowerCase().includes(v)    ||
         e.user?.email?.toLowerCase().includes(v)  ||
-        e.phone_number?.toLowerCase().includes(v) ||
-        e.payment_ref?.toLowerCase().includes(v)
+        e.phone_number?.toLowerCase().includes(v) 
       );
     }
 
     if (selectedBranch !== 'all')
       list = list.filter(e => e.branch === selectedBranch);
 
-    list = list.filter(e =>
-      (e.statutEmploye ?? 'actif') === activeEmplTab
-    );
+    list = list.filter(e => e.is_active !== false === (activeEmplTab === 'actif'));
 
     const now = new Date();
     if (selectedFilter === 'recent') {
@@ -193,64 +190,68 @@ const EmployeeGrid: React.FC = () => {
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
   const onClear                = useCallback(() => setFilterValue(''), []);
   // ── Sync filtre statut ↔ tab ───────────────────────────────────────────────
-  const handleStatusChange = (status: string) => {
+ const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
-    if      (status === 'inactif') setActiveEmplTab('inactif');
-    else if (status === 'archive' || status === 'suspended') setActiveEmplTab('archive');
-    else    setActiveEmplTab('actif');
+    setActiveEmplTab(status === 'archive' ? 'archive' : 'actif');
   };
+
 
   // ── Bulk action ────────────────────────────────────────────────────────────
   // Export géré directement dans EmployeeTable — ici on traite uniquement les
   // actions métier qui nécessitent un appel API.
-  const handleBulkAction = async (
-    action:  EmployeeBulkAction,
-    ids:     string [],
-    payload?: string,
-  ) => {
-    switch (action) {
-      case 'activate':
-        await Promise.all(
-          ids
-            .map(id => hydratedEmployees.find(e => e.id === id))
-            .filter(Boolean)
-            .map(e => putEmployeeMultipart(String(e!.id), { status: 'actif' } as any))
-        );
-        break;
-      case 'deactivate':
-        await Promise.all(
-          ids
-            .map(id => hydratedEmployees.find(e => e.id === id))
-            .filter(Boolean)
-            .map(e => putEmployeeMultipart(String(e!.id), { status: 'inactif' } as any))
-        );
-        break;
-      case 'change_branch':
-        if (!payload) return;
-        await Promise.all(
-          ids.map(id => putEmployeeMultipart(String(id), { branch: payload } as any))
-        );
-        break;
-      case 'change_post':
-        if (!payload) return;
-        await Promise.all(
-          ids.map(id => putEmployeeMultipart(String(id), { posts: [payload] } as any))
-        );
-        break;
-      case 'archive':
-        await Promise.all(
-          ids
-            .map(id => hydratedEmployees.find(e => e.id === id))
-            .filter(Boolean)
-            .map(e => putEmployeeMultipart(String(e!.id), { status: 'archive' } as any))
-        );
+ const handleBulkAction = async (
+  action: EmployeeBulkAction,
+  ids: string[],
+  payload?: string,
+) => {
+
+  const employees = ids
+    .map(id => hydratedEmployees.find(e => e.id === id))
+    .filter(Boolean);
+
+  switch (action) {
+
+    case 'activate':
+      await Promise.all(
+        employees.map(e =>
+          putEmployeeMultipart(String(e!.id), { status: 'actif' } as any)
+        )
+      );
       break;
-       case 'export':
-        exportToCSV(ids);
-        return; // pas de reload
-    }
-    await loadEmployees();
-  };
+
+    case 'archive':
+      await Promise.all(
+        employees.map(e =>
+          putEmployeeMultipart(String(e!.id), { status: 'archive' } as any)
+        )
+      );
+      break;
+
+    case 'change_branch':
+      if (!payload) return;
+      await Promise.all(
+        ids.map(id =>
+          putEmployeeMultipart(String(id), { branch: payload } as any)
+        )
+      );
+      break;
+
+    case 'change_post':
+      if (!payload) return;
+      await Promise.all(
+        ids.map(id =>
+          putEmployeeMultipart(String(id), { posts: [payload] } as any)
+        )
+      );
+      break;
+
+    case 'export':
+      exportToCSV(ids);
+      return; // pas de reload
+  }
+
+  await loadEmployees();
+};
 
 
   // ── Export CSV direct ──────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ const EmployeeGrid: React.FC = () => {
       e.user?.email ?? '',
       e.phone_number ?? '',
       e.branch_details?.branch_name ?? '',
-      e.statutEmploye ?? 'actif',
+      e.is_active === false ? 'Archivé' : 'Actif',
       e.created_at ? new Date(e.created_at).toLocaleDateString('fr-FR') : '',
     ]);
     const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
@@ -330,12 +331,13 @@ const EmployeeGrid: React.FC = () => {
         // onTabChange={setActiveAccountTab}      // ← NOUVEAU
         onTabChange={(tab) => {
           setActiveEmplTab(tab);
-          // tab → dropdown (same as AccountGrid)
           setSelectedStatus(
-            tab === 'inactif' ? 'inactif' :
-            tab === 'archive'  ? 'suspended' : 'actif'
+            tab === 'archive'
+              ? 'archive'
+              : 'actif'
           );
         }}
+
       />
 
       <EmployeeDetailModal
@@ -366,7 +368,6 @@ const EmployeeGrid: React.FC = () => {
           first_name:   selectedEmployee.first_name,
           last_name:    selectedEmployee.last_name,
           photo_profil: selectedEmployee.photo_profil ?? null,
-          payment_ref:  selectedEmployee.payment_ref,
         } : null}
       />
     </div>

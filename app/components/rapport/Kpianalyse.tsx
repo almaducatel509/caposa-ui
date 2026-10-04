@@ -94,20 +94,20 @@ export function AnalyseHeader({
           className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
         >
           {succesSave ? (
-            <>
+            <div>
               <Check className="h-4 w-4" />
               Enregistré
-            </>
+            </div>
           ) : isSaving ? (
-            <>
+            <div>
               <Loader2 className="h-4 w-4 animate-spin" />
               Enregistrement…
-            </>
+            </div>
           ) : (
-            <>
+            <div>
               <Save className="h-4 w-4" />
               Enregistrer rapport
-            </>
+            </div>
           )}
         </button>
         <button

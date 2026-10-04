@@ -17,6 +17,7 @@ export default function BranchScheduleDisplay({ branch }: BranchScheduleDisplayP
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Header */}
+      
       <div className="bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] px-6 py-5 flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold text-[#DDEAD5] uppercase tracking-widest mb-1">

@@ -1,25 +1,24 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft, ChevronRight, Calendar, MapPin,
-  MessageSquare, User, Search, Plus, Download, X, Edit2, Trash2,
+  MessageSquare, User, Search, Plus, X, Edit2, Trash2, AlertTriangle, Loader2,
 } from "lucide-react";
 import { TbCalendarCog } from "react-icons/tb";
 import PageHeader from "../header";
 import EditHolidayModal from "./EditHolidayModal";
 import DeleteHolidayModal from "./DeleteHolidayModal";
 import HolidayInvertedView from "./HolidayInvertedView";
-
-// 🔌 Source unique de données — remplacer par fetchHolidays() / fetchBranches() quand l'API est prête
-import {
-  MOCK_HOLIDAYS, MOCK_BRANCHES,
-  Holiday
-} from "../OpeningHours/mock";
-import type { Branch } from "@/types/branche";
-import { GroupedHoliday } from "@/types/holidayHelpers";
 import AssignBranchesModal from "./modals/AssignBranchesModal";
-import{HolidayType, HolidayScope,} from "./validations"
+
+import { fetchHolidays } from "@/app/lib/api/holidays";
+import type { Branch } from "@/types/branche";
+import type { GroupedHoliday } from "@/types/holidayHelpers";
+import {
+  HolidayType, HolidayScope, HolidayData as Holiday,
+} from "./validations";
+import { fetchBranches } from "@/app/lib/api/branche";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const TYPE_LABELS: Record<HolidayType, string> = {
@@ -59,15 +58,16 @@ const getDayBg = (holidays: Holiday[]): string => {
   return "bg-[#DDEAD5]/40 border-[#2E7D32]/20 hover:bg-[#DDEAD5]/70";
 };
 
-// ─── EventDetailCard (panneau de droite du calendrier) ─────────────────────────
+// ─── EventDetailCard ────────────────────────────────────────────────────────────
 function EventDetailCard({
-  holiday, onEdit, onDelete,
+  holiday, allBranches, onEdit, onDelete,
 }: {
   holiday: Holiday;
+  allBranches: Branch[];
   onEdit: (h: Holiday) => void;
   onDelete: (h: Holiday) => void;
 }) {
-  const branch = MOCK_BRANCHES.find(b => b.branch_code === holiday.branch_code);
+  const branch = allBranches.find(b => b.branch_code === holiday.branch_code);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
@@ -126,12 +126,18 @@ function EventDetailCard({
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function HolidayCalendar() {
-  const [currentDate,    setCurrentDate]    = useState(new Date(2025, 0, 1));
+  const [currentDate,    setCurrentDate]    = useState(new Date(2026, 0, 1));
   const [selectedDay,    setSelectedDay]    = useState<Date | null>(null);
   const [filterValue,    setFilterValue]    = useState("");
   const [selectedType,   setSelectedType]   = useState("all");
   const [selectedScope,  setSelectedScope]  = useState("all");
   const [selectedBranch, setSelectedBranch] = useState("all");
+
+  /* ── Data réelle ── */
+  const [holidays,       setHolidays]       = useState<Holiday[]>([]);
+  const [allBranches,    setAllBranches]    = useState<Branch[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
 
   /* ── Modaux ── */
   const [showEditModal,    setShowEditModal]    = useState(false);
@@ -141,15 +147,26 @@ export default function HolidayCalendar() {
   const [selectedGroup,    setSelectedGroup]    = useState<GroupedHoliday | null>(null);
   const [isEditMode,       setIsEditMode]       = useState(false);
 
-  /* ── Branches (mock pour l'instant — sera remplacé par fetchBranches) ── */
-  const allBranches = useMemo<Branch[]>(
-    () => MOCK_BRANCHES as unknown as Branch[],
-    []
-  );
+  const loadData = async () => {
+    setLoading(true);
+    setApiUnavailable(false);
+    try {
+      const [h, b] = await Promise.all([fetchHolidays(), fetchBranches()]);
+      setHolidays(h);
+      setAllBranches(b);
+    } catch (e) {
+      console.error("Erreur chargement calendrier fériés:", e);
+      setApiUnavailable(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   // ─── Filtering ───────────────────────────────────────────────────────────────
   const filteredHolidays = useMemo(() =>
-    MOCK_HOLIDAYS.filter(h => {
+    holidays.filter(h => {
       const matchSearch = !filterValue ||
         h.description.toLowerCase().includes(filterValue.toLowerCase());
       const matchType   = selectedType  === "all" || h.type  === selectedType;
@@ -159,7 +176,7 @@ export default function HolidayCalendar() {
         h.branch_code === selectedBranch;
       return matchSearch && matchType && matchScope && matchBranch;
     }),
-  [filterValue, selectedType, selectedScope, selectedBranch]);
+  [holidays, filterValue, selectedType, selectedScope, selectedBranch]);
 
   // ─── Calendar ────────────────────────────────────────────────────────────────
   const calendarDays = useMemo(() => {
@@ -205,7 +222,6 @@ export default function HolidayCalendar() {
     setShowDeleteModal(true);
   };
 
-  /** 🎯 Nouveau : déclenché par "Gérer" / "Assigner" sur une card de la vue inversée */
   const handleManageGroup = (group: GroupedHoliday) => {
     setSelectedGroup(group);
     setShowAssignModal(true);
@@ -218,7 +234,7 @@ export default function HolidayCalendar() {
     setSelectedHoliday(null);
     setSelectedGroup(null);
     setIsEditMode(false);
-    // 🔌 Recharger les données ici quand l'API est prête
+    loadData(); // recharge les vraies données après toute modification
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────────
@@ -242,6 +258,16 @@ export default function HolidayCalendar() {
               Ajouter
             </button>
           </div>
+
+          {apiUnavailable && (
+            <div className="flex items-start gap-2.5 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">
+                Données des jours fériés indisponibles — backend en attente
+                (modèle Holiday / table BranchHoliday, en cours côté CS).
+              </p>
+            </div>
+          )}
 
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -292,15 +318,10 @@ export default function HolidayCalendar() {
               className="px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] appearance-none transition-all"
             >
               <option value="all">Toutes les succursales</option>
-              {MOCK_BRANCHES.map(b => (
+              {allBranches.map(b => (
                 <option key={b.branch_code} value={b.branch_code}>{b.branch_name}</option>
               ))}
             </select>
-
-            {/* <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-all">
-              <Download className="w-4 h-4" />
-              Exporter
-            </button> */}
           </div>
 
           <p className="mt-3 text-xs text-gray-500">
@@ -308,35 +329,32 @@ export default function HolidayCalendar() {
           </p>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* ── BLOC 1 : CALENDRIER (vue temporelle, en haut) ────────────────── */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-20 text-gray-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <p className="text-sm">Chargement du calendrier…</p>
+          </div>
+        ) : (
+        <div>
+        {/* ── BLOC 1 : CALENDRIER ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={prevMonth}
-                className="p-2 rounded-xl hover:bg-gray-50 text-[#2E7D32] transition-all"
-              >
+              <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-gray-50 text-[#2E7D32] transition-all">
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <h2 className="text-lg font-bold text-gray-900 capitalize">
                 {currentDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
               </h2>
-              <button
-                onClick={nextMonth}
-                className="p-2 rounded-xl hover:bg-gray-50 text-[#2E7D32] transition-all"
-              >
+              <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-gray-50 text-[#2E7D32] transition-all">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
 
             <div className="grid grid-cols-7 mb-2">
               {["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"].map(d => (
-                <div key={d} className="text-center text-xs font-semibold text-gray-500 py-2">
-                  {d}
-                </div>
+                <div key={d} className="text-center text-xs font-semibold text-gray-500 py-2">{d}</div>
               ))}
             </div>
 
@@ -355,10 +373,7 @@ export default function HolidayCalendar() {
                     </div>
                     <div className="flex flex-wrap gap-0.5">
                       {holidaysForDate(day).slice(0, 3).map(h => (
-                        <div
-                          key={h.id}
-                          className={`h-1 flex-1 rounded-full ${TYPE_COLORS[h.type].split(" ")[0]}`}
-                        />
+                        <div key={h.id} className={`h-1 flex-1 rounded-full ${TYPE_COLORS[h.type].split(" ")[0]}`} />
                       ))}
                     </div>
                   </button>
@@ -402,10 +417,7 @@ export default function HolidayCalendar() {
                 </h3>
               </div>
               {selectedDay && (
-                <button
-                  onClick={() => setSelectedDay(null)}
-                  className="text-xs font-semibold text-[#2E7D32] hover:underline"
-                >
+                <button onClick={() => setSelectedDay(null)} className="text-xs font-semibold text-[#2E7D32] hover:underline">
                   Voir tout
                 </button>
               )}
@@ -417,6 +429,7 @@ export default function HolidayCalendar() {
                   <EventDetailCard
                     key={holiday.id}
                     holiday={holiday}
+                    allBranches={allBranches}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />
@@ -426,9 +439,7 @@ export default function HolidayCalendar() {
                   <Calendar className="w-10 h-10 mx-auto mb-3 opacity-40" />
                   <p className="text-sm font-medium">Aucun événement</p>
                   <p className="text-xs mt-1 text-gray-400">
-                    {selectedDay
-                      ? "Pas d'événement pour cette date"
-                      : "Aucun événement ne correspond aux filtres"}
+                    {selectedDay ? "Pas d'événement pour cette date" : "Aucun événement ne correspond aux filtres"}
                   </p>
                 </div>
               )}
@@ -436,17 +447,17 @@ export default function HolidayCalendar() {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* ── BLOC 2 : VUE INVERSÉE (cards par férié, en bas) ──────────────── */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ── BLOC 2 : VUE INVERSÉE ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <HolidayInvertedView
-            holidays={MOCK_HOLIDAYS}
+            holidays={holidays}
             branches={allBranches}
             filteredHolidays={filteredHolidays}
             onManageGroup={handleManageGroup}
           />
         </div>
+        </div>
+        )}
 
       </div>
 

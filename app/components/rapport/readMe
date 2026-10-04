@@ -52,7 +52,7 @@ export default function RapportPage() {
   const utilisateur = { id: "u_001", nom: "Jean Dupont" }; // depuis ton auth
 
   return (
-    <>
+    <div>
       {/* Ta liste actuelle + bouton */}
       <button onClick={() => setConfigOuvert(true)}>
         + Générer un rapport
@@ -81,7 +81,7 @@ export default function RapportPage() {
           utilisateur={utilisateur}
         />
       )}
-    </>
+    </div>
   );
 }
 ```

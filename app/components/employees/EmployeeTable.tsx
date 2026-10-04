@@ -16,8 +16,8 @@ import BulkActionModal                                          from './modals/B
 import { PostData } from './validations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-type TabId = 'actif' | 'inactif' | 'archive';
-type EmployeeStatus = 'actif' | 'inactif' | 'archive';
+type TabId = 'actif' | 'archive';
+type EmployeeStatus = 'actif' | 'archive';
 
 interface EmployeeTableProps {
   employees: EmployeeData[];
@@ -29,7 +29,7 @@ interface EmployeeTableProps {
   onViewTransactions: (e: EmployeeData) => void;
   onBulkAction: (action: EmployeeBulkAction, ids: string[]) => Promise<void>;
   activeTab: string;
-  onTabChange?: (tab: 'actif' | 'inactif' | 'archive') => void;
+  onTabChange?: (tab: 'actif'  | 'archive') => void;
   onEdit:(e: EmployeeData) => void;
   
 }
@@ -37,11 +37,7 @@ interface EmployeeTableProps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
   actif:                { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]',  dot: 'bg-[#2E7D32]',  label: 'Actif'      },
-  inactif:              { bg: 'bg-yellow-50',  text: 'text-yellow-700', dot: 'bg-yellow-400', label: 'Inactif'    },
-  suspended:             { bg: 'bg-red-50',     text: 'text-red-600',    dot: 'bg-red-500',    label: 'Suspendu'   },
   archive:               { bg: 'bg-gray-100',   text: 'text-gray-500',   dot: 'bg-gray-400',   label: 'Archive'    },
-  en_conge:              { bg: 'bg-blue-50',    text: 'text-blue-600',   dot: 'bg-blue-400',   label: 'En conge'   },
-  en_attente_validation: { bg: 'bg-purple-50',  text: 'text-purple-600', dot: 'bg-purple-400', label: 'En attente' },
 };
 
 const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
@@ -61,32 +57,19 @@ const COLS = [
 ];
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function getEffectiveStatus(e: EmployeeData): EmployeeStatus {
-  // On unifie les différentes sources possibles
-  const s = (e as any).statusEmployee ?? e.statutEmploye;
+  // Source de vérité : backend → is_active
+  if (typeof e.is_active === 'boolean') {
+    return e.is_active ? 'actif' : 'archive';
+  }
 
-  // Normalisation en minuscule pour éviter les variations
+  // Fallback legacy si jamais un vieux champ existe encore
+  const s = (e as any).statusEmployee;
   const normalized = typeof s === 'string' ? s.toLowerCase() : s;
 
-  // Fermé / Inactif
-  if (
-    normalized === 'inactif' ||
-    normalized === 'inactif' ||
-    normalized === 'désactivé' ||
-    normalized === 'desactive' ||
-    normalized === 'disabled' ||
-    normalized === false // fallback legacy boolean
-  ) {
-    return 'inactif';
-  }
-
-  // Suspendu
-  if (
-    normalized === 'suspendu' ||
-    normalized === 'suspended'
-  ) {
+  if (normalized === 'archive' || normalized === 'suspended') {
     return 'archive';
   }
-  // Sinon, par défaut : actif
+
   return 'actif';
 }
 
@@ -135,7 +118,6 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   // ── Counts ────────────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
     actif: employees.filter(e => getEffectiveStatus(e) === 'actif').length,
-    inactif: employees.filter(e => getEffectiveStatus(e) === 'inactif').length,
     archive:  employees.filter(e => getEffectiveStatus(e) === 'archive').length,
   }), [employees]);
 
@@ -210,7 +192,6 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       <div className="flex items-center gap-0 px-2 border-b border-gray-100 bg-white">
         {([
           { id: 'actif'   as TabId, label: 'Actifs',   icon: UserCheck, active: 'border-[#2E7D32] text-[#1B5E20]',  badge: 'bg-[#DDEAD5] text-[#1B5E20]', count: counts.actif},
-          { id: 'inactif' as TabId, label: 'Inactifs', icon: Clock,     active: 'border-yellow-500 text-yellow-700', badge: 'bg-yellow-100 text-yellow-700',count: counts.inactif},
           { id: 'archive'  as TabId, label: 'Archive',  icon: Archive,   active: 'border-red-400 text-red-600',       badge: 'bg-red-100 text-red-600',count: counts.archive},
         ]).map(tab => {
           const Icon = tab.icon; 
@@ -247,7 +228,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
         </div>
       )}
 
-      {/* ── Barre sélection multiple ── */}
+     {/* ── Barre sélection multiple ── */}
       {selected.size > 0 && (
         <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -257,15 +238,13 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-           
-            {!isArchiveTab && (
-              <BulkActionDropdown
-                selectedCount={selected.size}
-                isOpen={dropdownOpen}
-                onToggle={() => setDropdownOpen(o => !o)}
-                onAction={(action) => setActiveAction(action)}
-              />
-            )}
+            <BulkActionDropdown
+              selectedCount={selected.size}
+              isOpen={dropdownOpen}
+              onToggle={() => setDropdownOpen(o => !o)}
+              onAction={(action) => setActiveAction(action)}
+              context={isArchiveTab ? 'archive' : 'actif'}
+            />
             <button
               onClick={() => setSelected(new Set())}
               className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all"
@@ -378,10 +357,11 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 </div>
               </div>
 
-              {/* Poste(s) */}
+              {/* Poste(s) — 2 badges max affichés, le reste compté dans un badge "+N" */}
               <div className="flex flex-wrap gap-1">
                 {(emp.posts?.length ?? 0) > 0 ? (
-                  <>
+                  <div>
+                    {/* `!` safe ici : le `(emp.posts?.length ?? 0) > 0` au-dessus garantit que posts_details existe */}
                     {emp.posts_details!.slice(0, 2).map(post => (
                       <span key={String(post.id)}
                         className={`px-2 py-0.5 text-xs rounded-lg font-medium capitalize whitespace-nowrap ${
@@ -395,7 +375,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                         +{emp.posts_details!.length - 2}
                       </span>
                     )}
-                  </>
+                  </div>
                 ) : (
                   <span className="text-xs text-gray-400">—</span>
                 )}
@@ -431,7 +411,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <Eye className="w-3.5 h-3.5" />
                 </button>
                 {!isArchiveTab ? (
-                  <>
+                  <div>
                     <button title="Modifier" onClick={() => onEdit(emp)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32]">
                       <Edit className="w-3.5 h-3.5" />
@@ -444,9 +424,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div>
                     <button title="Historique" onClick={() => onViewTransactions(emp)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-purple-50 hover:text-purple-500">
                       <Receipt className="w-3.5 h-3.5" />
@@ -455,7 +435,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">
                       <UserCheck className="w-3 h-3" /> Reactiver
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -473,11 +453,6 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {counts.actif} Actif{counts.actif !== 1 ? 's' : ''}
             </span>
-            {counts.inactif > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" /> {counts.inactif} Inactif{counts.inactif !== 1 ? 's' : ''}
-              </span>
-            )}
             {counts.archive > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400" /> {counts.archive} Archive{counts.archive !== 1 ? 's' : ''}
