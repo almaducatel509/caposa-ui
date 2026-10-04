@@ -322,9 +322,9 @@ export default function DepositTable({
               </div>
 
               {/* Membre (sans la date en sous-titre, on la garde uniquement dans la colonne Date) */}
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className=" capitalize flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-[#2E7D32]">{dep.member_name?.[0] ?? '?'}</span>
+                  <span className="text-xs font-bold uppercase text-[#2E7D32]">{dep.member_name?.[0] ?? '?'}</span>
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">{dep.member_name ?? '—'}</p>

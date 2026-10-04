@@ -112,6 +112,7 @@ const STATUS_CFG: Record<string, { label: string; bg: string; text: string; dot:
   en_cours:   { label: 'En cours',    bg: '#EBF2F8', text: '#355C7D', dot: '#355C7D', icon: Loader2      },
   echoue:     { label: 'Échoué',      bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444', icon: XCircle      },
   annule:     { label: 'Annulé',      bg: '#F3F4F6', text: '#4B5563', dot: '#9CA3AF', icon: XCircle      },
+  encaisse:   { label: 'Encaissé',    bg: '#DDEAD5', text: '#1B5E20', dot: '#2E7D32', icon: CheckCircle2 },
 };
 
 const DEPOSIT_SUBTYPE: Record<string, string> = {
@@ -167,7 +168,7 @@ function LinkRow({ icon: Icon, label, value, href, tooltip, mono, accent }: {
 }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
+    <div className=" capitalize flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
       <div className="w-7 h-7 rounded-lg bg-[#F9F9F6] flex items-center justify-center shrink-0 mt-0.5">
         <Icon className="w-3.5 h-3.5 text-gray-400" />
       </div>
@@ -249,12 +250,12 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
     isOpen
     onClose={onClose}
     size="3xl"
-    title={
-      <div className="flex items-center gap-3">
+        title={
+      <div className=" capitalize flex items-center gap-3">
         <div className={`w-9 h-9 rounded-xl bg-linear-to-br ${kindCfg.gradient} flex items-center justify-center`}>
           <KindIcon className="w-4 h-4 text-white" />
         </div>
-        <div>
+        <div className='capitalize'>
           <p className="text-sm font-bold text-gray-900">Détail — {kindCfg.label}</p>
           <p className="text-xs text-gray-400 font-mono">
             {transaction.reference ?? `#${transaction.id}`}
@@ -288,7 +289,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
         <div className="p-4 flex flex-col gap-3">
 
           {/* ── Membre & Compte — liens cliquables ── */}
-          <Section title="Membre et compte">
+          <Section   title="Membre et compte">
             <LinkRow
               icon={User}
               label="Membre"
@@ -307,7 +308,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               accent="#355C7D"
             />
             {transaction.member_id && (
-              <Row icon={Hash} label="N° membre" value={transaction.member_id} mono />
+              <Row  icon={Hash} label="N° membre" value={transaction.member_id} mono />
             )}
           </Section>
 
