@@ -17,12 +17,7 @@ export default function SideNav() {
   const { data: session, status } = useSession();
 
 // 🔍 DEBUG : voir ce que contient la session
-console.log("=== SESSION DEBUG ===");
-console.log("Status:", status);
-console.log("Session complète:", session);
-console.log("User:", session?.user);
-console.log("Name:", session?.user?.name);
-console.log("Email:", session?.user?.email);
+
 
   /* TODO: remplacer par les vraies données de session NextAuth */
   // const currentUser = {

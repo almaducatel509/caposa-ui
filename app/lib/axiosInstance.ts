@@ -72,12 +72,12 @@ AxiosInstance.interceptors.request.use(
           access = result ?? undefined;
         }
       }
-console.log('ACCESS_COOKIE name:', ACCESS_COOKIE, '| valeur lue:', access);
-      if (access) {
-        config.headers = config.headers ?? {};
-        config.headers.Authorization = `Bearer ${access}`;
-      }
-    }
+      // console.log('ACCESS_COOKIE name:', ACCESS_COOKIE, '| valeur lue:', access);
+            if (access) {
+              config.headers = config.headers ?? {};
+              config.headers.Authorization = `Bearer ${access}`;
+            }
+          }
 
     return config;
   },

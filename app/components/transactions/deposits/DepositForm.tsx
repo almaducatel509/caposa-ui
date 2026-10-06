@@ -8,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { depositSchema, DepositSubtype, type DepositFormValidated } from '../validation/deposit';
-import DepositReceipt from './DepositReceipt';
+import DepositReceipt, { DepositApiResult } from './DepositReceipt';
 import { MemberOption } from '../../members/validations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -31,7 +31,8 @@ interface DepositFormProps {
   members:              MemberOption[];
   /** Doit appeler l'API réelle et lever une Error avec un message explicite en cas d'échec. */
   fetchMemberAccounts:  (memberId: string) => Promise<AccountOption[]>;
-  onSubmit:             (data: DepositFormValidated) => Promise<void>;
+  // onSubmit:             (data: DepositFormValidated) => Promise<void>;
+  onSubmit:             (data: DepositFormValidated) => Promise<DepositApiResult>;
   onCancel:             () => void;
   isLoading?:           boolean;
 }
@@ -138,6 +139,7 @@ export default function DepositForm({
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
   const [submitted,       setSubmitted]       = useState(false);
   const [submitting,      setSubmitting]      = useState(false);
+  const [created, setCreated] = useState<DepositApiResult | null>(null);
   const [submitError,     setSubmitError]     = useState<string | null>(null);
   const [errors,          setErrors]          = useState<Record<string, string>>({});
   const [form, setForm] = useState({
@@ -287,7 +289,9 @@ export default function DepositForm({
     setSubmitting(true);
 
     try {
-      await onSubmit(result.data);
+      const response = await onSubmit(result.data);
+      console.log('[reçu] réponse API reçue par le formulaire :', response);
+      setCreated(response);
       setSubmittedData(result.data);
       setSubmitted(true);
     } catch (err) {
@@ -300,6 +304,7 @@ export default function DepositForm({
     } finally {
       setSubmitting(false);
     }
+    ;
   };
 
   const handleReset = () => {
@@ -331,6 +336,7 @@ export default function DepositForm({
       issuePlace: '',
     });
     setSubmittedData(null);
+    setCreated(null);
     setSelectedMember(null);
     setSelectedAccount(null);
     setMemberAccounts([]);
@@ -341,8 +347,14 @@ export default function DepositForm({
 
   if (submitted && submittedData) {
     return (
+      // <DepositReceipt
+      //   data={submittedData}
+      //   memberName={selectedMember?.member_name}
+      //   onReset={handleReset}
+      // />
       <DepositReceipt
         data={submittedData}
+        apiResponse={created}
         memberName={selectedMember?.member_name}
         onReset={handleReset}
       />

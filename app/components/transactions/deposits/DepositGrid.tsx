@@ -23,6 +23,7 @@ import {
   fetchAllAccounts,
 } from '@/app/lib/api/caisse';
 import { fetchMembers } from '@/app/lib/api/members';
+import { DepositApiResult } from './DepositReceipt';
 
 // ─── Main ────────────────────────────────────────────────────────
 
@@ -186,10 +187,11 @@ export default function DepositDashboard() {
   //   await loadDeposits();
   // };
   // DepositGrid.tsx
-  const handleDepositSubmit = async (data: DepositFormValidated): Promise<void> => {
+  const handleDepositSubmit = async (data: DepositFormValidated): Promise<DepositApiResult> => {
     if (!activeSessionId) throw new Error('Aucune session caisse ouverte.');
-    await createDeposit(mapDepositFormToPayload(data, activeSessionId));
+    const created = await createDeposit(mapDepositFormToPayload(data, activeSessionId));
     await loadDeposits();
+    return created;
   };
 
   const handleDifferedSubmit = async (data: any) => {
