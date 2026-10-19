@@ -14,6 +14,7 @@
  */
 
 import AxiosInstance from '../axiosInstance';
+import type { WithdrawalApiResult } from '@/app/components/transactions/withdrawals/WithdrawalReceipt';
 import { isAxiosError } from 'axios';
 import { SessionManager } from './Sessionmanager';
 import { CreateDepositResponse } from '@/app/components/dashboard/caissier/validation';
@@ -37,8 +38,6 @@ function describeError(err: unknown, context: string): string {
     if (!err.response) {
       return `${context} : serveur injoignable (${err.message}).`;
     }
-    // const serverMessage = (err.response.data as any)?.message ?? (err.response.data as any)?.detail;
-    // return `${context} : erreur ${err.response.status}${serverMessage ? ` — ${serverMessage}` : ''}.`;
     const body = err.response.data as any;
     const serverMessage =
       body?.message ?? body?.detail ??
@@ -47,9 +46,19 @@ function describeError(err: unknown, context: string): string {
             .map(([k, v]) => `${k} : ${Array.isArray(v) ? v.join(', ') : v}`)
             .join(' · ')
         : undefined);
+    return `${context} : ${serverMessage ?? `erreur ${err.response.status}`}.`;
   }
   if (err instanceof Error) return `${context} : ${err.message}`;
   return `${context} : erreur inconnue.`;
+}
+
+/** Récupère la session active ou lève une erreur claire (aucune transaction hors session). */
+async function requireActiveSessionId(action: string): Promise<string> {
+  const active = await SessionManager.fetchActive();
+  if (!active) {
+    throw new Error(`Ouvrez votre session caisse avant d\u2019enregistrer ${action}.`);
+  }
+  return active.id;
 }
 
 // ─── Caisses ─────────────────────────────────────────────────────
@@ -104,12 +113,121 @@ export async function createDeposit(
     throw new Error(describeError(err, 'Impossible d\u2019enregistrer le dépôt'));
   }
 }
-/** GET /accounts/ — correspondance compte → membre */
-export async function fetchAllAccounts(): Promise<{ id: string; member: string }[]> {
+
+// ─── Retraits ────────────────────────────────────────────────────
+
+/** POST /transactions/withdraw/ — débite le compte (fonds vérifiés côté Django) */
+export async function createWithdrawal(payload: {
+  account:  string;                         // UUID du compte
+  amount:   number;
+  reason?:  string | null;
+  method?:  'cash' | 'check' | 'transfer';
+  session?: string;
+}): Promise<WithdrawalApiResult> {
+  const session = payload.session ?? await requireActiveSessionId('un retrait');
+
+  try {
+    const { data } = await AxiosInstance.post<WithdrawalApiResult>(
+      '/transactions/withdraw/',
+      { method: 'cash', ...payload, session },
+    );
+    return data;
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible d\u2019enregistrer le retrait'));
+  }
+}
+
+/** GET /transactions/?type=WITHDRAWAL — liste tous les retraits */
+export async function getWithdrawals(): Promise<any[]> {
+  try {
+    const { data } = await AxiosInstance.get('/transactions/', { params: { type: 'WITHDRAWAL' } });
+    return Array.isArray(data) ? data : data?.results ?? [];
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible de charger les retraits'));
+  }
+}
+
+// ─── Transferts ──────────────────────────────────────────────────
+
+/** Réponse brute de Django pour une transaction de type TRANSFER. */
+export interface TransferApiResult {
+  id:                string | number;
+  transaction_type?: string;
+  account:           string;          // UUID compte source
+  to_account:        string;          // UUID compte destination
+  account_number?:    string;         // renvoyé par Django
+  to_account_number?: string;         // renvoyé par Django
+  amount:            string | number; // DecimalField → string côté DRF
+  status?:           string;
+  reference_number?: string;
+  reference?:        string;
+  description?:      string | null;
+  session?:          string | null;
+  created_by?:       string | number | null;
+  created_at?:       string;
+  transaction_date?: string | null;
+}
+
+/**
+ * POST /transactions/transfer/ — débite `account`, crédite `to_account`.
+ * Fonds et statut des comptes vérifiés côté Django.
+ * Session active injectée automatiquement si non fournie.
+ */
+export async function createTransfer(
+  payload: {
+    account:      string;   // UUID compte source
+    to_account:   string;   // UUID compte destination
+    amount:       number;
+    description?: string;
+    session?:     string;
+  },
+  idemKey?: string,
+): Promise<TransferApiResult> {
+  const session = payload.session ?? await requireActiveSessionId('un transfert');
+
+  // ⚠️ Pas d'en-tête Idempotency-Key : Django ne l'autorise pas en CORS
+  // (absent de CORS_ALLOW_HEADERS) et ne le traite pas. La protection
+  // contre le double envoi reste le verrou du formulaire (useRef).
+  void idemKey;
+
+  try {
+    const { data } = await AxiosInstance.post<TransferApiResult>(
+      '/transactions/transfer/',
+      { ...payload, session },
+    );
+    return data;
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible d\u2019enregistrer le transfert'));
+  }
+}
+
+/**
+ * GET /transactions/?type=TRANSFER — liste tous les transferts.
+ * Filtre aussi côté front : si le ViewSet ignore ?type=, on reçoit
+ * toutes les transactions.
+ */
+export async function getTransfers(): Promise<TransferApiResult[]> {
+  try {
+    const { data } = await AxiosInstance.get('/transactions/', { params: { type: 'TRANSFER' } });
+    const raw: TransferApiResult[] = Array.isArray(data) ? data : data?.results ?? [];
+    return raw.filter(t => String(t.transaction_type ?? '').toUpperCase() === 'TRANSFER');
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible de charger les transferts'));
+  }
+}
+
+// ─── Comptes ─────────────────────────────────────────────────────
+
+/** GET /accounts/ — correspondance compte → membre (+ numéro de compte) */
+export async function fetchAllAccounts(): Promise<{ id: string; member: string; account_number: string }[]> {
   try {
     const { data } = await AxiosInstance.get('/accounts/');
     const raw: any[] = Array.isArray(data) ? data : data?.results ?? [];
-    return raw.map(a => ({ id: String(a.id), member: String(a.member) }));
+    return raw.map(a => ({
+      id:             String(a.id),
+      member:         String(a.member),
+      account_number: String(a.account_number ?? ''),
+    }));
   } catch (err) {
     throw new Error(describeError(err, 'Impossible de charger les comptes'));
   }
@@ -165,7 +283,6 @@ export async function getDepositAudit(id: string | number): Promise<unknown> {
 }
 
 // ─── Comptes par membre ────────────────────────────────────────────
-// ⚠️ Endpoint à confirmer côté backend Django (placeholder ci-dessous).
 
 export interface CaisseAccountOption {
   id:             string;
@@ -175,35 +292,26 @@ export interface CaisseAccountOption {
   account_status: 'actif' | 'suspendu' | 'ferme';
 }
 
-/** GET /comptes/?membre={id} — comptes d'un membre */
+/** GET /accounts/?member={id} — comptes d'un membre */
 export const fetchAccountsByMember = async (memberId: string): Promise<CaisseAccountOption[]> => {
-  const { data } = await AxiosInstance.get('/accounts/', { params: { member: memberId } });
-  const raw: any[] = Array.isArray(data) ? data : data?.results ?? [];
+  try {
+    const { data } = await AxiosInstance.get('/accounts/', { params: { member: memberId } });
+    const raw: any[] = Array.isArray(data) ? data : data?.results ?? [];
 
-  return raw
-    // Indispensable : Django ignore ?member= s'il n'a pas de filtre configuré
-    .filter(a => String(a.member) === String(memberId))
-    .map(a => ({
-      id:             String(a.id),
-      account_number: a.account_number,
-      typeCompte:     a.account_type ?? a.typeCompte ?? '',
-      soldeActuel:    Number(a.balance ?? a.soldeActuel ?? 0) || 0,
-      account_status: a.account_status ?? '',
-    }));
+    return raw
+      // Indispensable : Django ignore ?member= s'il n'a pas de filtre configuré
+      .filter(a => String(a.member) === String(memberId))
+      .map(a => ({
+        id:             String(a.id),
+        account_number: a.account_number,
+        typeCompte:     a.account_type ?? a.typeCompte ?? '',
+        soldeActuel:    Number(a.balance ?? a.soldeActuel ?? 0) || 0,
+        account_status: a.account_status ?? '',
+      }));
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible de charger les comptes de ce membre'));
+  }
 };
-// export async function fetchAccountsByMember(memberId: string): Promise<CaisseAccountOption[]> {
-//   try {
-//     const { data } = await AxiosInstance.get('/accounts/', { params: { member: memberId } });
-//     const raw  = Array.isArray(data) ? data : data?.results ?? [];
-//     // Filtre côté front aussi : si Django ignore ?member=, on reçoit tous les comptes
-//     const list = raw.filter((a: any) => String(a.member) === String(memberId));
-// // ... puis ton mapping existant vers CaisseAccountOption, appliqué à `list`
-//     // const { data } = await AxiosInstance.get<CaisseAccountOption[]>(`/comptes/?membre=${memberId}`);
-//     return data;
-//   } catch (err) {
-//     throw new Error(describeError(err, "Impossible de charger les comptes de ce membre"));
-//   }
-// }
 
 // ─── Dashboard ───────────────────────────────────────────────────
 
@@ -222,7 +330,7 @@ export async function fetchDashboard(): Promise<{
     throw new Error(describeError(err, 'Impossible de charger les sessions caisse'));
   }
 
-    const [transactions, alerts] = await Promise.all([
+  const [transactions, alerts] = await Promise.all([
     fetchTransactions(),
     FEATURES.alerts ? fetchAlerts() : Promise.resolve(null),
   ]);

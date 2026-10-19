@@ -2,15 +2,15 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Eye, Edit, CheckCircle2, Clock, Check, X,
+  Eye, CheckCircle2, Clock, Check, X,
   ChevronDown, ChevronUp, ChevronsUpDown,
   Users, Banknote, FileCheck, HandCoins, MoreHorizontal,
-  Loader2, XCircle, ArrowDownLeft,
+  Loader2, XCircle, ArrowUpRight ,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface WithdrawalData {
-  id:                   number;
+  id:                   string;
   idCompte:             string;
   codeAutorisation:     string;
   montantTransaction:   number;
@@ -26,15 +26,13 @@ export interface WithdrawalData {
   caisse_numero:        string;
   caisse_id:            string;
   session_id:           string;
-  session_statut:       'ouverte' | 'fermée';
 }
 
 interface WithdrawalTableProps {
   withdrawals: WithdrawalData[];
   loading?:    boolean;
   onView:      (w: WithdrawalData) => void;
-  onEdit:      (w: WithdrawalData) => void;
-  onExport:    (ids: number[]) => Promise<void>;
+  onExport?: (ids: string[]) => void | Promise<void>;
 }
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -79,7 +77,7 @@ function SortIcon({ field, sortField, sortDir }: { field: string; sortField: str
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function WithdrawalTable({
-  withdrawals, loading = false, onView, onEdit, onExport,
+  withdrawals, loading = false, onView, onExport,
 }: WithdrawalTableProps) {
 
   // ── Tri ───────────────────────────────────────────────────────
@@ -92,8 +90,7 @@ export default function WithdrawalTable({
   };
 
   // ── Sélection ─────────────────────────────────────────────────
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   // ── Liste triée ───────────────────────────────────────────────
   const sorted = useMemo(() => [...withdrawals].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -110,7 +107,7 @@ export default function WithdrawalTable({
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
   const someSelected = selected.size > 0 && !allSelected;
   const toggleAll    = () => allSelected ? setSelected(new Set()) : setSelected(new Set(sorted.map(w => w.id)));
-  const toggleRow    = (id: number) => {
+  const toggleRow    = (id: string) => {
     const s = new Set(selected);
     s.has(id) ? s.delete(id) : s.add(id);
     setSelected(s);
@@ -139,12 +136,14 @@ export default function WithdrawalTable({
             </span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => onExport([...selected])}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
-            >
-              Exporter la sélection
-            </button>
+            {onExport && (
+              <button
+                onClick={() => onExport([...selected])}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
+              >
+                Exporter la sélection
+              </button>
+            )}
             <button
               onClick={() => setSelected(new Set())}
               className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all"
@@ -200,7 +199,7 @@ export default function WithdrawalTable({
         {!loading && sorted.length === 0 && (
           <div className="flex flex-col items-center justify-center py-14 text-center">
             <div className="w-14 h-14 rounded-full bg-[#DDEAD5] flex items-center justify-center mb-3">
-              <ArrowDownLeft className="w-7 h-7 text-[#2E7D32]" />
+              <ArrowUpRight   className="w-7 h-7 text-[#2E7D32]" />
             </div>
             <p className="text-sm font-semibold text-gray-900 mb-1">Aucun retrait trouvé</p>
             <p className="text-xs text-gray-400">Modifiez vos critères pour voir plus de résultats</p>
@@ -208,8 +207,10 @@ export default function WithdrawalTable({
         )}
 
         {!loading && sorted.map((w, i) => {
-          const cfg        = STATUS_CFG[w.status];
-          const sub        = SUBTYPE_CFG[w.withdrawalSubtype];
+          const cfg     = STATUS_CFG[w.status] ?? STATUS_CFG.en_attente;
+          const sub     = SUBTYPE_CFG[w.withdrawalSubtype] ?? SUBTYPE_CFG.other;
+          // const cfg        = STATUS_CFG[w.status];
+          // const sub        = SUBTYPE_CFG[w.withdrawalSubtype];
           const SubIcon    = sub.icon;
           const isSelected = selected.has(w.id);
 
@@ -295,13 +296,7 @@ export default function WithdrawalTable({
                 >
                   <Eye className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  title="Modifier"
-                  onClick={() => onEdit(w)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32] transition-colors"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                </button>
+                
               </div>
             </div>
           );

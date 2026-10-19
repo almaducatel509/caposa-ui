@@ -2,80 +2,69 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  TrendingDown, ArrowLeft, CreditCard, Banknote,
-  Landmark, User, Hash, FileText, ShieldCheck,
+  CreditCard, Banknote, User, FileText, ShieldCheck,
   CheckCircle2, AlertTriangle, Loader2, Search,
-  X, ChevronDown, RefreshCw,
-  ArrowDownCircle,
+  X, ChevronDown, ArrowDownCircle,
 } from 'lucide-react';
 import { MemberOption } from '../../members/validations';
-import WithdrawalReceipt from './WithdrawalReceipt';
 import { WithdrawalFormValidated, withdrawalSchema } from '../validation/withdrawal';
-
+import WithdrawalReceipt, { type WithdrawalApiResult } from './WithdrawalReceipt';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+type AccountStatus = 'actif' | 'gele' | 'ferme' | 'en_attente' | 'archive';
 
 interface AccountOption {
-  id:             string;
-  account_number: string;
+  id:             string;   // UUID — c'est lui qui part au backend
+  account_number: string;   // affichage uniquement
   typeCompte:     'epargne' | 'cheques' | 'terme';
   soldeActuel:    number;
-  account_status:   'actif' | 'suspendu' | 'ferme';
+  account_status: AccountStatus;
 }
 
 export interface WithdrawalFormProps {
-  members?:   MemberOption[];
-  onSubmit:  (data: WithdrawalFormValidated) => Promise<void>;
-  onCancel:  () => void;
-  isLoading?: boolean;
+  members:             MemberOption[];
+  fetchMemberAccounts: (memberId: string) => Promise<any[]>;
+  onSubmit: (data: WithdrawalFormValidated) => Promise<WithdrawalApiResult>;
+  onCancel:            () => void;
+  isLoading?:          boolean;
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const SUBTYPE_CFG = {
-  counter:           { icon: Banknote,      label: 'Comptoir',          desc: 'Espèces remises au guichet',  delay: 'Immédiat'  },
-  check:             { icon: FileText,      label: 'Chèque',            desc: 'Émission d\'un chèque',       delay: '1–2 jours' },
-  loan_disbursement: { icon: Landmark,      label: 'Décaissement prêt', desc: 'Déblocage de fonds de prêt',  delay: 'Immédiat'  },
-  other:             { icon: TrendingDown,  label: 'Autre',             desc: 'Cas particulier',             delay: 'Variable'  },
-} as const;
 
 const TYPE_LABEL: Record<string, { label: string; bg: string; text: string }> = {
-  epargne: { label: 'Épargne',  bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]'  },
-  cheques: { label: 'Chèques', bg: 'bg-blue-50',    text: 'text-[#355C7D]'  },
-  terme:   { label: 'Terme',   bg: 'bg-yellow-50',  text: 'text-yellow-700' },
+  epargne: { label: 'Épargne', bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]'  },
+  cheques: { label: 'Chèques', bg: 'bg-blue-50',   text: 'text-[#355C7D]'  },
+  terme:   { label: 'Terme',   bg: 'bg-yellow-50', text: 'text-yellow-700' },
+};
+
+const STATUS_LABEL: Record<AccountStatus, string> = {
+  actif:      'Actif',
+  gele:       'Gelé',
+  ferme:      'Fermé',
+  en_attente: 'En attente',
+  archive:    'Archivé',
 };
 
 const MOTIFS = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 'Urgence médicale', 'Autre'];
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_MEMBERS: MemberOption[] = [
-  { id: 'dcb21971', member_name: 'Hudson Joseph',       id_number: '555555', phone_number: '1248666' },
-  { id: 'a1b2c3d4', member_name: 'Marie Dupont',        id_number: '987654', phone_number: '3456789' },
-  { id: 'b3c4d5e6', member_name: 'Jean-Pierre Antoine', id_number: '112233', phone_number: '4567890' },
-  { id: 'c4d5e6f7', member_name: 'Roseline Pierre',     id_number: '334455', phone_number: '5678901' },
-  { id: 'd5e6f7a8', member_name: 'Claudette Moreau',    id_number: '556677', phone_number: '6789012' },
-  { id: 'e6f7a8b9', member_name: 'Réginald Beaumont',   id_number: '778899', phone_number: '7890123' },
-];
-
-const MOCK_ACCOUNTS: Record<string, AccountOption[]> = {
-  'dcb21971': [
-    { id: 'acc1', account_number: '636-922-093-4469', typeCompte: 'epargne', soldeActuel: 15000, account_status: 'actif'    },
-    { id: 'acc2', account_number: '789-123-456-7890', typeCompte: 'cheques', soldeActuel: 5500,  account_status: 'actif'    },
-    { id: 'acc3', account_number: '111-222-333-4444', typeCompte: 'terme',   soldeActuel: 25000, account_status: 'actif'    },
-    { id: 'acc4', account_number: '222-333-444-5555', typeCompte: 'epargne', soldeActuel: 1200,  account_status: 'suspendu' },
-  ],
-  'a1b2c3d4': [{ id: 'acc5', account_number: '321-654-987-0123', typeCompte: 'terme',   soldeActuel: 50000, account_status: 'actif' }],
-  'b3c4d5e6': [{ id: 'acc6', account_number: '456-789-012-3456', typeCompte: 'epargne', soldeActuel: 8750,  account_status: 'actif' }],
-  'c4d5e6f7': [{ id: 'acc7', account_number: '567-890-123-4567', typeCompte: 'cheques', soldeActuel: 2300,  account_status: 'actif' }],
-  'd5e6f7a8': [{ id: 'acc8', account_number: '678-901-234-5678', typeCompte: 'epargne', soldeActuel: 32000, account_status: 'actif' }],
-  'e6f7a8b9': [{ id: 'acc9', account_number: '890-123-456-7891', typeCompte: 'terme',   soldeActuel: 100000,account_status: 'actif' }],
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatHTG(n: number) {
-  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' HTG';
+}
+
+// Normalise la réponse de fetchMemberAccounts (API brute ou déjà mappée)
+function toAccountOption(a: any): AccountOption {
+  return {
+    id:             String(a.id),
+    account_number: a.account_number ?? '',
+    typeCompte:     a.typeCompte ?? a.account_type ?? 'epargne',
+    soldeActuel:    Number(a.soldeActuel ?? a.balance ?? 0),
+    account_status: a.account_status ?? 'en_attente',
+  };
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
 function Field({ label, required, error, hint, className = '', children }: {
   label: string; required?: boolean; error?: string; hint?: string; className?: string; children: React.ReactNode;
 }) {
@@ -123,60 +112,67 @@ function SectionHeader({ step, title, icon: Icon }: { step: number; title: strin
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
+
+const EMPTY_FORM = { idCompte: '', montantTransaction: '', motif: '', description: '' };
+
 export default function WithdrawalForm({
-  members   = MOCK_MEMBERS,
+  members,
+  fetchMemberAccounts,
   onSubmit,
   onCancel,
   isLoading = false,
 }: WithdrawalFormProps) {
 
-  // Membre / Compte — même pattern que DepositForm
   const [memberSearch,    setMemberSearch]    = useState('');
   const [memberOpen,      setMemberOpen]      = useState(false);
   const [selectedMember,  setSelectedMember]  = useState<MemberOption | null>(null);
   const [memberAccounts,  setMemberAccounts]  = useState<AccountOption[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [submittedData, setSubmittedData] = useState<WithdrawalFormValidated | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [form, setForm] = useState({
-    idCompte: '',
-    montantTransaction: '',
-    motif:              '',
-    description:        '',
-    codeAutorisation:   '',
-  });
-
-  const set = (key: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm(f => ({ ...f, [key]: e.target.value }));
-
+  const [submitted,       setSubmitted]       = useState(false);
+  const [submittedData,   setSubmittedData]   = useState<WithdrawalFormValidated | null>(null);
+  const [submitting,      setSubmitting]      = useState(false);
+  const [errors,          setErrors]          = useState<Record<string, string>>({});
+  const [form,            setForm]            = useState(EMPTY_FORM);
+  const [created, setCreated] = useState<WithdrawalApiResult | null>(null);
   const amount       = parseFloat(form.montantTransaction) || 0;
   const isBlocked    = selectedAccount !== null && selectedAccount.account_status !== 'actif';
   const insufficient = selectedAccount ? amount > selectedAccount.soldeActuel : false;
   const needsVerif   = amount > 50000;
 
-  // Filtrage membres
-  const filteredMembers = useMemo(() =>
-    members.filter(m =>
-      m.member_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
-      m.id_number.includes(memberSearch)
-    ), [members, memberSearch]);
+  // ── Membres ─────────────────────────────────────────────────
+  const filteredMembers = useMemo(() => {
+    const q = memberSearch.toLowerCase();
+    return members.filter(m =>
+      (m.member_name ?? '').toLowerCase().includes(q) ||
+      (m.id_number ?? '').includes(memberSearch)
+    );
+  }, [members, memberSearch]);
 
-  const handleMemberSelect = (m: MemberOption) => {
+  const handleMemberSelect = async (m: MemberOption) => {
     setSelectedMember(m);
     setMemberOpen(false);
     setMemberSearch('');
     setSelectedAccount(null);
-    setMemberAccounts(MOCK_ACCOUNTS[m.id] ?? []);
-    setErrors(e => ({ ...e, member: '', account: '' }));
+    setMemberAccounts([]);
+    setForm(f => ({ ...f, idCompte: '' }));
+    setErrors(e => ({ ...e, member: '', idCompte: '' }));
+
+    setAccountsLoading(true);
+    try {
+      const list = await fetchMemberAccounts(String(m.id));
+      setMemberAccounts(list.map(toAccountOption));
+    } catch (e: any) {
+      setErrors(er => ({ ...er, idCompte: e?.message ?? 'Impossible de charger les comptes du membre.' }));
+    } finally {
+      setAccountsLoading(false);
+    }
   };
 
   const handleAccountSelect = (acc: AccountOption) => {
     if (acc.account_status !== 'actif') return;
     setSelectedAccount(acc);
-    setForm(f => ({ ...f, idCompte: acc.account_number }));
+    setForm(f => ({ ...f, idCompte: acc.id }));   // UUID, pas account_number
     setErrors(e => ({ ...e, idCompte: '' }));
   };
 
@@ -187,83 +183,73 @@ export default function WithdrawalForm({
     setForm(f => ({ ...f, idCompte: '' }));
   };
 
-  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
+  // ── Submit ──────────────────────────────────────────────────
+  const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-      console.log("🟢 Form complète :", form);
-      console.log("🟢 Valeurs importantes :", {
-        membre: selectedMember,
-        compte: selectedAccount,
-        montant: form.montantTransaction,
-        description: form.description,
-      });
-    console.log("📤 Données brutes du formulaire :", form);
+
+    const extraErrors: Record<string, string> = {};
+    if (!selectedMember) extraErrors.member = 'Sélectionnez un membre.';
+    // if (!form.motif)     extraErrors.motif  = 'Sélectionnez un motif.';
 
     const payload = {
-      idCompte:             form.idCompte,
+      idCompte:           form.idCompte,
       typeTransaction:    'WITHDRAWAL' as const,
-      codeAutorisation:   form.codeAutorisation,
       montantTransaction: amount,
-      reason:             form.description || null,
-    };                              
+      reason:             [form.motif, form.description].filter(Boolean).join(' — ') || null,
+    };
 
-  console.log("📦 Payload avant validation :", payload);
+    const result = withdrawalSchema.safeParse(payload);
 
-  const result = withdrawalSchema.safeParse(payload);
+    if (!result.success || Object.keys(extraErrors).length > 0) {
+      const fieldErrors: Record<string, string> = { ...extraErrors };
+      if (!result.success) {
+        result.error.errors.forEach(err => {
+          const key = String(err.path[0]);
+          if (!fieldErrors[key]) fieldErrors[key] = err.message;
+        });
+      }
+      setErrors(fieldErrors);
+      return;
+    }
 
-  if (!result.success) {
-    console.log("❌ Erreurs de validation :", result.error.format());
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const response = await onSubmit(result.data);
+      setCreated(response);   
+      await onSubmit(result.data);
+      setSubmittedData(result.data);
+      setSubmitted(true);
+    } catch (err: any) {
+      // ex. « Fonds insuffisants sur le compte. » renvoyé par Django
+      setErrors({ submit: err?.message ?? "Le retrait n'a pas pu être enregistré." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const fieldErrors: Record<string, string> = {};
-    result.error.errors.forEach((err) => {
-      const key = String(err.path[0]);
-      if (!fieldErrors[key]) fieldErrors[key] = err.message;
-    });
+  const handleReset = () => {
+    setSubmitted(false);
+    setSubmittedData(null);
+    setForm(EMPTY_FORM);
+    setSelectedMember(null);
+    setSelectedAccount(null);
+    setMemberAccounts([]);
+    setErrors({});
+  };
 
-    setErrors(fieldErrors);
-    return;
+   if (submitted && submittedData) {
+    return (
+      <WithdrawalReceipt
+        data={submittedData}
+        apiResponse={created}
+        memberName={selectedMember?.member_name}
+        accountLabel={selectedAccount?.account_number}
+        onReset={handleReset}
+      />
+    );
   }
-
-  console.log("✅ Données validées envoyées au backend :", result.data);
-
-  setErrors({});
-  setSubmitting(true);
-
-  try {
-    const response = await onSubmit(result.data);
-    console.log("📥 Réponse backend :", response);
-    setSubmittedData(result.data);
-    setSubmitted(true);
-  } finally {
-    setSubmitting(false);
-  }
-};
-
-const handleReset = () => {
-  setSubmitted(false);
-  setSubmittedData(null);
-  setForm({
-    idCompte: '',
-    montantTransaction: '',
-    motif:              '',
-    description:        '',
-    codeAutorisation:   '',
-  });
-  setSelectedMember(null);
-  setSelectedAccount(null);
-  setMemberAccounts([]);
-  setErrors({});
-};
-
-if (submitted && submittedData) {
-  return (
-    <WithdrawalReceipt
-      data={submittedData}
-      memberName={selectedMember?.member_name}
-      onReset={handleReset}
-    />
-  );
-}
-  // ── Formulaire ──────────────────────────────────────────────────────────────
+  // ── Formulaire ──────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
 
@@ -271,11 +257,14 @@ if (submitted && submittedData) {
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={1} title="Membre et compte à débiter" icon={User} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Dropdown membre */}
-          <Field label="Membre" required error={errors.member}>
-            <div className="relative">
-              <button type="button" onClick={() => setMemberOpen(o => !o)}
-                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm text-left transition-all
+
+          {/* Membre */}
+            <Field label="Motif" hint="Optionnel" error={errors.motif}>            
+              <div className="relative">
+              <div role="button" tabIndex={0}
+                onClick={() => setMemberOpen(o => !o)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setMemberOpen(o => !o); }}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm text-left transition-all cursor-pointer
                   ${selectedMember ? 'border-[#2E7D32] bg-[#DDEAD5]/30' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <span className={`flex-1 truncate ${selectedMember ? 'font-medium text-gray-800' : 'text-gray-400'}`}>
@@ -288,7 +277,7 @@ if (submitted && submittedData) {
                     </button>
                   : <ChevronDown className="w-4 h-4 text-gray-400" />
                 }
-              </button>
+              </div>
 
               {memberOpen && (
                 <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
@@ -308,7 +297,7 @@ if (submitted && submittedData) {
                           <button key={m.id} type="button" onClick={() => handleMemberSelect(m)}
                             className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#DDEAD5]/30 transition-colors text-left">
                             <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
-                              <span className="text-xs font-bold text-[#2E7D32]">{m.member_name[0]}</span>
+                              <span className="text-xs font-bold text-[#2E7D32]">{(m.member_name ?? '?')[0]}</span>
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-800">{m.member_name}</p>
@@ -331,22 +320,29 @@ if (submitted && submittedData) {
           </Field>
 
           {/* Compte à débiter */}
-          <Field label="Compte à débiter" required error={errors.account}
+          <Field label="Compte à débiter" required error={errors.idCompte}
             hint={!selectedMember ? "Sélectionnez un membre d'abord" : undefined}>
-            <StyledInput
-              placeholder="Ex: 636-922-093-4469"
-              hasError={!!errors.account}
-              disabled={!selectedMember}
-              value={selectedAccount?.account_number ?? ''}
-              onChange={e => {
-                const match = memberAccounts.find(a => a.account_number === e.target.value);
-                if (match) handleAccountSelect(match);
-              }}
-            />
-            {memberAccounts.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-1">
+
+            {!selectedMember && (
+              <StyledInput disabled placeholder="Ex: 636-922-093-4469" value="" readOnly />
+            )}
+
+            {selectedMember && accountsLoading && (
+              <div className="flex items-center gap-2 px-3 py-2.5 text-xs text-gray-400">
+                <Loader2 className="w-4 h-4 animate-spin text-[#2E7D32]" /> Chargement des comptes…
+              </div>
+            )}
+
+            {selectedMember && !accountsLoading && memberAccounts.length === 0 && !errors.idCompte && (
+              <p className="px-3 py-2.5 text-xs text-gray-400 bg-[#F9F9F6] rounded-xl border border-gray-100">
+                Aucun compte pour ce membre.
+              </p>
+            )}
+
+            {!accountsLoading && memberAccounts.length > 0 && (
+              <div className="flex flex-col gap-1.5">
                 {memberAccounts.map(acc => {
-                  const tCfg  = TYPE_LABEL[acc.typeCompte];
+                  const tCfg  = TYPE_LABEL[acc.typeCompte] ?? TYPE_LABEL.epargne;
                   const isAct = acc.account_status === 'actif';
                   const isSel = selectedAccount?.id === acc.id;
                   return (
@@ -362,8 +358,12 @@ if (submitted && submittedData) {
                         <p className="text-xs text-gray-400">{formatHTG(acc.soldeActuel)}</p>
                       </div>
                       <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${tCfg.bg} ${tCfg.text}`}>{tCfg.label}</span>
-                      {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">Suspendu</span>}
-                      {isSel  && <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />}
+                      {!isAct && (
+                        <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-500">
+                          {STATUS_LABEL[acc.account_status] ?? acc.account_status}
+                        </span>
+                      )}
+                      {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />}
                     </button>
                   );
                 })}
@@ -376,15 +376,17 @@ if (submitted && submittedData) {
       {/* ── 2. Montant + Motif ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={2} title="Montant et motif" icon={Banknote} />
-      {/* // Partout où tu as md:grid-cols-2, change en sm:grid-cols-2 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Montant (HTG)" required error={errors.amount}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Montant (HTG)" required error={errors.montantTransaction}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">HTG</span>
-              <StyledInput type="number" min={1} placeholder="0" hasError={!!errors.amount}
+              <StyledInput type="number" min={1} placeholder="0" hasError={!!errors.montantTransaction}
                 className="pl-12 text-right font-mono text-base font-bold"
                 value={form.montantTransaction}
-                onChange={e => { setForm(f => ({ ...f, montantTransaction: e.target.value })); setErrors(er => ({ ...er, amount: '' })); }} />
+                onChange={e => {
+                  setForm(f => ({ ...f, montantTransaction: e.target.value }));
+                  setErrors(er => ({ ...er, montantTransaction: '' }));
+                }} />
             </div>
             {amount > 0 && (
               <p className={`text-xs font-semibold text-right ${insufficient ? 'text-red-500' : 'text-red-600'}`}>
@@ -395,7 +397,8 @@ if (submitted && submittedData) {
           </Field>
 
           <Field label="Motif" required error={errors.motif}>
-            <select value={form.motif} onChange={set('motif')}
+            <select value={form.motif}
+              onChange={e => { setForm(f => ({ ...f, motif: e.target.value })); setErrors(er => ({ ...er, motif: '' })); }}
               className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none transition-all appearance-none bg-white
                 focus:ring-2 focus:ring-[#DDEAD5] focus:border-[#2E7D32]
                 ${errors.motif ? 'border-red-300' : 'border-gray-200 hover:border-gray-300'}`}>
@@ -404,7 +407,7 @@ if (submitted && submittedData) {
             </select>
           </Field>
 
-          <Field label="Description" hint="Optionnel" className="md:col-span-2">
+          <Field label="Description" hint="Optionnel" className="sm:col-span-2">
             <div className="relative">
               <FileText className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <StyledInput placeholder="Notes complémentaires…" className="pl-9"
@@ -439,37 +442,37 @@ if (submitted && submittedData) {
           </div>
         )}
 
-        {amount > 50000 && (
+        {needsVerif && (
           <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-yellow-50 border border-yellow-100 rounded-xl">
             <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
             <p className="text-xs text-yellow-700 font-medium">Montant &gt; 50 000 HTG — validation superviseur requise.</p>
           </div>
         )}
-        {isBlocked && (
-          <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
-            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-red-600 font-medium">Ce compte est suspendu — les retraits ne sont pas autorisés.</p>
-          </div>
-        )}
       </div>
 
-      {/* ── 3. Autorisation superviseur ── */}
-      
+      {/* ── Erreur backend ── */}
+      {errors.submit && (
+        <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl">
+          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-600 font-medium">{errors.submit}</p>
+        </div>
+      )}
+
       {/* ── Footer ── */}
-     <div className="flex items-center justify-between gap-3 pt-1">
+      <div className="flex items-center justify-between gap-3 pt-1">
         <button type="button" onClick={onCancel}
           className="px-4 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
           Annuler
         </button>
-        <button type="submit" disabled={submitting || isLoading || isBlocked}
+        <button type="submit" disabled={submitting || isLoading || isBlocked || insufficient}
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           {submitting || isLoading
-            ? <div><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</div>
-            : <div><ArrowDownCircle className="w-4 h-4" /> Enregistrer le dépôt</div>
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
+            : <><ArrowDownCircle className="w-4 h-4" /> Enregistrer le retrait</>
           }
         </button>
       </div>
-      
+
     </form>
   );
 }

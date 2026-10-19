@@ -1,101 +1,131 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { TrendingDown, X } from 'lucide-react';
-
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { TrendingDown, X, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import { getWithdrawals, createWithdrawal } from '@/app/lib/api/caisse';
 import WithdrawalTable, { WithdrawalData } from './WithdrawalTable';
 import WithdrawalFilterBar from './WithdrawalFilterBar';
 import WithdrawalForm from './WithdrawalForm';
-import EditWithdrawalModal from './EditWithdrawalModal';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 import { WithdrawalFormValidated } from '../validation/withdrawal';
+import { fetchMembers, fetchMemberAccounts } from '@/app/lib/api/members';
+// import { fetchMembers } from '@/app/lib/api/members';
 
-// ─── Mock data ────────────────────────────────────────────────────
+// ─── Mapping API (TransactionSerializer) → WithdrawalData ────────
 
-function generateMockWithdrawals(daysBack: number): WithdrawalData[] {
-  const subtypes: WithdrawalData['withdrawalSubtype'][] = ['counter', 'counter', 'counter', 'check', 'loan_disbursement', 'other'];
-  const statuses: WithdrawalData['status'][]            = ['decaisse', 'decaisse', 'decaisse', 'en_attente', 'en_cours', 'echoue'];
-  const members   = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont'];
-  const motifs    = ['Achat fournitures', 'Paiement facture', 'Dépenses courantes', 'Urgence médicale', 'Autre'];
-  const employes  = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
-  const supers    = ['Marie-Ange Celestin', 'Réginald Toussaint'];
-  const caisses   = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }];
+const STATUS_FROM_API: Record<string, WithdrawalData['status']> = {
+  completed: 'decaisse',
+  pending:   'en_attente',
+  failed:    'echoue',
+  cancelled: 'annule',
+};
 
-  const data: WithdrawalData[] = [];
-  let attempts = 0, i = 0;
+const SUBTYPE_FROM_METHOD: Record<string, WithdrawalData['withdrawalSubtype']> = {
+  cash:     'counter',
+  check:    'check',
+  transfer: 'other',
+};
 
-  while (i < 60 && attempts < 200) {
-    const date = new Date();
-    date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
-    if (date.getDay() === 0 || date.getDay() === 6) { attempts++; continue; }
-    date.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
+function mapApiWithdrawal(t: any): WithdrawalData {
+  return {
+    id:                   String(t.id),
+    idCompte:             t.account_number ?? '',
+    codeAutorisation:     t.reference ?? '',
+    montantTransaction:   Number(t.amount ?? 0),
+    withdrawalSubtype:    SUBTYPE_FROM_METHOD[t.method] ?? 'counter',
+    motif:                t.reason ?? '',
+    description:          t.note ?? '',
+    requiresVerification: t.method === 'check',
+    status:               STATUS_FROM_API[t.status] ?? 'en_attente',
+    created_at:           t.created_at,
+    member_name:          t.member_name ?? '',
+    processed_by:         t.created_by != null ? String(t.created_by) : '',
+    validated_by:         '',
+    caisse_numero:        t.caisse_numero ?? '',
+    caisse_id:            '',
+    session_id:           t.session_id ?? '',
+  };
+}
 
-    const subtype = subtypes[Math.floor(Math.random() * subtypes.length)];
-    const amount  = Math.floor(Math.random() * 50000) + 500;
-    const caisse  = caisses[Math.floor(Math.random() * caisses.length)];
-    const status  = statuses[Math.floor(Math.random() * statuses.length)];
+// const isWithdrawal = (t: any) => t.transaction_type === 'WITHDRAWAL';
 
-    data.push({
-      id:                   i + 1,
-      idCompte:             `ACC${1000 + i}`,
-      codeAutorisation:     `AUTHW${100000 + i}`,
-      montantTransaction:   amount,
-      withdrawalSubtype:    subtype,
-      motif:                motifs[Math.floor(Math.random() * motifs.length)],
-      requiresVerification: amount > 50000 || subtype === 'check',
-      status,
-      created_at:           date.toISOString(),
-      member_name:          members[Math.floor(Math.random() * members.length)],
-      processed_by:         employes[Math.floor(Math.random() * employes.length)],
-      validated_by:         supers[Math.floor(Math.random() * supers.length)],
-      caisse_numero:        caisse.numero,
-      caisse_id:            caisse.id,
-      session_id:           `SES-${1000 + i}`,
-      session_statut:       status === 'decaisse' || status === 'annule' ? 'fermée' : 'ouverte',
-    });
-    i++; attempts++;
-  }
-  return data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+// ─── Période → date de début ─────────────────────────────────────
+
+function periodStart(period: 'day' | 'week' | 'month'): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (period === 'week')  d.setDate(d.getDate() - 6);
+  if (period === 'month') d.setDate(d.getDate() - 29);
+  return d;
 }
 
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function WithdrawalDashboard() {
-  const [period,       setPeriod]       = useState<'day' | 'week' | 'month'>('week');
-  const [loading,      setLoading]      = useState(false);
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [detailTx,     setDetailTx]     = useState<TransactionDetail | null>(null);
-  const [editTarget,   setEditTarget]   = useState<WithdrawalData | null>(null);
+  const [period,    setPeriod]    = useState<'day' | 'week' | 'month'>('week');
+  const [data,      setData]      = useState<WithdrawalData[]>([]);
+  const [members,   setMembers]   = useState<any[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
 
   // ── Filtres ─────────────────────────────────────────────────
   const [search,         setSearch]         = useState('');
   const [selectedType,   setSelectedType]   = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Regénère les données quand la période change
-  const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
-  const data     = useMemo(() => generateMockWithdrawals(daysBack), [period]);
+  // ── Chargement ──────────────────────────────────────────────
+  const loadWithdrawals = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await getWithdrawals();
+      setData(
+        list
+          .map(mapApiWithdrawal)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      );
+    } catch (e: any) {
+      setError(e?.message ?? 'Impossible de charger les retraits.');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadWithdrawals(); }, [loadWithdrawals]);
+
+  useEffect(() => {
+    fetchMembers()
+      .then((list: any[]) =>
+        setMembers(list.map(m => ({
+          ...m,
+          member_name: m.member_name ?? [m.first_name, m.last_name].filter(Boolean).join(' '),
+          id_number:   String(m.id_number ?? ''),
+        }))),
+      )
+      .catch((e: any) => setError(e?.message ?? 'Impossible de charger les membres.'));
+  }, []);
 
   // ── Filtrage ────────────────────────────────────────────────
   const filteredWithdrawals = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q     = search.trim().toLowerCase();
+    const start = periodStart(period).getTime();
     return data.filter(w => {
+      if (new Date(w.created_at).getTime() < start)                            return false;
       if (selectedType   !== 'all' && w.withdrawalSubtype !== selectedType)   return false;
       if (selectedStatus !== 'all' && w.status            !== selectedStatus) return false;
       if (q) {
-        const haystack = [
-          w.codeAutorisation,
-          w.idCompte,
-          w.member_name,
-          w.motif,
-        ].filter(Boolean).join(' ').toLowerCase();
+        const haystack = [w.codeAutorisation, w.idCompte, w.member_name, w.motif]
+          .filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [data, search, selectedType, selectedStatus]);
+  }, [data, period, search, selectedType, selectedStatus]);
 
-  // ── Handlers ──────────────────────────────────────────────────
+  // ── Handlers ────────────────────────────────────────────────
   const handleView = (w: WithdrawalData) => {
     setDetailTx({
       id:                   w.id,
@@ -118,26 +148,27 @@ export default function WithdrawalDashboard() {
     });
   };
 
-  const handleEditSuccess = (updated: WithdrawalData) => {
-    // TODO API : rafraîchir la liste depuis le serveur
-    console.log('Retrait mis à jour :', updated);
+  // const handleWithdrawalSubmit = async (form: WithdrawalFormValidated) => {
+  //   // Les erreurs (ex. « Fonds insuffisants ») remontent au WithdrawalForm.
+  //   await createTransaction({
+  //     transaction_type: 'WITHDRAWAL',
+  //     account:          form.idCompte,          // UUID du compte, pas account_number
+  //     amount:           form.montantTransaction,
+  //     reason:           form.reason,
+  //     method:           'cash',
+  //   } as any);
+  //   setModalOpen(false);
+  //   await loadWithdrawals();
+  // };
+  const handleWithdrawalSubmit = async (form: WithdrawalFormValidated) => {
+    const result = await createWithdrawal({
+      account: form.idCompte,
+      amount:  form.montantTransaction,
+      reason:  form.reason,
+    });
+    loadWithdrawals();
+    return result;
   };
-
-  const handleExport = async (ids: number[]) => {
-    // TODO : appel API export CSV
-    console.log('Exporter les IDs :', ids);
-  };
-
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 800);
-  };
-
-  const handleWithdrawalSubmit = async (data: WithdrawalFormValidated) => {
-    console.log('Mock submit:', data);
-    await new Promise(r => setTimeout(r, 500));
-  };
-
   return (
     <div className="min-h-screen bg-[#F9F9F6] p-6 flex flex-col gap-6">
 
@@ -145,14 +176,29 @@ export default function WithdrawalDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center">
-              <TrendingDown className="w-5 h-5 text-white" />
-            </div>
+           <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center">
+              <ArrowUpRight className="w-5 h-5 text-white" />
+           </div>
+
             <h1 className="text-3xl font-bold text-gray-900">Retraits</h1>
           </div>
           <p className="text-sm text-gray-500 ml-12">Gestion et suivi des retraits membres</p>
         </div>
       </div>
+
+      {/* ── Erreur API ── */}
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+          <div className="flex-1 text-sm text-red-700">{error}</div>
+          <button
+            onClick={loadWithdrawals}
+            className="text-sm font-semibold text-red-700 hover:underline"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* ── Barre de filtres ── */}
       <WithdrawalFilterBar
@@ -168,19 +214,15 @@ export default function WithdrawalDashboard() {
         onStatusChange={setSelectedStatus}
         onPeriodChange={setPeriod}
         onAdd={() => setModalOpen(true)}
-        onRefresh={handleRefresh}
+        onRefresh={loadWithdrawals}
         withdrawals={filteredWithdrawals}
       />
-
-      {/* ── Table ── */}
+            {/* ── Table ── */}
       <WithdrawalTable
         withdrawals={filteredWithdrawals}
         loading={loading}
         onView={handleView}
-        onEdit={w => setEditTarget(w)}
-        onExport={handleExport}
       />
-
       {/* ── Modal Nouveau retrait ── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10">
@@ -203,22 +245,15 @@ export default function WithdrawalDashboard() {
               </button>
             </div>
             <div className="p-5 overflow-y-auto max-h-[80vh]">
-              <WithdrawalForm 
-                onCancel={() => setModalOpen(false)} 
-                onSubmit={ handleWithdrawalSubmit}                            
+              <WithdrawalForm
+                members={members}
+                fetchMemberAccounts={fetchMemberAccounts}
+                onCancel={() => setModalOpen(false)}
+                onSubmit={handleWithdrawalSubmit}
               />
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── Modal Edit ── */}
-      {editTarget && (
-        <EditWithdrawalModal
-          withdrawal={editTarget}
-          onClose={() => setEditTarget(null)}
-          onSuccess={handleEditSuccess}
-        />
       )}
 
       {/* ── Modal Détail ── */}

@@ -1,143 +1,184 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { ArrowLeftRight, X } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ArrowLeftRight, X, AlertTriangle } from 'lucide-react';
 
 import TransferTable from './TransferTable';
-import TransferForm from './TransferForm';
+import TransferForm, { TransferSubmitInput } from './TransferForm';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
-import EditTransferModal from './EditTransferModal';
 import TransferFilterBar from './TransferFilterBar';
-import type {
-  TransferData,
-  TransferType,
-  TransferStatus,
-} from '../validation/transfert';
+import type { TransferData, TransferStatus } from '../validation/transfert';
+import type { MemberOption } from '../../members/validations';
+import type { AccountOption } from '../../accounts/validationsaccount';
+import {
+  getTransfers,
+  createTransfer,
+  fetchAllAccounts,
+  fetchAccountsByMember,
+  type TransferApiResult,
+} from '@/app/lib/api/caisse';
+import { fetchMembers } from '@/app/lib/api/members';
 
-// ─── Mock data ────────────────────────────────────────────────────
-// 🏛️ Valeurs officielles CAPOSA :
-//   types   : 'interne' | 'externe'
-//   statuts : 'approuve' | 'en_attente' | 'en_cours' | 'echoue' | 'annule'
+// Règle métier : un transfert n'est jamais modifié.
+// Pour le défaire, on crée simplement un nouveau transfert en sens inverse.
 
-function generateMockTransfers(daysBack: number): TransferData[] {
-  // Distribution réaliste : 70% interne, 30% externe
-  const types: TransferType[] = [
-    'interne', 'interne', 'interne', 'interne', 'interne',
-    'externe', 'externe',
-  ];
+// ─── Mappers API → Front ──────────────────────────────────────────
 
-  // Distribution réaliste : majorité approuvée
-  const statuses: TransferStatus[] = [
-    'approuve', 'approuve', 'approuve', 'approuve',
-    'en_attente', 'en_cours', 'echoue', 'annule',
-  ];
+/** ⚠️ À aligner sur les choices réels de Transaction.status (models.py). */
+const STATUS_MAP: Record<string, TransferStatus> = {
+  completed: 'approuve',  approved:  'approuve', success: 'approuve',
+  pending:   'en_attente',
+  processing:'en_cours',
+  failed:    'echoue',    rejected:  'echoue',
+  cancelled: 'annule',    canceled:  'annule',
+};
 
-  const members = [
-    { id: 'MEM001', name: 'Hudson Joseph'       },
-    { id: 'MEM002', name: 'Marie Dupont'        },
-    { id: 'MEM003', name: 'Jean-Pierre Antoine' },
-    { id: 'MEM004', name: 'Roseline Pierre'     },
-    { id: 'MEM005', name: 'Claudette Moreau'    },
-    { id: 'MEM006', name: 'Réginald Beaumont'   },
-    { id: 'MEM007', name: 'Nadège Thermidor'    },
-    { id: 'MEM008', name: 'Wilgens Désir'       },
-  ];
-  const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
-  const supers   = ['Marie-Ange Celestin', 'Réginald Toussaint'];
-  const caisses  = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }];
+function mapTransferStatus(raw?: string | null): TransferStatus {
+  const key = String(raw ?? '').toLowerCase();
+  const mapped = STATUS_MAP[key];
+  if (!mapped) console.warn('[transferts] statut backend inconnu :', raw);
+  return mapped ?? 'en_attente';
+}
 
-  const data: TransferData[] = [];
-  let attempts = 0, i = 0;
+/** Membre API → MemberOption (même forme que pour les dépôts). */
+function toMemberOption(m: any): MemberOption {
+  return {
+    id:          String(m.id),
+    member_name: m.full_name ?? `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(),
+    id_number:   m.id_number ?? '',
+  } as MemberOption;
+}
 
-  while (i < 60 && attempts < 200) {
-    const date = new Date();
-    date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
-    if (date.getDay() === 0 || date.getDay() === 6) { attempts++; continue; }
-    date.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
+type AccountRef = { id: string; member: string; account_number: string };
 
-    const type     = types[Math.floor(Math.random() * types.length)];
-    const status   = statuses[Math.floor(Math.random() * statuses.length)];
-    const caisse   = caisses[Math.floor(Math.random() * caisses.length)];
-    const initiator = members[Math.floor(Math.random() * members.length)];
+function mapApiTransfer(
+  tx: TransferApiResult,
+  accountById: Map<string, AccountRef>,
+  memberById: Map<string, MemberOption>,
+): TransferData {
+  const src = accountById.get(String(tx.account));
+  const dst = accountById.get(String(tx.to_account));
+  const srcMember = src ? memberById.get(src.member) : undefined;
+  const dstMember = dst ? memberById.get(dst.member) : undefined;
 
-    // Pour 'externe' : on choisit un AUTRE membre comme destinataire
-    // Pour 'interne' : c'est le même membre, deux comptes différents
-    let destination: { id: string; name: string } | undefined;
-    if (type === 'externe') {
-      do {
-        destination = members[Math.floor(Math.random() * members.length)];
-      } while (destination.id === initiator.id);
-    }
+  return {
+    id:                  tx.id,
+    id_member:           src?.member ?? '',
+    member_name:         srcMember?.member_name ?? '—',
+    account_source:      tx.account_number    ?? src?.account_number ?? String(tx.account ?? ''),
+    account_destination: tx.to_account_number ?? dst?.account_number ?? String(tx.to_account ?? ''),
+    destination_name:    dstMember?.member_name,
+    // même membre → interne ; deux membres différents → externe
+    typeTransfert:       src && dst && src.member === dst.member ? 'interne' : 'externe',
+    montant:             Number(tx.amount) || 0,
+    reference:           tx.reference_number ?? tx.reference ?? undefined,
+    description:         tx.description ?? undefined,
+    status:              mapTransferStatus(tx.status),
+    created_at:          tx.created_at,
+    dateTransfert:       tx.transaction_date ?? tx.created_at,
+    processed_by:        tx.created_by != null ? String(tx.created_by) : undefined,
+    session_id:          tx.session != null ? String(tx.session) : undefined,
+  } as TransferData;
+}
 
-    data.push({
-      id:         10000 + i,
-      id_member:           initiator.id,
-      member_name:         initiator.name,
-      account_source:      `ACC${1000 + i}`,
-      account_destination: type === 'externe' ? `ACC${5000 + i}` : `ACC${2000 + i}`,
-      destination_name:    destination?.name,
-      typeTransfert:       type,
-      montant:             Math.floor(Math.random() * 80000) + 1000,
-      reference:           `VIR-${String(i + 1).padStart(4, '0')}`,
-      status,
-      created_at:          date.toISOString(),
-      dateTransfert:       date.toISOString(),
-      processed_by:        employes[Math.floor(Math.random() * employes.length)],
-      validated_by:        supers[Math.floor(Math.random() * supers.length)],
-      caisse_numero:       caisse.numero,
-      caisse_id:           caisse.id,
-      session_id:          `SES-${1000 + i}`,
-    });
-    i++; attempts++;
-  }
-  return data.sort(
-    (a, b) =>
-      new Date(b.created_at ?? b.dateTransfert ?? 0).getTime() -
-      new Date(a.created_at ?? a.dateTransfert ?? 0).getTime()
-  );
+function periodStart(period: 'day' | 'week' | 'month'): Date {
+  const d = new Date();
+  if (period === 'day') { d.setHours(0, 0, 0, 0); return d; }
+  d.setDate(d.getDate() - (period === 'week' ? 7 : 30));
+  return d;
 }
 
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function TransferDashboard() {
-  const [detailTx,   setDetailTx]   = useState<TransactionDetail | null>(null);
-  const [editTarget, setEditTarget] = useState<TransferData | null>(null);
-  const [overrides,  setOverrides]  = useState<Record<string, TransferData>>({});
+  const [detailTx,  setDetailTx]  = useState<TransactionDetail | null>(null);
+
+  const [transfers, setTransfers] = useState<TransferData[]>([]);
+  const [members,   setMembers]   = useState<MemberOption[]>([]);
+  const [loadError, setLoadError] = useState('');
 
   const [period,         setPeriod]         = useState<'day' | 'week' | 'month'>('week');
-  const [loading,        setLoading]        = useState(false);
+  const [loading,        setLoading]        = useState(true);
   const [search,         setSearch]         = useState('');
   const [selectedType,   setSelectedType]   = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [modalOpen,      setModalOpen]      = useState(false);
 
-  // ── Données ───────────────────────────────────────────────────
-  const daysBack  = period === 'day' ? 1 : period === 'week' ? 7 : 30;
-  const transfers = useMemo(
-    () => generateMockTransfers(daysBack).map(t => overrides[t.id] ?? t),
-    [daysBack, overrides],
-  );
+  // ── Chargement API (aucun fallback mock) ─────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const [rawTransfers, accounts, rawMembers] = await Promise.all([
+        getTransfers(),
+        fetchAllAccounts(),
+        fetchMembers(),
+      ]);
+
+      const memberOptions = (rawMembers as any[]).map(toMemberOption);
+      const memberById    = new Map(memberOptions.map(m => [m.id, m]));
+      const accountById   = new Map(accounts.map(a => [a.id, a]));
+
+      setMembers(memberOptions);
+      setTransfers(
+        rawTransfers
+          .map(tx => mapApiTransfer(tx, accountById, memberById))
+          .sort((a, b) =>
+            new Date(b.created_at ?? b.dateTransfert ?? 0).getTime() -
+            new Date(a.created_at ?? a.dateTransfert ?? 0).getTime()),
+      );
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Impossible de charger les transferts.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── Callbacks pour le formulaire ─────────────────────────────
+  const fetchMemberAccounts = useCallback(async (memberId: string): Promise<AccountOption[]> => {
+    const accounts = await fetchAccountsByMember(memberId);
+    return accounts.map(a => ({
+      id:             a.id,
+      account_number: a.account_number,
+      typeCompte:     a.typeCompte,
+      balance:        a.soldeActuel,
+      account_status: a.account_status as AccountOption['account_status'],
+    }));
+  }, []);
+
+  const submitTransfer = useCallback((input: TransferSubmitInput) =>
+    createTransfer(
+      {
+        account:     input.sourceAccountId,
+        to_account:  input.destAccountId,
+        amount:      input.amount,
+        description: input.description,
+      },
+      input.idemKey,
+    ), []);
 
   // ── Filtrage ──────────────────────────────────────────────────
   const filteredTransfers = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q     = search.trim().toLowerCase();
+    const since = periodStart(period).getTime();
+
     return transfers.filter(t => {
+      const date = new Date(t.created_at ?? t.dateTransfert ?? 0).getTime();
+      if (date < since) return false;
       if (selectedType   !== 'all' && t.typeTransfert !== selectedType)   return false;
       if (selectedStatus !== 'all' && t.status        !== selectedStatus) return false;
       if (q) {
         const haystack = [
-          t.id,
-          t.reference,
-          t.account_source,
-          t.account_destination,
-          t.member_name,
-          t.destination_name,
+          t.id, t.reference, t.account_source, t.account_destination,
+          t.member_name, t.destination_name,
         ].filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [transfers, search, selectedType, selectedStatus]);
+  }, [transfers, search, selectedType, selectedStatus, period]);
 
   // ── Handlers ──────────────────────────────────────────────────
   const handleView = (t: TransferData) => {
@@ -161,11 +202,7 @@ export default function TransferDashboard() {
     } as TransactionDetail);
   };
 
-  const handleEditSuccess = (updated: TransferData) => {
-    setOverrides(prev => ({ ...prev, [updated.id]: updated }));
-  };
-
-  const handleExport = async (ids: number[]) => {
+  const handleExport = async (ids: TransferData['id'][]) => {
     // TODO : appel API export CSV
     console.log('Exporter les IDs :', ids);
   };
@@ -186,6 +223,17 @@ export default function TransferDashboard() {
         </div>
       </div>
 
+      {/* ── Erreur de chargement ── */}
+      {loadError && (
+        <div className="flex items-start justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{loadError}</span>
+          </div>
+          <button onClick={load} className="text-xs font-semibold underline shrink-0">Réessayer</button>
+        </div>
+      )}
+
       {/* ── Barre de filtres ── */}
       <TransferFilterBar
         filterValue={search}
@@ -200,10 +248,7 @@ export default function TransferDashboard() {
         onStatusChange={setSelectedStatus}
         onPeriodChange={setPeriod}
         onAdd={() => setModalOpen(true)}
-        onRefresh={() => {
-          setLoading(true);
-          setTimeout(() => setLoading(false), 800);
-        }}
+        onRefresh={load}
         transfers={filteredTransfers}
       />
 
@@ -212,7 +257,6 @@ export default function TransferDashboard() {
         transfers={filteredTransfers}
         loading={loading}
         onView={handleView}
-        onEdit={t => setEditTarget(t)}
         onExport={handleExport}
       />
 
@@ -238,19 +282,16 @@ export default function TransferDashboard() {
               </button>
             </div>
             <div className="p-5 overflow-y-auto max-h-[80vh]">
-              <TransferForm onCancel={() => setModalOpen(false)} />
+              <TransferForm
+                members={members}
+                fetchMemberAccounts={fetchMemberAccounts}
+                onSubmit={submitTransfer}
+                onSuccess={() => load()}
+                onCancel={() => setModalOpen(false)}
+              />
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── Modal Edit ── */}
-      {editTarget && (
-        <EditTransferModal
-          transfer={editTarget}
-          onClose={() => setEditTarget(null)}
-          onSuccess={handleEditSuccess}
-        />
       )}
 
       {/* ── Modal Détail ── */}

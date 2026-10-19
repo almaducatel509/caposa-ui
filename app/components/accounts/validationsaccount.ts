@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 /* =========================================================
+Final Project\caposa-ui\app\components\accounts\validationsaccount.ts
    ENUMS / TYPES DE BASE
 ========================================================= */
 
@@ -108,6 +109,15 @@ export interface TransactionData {
   date: string;
   description?: string;
   created_at?: string;
+}
+
+/** Compte sélectionnable dans un formulaire de transaction (transfert, dépôt…). */
+export interface AccountOption {
+  id:             string;        // UUID du compte (envoyé à l'API)
+  account_number: string;
+  typeCompte:     AccountType;
+  balance:        number;
+  account_status: AccountStatus;
 }
 
 /* =========================================================

@@ -5,6 +5,7 @@ import {
   Banknote, FileCheck, ArrowLeftRight, MoreHorizontal,
   CheckCircle2, XCircle, Pencil, Download, Clock, Loader2,
   ChevronDown, ChevronsUpDown, ChevronUp, Check,
+  ArrowDownLeft,
 } from 'lucide-react';
 // import DepositExportModal from './DepositExportModal';
 import { DepositFilterPeriod, DepositFilterRange } from './DepositFilterBar';
@@ -282,14 +283,15 @@ export default function DepositTable({
           </div>
         ))}
 
-        {!loading && sorted.length === 0 && (
-          <div className="flex flex-col items-center py-14 gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#F9F9F6] border border-gray-100 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-gray-300" />
-            </div>
-            <p className="text-sm font-medium text-gray-500">Aucun dépôt trouvé</p>
+       {!loading && sorted.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-14 text-center">
+          <div className="w-14 h-14 rounded-full bg-[#DDEAD5] flex items-center justify-center mb-3">
+            <ArrowDownLeft className="w-7 h-7 text-[#2E7D32]" />
           </div>
-        )}
+          <p className="text-sm font-semibold text-gray-900 mb-1">Aucun dépôt trouvé</p>
+          <p className="text-xs text-gray-400">Modifiez vos critères pour voir plus de résultats</p>
+        </div>
+      )}
 
         {!loading && sorted.map(dep => {
           const stCfg   = STATUS_CFG[dep.status]         ?? STATUS_CFG['en_attente'];

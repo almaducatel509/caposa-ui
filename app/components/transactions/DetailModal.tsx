@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Loader2,
   Banknote, Building2, Calendar, Tag, ExternalLink,
   UserCheck, Cpu, Receipt,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { getDepositAudit } from '@/app/lib/api/deposit';
@@ -253,10 +254,10 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
         title={
       <div className=" capitalize flex items-center gap-3">
         <div className={`w-9 h-9 rounded-xl bg-linear-to-br ${kindCfg.gradient} flex items-center justify-center`}>
-          <KindIcon className="w-4 h-4 text-white" />
+          <ArrowUpRight  className="w-4 h-4 text-white" />
         </div>
         <div className='capitalize'>
-          <p className="text-sm font-bold text-gray-900">Détail — {kindCfg.label}</p>
+          <p className="text-sm font-bold text-gray-900">Détail {kindCfg.label}</p>
           <p className="text-xs text-gray-400 font-mono">
             {transaction.reference ?? `#${transaction.id}`}
           </p>

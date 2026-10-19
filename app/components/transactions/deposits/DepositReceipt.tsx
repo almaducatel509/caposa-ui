@@ -32,7 +32,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 };
 
 function formatHTG(n: number, devise = 'HTG') {
-  return new Intl.NumberFormat('fr-HT').format(n) + ' ' + devise;
+  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' ' + devise;
 }
 
 const toNumber = (v: unknown): number | null => {

@@ -4,8 +4,9 @@ import React, { useState, useMemo } from 'react';
 import {
   Search, X, ArrowDownCircle,
   Banknote, FileCheck,
-  User, CreditCard, Hash, FileText,
+  User, CreditCard, FileText,
   CheckCircle2, AlertTriangle, Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { depositSchema, DepositSubtype, type DepositFormValidated } from '../validation/deposit';
 import DepositReceipt, { DepositApiResult } from './DepositReceipt';
@@ -304,7 +305,7 @@ export default function DepositForm({
     } finally {
       setSubmitting(false);
     }
-    ;
+    
   };
 
   const handleReset = () => {
@@ -381,8 +382,8 @@ export default function DepositForm({
                 <span className={`flex-1 truncate ${selectedMember ? 'font-medium text-gray-800' : 'text-gray-400'}`}>
                   {selectedMember?.member_name ?? 'Rechercher un membre…'}
                 </span>
-                  {selectedMember ? (
-                    <div
+                 {selectedMember ? (
+                    <span
                       role="button"
                       tabIndex={0}
                       onClick={e => { e.stopPropagation(); handleClearMember(); }}
@@ -395,8 +396,10 @@ export default function DepositForm({
                       className="p-0.5 rounded-md hover:bg-[#c8e0bc] text-gray-500 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
-                    </div>
-                  ) : null}
+                    </span>
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  )}
               </button>
 
               {memberOpen && (

@@ -2,20 +2,17 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  ArrowLeftRight, Building2,
-  CheckCircle2, XCircle, AlertCircle, Download, Pencil,
-  Grid,
+  ArrowLeftRight, CheckCircle2, XCircle, AlertCircle, Download,
 } from 'lucide-react';
-import TransferExportModal from './TransferExportModal';
-import { TransferData, TransferStatus, TransferType } from '../validation/transfert';
-import { TransactionData } from '../types';
+import { TransferData, TransferStatus } from '../validation/transfert';
+
+type TransferId = TransferData['id'];
 
 interface TransferTableProps {
-  transfers: TransferData[];
-  loading:   boolean;
-  onView:    (t: TransferData) => void;
-  onEdit:    (t: TransferData) => void;
-  onExport:  (ids: number[]) => Promise<void>;
+  transfers:   TransferData[];
+  loading:     boolean;
+  onView:      (t: TransferData) => void;
+  onExport:    (ids: TransferId[]) => Promise<void>;
 }
 
 // ─── Constantes ───────────────────────────────────────────────────
@@ -34,33 +31,8 @@ const STATUS_CFG: Record<TransferStatus, { label: string; bg: string; text: stri
   annule:     { label: 'Annulé',     bg: '#F3F4F6',   text: '#6B7280',   dot: '#9CA3AF' },
 };
 
+const STATUS_FALLBACK = { label: '—', bg: '#F3F4F6', text: '#6B7280', dot: '#9CA3AF' };
 
-
-// Config alignée sur les 2 types du schema : 'interne' | 'externe'
-const TYPE_CFG: Record<TransferType, { icon: React.ElementType; label: string; color: string; bg: string }> = {
-  interne: { icon: ArrowLeftRight, label: 'Interne', color: C.green, bg: C.greenPale },
-  externe: { icon: Building2, label: 'Externe', color: C.blue, bg: '#EBF2F8' },
-  internal: {
-    icon: 'symbol',
-    label: '',
-    color: '',
-    bg: ''
-  },
-  supplier: {
-    icon: 'symbol',
-    label: '',
-    color: '',
-    bg: ''
-  },
-  loan_payment: {
-    icon: 'symbol',
-    label: '',
-    color: '',
-    bg: ''
-  }
-};
-
-// const COLS = '40px 1.4fr 1.2fr 1.2fr 1fr 1.2fr 1fr 90px';
 const GRID = '40px 1.3fr 1.2fr 1fr 0.9fr 1fr 1fr 90px';
 
 // ─── Helpers ─────────────────────────────────────────────────────
@@ -94,12 +66,17 @@ function EyeIcon() {
 
 // ─── Main ────────────────────────────────────────────────────────
 
-export default function TransferTable({ transfers, loading, onView, onEdit, onExport }: TransferTableProps) {
-   const [selected, setSelected] = useState<Set<number>>(new Set());
-// ── Tri ───────────────────────────────────────────────────────
+// Un transfert n'est jamais modifié : pas d'action d'édition.
+// Pour le défaire, on crée un nouveau transfert en sens inverse.
+export default function TransferTable({
+  transfers, loading, onView, onExport,
+}: TransferTableProps) {
+  const [selected, setSelected] = useState<Set<TransferId>>(new Set());
+
+  // ── Tri ───────────────────────────────────────────────────────
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
-  
+
   const toggleSort = (field: string) => {
     if (sortField === field) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -124,55 +101,31 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
       </button>
     );
   };
+
   const sorted = useMemo(() => [...transfers].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
-    if (sortField === 'montant')
-      return (a.montant - b.montant) * dir;
-
-    if (sortField === 'status')
-      return (a.status ?? '').localeCompare(b.status ?? '') * dir;
-
-    if (sortField === 'typeTransfert')
-      return a.typeTransfert.localeCompare(b.typeTransfert) * dir;
-
-    if (sortField === 'reference')
-      return (a.reference ?? '').localeCompare(b.reference ?? '') * dir;
-
-    if (sortField === 'description')
-      return (a.description ?? '').localeCompare(b.description ?? '') * dir;
-
-    if (sortField === 'caisse')
-      return (a.caisse_numero ?? '').localeCompare(b.caisse_numero ?? '') * dir;
-
-    if (sortField === 'created_at')
-      return (
-        new Date(a.created_at ?? 0).getTime() -
-        new Date(b.created_at ?? 0).getTime()
-      ) * dir;
-
-    if (sortField === 'dateTransfert')
-      return (
-        new Date(a.dateTransfert ?? 0).getTime() -
-        new Date(b.dateTransfert ?? 0).getTime()
-      ) * dir;
-
-    if (sortField === 'member_name')
-      return (a.member_name ?? '').localeCompare(b.member_name ?? '') * dir;
-
-    if (sortField === 'destination_name')
-      return (a.destination_name ?? '').localeCompare(b.destination_name ?? '') * dir;
-    // fallback
-    return (a.member_name ?? '').localeCompare(b.member_name ?? '') * dir;
-
+    switch (sortField) {
+      case 'montant':        return (a.montant - b.montant) * dir;
+      case 'status':         return (a.status ?? '').localeCompare(b.status ?? '') * dir;
+      case 'reference':      return (a.reference ?? '').localeCompare(b.reference ?? '') * dir;
+      case 'account_source': return (a.account_source ?? '').localeCompare(b.account_source ?? '') * dir;
+      case 'created_at':
+        return (new Date(a.created_at ?? a.dateTransfert ?? 0).getTime() -
+                new Date(b.created_at ?? b.dateTransfert ?? 0).getTime()) * dir;
+      case 'member_name':
+      default:
+        return (a.member_name ?? '').localeCompare(b.member_name ?? '') * dir;
+    }
   }), [transfers, sortField, sortDir]);
 
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
-  const pendingCount = transfers.filter(t => t.status === 'en_attente').length;
   const someSelected = selected.size > 0 && !allSelected;
+  const pendingCount = transfers.filter(t => t.status === 'en_attente').length;
 
-  const toggleAll    = () => allSelected ? setSelected(new Set()) : setSelected(new Set(sorted.map(w => w.id)));
+  const toggleAll = () =>
+    allSelected ? setSelected(new Set()) : setSelected(new Set(sorted.map(t => t.id)));
 
-  const toggleRow = (id: number) => {
+  const toggleRow = (id: TransferId) => {
     const s = new Set(selected);
     s.has(id) ? s.delete(id) : s.add(id);
     setSelected(s);
@@ -207,27 +160,25 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
       )}
 
       {/* ── En-tête colonnes ── */}
-       <div
+      <div
         className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
         style={{ display: 'grid', gridTemplateColumns: GRID }}
       >
         <div className="flex justify-center">
           <input
             type="checkbox"
-            checked={someSelected}
+            checked={allSelected}
             ref={el => { if (el) el.indeterminate = someSelected; }}
             onChange={toggleAll}
             className="w-3.5 h-3.5 rounded accent-[#2E7D32] cursor-pointer"
           />
         </div>
-        <SortHeader field="member_name" label="Membre" />
+        <SortHeader field="member_name"    label="Membre" />
         <SortHeader field="account_source" label="Comptes" />
-        <SortHeader field="reference" label="Référence" />
-        {/* <SortHeader field="typeTransfert" label="Type" /> */}
-        <SortHeader field="created_at" label="Date" />
-        <SortHeader field="status" label="Statut" />    
-        <SortHeader field="montant" label="Montant" />
-
+        <SortHeader field="reference"      label="Référence" />
+        <SortHeader field="created_at"     label="Date" />
+        <SortHeader field="montant"        label="Montant" />
+        <SortHeader field="status"         label="Statut" />
         <div className="text-xs font-semibold uppercase tracking-widest text-gray-500">Actions</div>
       </div>
 
@@ -235,10 +186,7 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
       <div className="divide-y divide-gray-50">
 
         {loading && Array.from({ length: 5 }).map((_, i) => (
-          <div 
-            key={i} className="grid items-center px-5 py-3.5"         
-            style={{ gridTemplateColumns: GRID }}
-          >
+          <div key={i} className="grid items-center px-5 py-3.5" style={{ gridTemplateColumns: GRID }}>
             {Array.from({ length: 8 }).map((_, j) => (
               <div key={j} className="h-3 w-20 bg-gray-100 animate-pulse rounded" />
             ))}
@@ -253,23 +201,18 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
             <p className="text-sm font-medium text-gray-500">Aucun virement trouvé</p>
           </div>
         )}
+
         {!loading && sorted.map(t => {
-          const stCfg     = STATUS_CFG[t.status];
-          const tpCfg     = TYPE_CFG[t.typeTransfert];
-          const TpIcon    = tpCfg.icon;
-          const isSel     = selected.has(t.id);
-          const TERMINAL  = ['approuve', 'echoue', 'annule'];
-          const canEdit   = t.status ? !TERMINAL.includes(t.status) : true;
-          const memberLbl = t.member_name ?? t.id_member;
-          const initial   = memberLbl.charAt(0).toUpperCase() || '?';
+          const stCfg       = (t.status && STATUS_CFG[t.status]) || STATUS_FALLBACK;
+          const isSel       = selected.has(t.id);
+          const memberLbl   = t.member_name ?? t.id_member ?? '—';
+          const initial     = memberLbl.charAt(0).toUpperCase() || '?';
 
           return (
             <div
               key={t.id}
               className={`grid items-center px-5 py-3 transition-colors border-l-2 ${
-                isSel
-                  ? 'bg-[#DDEAD5]/50 border-[#2E7D32]'
-                  : 'hover:bg-[#DDEAD5]/10 border-transparent'
+                isSel ? 'bg-[#DDEAD5]/50 border-[#2E7D32]' : 'hover:bg-[#DDEAD5]/10 border-transparent'
               }`}
               style={{ gridTemplateColumns: GRID }}
             >
@@ -283,7 +226,7 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
                 />
               </div>
 
-             {/* Membre */}
+              {/* Membre */}
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#DDEAD5] flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-[#2E7D32]">{initial}</span>
@@ -299,17 +242,11 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
               </div>
 
               {/* Référence */}
-              <p className="text-xs font-mono text-gray-500">{t.reference ?? '—'}</p>
+              <p className="text-xs font-mono text-gray-500 truncate">{t.reference ?? '—'}</p>
 
-              {/* Type */}
-              {/* <span
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold w-fit"
-                style={{ backgroundColor: tpCfg.bg, color: tpCfg.color }}
-              >
-                <TpIcon className="w-3 h-3 shrink-0" />{tpCfg.label}
-              </span> */}
               {/* Date */}
               <p className="text-xs text-gray-500">{formatDate(t.created_at ?? t.dateTransfert)}</p>
+
               {/* Montant */}
               <p className="text-sm font-bold text-[#355C7D]">{formatHTG(t.montant)}</p>
 
@@ -331,23 +268,6 @@ export default function TransferTable({ transfers, loading, onView, onEdit, onEx
                 >
                   <EyeIcon />
                 </button>
-                {canEdit ? (
-                  <button
-                    title="Modifier ce virement"
-                    onClick={() => onEdit(t)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    title="Statut terminal — modification impossible"
-                    disabled
-                    className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
             </div>
           );
