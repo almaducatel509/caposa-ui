@@ -33,24 +33,27 @@ import { FEATURES } from '../features';
 // ─── Helper interne ───────────────────────────────────────────────
 
 /** Message clair à partir d'une erreur Axios ou générique — jamais de silence. */
-function describeError(err: unknown, context: string): string {
-  if (isAxiosError(err)) {
-    if (!err.response) {
-      return `${context} : serveur injoignable (${err.message}).`;
+/** Message clair à partir d'une erreur Axios ou générique — jamais de silence. */
+  export function describeError(err: unknown, context: string): string {
+    if (isAxiosError(err)) {
+      if (!err.response) {
+        return `${context} : serveur injoignable (${err.message}).`;
+      }
+      const body = err.response.data as any;
+      const serverMessage =
+        body?.message ?? body?.detail ??
+        (body && typeof body === 'object'
+          ? Object.entries(body)
+              .map(([k, v]) => `${k} : ${Array.isArray(v) ? v.join(', ') : v}`)
+              .join(' · ')
+          : undefined);
+      // Retire le point final éventuel de Django avant d'ajouter le nôtre
+      const msg = String(serverMessage ?? `erreur ${err.response.status}`).replace(/\.+$/, '');
+      return `${context} : ${msg}.`;
     }
-    const body = err.response.data as any;
-    const serverMessage =
-      body?.message ?? body?.detail ??
-      (body && typeof body === 'object'
-        ? Object.entries(body)
-            .map(([k, v]) => `${k} : ${Array.isArray(v) ? v.join(', ') : v}`)
-            .join(' · ')
-        : undefined);
-    return `${context} : ${serverMessage ?? `erreur ${err.response.status}`}.`;
+    if (err instanceof Error) return `${context} : ${err.message}`;
+    return `${context} : erreur inconnue.`;
   }
-  if (err instanceof Error) return `${context} : ${err.message}`;
-  return `${context} : erreur inconnue.`;
-}
 
 /** Récupère la session active ou lève une erreur claire (aucune transaction hors session). */
 async function requireActiveSessionId(action: string): Promise<string> {

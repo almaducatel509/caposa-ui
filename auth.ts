@@ -1,11 +1,12 @@
-import { loginUser} from "@/app/lib/actions";
+import { loginUser } from "@/app/lib/actions";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { authConfig } from "./auth.config";
-// petit helper pour décoder le JWT sans dépendance externe
+import { normalizeRoles } from "@/app/lib/roles";
 //C:\Users\alma2\Documents\Final Project\caposa-ui\auth.ts
-// pour décoder un JWT dans un environnement moderne (NextAuth v5, Next.js 16, Edge Runtime).
+
+// Décode le payload d'un JWT sans dépendance externe (compatible Edge Runtime).
 export function decodeJwt<T = any>(token: string): T {
   const [, payload] = token.split(".");
 
@@ -44,65 +45,67 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         const { username, password } = parsed.data;
 
-        // 2) Login côté Django -> récupère { access, refresh }
+        // 2) Login côté Django → { access, refresh, roles }
         const result = await loginUser(username, password);
         if (!result.success) return null;
 
-        const { access, refresh } = result.details as { access: string; refresh: string };
+        const { access, refresh, roles } = result.details as {
+          access: string;
+          refresh: string;
+          roles?: unknown;
+        };
         if (!access) return null;
 
-        // 3) Décoder l’`access` pour extraire l’info utilisateur
-        //    (SimpleJWT met typiquement user_id et/ou username selon ta config)
+        // 3) Le JWT SimpleJWT ne contient que user_id (+ exp, iat…)
         const payload = decodeJwt<{ user_id?: number; username?: string }>(access);
 
-        // 4) Retourner l'objet user attendu par NextAuth username: YT1; passwd: 123456 et securepassword123 Aluser
-      //   return {
-      //    id: (payload.user_id ?? payload.username ?? username).toString(), // identifiant unique
-      //    username: payload.username ?? username, // nom d'utilisateur
-      //   //  email: payload.email,                   // email s'il existe
-      //   //  roles: payload.roles || [],             // rôles éventuels
-      //  };
-      
-       const ADMIN_USERNAMES = ["YT1", "Karimc", "Claudin"]; // 👈 mets tes admins ici
+        // 4) Rôles renvoyés par Django au login, normalisés
+        //    ("Trésorier" → "tresorier", accents et casse ignorés)
+        const normalizedRoles = normalizeRoles(roles);
+
+        // ⚠️ Temporaire : garde la liste en dur tant que le poste « administrateur »
+        //    n'est pas assigné en base. À supprimer ensuite (isAdmin = rôle).
+        const ADMIN_USERNAMES = ["YT1", "Karimc", "Claudin"];
+        const finalUsername = payload.username ?? username;
+
         return {
-          id: (payload.user_id ?? payload.username ?? username).toString(),
-          username: payload.username ?? username,
-          isAdmin: ADMIN_USERNAMES.includes(payload.username ?? username), // 👈 ajout
-          accessToken: access,   // 👈 ajouter
-          refreshToken: refresh, // 👈 ajouter
+          id: (payload.user_id ?? finalUsername).toString(),
+          username: finalUsername,
+          roles: normalizedRoles,
+          isAdmin:
+            normalizedRoles.includes("administrateur") ||
+            ADMIN_USERNAMES.includes(finalUsername),
+          accessToken: access,
+          refreshToken: refresh,
         };
       },
     }),
-  ],callbacks: {
-  // async jwt({ token, user }) {
-  //   if (user) {
-  //     token.username = (user as any).username;
-  //     token.isAdmin = (user as any).isAdmin;
-  //   }
-  //   return token;
-  // },
-  async jwt({ token, user }) {
-    if (user) {
-      token.name = (user as any).name;
-      token.email = (user as any).email;
-      token.username = (user as any).username;
-      token.isAdmin = (user as any).isAdmin;
-      token.accessToken  = (user as any).accessToken;  // new
-      token.refreshToken = (user as any).refreshToken; // new
-    }
-    return token;
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.name = (user as any).name;
+        token.email = (user as any).email;
+        token.username = (user as any).username;
+        token.roles = (user as any).roles ?? [];
+        token.isAdmin = (user as any).isAdmin;
+        token.accessToken = (user as any).accessToken;
+        token.refreshToken = (user as any).refreshToken;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).username = token.username;
+        (session.user as any).roles = token.roles ?? [];
+        (session.user as any).isAdmin = token.isAdmin;
+        (session.user as any).accessToken = token.accessToken;
+        (session.user as any).refreshToken = token.refreshToken;
+        session.user.name = token.username as string;
+      }
+      return session;
+    },
   },
-  async session({ session, token }) {
-    if (session.user) {
-      (session.user as any).username = token.username;
-      (session.user as any).isAdmin = token.isAdmin;
-      (session.user as any).accessToken   = token.accessToken;  // new
-      (session.user as any).refreshToken  = token.refreshToken; // new
-    session.user.name = token.username as string;
-    }
-    return session;
-  },
-},
 });
 // vérifier qu'aucun serializer custom n'ajoute des données sensibles au token.
 // # settings.py

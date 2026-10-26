@@ -2,30 +2,34 @@
 
 import { BranchData } from "../components/branches/validations";
 
-
-
 export type BranchStatus = "active" | "inactive" | "archive";
 
 /**
- * Détermine si une branche est configurée et opérationnelle.
- * Une branche est active si elle a un horaire ET des jours fériés définis.
+ * Source de vérité : le statut renvoyé par Django (`statusBranche`).
+ * Le front ne recalcule plus le statut à partir de l'horaire ou des jours fériés.
  */
+export function getEffectiveStatus(b: BranchData): BranchStatus {
+  const raw = (b as any).statusBranche ?? (b as any).statusBranch;
+  const s = typeof raw === "string" ? raw.toLowerCase() : "";
+
+  if (["archive", "archived", "suspendu", "suspended"].includes(s)) return "archive";
+  if (s === "active" || s === "actif") return "active";
+  return "inactive";
+}
+
+/** Une branche est active si Django le dit. */
 export function isBranchActive(b: BranchData): boolean {
-  return !!b.opening_hour && (b.holidays?.length ?? 0) > 0;
+  return getEffectiveStatus(b) === "active";
 }
 
 /**
- * Statut effectif de la branche, avec prise en compte de l'archivage manuel.
+ * Points de configuration manquants — purement informatifs.
+ * Ils s'affichent comme avertissement, sans changer le statut.
+ * (Zéro jour férié est une situation valide : aucun férié à observer.)
  */
-export function getEffectiveStatus(b: BranchData): BranchStatus {
-  const manual = (b as any).statusBranch ?? b.statusBranche;
-  const normalized = typeof manual === "string" ? manual.toLowerCase() : manual;
-
-  // Archivage manuel explicite
-  if (["archive", "archived", "suspendu", "suspended"].includes(normalized)) {
-    return "archive";
-  }
-
-  // Logique métier locale
-  return isBranchActive(b) ? "active" : "inactive";
+export function getBranchConfigWarnings(b: BranchData): string[] {
+  const warnings: string[] = [];
+  if (!b.opening_hour) warnings.push("Aucun horaire d'ouverture assigné.");
+  if ((b.holidays?.length ?? 0) === 0) warnings.push("Aucun jour férié assigné.");
+  return warnings;
 }

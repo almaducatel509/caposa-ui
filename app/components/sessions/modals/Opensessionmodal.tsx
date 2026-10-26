@@ -86,11 +86,16 @@ const inputCls = (err?: string) =>
   }`;
 
 const getUsername = (e: EmployeeOption) => e.user?.username ?? '';
+const normalizeName = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 
 // `employee.posts` ne contient que des IDs — pour filtrer par nom de poste
 // il faut d'abord retrouver l'ID correspondant dans la liste des postes.
+// Comparaison insensible à la casse ET aux accents ("Trésorier" == "Tresorier").
 const findPostId = (posts: PostData[], name: string) =>
-  posts.find(p => p.name.toLowerCase() === name.toLowerCase())?.id;
+  posts.find(p => normalizeName(p.name) === normalizeName(name))?.id;
+// `employee.posts` ne contient que des IDs — pour filtrer par nom de poste
+// il faut d'abord retrouver l'ID correspondant dans la liste des postes.
 
 // ─────────────────────────────────────────────────────────────────
 // Composant

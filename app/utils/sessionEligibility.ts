@@ -1,7 +1,7 @@
 // src/app/dashboard/sessions/utils/sessionEligibility.ts
 
 import type { OpeningHour } from "@/types/branche";
-import { isBranchActive } from "./branchStatus";
+import { getEffectiveStatus } from "./branchStatus";
 import { BranchData } from "../components/branches/validations";
 import { Holiday } from "../components/holidays/validations";
 
@@ -25,33 +25,24 @@ export interface SessionEligibility {
 
 /**
  * Détermine si une session peut être ouverte MAINTENANT dans une branche.
- * 
- * Retourne :
- *  - eligible: true              → ouverture directe
- *  - requiresOverride: true       → nécessite l'approbation du directeur
- *  - eligible: false sans override → blocage total (branche archivée/non configurée)
- * 
- * ⚠️  Cette vérification est informative côté front uniquement.
- *     Le backend DOIT refaire la même vérification et logger la tentative.
- *     Voir : apps/sessions/services.py → check_branch_eligibility()
+ *
+ *  - eligible: true                → ouverture directe
+ *  - requiresOverride: true        → nécessite l'approbation du directeur
+ *  - eligible: false sans override → blocage total (archivée / inactive / sans horaire)
+ *
+ * ⚠️  Vérification informative côté front uniquement.
+ *     Le statut de la branche vient de Django (`statusBranche`).
  */
 export function canOpenSessionNow(
   branch: BranchData,
   now: Date,
-  hours: OpeningHour,
+  hours: OpeningHour | null | undefined,
   holidays: Holiday[]
 ): SessionEligibility {
-  // 1. Branche pas configurée → blocage total
-  if (!isBranchActive(branch)) {
-    return {
-      eligible: false,
-      reason: "BRANCH_NOT_CONFIGURED",
-      details: "Cette branche n'a pas ses horaires ou jours fériés configurés.",
-    };
-  }
+  const status = getEffectiveStatus(branch);
 
-  // 2. Branche archivée → blocage total
-  if ((branch as any).statusBranche === "archive") {
+  // 1. Branche archivée → blocage total
+  if (status === "archive") {
     return {
       eligible: false,
       reason: "BRANCH_ARCHIVED",
@@ -59,7 +50,18 @@ export function canOpenSessionNow(
     };
   }
 
-  // 3. Jour férié → override possible
+  // 2. Branche inactive selon Django, ou sans horaire → blocage total
+  if (status !== "active" || !hours) {
+    return {
+      eligible: false,
+      reason: "BRANCH_NOT_CONFIGURED",
+      details: status !== "active"
+        ? "Cette branche est inactive."
+        : "Cette branche n'a pas d'horaire d'ouverture assigné.",
+    };
+  }
+
+  // 3. Jour férié → override possible (aucun férié = rien à bloquer)
   const isHoliday = holidays.some(
     (h) => new Date(h.date).toDateString() === now.toDateString()
   );

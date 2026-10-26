@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Modal } from "../../ui/Modal";
 
-// ─── Types ────────────────────────────────────────────────────────────────
+// ─── Types ──────── ────────────────────────────────────────────────────────
 export interface LoanForRepayment {
   id_loan: string;
 

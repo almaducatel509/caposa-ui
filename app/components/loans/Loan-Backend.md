@@ -1,302 +1,185 @@
-# 📄 CAPOSA LOAN SYSTEM — BACKEND CONTRACT (CRUD + RULES + FRONT EXPECTATIONS)
+# CAPOSA — Module Prêts : contrat backend/frontend
 
-## 🎯 OBJECTIF GLOBAL
+*Version du 26 octobre 2026*
 
-Le backend est **la seule source de vérité** pour :
+Ce document décrit comment fonctionne un prêt dans CAPOSA, du point de vue du backend (Django REST, développé par CS) et du frontend (Next.js). Il fait foi en cas de doute entre les deux équipes.
 
-* règles métier
-* calculs financiers
-* KPI / analytics
-* statuts de prêts
-* validation des données
-* logique de risque
+## Principe
 
-Le frontend **n’affiche jamais de logique métier**, il consomme uniquement des données prêtes.
+Le backend est la seule source de vérité financière ; le frontend affiche et collecte, il ne calcule rien.
 
-class Loan(models.Model):
-   ```python
-    # Set automatically on creation
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    # Set when the loan is disbursed (caissier action)
-    start_date = models.DateField(null=True, blank=True)
-    disbursed_at = models.DateTimeField(null=True, blank=True)
-    
-    # Computed when closed
-    end_date = models.DateField(null=True, blank=True)
-    closed_at = models.DateTimeField(null=True, blank=True)
-   ```
----
+| Le backend décide | Le frontend fait |
+| --- | --- |
+| Statuts et transitions d'un prêt | Afficher le statut, proposer les boutons permis |
+| Montants : intérêts, échéances, solde restant | Afficher les montants reçus, sans les recalculer |
+| Retard et niveau de risque | Afficher un badge selon `is_late` / `late_days` |
+| Validations métier (montant, durée, compte, limites) | Valider le format du formulaire, afficher les erreurs du backend |
+| Mouvements d'argent (transactions) | Déclencher l'action, afficher le reçu |
 
-# 🧱 1. MODULE LOAN — STRUCTURE BACKEND
+Pourquoi : si le front recalcule un montant, l'écran et la base finissent par diverger. Un membre ne doit jamais voir un solde différent de celui enregistré.
 
-## 📁 `loan.controller.ts`
+## Cycle de vie
 
-### 👉 API endpoints
+Un prêt passe par cinq statuts ; seuls `active` et `paid` impliquent de l'argent réel.
 
-* `GET /loans`
-* `GET /loans/:id`
-* `POST /loans`
-* `PUT /loans/:id`
-* `DELETE /loans/:id`
-* `GET /loans/kpis`
-* `GET /loans/analytics`
-* `GET /loans/risk-summary`
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> pending
+    pending --> approved : approve
+    approved --> active : disburse (crédite le compte)
+    active --> active : repay (réduit le solde)
+    active --> paid : solde = 0
+    pending --> rejected : reject
+    approved --> rejected : reject
+    paid --> [*]
+    rejected --> [*]
+```
 
----
+| Statut | Libellé |
+| --- | --- |
+| `pending` | En attente |
+| `approved` | Approuvé |
+| `active` | Décaissé |
+| `paid` | Remboursé |
+| `rejected` | Rejeté |
 
-## 📁 `loan.service.ts`
+Une demande peut être rejetée tant qu'elle n'est pas décaissée. Une fois `active`, le prêt ne peut que se rembourser jusqu'à `paid`.
 
-### 👉 logique principale métier
+## Mouvement d'argent
 
-### 🔴 Backend only :
+Un prêt ne bouge de l'argent qu'à deux moments : le décaissement et le remboursement. Chacun crée une `Transaction` reliée au prêt par une clé `loan`.
 
-* création prêt
-* validation règles business
-* liaison membre / caisse / session
-* statut initial du prêt
+**Décaissement** — la coopérative remet l'argent au membre.
 
-### 📌 règles métier :
+- Le montant est **crédité sur le compte du membre** (transaction `LOAN_DISBURSEMENT`).
+- Aucune session caisse n'est nécessaire. Si le membre veut du cash, il fait ensuite un retrait normal.
+- C'est à ce moment que démarrent les échéances et que la date de fin est fixée.
 
-* montant > 0
-* durée 3–60 mois
-* 1 prêt actif max par membre (option CAPOSA)
-* type de prêt valide obligatoire
+**Remboursement** — le membre rembourse la coopérative. Géré par le module prêts, jamais par un dépôt.
 
----
+- `cash` (cas principal) : le membre paie au guichet, l'argent entre dans la caisse. Une session caisse ouverte est obligatoire.
+- `account` : le montant est débité du compte du membre, s'il a le solde.
+- Transaction `LOAN_REPAYMENT`. Montant refusé s'il dépasse le solde restant.
+- Quand le solde restant atteint 0, le prêt passe automatiquement à `paid`.
 
-## 📁 `loan.calculation.service.ts`
+Pourquoi pas un dépôt : un dépôt augmente l'épargne du membre. L'argent qui rembourse un prêt n'appartient plus au membre ; le compter comme un dépôt fausserait la comptabilité et le solde du prêt.
 
-### 👉 calculs financiers
+## Modèle Loan
 
-### 🔴 Backend only :
+Les noms ci-dessous sont ceux du modèle Django réel ; le frontend les utilise tels quels.
 
-* `monthly_payment`
-* `remaining_balance`
-* `total_repayment`
-* amortissement complet
-* recalcul automatique
+**Saisis à la création (modifiables seulement tant que le prêt est `pending`)**
 
-### 📌 règles :
+| Champ | Sens |
+| --- | --- |
+| `member` | Le membre emprunteur |
+| `account` | Compte existant du membre, crédité au décaissement |
+| `loan_type` | `commerce`, `agriculture`, `elevage`, `logement`, `equipement`, `scolaire`, `personnel` |
+| `loan_amount` | Capital prêté, en HTG |
+| `interest_rate` | Taux d'intérêt en % (annuel ou mensuel : voir questions ouvertes) |
+| `loan_duration` | Durée en mois |
+| `payment_frequency` | `weekly` (hebdomadaire), `biweekly` (toutes les deux semaines), `monthly` |
+| `guarantor_account` | Compte d'un garant, facultatif |
+| `notes` | Objet du prêt et remarques |
 
-* recalcul si taux ou durée change
-* arrondi uniquement backend
-* aucune logique React
+**Fixés par le backend, jamais envoyés par le front**
 
----
+| Champ | Fixé quand |
+| --- | --- |
+| `status` | À chaque transition (voir cycle de vie) |
+| `employee` | À la création : l'employé connecté |
+| `request_date` | À la création |
+| `approval_date` | À l'approbation |
+| `disbursement_date` | Au décaissement |
+| `due_date` | Au décaissement : `disbursement_date` + `loan_duration` mois |
+| `closed_at` | Quand le prêt passe à `paid` |
+| `rejection_reason` | Au rejet : raison obligatoire, envoyée par `reject` |
 
-## 📁 `loan.kpi.service.ts`
+**Calculés, en lecture seule** : `total_due`, `installment_amount`, `amount_paid`, `remaining_balance`, `next_due_date`, `is_late`, `late_days` (détail plus bas).
 
-### 👉 dashboard KPIs
+Attention au libellé : `biweekly` signifie toutes les deux semaines (« bihebdomadaire »), pas deux fois par mois (« bimensuel »).
 
-### 🔴 Backend only :
+## Endpoints
 
-* total loans
-* total disbursed
-* total outstanding
-* total repaid
-* approval rate
-* on-time rate
-* monthly expected payments
+Un statut ne change jamais par un `PATCH` : chaque transition a son action dédiée, avec ses propres contrôles.
 
-### 📌 règles :
+| Méthode et chemin | Rôle | Qui |
+| --- | --- | --- |
+| `GET /loans/` | Liste, filtres `?member=` et `?status=` | Tout employé connecté |
+| `GET /loans/{id}/` | Détail d'un prêt | Tout employé connecté |
+| `POST /loans/` | Créer une demande (statut `pending`) | Conseiller, superviseur, directeur |
+| `PATCH /loans/{id}/` | Corriger une demande, seulement si `pending` | Conseiller, superviseur |
+| `POST /loans/{id}/approve/` | `pending` → `approved` | Superviseur, directeur, admin |
+| `POST /loans/{id}/reject/` | `pending` ou `approved` → `rejected` | Superviseur, directeur, admin |
+| `POST /loans/{id}/disburse/` | `approved` → `active`, crédite le compte | Caissier, superviseur |
+| `POST /loans/{id}/repay/` | Enregistre un remboursement | Caissier |
+| `GET /loans/{id}/payments/` | Remboursements de ce prêt | Tout employé connecté |
+| `DELETE /loans/{id}/` | Supprimer, seulement si `pending` ou `rejected` | Directeur |
 
-* calcul live ou cache Redis
-* utilisé dans dashboard global
-
----
-
-## 📁 `loan.risk.service.ts`
-
-### 👉 analyse de risque
-
-### 🔴 Backend only :
-
-* `is_late`
-* `late_days`
-* classification :
-
-  * à jour
-  * retard 1–29 jours
-  * retard 30+ jours (critique)
-
-### 📌 règles :
-
-* basé sur dates réelles
-* utilisé pour alertes + scoring
-
----
-
-## 📁 `loan.analytics.service.ts`
-
-### 👉 données graphiques
-
-### 🔴 Backend only :
-
-* volume des prêts (jour / semaine)
-* distribution par type
-* distribution par statut
-* progression des remboursements
-* top soldes restants
-
----
-
-## 📁 `loan.repository.ts`
-
-### 👉 accès base de données
-
-* requêtes SQL / ORM
-* groupBy / aggregation backend
-* optimisation performance
-
----
-
-# 📊 2. DONNÉES ATTENDUES PAR LE FRONTEND (DASHBOARD)
-
-## 🟢 Endpoint: `GET /loans/kpis`
+Corps de `repay` :
 
 ```json
-{
-  "totalLoans": 120,
-  "activeLoans": 80,
-  "totalDisbursed": 4500000,
-  "totalOutstanding": 1800000,
-  "totalRepaid": 2700000,
-  "approvalRate": 87.5,
-  "onTimeRate": 92.1,
-  "monthlyExpected": 120000
-}
+{ "amount": 2500.00, "method": "cash", "session": "<uuid de la session caisse>" }
 ```
 
----
+Réponse de `repay` : la transaction créée, le `remaining_balance` mis à jour et le `status` du prêt.
 
-## 🟢 Endpoint: `GET /loans/analytics`
+## Règles métier
 
-```json
-{
-  "volumeData": [
-    { "label": "Mon", "count": 12, "amount": 300000 },
-    { "label": "Tue", "count": 8, "amount": 210000 }
-  ],
-  "typeDistrib": [
-    { "type": "Commerce", "value": 40 },
-    { "type": "Logement", "value": 25 }
-  ],
-  "statusDistrib": [
-    { "status": "decaisse", "count": 60 },
-    { "status": "en_attente", "count": 20 }
-  ],
-  "progressDistrib": [
-    { "range": "0-25%", "count": 10 },
-    { "range": "26-50%", "count": 30 }
-  ]
-}
-```
+Toutes ces règles sont vérifiées par le backend ; le front peut les rappeler dans le formulaire, mais ne les applique pas seul.
 
----
+1. Montant strictement supérieur à 0.
+2. Durée entre 3 et 60 mois.
+3. Taux d'intérêt supérieur ou égal à 0.
+4. Le compte `account` appartient au membre emprunteur.
+5. Le compte garant n'est pas le compte de l'emprunteur, ni un autre compte du même membre.
+6. Un membre a au plus **un prêt non clos** à la fois (`pending`, `approved` ou `active`). Sinon il pourrait empiler des demandes.
+7. Montant, taux et durée sont **verrouillés après approbation**. Pour changer les conditions, on rejette et on refait une demande.
+8. Un remboursement ne dépasse jamais le solde restant.
+9. Un remboursement en cash exige une session caisse ouverte.
+10. Un prêt décaissé ou remboursé ne peut être ni rejeté ni supprimé.
 
-## 🟢 Endpoint: `GET /loans`
+La création d'une demande ne demande **ni caisse ni session** : c'est un travail de conseiller, pas une opération de guichet.
 
-Frontend attend :
+## Calculs et retard
 
-```ts
-LoanData {
-  id
-  member_name
-  amount
-  status
-  loan_type
-  remaining_balance
-  monthly_payment
-  interest_rate
-  is_late
-  late_days
-  next_payment_date
-  created_at
-}
-```
+CAPOSA utilise l'**intérêt simple** : le taux s'applique au capital initial pendant toute la durée. Tous les arrondis se font au backend, à 2 décimales (HTG).
 
-👉 IMPORTANT : toutes ces valeurs sont **backend computed**
-
----
-
-# 🧾 3. CRÉATION PRÊT — VALIDATION BACKEND
-
-## 📁 `loan.validation.ts`
-
-### 🔴 Backend only rules :
-
-#### Champs obligatoires :
-
-* member_id
-* amount
-* loan_type
-* duration_months
-* purpose
-
----
-
-## 📌 règles métier création :
-
-* montant > 0
-* durée 3–60 mois
-* type de prêt valide
-* membre doit exister
-* membre ne peut pas avoir 2 prêts actifs
-* caisse obligatoire
-* session obligatoire
-
----
-
-## 📌 auto-generated backend fields :
-
-* monthly_payment
-* interest_rate (si non fourni → default rule)
-* remaining_balance = amount + interest
-* status = "en_attente"
-* created_at = now()
-* account_number généré
-* session_id généré
-
----
-
-# 🚫 4. INTERDIT FRONTEND (TRÈS IMPORTANT)
-
-## ❌ Le frontend NE DOIT PAS calculer :
-
-* monthly_payment
-* remaining_balance
-* late_days
-* is_late
-* KPIs
-* analytics
-* groupements
-* filtrage métier complexe
-
----
-
-# 🧠 5. RÈGLE ARCHITECTURALE CAPOSA
-
-> 🔥 Backend = logique métier + vérité financière
-> 🔥 Frontend = affichage + interaction UI uniquement
-
----
-
-# 🧩 6. STRUCTURE BACKEND RECOMMANDÉE
+Avec un taux annuel :
 
 ```
-/loan
-  ├── 
-  ├── service/
-  │     loan.service.ts
-  │     loan.calculation.service.ts
-  │     loan.kpi.service.ts
-  │     loan.risk.service.ts
-  │     loan.analytics.service.ts
-  ├── repository/
-  │     loan.repository.ts
-  ├── validation/
-  │     loan.validation.ts
-  ├── dto/
-  │     loan.dto.ts
+total_due = loan_amount × (1 + interest_rate / 100 × loan_duration / 12)
 ```
+
+| Champ | Signification |
+| --- | --- |
+| `total_due` | Capital + intérêts, ce que le membre doit au total |
+| `installment_amount` | Montant d'une échéance : `total_due` divisé par le nombre d'échéances selon la fréquence |
+| `amount_paid` | Somme des remboursements de ce prêt |
+| `remaining_balance` | `total_due` − `amount_paid` ; n'existe qu'après le décaissement |
+| `next_due_date` | Date de la prochaine échéance non payée |
+| `is_late`, `late_days` | Retard compté depuis la **prochaine échéance non payée**, pas depuis la date de fin |
+
+Niveau de risque, affiché par le front d'après `late_days` :
+
+| Retard | Classe |
+| --- | --- |
+| 0 jour | À jour |
+| 1 à 29 jours | En retard |
+| 30 jours et plus | Critique |
+
+Un prêt `pending` ou `approved` ne doit rien encore : pas de solde, pas de retard.
+
+## Phase 2 et questions ouvertes
+
+**Phase 2** — après que décaissement et remboursement fonctionnent, car ils en dépendent :
+
+- `GET /loans/kpis/` : nombre de prêts, montants décaissés, encours, remboursé, taux d'approbation, taux de paiement à temps.
+- `GET /loans/analytics/` : volumes dans le temps, répartition par type et par statut, progression des remboursements. Toujours avec les vrais types et statuts du modèle.
+
+**Questions ouvertes**
+
+- [ ] `interest_rate` est-il annuel ou mensuel ? Le document suppose annuel.
+- [ ] Faut-il un taux par défaut par type de prêt ?
+- [ ] Faut-il des frais de dossier ou des pénalités de retard ?

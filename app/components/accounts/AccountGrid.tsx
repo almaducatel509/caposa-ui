@@ -75,6 +75,7 @@ const AccountGrid: React.FC = () => {
   const [memberOptions,   setMemberOptions]   = useState<MemberOption[]>([]);
   const [membersLoading,  setMembersLoading]  = useState(false);
   const [allMembers, setAllMembers] = useState<MemberData[]>([]);
+
   const loadMembers = async () => {
     setMembersLoading(true);
     try {
@@ -97,20 +98,13 @@ const AccountGrid: React.FC = () => {
     } finally {
       setMembersLoading(false);
     }
-  };
+  };    
+
   const loadAccounts = async () => {
     setLoading(true);
+    setError(null); // ← voir point 3
     try {
-      const data = await fetchAccounts();
-      console.log('🔍 Comptes avant merge membres:', data);
-      console.log('🔍 allMembers disponibles au moment du merge:', allMembers);
-      const enriched = data.map(acc => {
-        const match = allMembers.find(m => m.id === acc.member);
-        if (!match) console.log('⚠️ Aucun membre trouvé pour acc.member =', acc.member);
-        return { ...acc, member_details: match ?? acc.member_details };
-      });
-      console.log('🔍 Comptes après merge:', enriched);
-      setAccounts(enriched);
+      setAccounts(await fetchAccounts());
     } catch (err) {
       console.error('Erreur chargement comptes:', err);
       setError('Impossible de charger les données des comptes.');
@@ -118,6 +112,15 @@ const AccountGrid: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Jointure dérivée : toujours à jour, quel que soit l'ordre d'arrivée
+  const accountsWithMembers = useMemo(
+    () => accounts.map(acc => ({
+      ...acc,
+      member_details: allMembers.find(m => m.id === acc.member) ?? acc.member_details,
+    })),
+    [accounts, allMembers]
+  );
 
   useEffect(() => { loadAccounts(); loadMembers(); }, []);
 
@@ -128,6 +131,7 @@ const AccountGrid: React.FC = () => {
       member_details: acc.member_details ?? allMembers.find(m => m.id === acc.member),
     })));
   }, [allMembers]);
+
   // ── Debounce search ────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 300);
@@ -211,7 +215,7 @@ const AccountGrid: React.FC = () => {
   //   }
   //   await loadAccounts();
   // };
-  const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
+    const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
     if (action === 'export') {
       exportToCSV(ids);
       return;
@@ -226,18 +230,21 @@ const AccountGrid: React.FC = () => {
       console.warn(`${skipped} compte(s) fermé(s)/archivé(s) ignoré(s) pour l'action "${action}".`);
     }
 
-    try {
-      switch (action) {
-        case 'activate': await Promise.all(actionableIds.map(id => activateAccount(id))); break;
-        case 'suspend':  await Promise.all(actionableIds.map(id => suspendAccount(id)));  break;
-        case 'close':    await Promise.all(actionableIds.map(id => closeAccount(id)));    break;
-      }
-    } catch (e) {
-      console.error(`Erreur bulk action "${action}":`, e);
-      throw e;
-    }
+    // Lance toutes les opérations ; un échec n'annule pas les autres
+    const ops = actionableIds.map(id =>
+      action === 'activate' ? activateAccount(id)
+      : action === 'suspend' ? suspendAccount(id)
+      : closeAccount(id)
+    );
+    const results = await Promise.allSettled(ops);
 
+    // Toujours recharger : la table reflète l'état réel du backend
     await loadAccounts();
+
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) {
+      throw new Error(`${failed} compte(s) n'ont pas pu être traités.`);
+    }
   };
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
@@ -322,16 +329,15 @@ const AccountGrid: React.FC = () => {
         onTabChange={setActiveAccountTab}
       />
       
-      <CreateAccountModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        members={memberOptions}
-        membersLoading={membersLoading}
-        onSuccess={(created) => {
-          setAccounts(prev => [...prev, created]);
-         setShowCreateModal(false);
-        }}
-      /> 
+      {showCreateModal && (
+        <CreateAccountModal
+          isOpen
+          onClose={() => setShowCreateModal(false)}
+          members={memberOptions}
+          membersLoading={membersLoading}
+          onSuccess={() => { loadAccounts(); }} // ne ferme plus le modal
+        />
+      )}
 
       <AccountDetailModal
         isOpen={showDetail}
