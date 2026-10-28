@@ -6,6 +6,12 @@
  * Appels HTTP uniquement. Types, libellés et validation : loanSchema.ts.
  * Même règle que caisse.ts : aucun mock, aucun fallback silencieux.
  *
+ * Aligné sur caposa-api master @ 53e4c51 (vérifié en local le 2026-10-28) :
+ *  - approve / reject / disburse / repay livrés et testés
+ *  - champs calculés (total_due, remaining_balance, is_late…) livrés
+ *  - montant, taux, durée, fréquence, type, compte, membre et garant
+ *    verrouillés par Django dès que le prêt n'est plus `pending`
+ *
  * Prérequis : exporter `describeError` depuis caisse.ts
  *   (`function describeError` → `export function describeError`)
  * ─────────────────────────────────────────────────────────────────
@@ -32,6 +38,7 @@ interface LoanApiRaw {
   loan_type:          LoanType;
   loan_amount:        Decimal;
   interest_rate:      Decimal;
+  /** Durée en mois */
   loan_duration:      number;
   payment_frequency:  PaymentFrequency;
   guarantor_account:  string | null;
@@ -40,19 +47,24 @@ interface LoanApiRaw {
   request_date:       string;
   approval_date:      string | null;
   disbursement_date:  string | null;
+  /** Échéance finale — fixée par Django au décaissement */
   due_date:           string | null;
   created_at:         string;
   updated_at:         string;
-  // en attente de CS
-  rejection_reason?:   string | null;
-  closed_at?:          string | null;
-  total_due?:          Decimal;
-  installment_amount?: Decimal;
-  amount_paid?:        Decimal;
-  remaining_balance?:  Decimal;
-  next_due_date?:      string | null;
-  is_late?:            boolean | null;
-  late_days?:          number | null;
+  rejection_reason:   string | null;
+  // Champs calculés par Django (toujours présents, strings "0.00")
+  total_due:          Decimal;
+  installment_amount: Decimal;
+  amount_paid:        Decimal;
+  remaining_balance:  Decimal;
+  /** Basé sur ⌊amount_paid / installment_amount⌋ : un paiement partiel n'avance pas l'échéance */
+  next_due_date:      string | null;
+  is_late:            boolean;
+  late_days:          number;
+  /** Échéance courante OU échéance finale dépassée */
+  is_overdue:         boolean;
+  /** N'existe pas côté Django — gardé pour compatibilité avec LoanData */
+  closed_at?:         string | null;
 }
 
 /** Montant requis : 0 si illisible. */
@@ -98,14 +110,50 @@ const mapLoan = (r: LoanApiRaw): LoanData => ({
   next_due_date:      r.next_due_date ?? null,
   is_late:            typeof r.is_late === 'boolean' ? r.is_late : null,
   late_days:          typeof r.late_days === 'number' ? r.late_days : null,
+  // TODO: ajouter `is_overdue: boolean | null` à LoanData dans loanSchema.ts
+  // puis décommenter :
+  // is_overdue:      typeof r.is_overdue === 'boolean' ? r.is_overdue : null,
 });
 
 const unwrapList = <T,>(data: T[] | { results?: T[] }): T[] =>
   Array.isArray(data) ? data : data?.results ?? [];
 
+// ─── Règles d'édition (miroir de LoanSerializer.validate) ─────────
+
+/**
+ * Champs que Django refuse de modifier dès que le prêt n'est plus `pending`.
+ * L'UI doit les afficher en lecture seule ; seul `notes` reste éditable.
+ */
+export const LOCKED_AFTER_PENDING = [
+  'loan_amount',
+  'interest_rate',
+  'loan_duration',
+  'payment_frequency',
+  'loan_type',
+  'account',
+  'member',
+  'guarantor_account',
+] as const;
+
+export const isLoanEditable = (status: LoanStatus): boolean => status === 'pending';
+
+/** Boutons d'action à afficher selon le statut (les permissions restent vérifiées par Django). */
+export type LoanAction = 'approve' | 'reject' | 'disburse' | 'repay';
+
+export const LOAN_ACTIONS_BY_STATUS: Record<LoanStatus, LoanAction[]> = {
+  pending:  ['approve', 'reject'],
+  approved: ['disburse', 'reject'],
+  active:   ['repay'],
+  paid:     [],
+  rejected: [],
+};
+
 // ─── Lecture ──────────────────────────────────────────────────────
 
-/** GET /loans/ — filtres optionnels ?member= et ?status= */
+/**
+ * GET /loans/ — filtres optionnels ?member= et ?status=
+ * (Django accepte aussi les alias FR : en_attente, approuve, decaisse, rembourse, rejete)
+ */
 export async function fetchLoans(params?: { member?: string; status?: LoanStatus }): Promise<LoanData[]> {
   try {
     const { data } = await AxiosInstance.get<LoanApiRaw[] | { results: LoanApiRaw[] }>('/loans/', { params });
@@ -125,7 +173,10 @@ export async function fetchLoan(id: string): Promise<LoanData> {
   }
 }
 
-/** GET /loans/{id}/payments/ — remboursements du prêt */
+/**
+ * GET /loans/{id}/payments/ — remboursements du prêt (transactions LOAN_REPAYMENT).
+ * TODO: typer avec le type Transaction existant du module transactions.
+ */
 export async function fetchLoanPayments(id: string): Promise<unknown[]> {
   try {
     const { data } = await AxiosInstance.get(`/loans/${id}/payments/`);
@@ -135,7 +186,7 @@ export async function fetchLoanPayments(id: string): Promise<unknown[]> {
   }
 }
 
-// ─── Création ─────────────────────────────────────────────────────
+// ─── Création et modification ─────────────────────────────────────
 
 /** POST /loans/ — payload construit avec toCreateLoanPayload() */
 export async function createLoan(payload: CreateLoanPayload): Promise<LoanData> {
@@ -147,6 +198,23 @@ export async function createLoan(payload: CreateLoanPayload): Promise<LoanData> 
   }
 }
 
+/**
+ * PATCH /loans/{id}/ — modification d'une demande.
+ * Prêt `pending` : tous les champs du formulaire.
+ * Sinon : seulement `notes` (Django renvoie 400 sur les champs verrouillés).
+ */
+export async function updateLoan(
+  id: string,
+  payload: Partial<CreateLoanPayload> & { notes?: string | null },
+): Promise<LoanData> {
+  try {
+    const { data } = await AxiosInstance.patch<LoanApiRaw>(`/loans/${id}/`, payload);
+    return mapLoan(data);
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible de modifier ce prêt'));
+  }
+}
+
 // ─── Cycle de vie — une action par transition, jamais PATCH status ──
 
 interface LifecycleResponse {
@@ -154,28 +222,37 @@ interface LifecycleResponse {
   detail:             string;
   approval_date?:     string;
   disbursement_date?: string;
+  /** Renvoyée par disburse */
+  due_date?:          string;
+  /** Renvoyée par reject */
+  rejection_reason?:  string;
+  /** Renvoyée par disburse (transaction LOAN_DISBURSEMENT) */
+  transaction?:       unknown;
 }
 
-/** POST /loans/{id}/approve/ — pending → approved */
+/** POST /loans/{id}/approve/ — pending → approved. Superviseur, directeur, admin. */
 export async function approveLoan(id: string): Promise<LifecycleResponse> {
   try {
     const { data } = await AxiosInstance.post<LifecycleResponse>(`/loans/${id}/approve/`);
     return data;
   } catch (err) {
-    throw new Error(describeError(err, 'Impossible d\u2019approuver ce prêt'));
+    throw new Error(describeError(err, 'Impossible d’approuver ce prêt'));
   }
 }
 
 /**
- * POST /loans/{id}/reject/ — pending|approved → rejected
- * `reason` est envoyé dès maintenant ; Django l'ignore tant que CS
- * n'a pas ajouté `rejection_reason` au modèle.
+ * POST /loans/{id}/reject/ — pending|approved → rejected. Superviseur, directeur, admin.
+ * Le motif est OBLIGATOIRE : Django renvoie 400 s'il est vide.
  */
-export async function rejectLoan(id: string, reason?: string): Promise<LifecycleResponse> {
+export async function rejectLoan(id: string, reason: string): Promise<LifecycleResponse> {
+  const motif = reason.trim();
+  if (!motif) {
+    throw new Error('Le motif du rejet est obligatoire.');
+  }
   try {
     const { data } = await AxiosInstance.post<LifecycleResponse>(
       `/loans/${id}/reject/`,
-      reason?.trim() ? { reason: reason.trim() } : undefined,
+      { rejection_reason: motif },
     );
     return data;
   } catch (err) {
@@ -184,10 +261,14 @@ export async function rejectLoan(id: string, reason?: string): Promise<Lifecycle
 }
 
 /**
- * DELETE /loans/{id}/ — Directeur seulement (vérifié par Django).
- * Contrat : seulement `pending` ou `rejected`, jamais un prêt décaissé.
+ * DELETE /loans/{id}/ — Directeur / admin seulement (vérifié par Django).
+ * ⚠️ Django ne vérifie PAS le statut : c'est l'UI qui doit n'offrir
+ * la suppression que pour `pending` ou `rejected`. Garde-fou ici aussi.
  */
-export async function deleteLoan(id: string): Promise<void> {
+export async function deleteLoan(id: string, status: LoanStatus): Promise<void> {
+  if (status !== 'pending' && status !== 'rejected') {
+    throw new Error('Seuls les prêts en attente ou rejetés peuvent être supprimés.');
+  }
   try {
     await AxiosInstance.delete(`/loans/${id}/`);
   } catch (err) {
@@ -196,13 +277,12 @@ export async function deleteLoan(id: string): Promise<void> {
 }
 
 // ─── Décaissement et remboursement ────────────────────────────────
-// ⚠️ Écrits sur le CONTRAT (points 5 et 6), pas encore sur le backend réel.
-// L'UI ne les appelle que si FEATURES.loanDisburse / FEATURES.loanRepay
-// sont à true — à activer quand CS livre.
+// Livrés et testés côté Django : passer FEATURES.loanDisburse et
+// FEATURES.loanRepay à true dans lib/features.ts.
 
 /**
- * POST /loans/{id}/disburse/ — approved → active.
- * Contrat : crédite le compte du membre (transaction LOAN_DISBURSEMENT),
+ * POST /loans/{id}/disburse/ — approved → active. Caissier, superviseur, admin.
+ * Crédite le compte du membre (transaction LOAN_DISBURSEMENT),
  * fixe disbursement_date et due_date. Pas de session caisse.
  */
 export async function disburseLoan(id: string): Promise<LifecycleResponse> {
@@ -223,30 +303,32 @@ export interface RepayResult {
 }
 
 /**
- * POST /loans/{id}/repay/ — enregistre un remboursement.
+ * POST /loans/{id}/repay/ — enregistre un remboursement. Caissier, superviseur, admin.
  * - cash    : session caisse ouverte obligatoire (injectée automatiquement)
- * - account : débite le compte du membre, pas de session
- * Le backend refuse un montant supérieur au solde restant et passe le
+ * - account : débite le compte du membre (refusé si fonds insuffisants ou compte gelé/fermé)
+ * Les paiements partiels sont acceptés mais n'avancent pas l'échéance.
+ * Django refuse un montant supérieur au solde restant et passe le
  * prêt à `paid` quand le solde atteint 0.
  */
 export async function repayLoan(
   id: string,
-  payload: { amount: number; method: RepayMethod; session?: string },
+  payload: { amount: number; method: RepayMethod; session?: string; note?: string },
 ): Promise<RepayResult> {
   let session = payload.session;
   if (payload.method === 'cash' && !session) {
     const active = await SessionManager.fetchActive();
     if (!active) {
-      throw new Error('Ouvrez votre session caisse avant d\u2019encaisser un remboursement en espèces.');
+      throw new Error('Ouvrez votre session caisse avant d’encaisser un remboursement en espèces.');
     }
     session = active.id;
   }
 
   try {
     const { data } = await AxiosInstance.post(`/loans/${id}/repay/`, {
-      amount: payload.amount,
+      amount: payload.amount.toFixed(2),
       method: payload.method,
       ...(session ? { session } : {}),
+      ...(payload.note?.trim() ? { note: payload.note.trim() } : {}),
     });
     return {
       transaction:       data?.transaction,
@@ -254,6 +336,6 @@ export async function repayLoan(
       status:            data?.status,
     };
   } catch (err) {
-    throw new Error(describeError(err, 'Impossible d\u2019enregistrer le remboursement'));
+    throw new Error(describeError(err, 'Impossible d’enregistrer le remboursement'));
   }
 }
