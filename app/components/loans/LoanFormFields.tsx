@@ -56,8 +56,8 @@ const ACCOUNT_BADGE: Record<string, { label: string; cls: string }> = {
   terme:   { label: 'Terme',   cls: 'bg-yellow-50 text-yellow-700' },
 };
 
-const formatHTG = (n: number) => new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
-
+const formatHTG = (n: number) =>
+  new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' HTG';
 /** '' → undefined, pour que Zod signale « requis » au lieu de lire 0. */
 const blankToUndef = (s: string) => (s.trim() === '' ? undefined : s);
 
@@ -251,12 +251,16 @@ export default function LoanForm({ members, onCancel, onCreated }: LoanFormProps
 
   // ═══ Écran succès + reçu imprimable ═════════════════════════════
   if (step === 'success' && created) {
-    const rows: [string, string][] = [
+       const rows: [string, string][] = [
       ['Référence',      created.id.slice(0, 8).toUpperCase()],
       ['Membre',         created.member_name || borrower?.member_name || '—'],
       ['Compte',         created.account_number || account?.account_number || '—'],
       ['Type de prêt',   LOAN_TYPE_LABELS[created.loan_type] ?? created.loan_type],
       ['Montant',        formatHTG(created.loan_amount)],
+      ['Total à rembourser', created.total_due != null ? formatHTG(created.total_due) : '—'],
+      ['Échéance',           created.installment_amount != null
+        ? `${formatHTG(created.installment_amount)} / ${PAYMENT_FREQUENCY_LABELS[created.payment_frequency].toLowerCase()}`
+        : '—'],
       ['Durée',          `${created.loan_duration} mois`],
       ["Taux d'intérêt", `${created.interest_rate} %`],
       ['Remboursement',  PAYMENT_FREQUENCY_LABELS[created.payment_frequency] ?? created.payment_frequency],

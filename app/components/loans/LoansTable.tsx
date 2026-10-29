@@ -6,9 +6,12 @@
  * Données réelles via GET /loans/ (aucun mock). Après chaque action,
  * la liste est rechargée depuis le backend (aucune mise à jour optimiste).
  *
- * Actions disponibles maintenant : créer, voir, approuver, rejeter
- * (en ligne ou en lot). Décaisser et rembourser restent désactivés
- * tant que le backend ne bouge pas l'argent (contrat, points 5 et 6).
+ * Actions selon le rôle connecté (useLoanPermissions) :
+ *   - tout le monde : voir la fiche, exporter
+ *   - superviseur / directeur / admin : approuver, rejeter (en ligne ou en lot)
+ *   - caissier / admin : décaisser, encaisser un remboursement
+ *   - directeur / admin : supprimer (en attente ou rejeté)
+ * Django revérifie chaque action (403 sinon).
  *
  * Aucun calcul financier : solde, échéance et retard s'affichent
  * s'ils viennent du backend, sinon « — ».
@@ -28,21 +31,15 @@ import NewLoanModal from './modals/NewLoanModal';
 import LoanBulkActionDropdown, { LoanBulkAction } from './LoanBulkActionDropdown';
 import LoanBulkActionModal from './modals/LoanBulkActionModal';
 import LoanDetailModal from './modals/LoanDetailModal';
-import { UserRole } from '@/app/lib/auth';
+import ReviewLoanModal from './modals/ReviewLoanModal';
+import RepayLoanModal from './modals/Repayloanmodal';
 import { fetchLoans } from '@/app/lib/api/loans';
+import { useLoanPermissions } from '@/app/lib/useloanpermissions';
 import {
   LoanData, LoanStatus, LoanTab,
   LOAN_STATUS_LABELS, LOAN_TYPE_LABELS, PAYMENT_FREQUENCY_LABELS,
   getLoanTab, getRiskLevel,
 } from '../transactions/validation/loanSchema';
-
-// ─── Rôle (temporaire) ────────────────────────────────────────────
-// ⚠️ MOCK tant que getRole() n'est pas branché sur la session NextAuth.
-// Le backend vérifie les permissions de toute façon : ceci évite seulement
-// d'afficher des boutons inutiles.
-const MOCK_ROLE: UserRole = 'superviseur';
-const DECIDER_ROLES  = new Set<string>(['superviseur', 'directeur', 'administrateur', 'admin']);
-const DIRECTOR_ROLES = new Set<string>(['directeur', 'administrateur', 'admin']);
 
 // ─── Styles ───────────────────────────────────────────────────────
 
@@ -112,9 +109,10 @@ function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: 
 // ─── Composant ────────────────────────────────────────────────────
 
 export default function LoansTable() {
-  const userRole: UserRole = MOCK_ROLE;
-  const canDecide  = DECIDER_ROLES.has(userRole);
-  const canDelete  = DIRECTOR_ROLES.has(userRole);
+  // Rôle réel lu dans la session (plus de rôle codé en dur)
+  const {
+    canApprove: canDecide, canDelete, canDisburse, canRepay, canCreate,
+  } = useLoanPermissions();
 
   // Actions masquées selon le rôle (le backend revérifie de toute façon)
   const hiddenActions: LoanBulkAction[] = [
@@ -155,6 +153,8 @@ export default function LoansTable() {
   const [newLoanOpen, setNewLoanOpen] = useState(false);
   const [detailLoan,  setDetailLoan]  = useState<LoanData | null>(null);
   const [bulk,         setBulk]         = useState<{ action: LoanBulkAction; loans: LoanData[] } | null>(null);
+  const [reviewLoan,   setReviewLoan]   = useState<LoanData | null>(null);   // décaissement
+  const [repayTarget,  setRepayTarget]  = useState<LoanData | null>(null);   // remboursement
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const counts = useMemo(() => {
@@ -249,7 +249,7 @@ export default function LoansTable() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <PageHeader
           title="Prêts"
-          subtitle="Registre complet — demandes, suivi et historique"
+          subtitle="Registre complet, demandes, suivi et historique"
           icon={<Landmark className="w-8 h-8 text-[#2E7D32]" />}
         />
         <button onClick={loadLoans} disabled={loading}
@@ -268,7 +268,7 @@ export default function LoansTable() {
         onPeriodChange={setSelectedPeriod}
         onTypeChange={setSelectedType}
         onRangeChange={setSelectedRange}
-        onAdd={() => setNewLoanOpen(true)}
+        onAdd={() => { if (canCreate) setNewLoanOpen(true); }}
         totalCount={sorted.length}
         loans={filtered}
       />
@@ -494,18 +494,16 @@ export default function LoansTable() {
                     </button>
                   )}
 
-                  {/* ⏳ Désactivé : le backend ne crédite pas encore le compte (contrat, point 5) */}
-                  {loan.status === 'approved' && (
-                    <button disabled title="Décaissement bientôt disponible (en attente du backend)"
-                      className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed">
+                  {canDisburse && loan.status === 'approved' && (
+                    <button title="Décaisser" onClick={() => setReviewLoan(loan)}
+                      className="p-1.5 rounded-lg text-[#355C7D] hover:bg-[#EBF2F8]">
                       <HandCoins className="w-3.5 h-3.5" />
                     </button>
                   )}
 
-                  {/* ⏳ Désactivé : POST /loans/{id}/repay/ n'existe pas encore (contrat, point 6) */}
-                  {loan.status === 'active' && (
-                    <button disabled title="Remboursement bientôt disponible (en attente du backend)"
-                      className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed">
+                  {canRepay && loan.status === 'active' && (
+                    <button title="Encaisser un remboursement" onClick={() => setRepayTarget(loan)}
+                      className="p-1.5 rounded-lg text-[#2E7D32] hover:bg-[#DDEAD5]">
                       <Wallet className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -533,6 +531,21 @@ export default function LoansTable() {
       />
 
       <LoanDetailModal loan={detailLoan} onClose={() => setDetailLoan(null)} />
+
+      <ReviewLoanModal
+        isOpen={reviewLoan !== null}
+        loan={reviewLoan}
+        onClose={() => setReviewLoan(null)}
+        onUpdated={() => loadLoans()}
+      />
+
+      {repayTarget && (
+        <RepayLoanModal
+          loan={repayTarget}
+          onClose={() => setRepayTarget(null)}
+          onDone={loadLoans}
+        />
+      )}
 
       {/* Monté seulement quand une action est choisie : son état repart à zéro à chaque ouverture */}
       {bulk && (
