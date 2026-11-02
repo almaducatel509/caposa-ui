@@ -26,7 +26,7 @@ import {
 import {
   approveLoan, rejectLoan, disburseLoan, updateLoan, fetchLoan,
 } from '@/app/lib/api/loans';
-import { useLoanPermissions } from '@/app/lib/useloanpermissions';
+import { useLoanPermissions } from '@/app/lib/useLoanPermissions';
 
 // ─── Actions ──────────────────────────────────────────────────────
 // Qui peut faire quoi : voir app/lib/useLoanPermissions.ts (source unique).
@@ -71,10 +71,22 @@ interface ReviewLoanModalProps {
 // ─── Helpers ──────────────────────────────────────────────────────
 
 const formatHTG = (n: number | null | undefined) =>
-  n === null || n === undefined ? '—' : new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 2 }).format(n) + ' HTG';
+  n === null || n === undefined
+    ? '—'
+    : new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' HTG';
 
+/**
+ * Django renvoie les dates sans heure ("2026-10-29"). new Date() les lit
+ * comme minuit UTC, soit la veille au soir en Haïti / à Toronto.
+ * On les lit à midi local pour garder le bon jour.
+ */
 const formatDate = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  iso
+    ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso)
+        .toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
+
+const PER: Record<string, string> = { weekly: 'semaine', biweekly: '2 semaines', monthly: 'mois' };
 
 const PASSWORD_ACTIONS: ReviewAction[] = ['approve', 'reject'];
 
@@ -164,7 +176,7 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
                 Examiner le prêt #{loan.id.slice(0, 8).toUpperCase()}
               </p>
               <p className="text-xs text-gray-600 mt-0.5 truncate">
-                {loan.member_name} · {loan.account_number}
+                <span className="capitalize">{loan.member_name}</span> · {loan.account_number}
               </p>
             </div>
           </div>
@@ -189,7 +201,9 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
               <Field label="Durée"          value={`${loan.loan_duration} mois`} />
               <Field label="Taux d'intérêt" value={`${loan.interest_rate} % / an`} />
               <Field label="Remboursement"  value={PAYMENT_FREQUENCY_LABELS[loan.payment_frequency] ?? loan.payment_frequency} />
-              <Field label="Échéance"       value={formatHTG(loan.installment_amount)} />
+              <Field label="Échéance"       value={loan.installment_amount == null
+                ? '—'
+                : `${formatHTG(loan.installment_amount)} / ${PER[loan.payment_frequency] ?? loan.payment_frequency}`} />
               <Field label="Total dû"       value={formatHTG(loan.total_due)} />
               <Field label="Demandé le"     value={formatDate(loan.request_date)} />
               {loan.approval_date     && <Field label="Approuvé le" value={formatDate(loan.approval_date)} />}
@@ -255,7 +269,7 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
                   onChange={e => { setAction(e.target.value as ReviewAction | ''); setError(null); }}
                   className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]"
                 >
-                  <option value="">— Aucune action —</option>
+                  <option value="">Aucune action</option>
                   {availableActions.map(a => (
                     <option key={a} value={a}>{ACTION_META[a].label}</option>
                   ))}

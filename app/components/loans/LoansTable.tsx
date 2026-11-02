@@ -32,9 +32,9 @@ import LoanBulkActionDropdown, { LoanBulkAction } from './LoanBulkActionDropdown
 import LoanBulkActionModal from './modals/LoanBulkActionModal';
 import LoanDetailModal from './modals/LoanDetailModal';
 import ReviewLoanModal from './modals/ReviewLoanModal';
-import RepayLoanModal from './modals/Repayloanmodal';
+import RepayLoanModal from './modals/RepayLoanModal';
 import { fetchLoans } from '@/app/lib/api/loans';
-import { useLoanPermissions } from '@/app/lib/useloanpermissions';
+import { useLoanPermissions } from '@/app/lib/useLoanPermissions';
 import {
   LoanData, LoanStatus, LoanTab,
   LOAN_STATUS_LABELS, LOAN_TYPE_LABELS, PAYMENT_FREQUENCY_LABELS,
@@ -60,8 +60,14 @@ type SortField = 'member_name' | 'loan_type' | 'loan_amount' | 'status' | 'col5'
 const formatHTG = (n: number) =>
   new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(n) + ' HTG';
 
+/**
+ * Django renvoie next_due_date / due_date sans heure ("2026-11-29").
+ * new Date() les lit comme minuit UTC, soit la veille en Haïti.
+ * On les lit à midi local pour afficher le bon jour d'échéance.
+ */
 const formatShortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  new Date(iso.length === 10 ? `${iso}T12:00:00` : iso)
+    .toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
 function formatRelative(iso: string) {
   const d       = new Date(iso);
@@ -124,7 +130,7 @@ export default function LoansTable() {
   const [loans,   setLoans]   = useState<LoanData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
-
+const [notice, setNotice] = useState<string | null>(null);
   const loadLoans = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -268,11 +274,28 @@ export default function LoansTable() {
         onPeriodChange={setSelectedPeriod}
         onTypeChange={setSelectedType}
         onRangeChange={setSelectedRange}
-        onAdd={() => { if (canCreate) setNewLoanOpen(true); }}
+        onAdd={() => {
+          if (canCreate) { setNewLoanOpen(true); return; }
+          setNotice(
+            "Votre rôle ne permet pas de créer une demande de prêt. " +
+            "Les demandes sont saisies par un agent de crédit, un superviseur ou un directeur. " +
+            "Orientez le membre vers l'un d'eux."
+          );
+          setTimeout(() => setNotice(null), 8000);
+        }}        
         totalCount={sorted.length}
         loans={filtered}
       />
-
+      {notice && (
+        <div className="flex items-start gap-3 p-4 bg-[#FEF9EC] border border-yellow-200 rounded-2xl">
+          <ShieldAlert className="w-4 h-4 text-[#B45309] shrink-0 mt-0.5" />
+          <p className="flex-1 text-sm text-[#B45309]">{notice}</p>
+          <button onClick={() => setNotice(null)} aria-label="Fermer"
+            className="p-1 rounded-lg text-[#B45309] hover:bg-yellow-100">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
       {error && (
         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
           <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />

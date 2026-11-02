@@ -65,9 +65,11 @@ export default function LoanDetailModal({ loan, onClose }: Props) {
     : loan.late_days === 0  ? 'À jour'
     : <span className="text-red-600">{loan.late_days} jour{loan.late_days > 1 ? 's' : ''} de retard</span>;
 
+  const PER: Record<string, string> = { weekly: 'semaine', biweekly: '2 semaines', monthly: 'mois' };
+   
   const echeance = loan.installment_amount == null
-    ? DASH
-    : `${htg(loan.installment_amount)} / ${(PAYMENT_FREQUENCY_LABELS[loan.payment_frequency] ?? loan.payment_frequency).toLowerCase()}`;
+     ? DASH
+     : `${htg(loan.installment_amount)} / ${PER[loan.payment_frequency] ?? loan.payment_frequency}`;
 
   // Dates : on ne montre que celles qui ont un sens pour le statut actuel
   const suivi: Row[] = [

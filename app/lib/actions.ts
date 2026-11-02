@@ -1,4 +1,4 @@
-// app/config.ts ou lib/config.ts
+//app\lib\actions.ts
 "use server";
 
 import { signIn } from "@/auth";
@@ -7,7 +7,6 @@ import axios from "axios";
 import { getCookie, setCookie } from 'cookies-next/server';
 import { revalidatePath } from "next/cache";
 import { signOut } from "@/auth";
-import { deleteCookie } from "cookies-next/server";
 import { cookies } from "next/headers";
 
 
@@ -46,7 +45,7 @@ export const findByUsernameOrEmail = async (username: string) => {
   }
 };
 export const loginUser = async (username: string, password: string) => {
-  console.log("loginUser called with:", username, password)
+  // Ne JAMAIS journaliser le mot de passe ni les jetons : ces logs serveur sont conservés en clair.
   try {
     const resp = await axios.post(`${process.env.BASE_URL}auth/login/`, {
       username,
@@ -55,7 +54,6 @@ export const loginUser = async (username: string, password: string) => {
 
 
     const token: Token = resp.data;
-    console.log(resp.data);
     await setCookie(`${process.env.TOKEN_NAME}`, token.access, {cookies});
     await setCookie(`${process.env.REFRESH_TOKEN}`, token.refresh, {cookies});
     await setCookie("roles", JSON.stringify(token.roles), {cookies});
@@ -65,7 +63,7 @@ export const loginUser = async (username: string, password: string) => {
       details: resp.data,
     };
   } catch (error) {
-    console.log("Error in loginUser:", error);
+    console.log("Error in loginUser:", axios.isAxiosError(error) ? error.response?.status : error);
     return {
       success: false,
       details: error,
@@ -184,24 +182,62 @@ export const massImport = async (
 
 
 /**
- * Déconnexion complète : 
- * - Supprime les tokens JWT backend
- * - Termine la session NextAuth
+ * Déconnexion complète :
+ * 1. Invalide le refresh token côté Django (liste noire : il ne pourra plus
+ *    servir à obtenir de nouveaux jetons, même s'il a été copié)
+ * 2. Supprime les cookies de jetons et de rôles du navigateur
+ * 3. Termine la session NextAuth et renvoie vers /login
+ *
+ * Un échec à l'étape 1 (serveur injoignable) n'empêche pas la déconnexion
+ * locale : on supprime toujours les cookies.
  */
-export async function logout() {
-  try {
-    // 1. Supprimer les cookies de tokens backend
-    await deleteCookie(`${process.env.TOKEN_NAME}`, { cookies });
-    await deleteCookie(`${process.env.REFRESH_TOKEN}`, { cookies });
-    
-    // 2. Déconnecter de NextAuth (supprime le cookie de session NextAuth)
-    await signOut({ redirect: true, redirectTo: "/login" });
-    
-    return { success: true };
-  } catch (error) {
-    console.error("Logout error:", error);
-    return { success: false, error };
+export async function logout(tokens?: { access?: string; refresh?: string }) {
+  // Le navigateur supprime ses cookies avant d'appeler cette action et nous
+  // transmet les jetons : on les prend en priorité, sinon on lit les cookies.
+  const access  = tokens?.access  ?? (await getCookie(`${process.env.TOKEN_NAME}`, { cookies }));
+  const refresh = tokens?.refresh ?? (await getCookie(`${process.env.REFRESH_TOKEN}`, { cookies }));
+
+  // 1. Liste noire du refresh token (POST /auth/logout/ — utils/views.py AuthLogoutView).
+  //    La vue exige un jeton d'accès valide (IsAuthenticated). Après plus de 30 min
+  //    d'inactivité, il a expiré : on en obtient un neuf avec le refresh, puis on réessaie.
+  if (refresh) {
+    const callLogout = (accessToken?: string) =>
+      axios.post(
+        `${process.env.BASE_URL}auth/logout/`,
+        { refresh },
+        { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, timeout: 5000 },
+      );
+
+    try {
+      await callLogout(access ?? undefined);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        try {
+          const { data } = await axios.post(
+            `${process.env.BASE_URL}auth/refresh/`,
+            { refresh },
+            { timeout: 5000 },
+          );
+          await callLogout(data.access);
+        } catch (retryError) {
+          console.warn("Logout: refresh token non invalidé côté serveur",
+            axios.isAxiosError(retryError) ? retryError.response?.status : retryError);
+        }
+      } else {
+        console.warn("Logout: refresh token non invalidé côté serveur",
+          axios.isAxiosError(error) ? error.response?.status : error);
+      }
+    }
   }
+
+  // 2. Cookies : API native de Next.js (plus fiable que cookies-next dans une action serveur)
+  const store = await cookies();
+  for (const name of [process.env.TOKEN_NAME, process.env.REFRESH_TOKEN, "roles"]) {
+    if (name) store.delete(name);
+  }
+
+  // 3. Session NextAuth (lève une redirection vers /login : ne pas l'attraper)
+  await signOut({ redirect: true, redirectTo: "/login" });
 }
 
 /**

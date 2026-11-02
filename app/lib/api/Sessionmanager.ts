@@ -1,24 +1,29 @@
 /**
  * SessionManager.ts
  * ─────────────────────────────────────────────────────────────────
- * Gère le cycle de vie des sessions caisse côté frontend :
- *   • Cache mémoire (évite les appels API répétés)
- *   • Session active par caissier
- *   • Multi-sessions (plusieurs caisses simultanées)
- *   • Fallback complet si l'API Django n'est pas encore disponible
+ * Cycle de vie des sessions caisse côté frontend.
  *
  * Endpoints Django :
  *   GET   /sessions/              → toutes les sessions
- *   GET   /sessions/{id}/         → une session
+ *   GET   /sessions/{id}/         → une session (montant_theorique, totaux…)
+ *   GET   /sessions/active/       → session ouverte du caissier connecté (404 sinon)
  *   POST  /sessions/open/         → ouvrir une session
  *   POST  /sessions/{id}/close/   → fermer une session
+ *
+ * Règles :
+ *   • Django fait autorité. Ouvrir ou fermer une caisse n'est JAMAIS simulé
+ *     localement : si le serveur ne répond pas, l'opération échoue avec un
+ *     message clair. (Une session « locale » ferait croire au caissier que sa
+ *     caisse est ouverte alors que tous ses encaissements seraient refusés.)
+ *   • Le cache sert uniquement à éviter des appels répétés en lecture.
+ *   • Le cache est rattaché à l'utilisateur connecté : sur un poste partagé,
+ *     un caissier ne voit jamais la session du précédent.
  *
  * USAGE :
  *   const session = await SessionManager.fetchActive();
  *   const session = await SessionManager.open(payload);
- *   await SessionManager.close(id, { montant_fermeture: 5000 });
- *   SessionManager.set(session);
- *   SessionManager.clear();
+ *   await SessionManager.close(id, { montant_fermeture: 5000, note_fermeture: '…' });
+ *   SessionManager.clear();   // à appeler à la déconnexion
  * ─────────────────────────────────────────────────────────────────
  */
 
@@ -26,18 +31,17 @@ import AxiosInstance from '../axiosInstance';
 import { isAxiosError } from 'axios';
 import { CaisseSession, OpenSessionPayload } from '@/types/caisse';
 
-// ─── Mapping front → Django ───────────────────────────────────────
-// Noms français du front  →  noms anglais attendus par Django
-// Tout changement de contrat API se fait ici uniquement.
+// ─── Mapping front → Django (tout changement de contrat se fait ici) ──
+
 interface DjangoOpenPayload {
-  username:             string;
-  branch:               string;
-  devise:               string;
-  montant_ouverture:    number;
-  id_responsable_cash:  string;
-  caissier_nom?:        string;
-  numero_caisse?:       string;
-  superviseur?:         string;
+  username:            string;
+  branch:              string;
+  devise:              string;
+  montant_ouverture:   number;
+  id_responsable_cash: string;
+  caissier_nom?:       string;
+  numero_caisse?:      string;
+  superviseur?:        string;
 }
 
 function toApiOpenPayload(p: OpenSessionPayload): DjangoOpenPayload {
@@ -46,34 +50,67 @@ function toApiOpenPayload(p: OpenSessionPayload): DjangoOpenPayload {
     branch:              p.branch,
     devise:              p.devise,
     montant_ouverture:   p.montant_ouverture,
-    id_responsable_cash: p.id_responsable_cash,   // ← voir ci-dessous, à faire correspondre côté modal
+    id_responsable_cash: p.id_responsable_cash,
     caissier_nom:        p.caissier_nom,
-    numero_caisse:        p.numero_caisse,
-    superviseur:          p.superviseur,
+    numero_caisse:       p.numero_caisse,
+    superviseur:         p.superviseur,
   };
 }
 
-interface DjangoClosePayload {
-  counted_amount: number;
+export interface ClosePayload {
+  montant_fermeture: number;
+  note_fermeture?:   string;
+  motif_retard?:     string;
 }
-// ─── Codes d'erreur métier (remontés par le backend) ──────────────
+
+/**
+ * ⚠️ À vérifier dans Swagger (POST /sessions/{id}/close/) : noms exacts
+ * attendus par Django. `counted_amount` est celui utilisé jusqu'ici ;
+ * `note_fermeture` est le nom du champ renvoyé par GET /sessions/{id}/.
+ */
+function toApiClosePayload(p: ClosePayload) {
+  return {
+    counted_amount: Math.round(p.montant_fermeture * 100) / 100,
+    ...(p.note_fermeture ? { note_fermeture: p.note_fermeture } : {}),
+    ...(p.motif_retard   ? { motif_retard:   p.motif_retard   } : {}),
+  };
+}
+
+// ─── Codes d'erreur métier ────────────────────────────────────────
+
 export const SESSION_ERROR_CODES = {
-  ALREADY_OPEN:      'SESSION_ALREADY_OPEN',
-  CLOSED_HOLIDAY:    'SESSION_CLOSED_HOLIDAY',
-  CLOSED_DAY:        'SESSION_CLOSED_DAY',
-  CLOSED_HOURS:      'SESSION_CLOSED_HOURS',
-  NETWORK:           'SESSION_NETWORK_ERROR',
+  ALREADY_OPEN:   'SESSION_ALREADY_OPEN',
+  CLOSED_HOLIDAY: 'SESSION_CLOSED_HOLIDAY',
+  CLOSED_DAY:     'SESSION_CLOSED_DAY',
+  CLOSED_HOURS:   'SESSION_CLOSED_HOURS',
+  NETWORK:        'SESSION_NETWORK_ERROR',
 } as const;
 
-function toApiClosePayload(montantFermeture: number): DjangoClosePayload {
-  return { counted_amount: montantFermeture };
+/** Réseau coupé ou panne serveur : l'opération n'a PAS eu lieu côté Django. */
+function isNetworkOrServerError(err: unknown): boolean {
+  if (!isAxiosError(err)) return false;
+  if (!err.response) return true;
+  return err.response.status >= 500;
 }
 
-// ─── Config ───────────────────────────────────────────────────────
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const LOCAL_KEY    = 'caposa_sessions';
+function networkError(action: string): Error {
+  const e = new Error(
+    `${SESSION_ERROR_CODES.NETWORK}: impossible de ${action} — le serveur ne répond pas. ` +
+    `Aucune opération n'a été enregistrée. Vérifiez la connexion puis réessayez.`
+  );
+  return e;
+}
 
-// ─── Helpers localStorage ─────────────────────────────────────────
+// ─── Cache ────────────────────────────────────────────────────────
+
+const CACHE_TTL_MS = 5 * 60 * 1000;           // 5 minutes
+const LOCAL_KEY    = 'caposa_sessions';
+const OWNER_KEY    = 'caposa_sessions_owner';
+
+interface CachedEntry {
+  session:   CaisseSession;
+  fetchedAt: number;
+}
 
 function readLocal(): CaisseSession[] {
   try {
@@ -88,57 +125,8 @@ function writeLocal(sessions: CaisseSession[]): void {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(sessions));
   } catch {
-    // SSR ou localStorage plein → on ignore silencieusement
+    // SSR ou stockage indisponible : le cache mémoire suffit
   }
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-function localId(): string {
-  return `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function nowISO(): string {
-  return new Date().toISOString();
-}
-
-/**
- * Retourne true si l'erreur Axios est due au réseau (pas de réponse)
- * ou à un 5xx serveur → on peut tomber en mode local sans remontée d'erreur.
- * Retourne false pour les 4xx → erreurs métier à remonter à l'UI.
- */
-function isNetworkOrServerError(err: unknown): boolean {
-  if (!isAxiosError(err)) return false;
-  if (!err.response) return true;          // réseau coupé
-  return err.response.status >= 500;       // panne serveur
-}
-
-// ─── Mock (fallback sans API) ─────────────────────────────────────
-
-function buildMockSession(payload: OpenSessionPayload): CaisseSession {
-  return {
-    id:                       localId(),
-    username:                 payload.username,
-    caissier_nom:             payload.caissier_nom,
-    numero_caisse:            payload.numero_caisse,
-    branch:                   payload.branch,
-    devise:                   payload.devise,
-    superviseur:              payload.superviseur,
-    id_responsable_cash:      payload.id_responsable_cash,
-    montant_ouverture:        payload.montant_ouverture,
-    statut:                   'ouverte',
-    ouverture_at:             nowISO(),
-    fermeture_at:             undefined,
-    tentatives_ouverture:     0,
-    remise_effectuee:         false,
-    reconciliation_effectuee: false,
-  };
-}
-// ─── Types internes ───────────────────────────────────────────────
-
-interface CachedEntry {
-  session:   CaisseSession;
-  fetchedAt: number;
 }
 
 // ─── SessionManager ───────────────────────────────────────────────
@@ -148,213 +136,166 @@ class SessionManagerClass {
   private sessions: CaisseSession[] = [];
   private hydrated  = false;
 
-  // ── Hydratation ──────────────────────────────────────────────────
-
   private hydrate(): void {
     if (this.hydrated) return;
     this.sessions = readLocal();
     this.hydrated = true;
   }
 
-  // ── Lecture synchrone ────────────────────────────────────────────
+  /**
+   * Rattache le cache à l'utilisateur connecté. Si un autre utilisateur se
+   * connecte sur le même poste, le cache du précédent est vidé.
+   * À appeler juste après la connexion (et sans risque à chaque chargement).
+   */
+  bindUser(username: string): void {
+    try {
+      const owner = localStorage.getItem(OWNER_KEY);
+      if (owner && owner !== username) this.clear();
+      localStorage.setItem(OWNER_KEY, username);
+    } catch {
+      // stockage indisponible : rien à purger
+    }
+  }
 
-  /** Toutes les sessions en mémoire (localStorage + cache). */
+  // ── Lecture synchrone (cache, ne fait pas autorité) ──
+
   getAll(): CaisseSession[] {
     this.hydrate();
     return [...this.sessions];
   }
 
   /**
-   * Session ouverte depuis le cache local, sans appel réseau.
-   * ⚠️ Ne fait pas autorité — peut être désynchronisée du serveur
-   * (ex. session fermée depuis un autre poste). Utiliser fetchActive()
-   * pour toute décision qui doit refléter l'état réel côté backend
-   * (notamment avant d'autoriser une ouverture de session).
+   * Session ouverte d'après le cache, sans appel réseau. Pour l'affichage
+   * uniquement : utiliser fetchActive() avant toute décision.
    */
   getActive(): CaisseSession | null {
     this.hydrate();
     return this.sessions.find(s => s.statut === 'ouverte') ?? null;
   }
 
-  // ── Lecture asynchrone ───────────────────────────────────────────
+  // ── Lecture asynchrone ──
 
   /**
-   * Session active avec priorité :
-   *   1. Cache mémoire frais (< 5 min)
-   *   2. GET /sessions/active/  via AxiosInstance
-   *   3. Fallback localStorage si réseau/5xx
+   * Session active du caissier connecté :
+   *   1. cache mémoire frais (< 5 min)
+   *   2. GET /sessions/active/
+   *   3. si le serveur ne répond pas : dernière valeur connue, pour
+   *      l'affichage seulement (les opérations, elles, échoueront proprement)
    */
   async fetchActive(): Promise<CaisseSession | null> {
     this.hydrate();
 
-    // 1. Cache frais ?
     const cached = this.getActive();
     if (cached) {
       const entry = this.cache.get(cached.id);
-      if (entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS) {
-        return entry.session;
-      }
+      if (entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS) return entry.session;
     }
 
-    // 2. Appel API
     try {
       const { data } = await AxiosInstance.get<CaisseSession>('/sessions/active/');
       this.set(data);
       return data;
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 404) {
-        // Le serveur confirme : aucune session ouverte
-        this._clearActiveLocally();
+        this._clearActiveLocally();     // le serveur confirme : aucune session ouverte
         return null;
       }
-      // Réseau/5xx → fallback silencieux
-      console.warn('[SessionManager] fetchActive → fallback local :', err);
-      return this.getActive();
+      if (isNetworkOrServerError(err)) {
+        console.warn('[SessionManager] fetchActive : serveur injoignable, dernière valeur connue', err);
+        return this.getActive();
+      }
+      throw err;
     }
   }
 
-  /**
-   * Session active, ou création automatique si absente.
-   * ⚠️ Réservé aux flux automatisés. Préférez bloquer l'UI.
-   */
-  async getOrCreate(payload: OpenSessionPayload): Promise<CaisseSession> {
-    const active = await this.fetchActive();
-    if (active) return active;
-    return this.open(payload);
+  /** Une session précise, toujours rechargée depuis Django (montant théorique à jour). */
+  async fetchOne(sessionId: string): Promise<CaisseSession> {
+    const { data } = await AxiosInstance.get<CaisseSession>(`/sessions/${sessionId}/`);
+    this.set(data);
+    return data;
   }
 
-  // ── Écriture ─────────────────────────────────────────────────────
+  // ── Écriture du cache ──
 
-  /** Enregistre ou met à jour une session en mémoire + localStorage. */
   set(session: CaisseSession): void {
     this.hydrate();
     const idx = this.sessions.findIndex(s => s.id === session.id);
-    if (idx >= 0) {
-      this.sessions[idx] = session;
-    } else {
-      this.sessions.push(session);
-    }
+    if (idx >= 0) this.sessions[idx] = session;
+    else this.sessions.push(session);
     this.cache.set(session.id, { session, fetchedAt: Date.now() });
     writeLocal(this.sessions);
   }
 
-  /** Invalide le cache mémoire (force re-fetch au prochain accès). */
   invalidate(sessionId: string): void {
     this.cache.delete(sessionId);
   }
 
-  /** Supprime toutes les sessions (déconnexion, fin de journée). */
+  /** Vide tout le cache. À appeler à la déconnexion. */
   clear(): void {
     this.cache.clear();
     this.sessions = [];
     writeLocal([]);
   }
 
-  // ── Opérations métier ────────────────────────────────────────────
+  // ── Opérations métier : jamais simulées ──
 
   /**
    * Ouvre une session caisse.
-   *   • Vérifie l'absence de session ouverte AUPRÈS DU SERVEUR (fetchActive),
-   *     pas seulement dans le cache local — évite les faux positifs/négatifs
-   *     quand le cache est désynchronisé (ex. session fermée depuis un autre
-   *     poste, ou jamais correctement invalidée après un fallback local).
-   *   • POST /sessions/open/  avec mapping des champs Django
-   *   • Fallback local si réseau/5xx (session marquée _local)
-   *   • Remonte les erreurs 4xx à l'UI sans swallowing
+   *   • vérifie auprès du serveur qu'aucune session n'est déjà ouverte
+   *   • POST /sessions/open/
+   *   • serveur injoignable → erreur claire, aucune session créée
    */
   async open(payload: OpenSessionPayload): Promise<CaisseSession> {
-    // Avant : this.getActive() (cache local uniquement). Le backend fait
-    // autorité sur l'état réel de la session — fetchActive() interroge le
-    // serveur et ne retombe sur le cache qu'en cas de panne réseau/5xx.
     const existing = await this.fetchActive();
     if (existing) {
       throw new Error(
-        `SESSION_ALREADY_OPEN: Caisse ${existing.numero_caisse} déjà ouverte. ` +
+        `${SESSION_ERROR_CODES.ALREADY_OPEN}: Caisse ${existing.numero_caisse} déjà ouverte. ` +
         `Fermez-la avant d'en ouvrir une nouvelle.`
       );
     }
 
     try {
-      const { data } = await AxiosInstance.post<CaisseSession>(
-        '/sessions/open/',
-        toApiOpenPayload(payload)
-      );
+      const { data } = await AxiosInstance.post<CaisseSession>('/sessions/open/', toApiOpenPayload(payload));
       this.set(data);
       return data;
     } catch (err) {
-      // Cas spécifique : caisse fermée selon horaire/calendrier
       if (isAxiosError(err) && err.response?.status === 403) {
-        const data = err.response.data as {
-          code?: string;
-          message?: string;
-          reason?: string;
-        };
-
-        // Remonter une erreur claire à l'UI avec le message du backend
-        throw new Error(
-          data.message ||
-          'Caisse fermée. Consultez les horaires ou le calendrier des jours fériés.'
-        );
+        const d = err.response.data as { code?: string; message?: string; detail?: string };
+        throw new Error(d.message || d.detail || 'Caisse fermée. Consultez les horaires ou le calendrier des jours fériés.');
       }
-
-      if (!isNetworkOrServerError(err)) throw err; // 4xx → remonter à l'UI (garde err.response intact)
-
-      // Réseau/5xx → session locale temporaire (existant)
-      console.warn('[SessionManager] open() → API hors ligne, session locale :', err);
-      const session = buildMockSession(payload);
-      (session as CaisseSession & { _local?: boolean })._local = true;
-      this.set(session);
-      return session;
+      if (isNetworkOrServerError(err)) throw networkError('ouvrir la caisse');
+      throw err;    // autre 4xx : remonter tel quel (err.response intact)
     }
   }
 
   /**
-   * Ferme une session caisse.
-   *   • POST /sessions/{id}/close/  avec { counted_amount }
-   *   • Fallback local si réseau/5xx
-   *   • Remonte les erreurs 4xx à l'UI
+   * Ferme une session caisse — la sienne, ou celle d'un caissier pour un
+   * superviseur / administrateur (Django vérifie le droit et renvoie 403).
+   *   • N'exige PAS que la session soit dans le cache local
+   *   • Envoie le montant compté, la note et le motif de retard
+   *   • Serveur injoignable → erreur claire : la caisse reste ouverte
    */
-  async close(
-    sessionId: string,
-    payload: { montant_fermeture: number }
-  ): Promise<CaisseSession> {
-    this.hydrate();
-
-    const session = this.sessions.find(s => s.id === sessionId);
-    if (!session) throw new Error(`Session introuvable : ${sessionId}`);
-
+  async close(sessionId: string, payload: ClosePayload): Promise<CaisseSession> {
     try {
       const { data } = await AxiosInstance.post<CaisseSession>(
         `/sessions/${sessionId}/close/`,
-        toApiClosePayload(payload.montant_fermeture)
+        toApiClosePayload(payload),
       );
       this.set(data);
+      this.invalidate(sessionId);
       return data;
     } catch (err) {
-      if (!isNetworkOrServerError(err)) throw err; // 4xx → remonter à l'UI
-
-      // Réseau/5xx → fermeture locale
-      console.warn('[SessionManager] close() → API hors ligne, fermeture locale :', err);
-      const closed: CaisseSession = {
-        ...session,
-        statut:       'fermée',
-        fermeture_at: nowISO(),
-      };
-      this.set(closed);
-      this.invalidate(sessionId);
-      return closed;
+      if (isNetworkOrServerError(err)) throw networkError('fermer la caisse');
+      throw err;    // 4xx (dont 403) : remonter à l'UI
     }
   }
 
-  // ── Privé ────────────────────────────────────────────────────────
+  // ── Privé ──
 
   private _clearActiveLocally(): void {
-    this.sessions = this.sessions.map(s =>
-      s.statut === 'ouverte' ? { ...s, statut: 'fermée' } : s
-    );
+    this.sessions = this.sessions.map(s => (s.statut === 'ouverte' ? { ...s, statut: 'fermée' } : s));
     writeLocal(this.sessions);
   }
 }
 
-// ─── Singleton exporté ────────────────────────────────────────────
 export const SessionManager = new SessionManagerClass();
