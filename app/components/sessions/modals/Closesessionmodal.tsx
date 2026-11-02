@@ -281,15 +281,15 @@ export default function CloseSessionModal({ session, onClose, onConfirm, schedul
 
       {/* ── Montant théorique et son détail ── */}
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Montant théorique</p>
             <p className="text-xs text-gray-400">Ce que la caisse doit contenir selon le système</p>
           </div>
           {freshLoading ? (
             <span className="flex items-center gap-2 text-xs text-gray-400"><Loader2 className="w-4 h-4 animate-spin" /> Calcul…</span>
           ) : theorique != null ? (
-            <span className="text-lg font-bold text-gray-900">{formatMoney(theorique, devise)}</span>
+            <span className="shrink-0 whitespace-nowrap text-lg font-bold text-gray-900">{formatMoney(theorique, devise)}</span>
           ) : (
             <button onClick={loadSession} className="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:underline">
               <RefreshCw className="w-3.5 h-3.5" /> Réessayer

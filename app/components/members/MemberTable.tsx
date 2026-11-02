@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Eye, Edit, Trash2, Banknote,
   Mail, Phone, MapPin, Users,
@@ -11,6 +11,7 @@ import { MemberData, getMemberInitials } from './validations';
 import MemberBulkActionDropdown, { MemberBulkAction } from './MemberBulkActionDropdown';
 import MemberBulkActionModal from './modals/MemberBulkActionModal';
 import UserAvatar from '@/app/components/core/UserAvatar';
+import { fetchAccountsByMember } from '@/app/lib/api/caisse';
 
 type TabId = 'actif' | 'inactif' | 'archive';
 
@@ -50,12 +51,81 @@ function getEffectiveStatus(m: MemberData): 'actif' | 'inactif' | 'suspendu' {
   return 'inactif';
 }
 
-function formatBalance(member: MemberData): string {
-  const balance = member.accounts?.[0]?.balance;
-  if (balance == null) return '—';
-  const num = typeof balance === 'string' ? parseFloat(balance) : balance;
-  if (isNaN(num)) return '—';
-  return `${num.toLocaleString('fr-FR')} HTG`;
+// ─── Soldes ────────────────────────────────────────────────────────────────────
+// GET /members/ ne renvoie pas les comptes : member.accounts est vide, d'où
+// les « — ». On charge donc les comptes de chaque membre affiché (même appel
+// que la modale de remboursement) et on additionne les soldes.
+// Comptes fermés ou archivés exclus : leur argent n'est plus disponible.
+// TODO (CS) : un champ `solde_total` dans le serializer membre éviterait
+// un appel par membre.
+
+const EXCLUDED_ACCOUNT_STATUS = new Set(['ferme', 'archive']);
+
+type BalanceInfo =
+  | { state: 'loading' }
+  | { state: 'error' }
+  | { state: 'ok'; total: number; count: number };
+
+function useMemberBalances(memberIds: string[]): Record<string, BalanceInfo> {
+  const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
+  const key = memberIds.join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    const missing = memberIds.filter(id => !balances[id] || balances[id].state === 'error');
+    if (missing.length === 0) return;
+
+    setBalances(b => {
+      const next = { ...b };
+      for (const id of missing) next[id] = { state: 'loading' };
+      return next;
+    });
+
+    Promise.all(missing.map(async id => {
+      try {
+        const accounts = await fetchAccountsByMember(id);
+        const usable   = accounts.filter(a => !EXCLUDED_ACCOUNT_STATUS.has(a.account_status));
+        const total    = usable.reduce((s, a) => s + (Number(a.soldeActuel) || 0), 0);
+        return [id, { state: 'ok', total, count: usable.length }] as const;
+      } catch {
+        return [id, { state: 'error' }] as const;
+      }
+    })).then(results => {
+      if (cancelled) return;
+      setBalances(b => {
+        const next = { ...b };
+        for (const [id, info] of results) next[id] = info as BalanceInfo;
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return balances;
+}
+
+function formatHTG(n: number): string {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' HTG';
+}
+
+function BalanceCell({ info }: { info?: BalanceInfo }) {
+  if (!info || info.state === 'loading') {
+    return <div className="h-3 w-20 bg-gray-100 animate-pulse rounded" />;
+  }
+  if (info.state === 'error') {
+    return <span className="text-xs text-gray-400" title="Impossible de charger les comptes">—</span>;
+  }
+  if (info.count === 0) {
+    return <span className="text-xs text-gray-400 italic">Aucun compte</span>;
+  }
+  return (
+    <div className="min-w-0">
+      <p className="text-sm font-semibold text-[#1B5E20] whitespace-nowrap">{formatHTG(info.total)}</p>
+      {info.count > 1 && <p className="text-xs text-gray-400">{info.count} comptes</p>}
+    </div>
+  );
 }
 
 function SortIcon({ field, sortField, sortDir }: { field: string; sortField: string; sortDir: string }) {
@@ -149,6 +219,8 @@ const MemberTable: React.FC<MemberTableProps> = ({
     onTabChange?.(tab);
     setSelected(new Set());
   };
+
+  const balances = useMemberBalances(useMemo(() => sorted.map(m => String(m.id)), [sorted]));
 
   const selectedMembers = useMemo(
     () => sorted.filter(m => selected.has(m.id)),
@@ -304,7 +376,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
                   />
                 </div>
                 <div className="min-w-0">
-                  <p className={`text-sm font-semibold truncate leading-tight ${isArchiveTab ? 'text-gray-400' : 'text-gray-900'}`}>
+                  <p className={`text-sm font-semibold truncate leading-tight capitalize ${isArchiveTab ? 'text-gray-400' : 'text-gray-900'}`}>
                     {member.first_name} {member.last_name}
                   </p>
                   {member.email && (
@@ -339,9 +411,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
               </div>
 
               {/* Solde */}
-              <div className="text-sm font-semibold text-[#1B5E20]">
-                {formatBalance(member)}
-              </div>
+              <BalanceCell info={balances[String(member.id)]} />
 
               {/* Actions */}
               <div className="flex items-center justify-center gap-1">
@@ -350,7 +420,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
                   <Eye className="w-3.5 h-3.5" />
                 </button>
                 {!isArchiveTab ? (
-                  <div>
+                  <>
                     <button title="Modifier" onClick={() => onEdit(member)}
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-[#DDEAD5] hover:text-[#2E7D32]">
                       <Edit className="w-3.5 h-3.5" />
@@ -365,7 +435,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
                       className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-red-50 hover:text-red-500">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
+                  </>
                 ) : (
                   <button title="Réactiver" onClick={() => onEdit(member)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#DDEAD5] text-[#1B5E20] hover:bg-[#c8e0bc] transition-all">

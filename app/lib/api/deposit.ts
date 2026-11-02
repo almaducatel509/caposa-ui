@@ -1,4 +1,4 @@
-import { CreateDepositResponse } from "@/app/components/dashboard/caissier/validation";
+import { CreateDepositResponse } from "@/app/components/dashboard/validation";
 import AxiosInstance from "../axiosInstance";
 import {
   CaisseSession,

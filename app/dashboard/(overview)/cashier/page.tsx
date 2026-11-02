@@ -1,4 +1,4 @@
-import DashboardCaissier from '@/app/components/dashboard/caissier/dashboard';
+import DashboardCaissier from '@/app/components/dashboard/dashboard';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

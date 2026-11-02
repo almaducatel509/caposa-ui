@@ -67,6 +67,13 @@ const tooltipStyle = {
   boxShadow:       '0 4px 16px rgba(0,0,0,0.06)',
 };
 
+/** Graduation d'axe : 0, 500, 1,5k, 20k… (évite « 0k » répété sur un axe vide ou petit) */
+function formatTick(v: number) {
+  if (Math.abs(v) < 1000) return String(v);
+  const k = v / 1000;
+  return `${Number.isInteger(k) ? k : k.toFixed(1).replace('.', ',')}k`;
+}
+
 function formatHTG(n: number) {
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
 }
@@ -103,9 +110,9 @@ export default function DashboardStats({
   volumeData, typeData,
 }: DashboardStatsProps) {
   return (
-    <div>
+    <div className="flex flex-col gap-4">
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard icon={ArrowDownCircle} label="Montant total"      value={formatHTG(totalAmount)}              accent={C.green} />
         <KPICard icon={TrendingUp}      label="Nombre de dépôts"   value={depositCount} sub={`${completedCount} complétés`} accent={C.blue} />
         <KPICard icon={CalendarDays}    label="Moyenne / dépôt"    value={formatHTG(avgAmount)}                accent={C.gold}  />
@@ -124,7 +131,7 @@ export default function DashboardStats({
             <BarChart data={volumeData} barSize={22}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
-              <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v) || 0, 'Dépôts']} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
@@ -143,7 +150,7 @@ export default function DashboardStats({
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false}
-                tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                allowDecimals={false} tickFormatter={formatTick} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) || 0), 'Montant']} />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
@@ -198,7 +205,7 @@ export default function DashboardStats({
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false}
-                tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                allowDecimals={false} tickFormatter={formatTick} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatHTG(Number(v) || 0), 'Montant']}/>
               <Line type="monotone" dataKey="amount" stroke={C.green} strokeWidth={2.5}
                 dot={{ fill: C.green, r: 3 }} activeDot={{ r: 5 }} />

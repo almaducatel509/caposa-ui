@@ -13,11 +13,17 @@ interface AccountDetailModalProps {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
+// Statuts Django (account_status). Il manquait en_attente, gele et archive :
+// ils retombaient sur « Actif » par défaut.
 const STATUS_CFG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  actif:    { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', dot: 'bg-[#2E7D32]', label: 'Actif'    },
-  suspendu: { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Suspendu' },
-  ferme:    { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Fermé'    },
+  actif:      { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]',  dot: 'bg-[#2E7D32]',  label: 'Actif'      },
+  en_attente: { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500', label: 'En attente' },
+  gele:       { bg: 'bg-blue-50',   text: 'text-[#355C7D]',  dot: 'bg-[#355C7D]',  label: 'Gelé'       },
+  suspendu:   { bg: 'bg-blue-50',   text: 'text-[#355C7D]',  dot: 'bg-[#355C7D]',  label: 'Suspendu'   },
+  ferme:      { bg: 'bg-gray-100',  text: 'text-gray-500',   dot: 'bg-gray-400',   label: 'Fermé'      },
+  archive:    { bg: 'bg-gray-100',  text: 'text-gray-500',   dot: 'bg-gray-400',   label: 'Archivé'    },
 };
+const UNKNOWN_STATUS = { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
 
 const TYPE_CFG: Record<string, { bg: string; text: string; label: string }> = {
   epargne: { bg: 'bg-[#DDEAD5]', text: 'text-[#1B5E20]', label: 'Compte Épargne'  },
@@ -32,7 +38,9 @@ function formatHTG(n?: number | null) {
 
 function formatDate(d?: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  // Date sans heure (« 2026-10-20 ») : lue à midi, sinon elle recule d'un jour en UTC-4/-5
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T12:00:00`) : new Date(d);
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // ─── Section wrapper ───────────────────────────────────────────────────────────
@@ -72,8 +80,10 @@ export default function AccountDetailModal({ isOpen, onClose, account }: Account
 
   if (!isOpen || !account) return null;
 
-  const status  = account.account_status ?? 'actif';
-  const sCfg    = STATUS_CFG[status]  ?? STATUS_CFG['actif'];
+  const status  = account.account_status ?? '';
+  // Jamais de repli sur « Actif » : un statut inconnu s'affiche tel quel, en gris
+  const sCfg    = STATUS_CFG[status] ?? { ...UNKNOWN_STATUS, label: status || 'Inconnu' };
+  const isPending = status === 'en_attente';
   const tCfg    = TYPE_CFG[account.typeCompte ?? ''] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: account.typeCompte ?? '—' };
   const solde   = account.soldeActuel ?? parseFloat(account.balance ?? '0');
 
@@ -111,6 +121,13 @@ export default function AccountDetailModal({ isOpen, onClose, account }: Account
 
         {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+
+          {isPending && (
+            <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+              <p className="font-semibold">Compte en attente d'activation</p>
+              <p className="text-xs mt-0.5">Il ne peut pas encore être débité (retrait, remboursement par débit de compte).</p>
+            </div>
+          )}
 
           {/* Général */}
           <Section icon={Wallet} title="Informations générales" color="bg-[#F9F9F6] border-gray-100">

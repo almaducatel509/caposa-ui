@@ -177,15 +177,15 @@ class SessionManagerClass {
 
   /**
    * Session active du caissier connecté :
-   *   1. cache mémoire frais (< 5 min)
+   *   1. cache mémoire frais (< 5 min) — ignoré avec { force: true }
    *   2. GET /sessions/active/
    *   3. si le serveur ne répond pas : dernière valeur connue, pour
    *      l'affichage seulement (les opérations, elles, échoueront proprement)
    */
-  async fetchActive(): Promise<CaisseSession | null> {
+  async fetchActive(opts: { force?: boolean } = {}): Promise<CaisseSession | null> {
     this.hydrate();
 
-    const cached = this.getActive();
+    const cached = opts.force ? null : this.getActive();
     if (cached) {
       const entry = this.cache.get(cached.id);
       if (entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS) return entry.session;
@@ -201,8 +201,9 @@ class SessionManagerClass {
         return null;
       }
       if (isNetworkOrServerError(err)) {
-        console.warn('[SessionManager] fetchActive : serveur injoignable, dernière valeur connue', err);
-        return this.getActive();
+        console.warn('[SessionManager] fetchActive : serveur injoignable', err);
+        // En mode force, on ne montre pas un cache local qui pourrait appartenir à un autre utilisateur
+        return opts.force ? null : this.getActive();
       }
       throw err;
     }

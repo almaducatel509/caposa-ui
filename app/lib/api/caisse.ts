@@ -17,7 +17,7 @@ import AxiosInstance from '../axiosInstance';
 import type { WithdrawalApiResult } from '@/app/components/transactions/withdrawals/WithdrawalReceipt';
 import { isAxiosError } from 'axios';
 import { SessionManager } from './Sessionmanager';
-import { CreateDepositResponse } from '@/app/components/dashboard/caissier/validation';
+import { CreateDepositResponse } from '@/app/components/dashboard/validation';
 import {
   CaisseSession,
   CaisseTransaction,

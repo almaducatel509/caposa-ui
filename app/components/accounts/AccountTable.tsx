@@ -55,6 +55,11 @@ const STATUS_CFG: Record<TabId, { bg: string; text: string; dot: string; label: 
   gele:    { bg: 'bg-blue-50',   text: 'text-[#355C7D]', dot: 'bg-[#355C7D]', label: 'Gelé'   },
   archive: { bg: 'bg-gray-100',  text: 'text-gray-500',  dot: 'bg-gray-400',  label: 'Archive' },
 };
+// Badge d'un compte en attente d'activation : il reste dans l'onglet « Ouverts »
+// (il n'est ni gelé ni fermé) mais ne doit PAS s'afficher « Ouvert » :
+// tant qu'il n'est pas activé, on ne peut pas le débiter.
+const PENDING_CFG = { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500', label: 'En attente' };
+
 // Mapping enum → onglet
 function getTab(status: AccountStatus): TabId {
   if (status === 'gele') return 'gele';
@@ -328,10 +333,10 @@ return (
         {!isLoading && sorted.map((acc, i) => {
           const status      = acc.account_status;
           const tab         = getTab(status);
-          const statusCfg   = STATUS_CFG[tab];
           const solde       = acc.soldeActuel ?? 0;
           // Pastille orange = compte en attente d'activation (même règle que la légende du bas)
           const isPending   = status === 'en_attente';
+          const statusCfg   = isPending ? PENDING_CFG : STATUS_CFG[tab];
           const typeCfg     = acc.typeCompte
             ? (TYPE_CFG[acc.typeCompte] ?? { bg: 'bg-gray-100', text: 'text-gray-500', label: acc.typeCompte })
             : { bg: 'bg-gray-100', text: 'text-gray-500', label: '—' };

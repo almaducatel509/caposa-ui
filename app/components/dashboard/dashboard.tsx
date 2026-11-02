@@ -20,18 +20,18 @@ import type {
 
 import { fetchEmployees } from '@/app/lib/api/employee';
 
-import OpenSessionModal  from '../../sessions/modals/Opensessionmodal';
-import CloseSessionModal from '../../sessions/modals/Closesessionmodal';
-
-import { Modal }         from '../../ui/Modal';
 import { useSession }    from 'next-auth/react';
 import DashboardStats, { TypePoint, VolumePoint } from './DashboardStats';
 import { OpeningHour } from '@/types/branche';
 import { fetchBranches, fetchOpeningHours, fetchHolidays } from '@/app/lib/api/branche';
-import { BranchData } from '../../branches/validations';
-import { Holiday } from '../../holidays/validations';
 import { fetchRecentTransactions } from '@/app/lib/api/transaction';
 import { FEATURES } from '@/app/lib/features';
+import { SessionManager } from '@/app/lib/api/Sessionmanager';
+import { BranchData } from '../branches/validations';
+import { Holiday } from '../holidays/validations';
+import { Modal } from '../ui/Modal';
+import OpenSessionModal from '../sessions/modals/Opensessionmodal';
+import CloseSessionModal from '../sessions/modals/Closesessionmodal';
 
 // ─────────────────────────────────────────────────────────────────
 // Constantes
@@ -114,6 +114,12 @@ function getGreeting() {
        : h < 18 ? { text: 'Bon après-midi', icon: Sun    }
        :          { text: 'Bonsoir',        icon: Sunset };
 }
+
+/** « 25 oct. 2026, 15:03 » au lieu de l'ISO brut 2026-10-25T19:03:28.192817Z */
+const fmtDateTime = (iso?: string) =>
+  iso
+    ? new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '—';
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('fr-HT', { hour: '2-digit', minute: '2-digit' });
@@ -224,11 +230,12 @@ function AlertsBell({ alerts }: { alerts: CaisseAlert[] }) {
 
 export default function DashboardCaissier() {
   // ── State: données caisse / session ──
-  const [sessions,       setSessions]      = useState<CaisseSession[]>([]);
+  // Session ouverte DU CAISSIER CONNECTÉ uniquement (GET /sessions/active/).
+  // Ne jamais la chercher dans une liste de sessions : on y trouverait
+  // la caisse d'un collègue.
+  const [activeSession,  setActiveSession] = useState<CaisseSession | null>(null);
   const [transactions,   setTransactions]  = useState<TransactionData[]>([]);
   const [alerts, setAlerts] = useState<CaisseAlert[] | null>(null);
-  const [montantCaisse,  setMontantCaisse] = useState(0);
-  const [caisseStatus,   setCaisseStatus]  = useState<CaisseStatus>('fermée');
   const [isLoading,      setIsLoading]     = useState(true);
 // ...
 const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si le type est importable ici
@@ -252,7 +259,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
   const [recentTx,  setRecentTx]  = useState<Transaction[]>([]);
   const [txLoading, setTxLoading] = useState(true);
 
-  const activeSession = sessions.find(s => s.statut === 'ouverte') ?? null;
+  const caisseStatus: CaisseStatus = activeSession ? 'ouverte' : 'fermée';
   const greeting  = getGreeting();
   const GreetIcon = greeting.icon;
   const { data: session } = useSession();
@@ -287,18 +294,18 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
       setDashError(err.message);
       return { sessions: [], transactions: [], alerts: null, montant_caisse: 0 };
     }),
+    // force : on ignore tout cache, le serveur dit si CET utilisateur a une caisse ouverte
+    SessionManager.fetchActive({ force: true }).catch(() => null),
     fetchBranches(),
     fetchOpeningHours(),
     fetchHolidays(),
     fetchCaisses(),
     fetchEmployees(),
     fetchPosts(),
-  ]).then(([dash, b, oh, h, c, emp, p]) => {
-    setSessions(dash.sessions);
+  ]).then(([dash, active, b, oh, h, c, emp, p]) => {
+    setActiveSession(active);
     setTransactions(dash.transactions);
     setAlerts(dash.alerts);
-    setMontantCaisse(dash.montant_caisse);
-    setCaisseStatus(dash.sessions.some((s: CaisseSession) => s.statut === 'ouverte') ? 'ouverte' : 'fermée');
 
     setBranches(Array.isArray(b) ? b : (b?.results ?? []));
     setOpeningHours(Array.isArray(oh) ? oh : (oh?.results ?? []));
@@ -311,19 +318,21 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
 
   const handleOpenSession = async (payload: OpenSessionPayload) => {
     const s = await openSession(payload);
-    setSessions(prev => [...prev, s]);
-    setCaisseStatus('ouverte');
+    SessionManager.set(s);
+    setActiveSession(s);
     setShowOpenModal(false);
   };
 
   const handleCloseSession = async (payload: {
     montant_fermeture: number;
     note_fermeture?:   string;
+    motif_retard?:     string;
   }) => {
     if (!activeSession) return;
     const closed = await closeSession(activeSession.id, payload);
-    setSessions(prev => prev.map(s => s.id === activeSession.id ? closed : s));
-    setCaisseStatus('fermée');
+    SessionManager.set(closed);
+    SessionManager.invalidate(activeSession.id);
+    setActiveSession(null);
     setShowCloseModal(false);
   };
 
@@ -343,17 +352,19 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
   }, [transactions, period]);
 
   // ── KPIs passés à DashboardStats ──
-  const completed         = filteredTx.filter(t => t.status === 'completed');
-  const totalAmount       = montantCaisse;                                   // Solde caisse (net, pas filtré par période)
-  const transactionCount  = filteredTx.length;
+  // Les cartes et les deux graphiques sont libellés « dépôts » : on ne compte
+  // donc QUE les dépôts. (Avant, « Montant total » affichait le solde de caisse
+  // renvoyé par le dashboard, d'où 2 000 HTG à côté de 0 dépôt.)
+  const deposits          = filteredTx.filter(t => t.type === 'deposit');
+  const completed         = deposits.filter(t => t.status === 'completed');
+  const totalAmount       = completed.reduce((s, t) => s + t.amount, 0);
+  const transactionCount  = deposits.length;
   const completedCount    = completed.length;
-  const avgAmount         = completed.length
-    ? completed.reduce((s, t) => s + t.amount, 0) / completed.length
-    : 0;
-  const uniqueMembers     = new Set(filteredTx.map(t => t.member_name).filter(Boolean)).size;
-  const pendingCount      = filteredTx.filter(t => t.status === 'pending').length;
-  const completionRate    = filteredTx.length
-    ? (completedCount / filteredTx.length) * 100
+  const avgAmount         = completed.length ? totalAmount / completed.length : 0;
+  const uniqueMembers     = new Set(deposits.map(t => t.member_name).filter(Boolean)).size;
+  const pendingCount      = deposits.filter(t => t.status === 'pending').length;
+  const completionRate    = deposits.length
+    ? (completedCount / deposits.length) * 100
     : 0;
 
   // ── Données pour les graphes Volume + Tendance ──
@@ -387,7 +398,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
     }
 
     filteredTx.forEach(tx => {
-      if (tx.status !== 'completed') return;
+      if (tx.type !== 'deposit' || tx.status !== 'completed') return;
       const txDate = new Date(tx.created_at);
       const idx = days.findIndex(item =>
         period === 'day'
@@ -478,7 +489,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
               <p className="text-xs text-gray-500">
                 {caisseStatus === 'fermée'
                   ? 'Ouvrez la caisse avant de commencer toute opération'
-                  : `Ouverte à ${activeSession?.ouverture_at} · Superviseur : ${activeSession?.superviseur}`}
+                  : `Ouverte le ${fmtDateTime(activeSession?.ouverture_at)} · Superviseur : ${activeSession?.superviseur ?? '—'}`}
               </p>
             </div>
           </div>
@@ -589,7 +600,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
               caisses={caisses}
               employees={employees}
               posts={posts}          
-              onRequireOverride={(reason, details) => {
+             onRequireOverride={(reason: string, details: unknown) => {
                 console.warn('Override requis:', reason, details);
                 // TODO: ouvrir un modal d'approbation directeur
               }}
