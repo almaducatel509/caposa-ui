@@ -5,7 +5,7 @@
 //     fetch('/api/treasury/handovers?status=archived').then(r => r.json()).then(setArchived);
 //   }, []);
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Clock, Archive, ShieldAlert, Check, X, AlertTriangle, Inbox,
   ChevronDown, ChevronUp, ChevronsUpDown, FileDown,
@@ -13,8 +13,8 @@ import {
 import AnomalieModal from './AnomalieModal';
 import { Remise, Decision, AnomalieDecision } from '@/types/remise';
 import AxiosInstance from '@/app/lib/axiosInstance';
-import { useEffect } from 'react';
 import { TableSkeleton } from '../ui/TableSkeleton';
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -282,6 +282,41 @@ const EmptyPendingState: React.FC<{ hasArchived: boolean }> = ({ hasArchived }) 
     </div>
   );
 };
+const toNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const nameOf = (info: any): string =>
+  typeof info === 'string' ? info : info?.name ?? info?.nom ?? info?.username ?? '—';
+const initialsOf = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '?';
+
+function mapHandover(h: any): Remise {
+  const cashierName  = nameOf(h.cashier_info);
+  const verifierName = h.verified_by_info ? nameOf(h.verified_by_info) : '—';
+  return {
+    id:             String(h.id),
+    session_id:     String(h.session_id ?? ''),
+    date:           h.date ?? '',
+    time:           String(h.time ?? '').slice(0, 5),
+    opening_amount: toNum(h.opening_amount),
+    amount:         toNum(h.amount),
+    anomaly:        Boolean(h.anomaly),
+    late_days:      Number(h.late_days) || 0,
+    cashier:        { name: cashierName,  initials: initialsOf(cashierName) },
+    verified_by:    { name: verifierName, initials: initialsOf(verifierName) },
+    decision:       h.decision ?? undefined,
+    decided_at:     h.decided_at
+      ? new Date(h.decided_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      : undefined,
+    decided_by:     h.decision ? verifierName : undefined,
+    reject_reason:  h.reject_reason || undefined,
+    anomalie_decision: h.anomalie_resolution
+      ? {
+          resolution: h.anomalie_resolution,
+          note:       h.anomalie_note ?? '',
+          amount:     h.anomalie_amount != null ? toNum(h.anomalie_amount) : undefined,
+        }
+      : undefined,
+  };
+}
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 const RemisesTable: React.FC = () => {
@@ -289,21 +324,25 @@ const RemisesTable: React.FC = () => {
   const [pending,  setPending]  = useState<Remise[]>([]);
   const [archived, setArchived] = useState<Remise[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [error,  setError]  = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      AxiosInstance.get('/treasury/handovers/?status=pending'),
-      AxiosInstance.get('/treasury/handovers/?status=archived')
-    ]).then(([pendingRes, archivedRes]) => {
-      setPending(pendingRes.data);
-      setArchived(archivedRes.data);
-    }).catch(e => {
-      console.error(e);
-    }).finally(() => {
+// Une seule requête : en attente = pas encore de décision, archive = décidée
+  const load = useCallback(async () => {
+    try {
+      const { data } = await AxiosInstance.get('/treasury/handovers/');
+      const list = (Array.isArray(data) ? data : data?.results ?? []).map(mapHandover);
+      setPending(list.filter((r: Remise) => !r.decision));
+      setArchived(list.filter((r: Remise) => r.decision));
+      setError(null);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? 'Impossible de charger les remises.');
+    } finally {
       setLoading(false);
-    });
+    }
   }, []);
 
+  useEffect(() => { load(); }, [load]);
   // Modale anomalie
   const [anomalieTarget, setAnomalieTarget] = useState<Remise | null>(null);
   // Expand archive
@@ -331,28 +370,36 @@ const RemisesTable: React.FC = () => {
   }), [archived, sortField, sortDir]);
 
   // ── Décision simple ───────────────────────────────────────────────────────
-  const handleDecide = async (id: string, decision: Decision) => {
-    const now  = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const item = pending.find(r => r.id === id);
-    if (!item) return;
-    const closed: Remise = { ...item, decision, decided_at: now, decided_by: 'Vous' };
-    setPending(prev  => prev.filter(r => r.id !== id));
-    setArchived(prev => [closed, ...prev]);
-  };
+  const decide = async (id: string, body: object) => {
+  setBusyId(id);
+  setError(null);
+  try {
+    await AxiosInstance.post(`/treasury/handovers/${id}/decide/`, body);
+    await load();
+  } catch (e: any) {
+    setError(e?.response?.data?.detail ?? "Impossible d'enregistrer la décision.");
+    throw e;
+  } finally {
+    setBusyId(null);
+  }
+};
 
-  // ── Décision avec anomalie ────────────────────────────────────────────────
-  const handleAnomalieConfirm = async (
-    id: string, decision: Decision, anomalie: AnomalieDecision,
-  ) => {
-    const now  = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const item = pending.find(r => r.id === id);
-    if (!item) return;
-    const closed: Remise = { ...item, decision, decided_at: now, decided_by: 'Vous', anomalie_decision: anomalie };
-    setPending(prev  => prev.filter(r => r.id !== id));
-    setArchived(prev => [closed, ...prev]);
+const handleDecide = async (id: string, decision: Decision) => {
+  let reject_reason: string | undefined;
+  if (decision === 'rejected') {
+    const reason = window.prompt('Motif du rejet :');
+    if (!reason?.trim()) return;
+    reject_reason = reason.trim();
+  }
+  try { await decide(id, { decision, reject_reason }); } catch { /* message déjà affiché */ }
+};
+
+const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: AnomalieDecision) => {
+  try {
+    await decide(id, { decision, anomalie });
     setAnomalieTarget(null);
-  };
-
+  } catch { /* message déjà affiché */ }
+};
   // ── En-tête triable ───────────────────────────────────────────────────────
   const SortTh: React.FC<{ field: string; label: string }> = ({ field, label }) => (
     <button
@@ -376,6 +423,12 @@ const RemisesTable: React.FC = () => {
   return (
     <div>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {error && (
+          <div className="flex items-start gap-2 px-5 py-3 bg-red-50 border-b border-red-100 text-sm text-red-700">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* ── Onglets ── */}
         <div className="flex border-b border-gray-100 px-1">
@@ -458,19 +511,13 @@ const RemisesTable: React.FC = () => {
                     {r.anomaly       && <Tag color="amber">⚠ Anomalie</Tag>}
                     {r.late_days > 0 && <Tag color="red">{r.late_days}j retard</Tag>}
                   </p>
-                  <p className="text-xs text-gray-400">{r.id}</p>
+                  <p className="text-xs text-gray-400 font-mono">{r.id.slice(0, 8).toUpperCase()}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5">
-                <Avatar initials={r.verified_by.initials} color="blue" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">{r.verified_by.name}</p>
-                  <p className="text-xs text-gray-400">Vérifié</p>
-                </div>
-              </div>
+              <p className="text-xs text-gray-400 italic">En attente de vérification</p>
               <p className="text-[15px] font-bold text-[#2E7D32]">{fmt(r.amount)}</p>
               <div>
-                <p className="text-sm font-medium text-gray-800">{r.session_id}</p>
+                <p className="text-sm font-medium text-gray-800 font-mono">{r.session_id.slice(0, 8).toUpperCase()}</p>
                 <p className="text-xs text-gray-400">{r.date} · {r.time}</p>
               </div>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FEF9EC] text-[#B45309]">
@@ -480,20 +527,23 @@ const RemisesTable: React.FC = () => {
               <div className="flex items-center gap-2">
                 {r.anomaly ? (
                   <button
+                  disabled={busyId === r.id}
                     onClick={() => setAnomalieTarget(r)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-yellow-800 border border-yellow-300 bg-yellow-50 hover:bg-yellow-100 transition-colors"
                   >
                     <AlertTriangle className="w-3 h-3" /> Traiter
                   </button>
                 ) : (
-                  <div>
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleDecide(r.id, 'approved')}
+                      disabled={busyId === r.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1B5E20] border border-[#A7D1A2] hover:bg-[#DDEAD5] transition-colors"
                     >
                       <Check className="w-3 h-3" /> Valider
                     </button>
                     <button
+                      disabled={busyId === r.id}
                       onClick={() => handleDecide(r.id, 'rejected')}
                       className="p-1.5 rounded-lg text-red-700 border border-red-200 hover:bg-red-50 transition-colors"
                     >
@@ -535,10 +585,7 @@ const RemisesTable: React.FC = () => {
                       <p className="text-xs text-gray-400">{r.id} · {r.session_id}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <Avatar initials={r.verified_by.initials} color="blue" />
-                    <p className="text-sm text-gray-600">{r.verified_by.name}</p>
-                  </div>
+                  <p className="text-xs text-gray-400 italic">En attente de vérification</p>
                   <p className="text-[15px] font-bold text-[#2E7D32]">{fmt(r.amount)}</p>
                   <div>
                     <p className="text-sm font-medium text-gray-700">{r.date}</p>

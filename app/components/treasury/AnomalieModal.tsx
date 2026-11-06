@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { X, AlertTriangle, FileText, UserX } from 'lucide-react';
+import { X, AlertTriangle, FileText, UserX, Info } from 'lucide-react';
 import { Remise, Decision, AnomalieDecision, AnomalieResolution } from '@/types/remise';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -31,13 +31,13 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
     setError('');
   };
 
-  const handleClose = () => { reset(); onClose(); };
+  const handleClose = () => { if (!loading) { reset(); onClose(); } };
 
   const handleConfirm = async () => {
-    if (!resolution)    return setError('Choisissez une résolution.');
-    if (!note.trim())   return setError('La note est obligatoire.');
-    if (resolution === 'justified' && (!amount || isNaN(Number(amount)))) {
-      return setError('Saisissez le montant justifié.');
+    if (!resolution)    return setError('Choisissez d’abord une décision : justifier ou imputer.');
+    if (!note.trim())   return setError('Expliquez votre décision dans la note (obligatoire).');
+    if (resolution === 'justified' && (!amount || isNaN(Number(amount)) || Number(amount) <= 0)) {
+      return setError('Indiquez le montant de l’écart que vous justifiez (en gourdes).');
     }
 
     setError('');
@@ -45,7 +45,7 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
     try {
       await onConfirm(
         remise.id,
-        'approved',                       // anomalie justifiée → remise approuvée
+        'approved',                       // la remise est validée ; l'anomalie est tranchée
         {
           resolution,
           note: note.trim(),
@@ -54,7 +54,7 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
       );
       reset();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError('La décision n’a pas pu être enregistrée. Le message du serveur s’affiche au-dessus du tableau.');
     } finally {
       setLoading(false);
     }
@@ -63,13 +63,15 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
   const fmt = (n: number) =>
     new Intl.NumberFormat('fr-HT', { maximumFractionDigits: 0 }).format(n) + ' G';
 
+  const shortSession = remise.session_id.slice(0, 8).toUpperCase();
+
   return (
     /* Overlay */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between p-6 border-b border-gray-100">
@@ -78,9 +80,9 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
               <AlertTriangle className="w-5 h-5 text-yellow-600" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Traitement de l'anomalie</h2>
+              <h2 className="text-base font-semibold text-gray-900">Traiter un écart de caisse</h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                {remise.id} · {remise.cashier.name} · {fmt(remise.amount)}
+                {remise.cashier.name} · Session {shortSession} · {remise.date}
               </p>
             </div>
           </div>
@@ -92,31 +94,54 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
         {/* ── Body ── */}
         <div className="p-6 space-y-5">
 
-          {/* Choix résolution */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">
-              Décision du trésorier
+          {/* Ce qui s'est passé */}
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50/60 p-4 space-y-3">
+            <p className="text-sm text-gray-700 leading-relaxed">
+              À la fermeture de sa session, <span className="font-semibold">{remise.cashier.name}</span> a
+              remis un montant qui ne correspond pas au montant attendu par le système
+              (fonds d’ouverture + dépôts − retraits).
             </p>
             <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-lg px-3 py-2 border border-yellow-100">
+                <p className="text-xs text-gray-500">Fonds d’ouverture</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(remise.opening_amount)}</p>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2 border border-yellow-100">
+                <p className="text-xs text-gray-500">Montant remis</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(remise.amount)}</p>
+              </div>
+              <div className="bg-red-600">
+                  <p className="text-xs text-gray-500">anomalie_decision</p>
+                  {remise.anomalie_decision?.amount == null && /* rien */ null}
+              </div>
+            </div>
+          </div>
 
+          {/* Choix résolution */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1">
+              1. Votre décision
+            </p>
+            <p className="text-xs text-gray-400 mb-3">
+              Dans les deux cas, la remise sera validée et l’écart enregistré dans l’audit.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
               <ResolutionCard
                 active={resolution === 'justified'}
                 icon={<FileText className="w-5 h-5" />}
                 title="Justifier l'écart"
-                desc="L'écart est expliqué et accepté (erreur documentée, frais bancaire, etc.)"
+                desc="L'écart a une explication acceptée : erreur documentée, frais, etc."
                 color="blue"
-                onClick={() => setResolution('justified')}
+                onClick={() => { setResolution('justified'); setError(''); }}
               />
-
               <ResolutionCard
                 active={resolution === 'imputed'}
                 icon={<UserX className="w-5 h-5" />}
                 title="Imputer à la caissière"
-                desc="L'écart est à la charge de la caissière et sera enregistré dans son dossier."
+                desc="L'écart est à la charge de la caissière et noté dans son dossier."
                 color="red"
-                onClick={() => setResolution('imputed')}
+                onClick={() => { setResolution('imputed'); setError(''); }}
               />
-
             </div>
           </div>
 
@@ -124,39 +149,52 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
           {resolution === 'justified' && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
-                Montant justifié (G)
+                2. Montant de l’écart justifié (G) *
               </label>
               <input
                 type="number"
+                min={1}
                 value={amount}
-                onChange={e => setAmount(e.target.value)}
+                onChange={e => { setAmount(e.target.value); setError(''); }}
                 placeholder="ex : 500"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent"
               />
+              <p className="flex items-start gap-1.5 text-xs text-gray-400 mt-1.5">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                Le montant, en gourdes, de la différence que vous acceptez comme justifiée.
+              </p>
             </div>
           )}
 
           {/* Note obligatoire */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
-              Note {resolution === 'imputed' ? "d'imputation" : 'de justification'} *
-            </label>
-            <textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              rows={3}
-              placeholder={
-                resolution === 'imputed'
-                  ? 'Ex : Écart de 500 HTG imputé à la caissière — billet déchiré non signalé.'
-                  : 'Ex : Frais bancaire de 20 HTG confirmé par relevé du 29/05.'
-              }
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent"
-            />
-          </div>
+          {resolution && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+                {resolution === 'justified' ? '3. Justification' : '2. Motif de l’imputation'} *
+              </label>
+              <textarea
+                value={note}
+                onChange={e => { setNote(e.target.value); setError(''); }}
+                rows={3}
+                placeholder={
+                  resolution === 'imputed'
+                    ? 'Ex : Manque de 500 HTG — billet déchiré non signalé par la caissière.'
+                    : 'Ex : Frais bancaires de 20 HTG confirmés par le relevé du 29/05.'
+                }
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Cette note apparaîtra dans l’archive et l’audit trail de la remise.
+              </p>
+            </div>
+          )}
 
           {/* Erreur */}
           {error && (
-            <p className="text-xs text-red-600 font-medium">{error}</p>
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
           )}
 
         </div>
@@ -165,16 +203,17 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
           <button
             onClick={handleClose}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            disabled={loading}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             Annuler
           </button>
           <button
             onClick={handleConfirm}
             disabled={loading || !resolution}
-            className="px-5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 rounded-xl text-sm font-semibold bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Enregistrement…' : 'Confirmer la décision'}
+            {loading ? 'Enregistrement…' : 'Valider la remise'}
           </button>
         </div>
 
@@ -194,20 +233,21 @@ const ResolutionCard: React.FC<{
 }> = ({ active, icon, title, desc, color, onClick }) => {
   const styles = {
     blue: {
-      ring:    active ? 'border-blue-400 bg-blue-50'  : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/40',
-      icon:    'bg-blue-100 text-blue-700',
-      title:   'text-blue-900',
+      ring:  active ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/40',
+      icon:  'bg-blue-100 text-blue-700',
+      title: 'text-blue-900',
     },
     red: {
-      ring:    active ? 'border-red-400 bg-red-50'    : 'border-gray-200 hover:border-red-200 hover:bg-red-50/40',
-      icon:    'bg-red-100 text-red-700',
-      title:   'text-red-900',
+      ring:  active ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-red-200 hover:bg-red-50/40',
+      icon:  'bg-red-100 text-red-700',
+      title: 'text-red-900',
     },
   };
   const s = styles[color];
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`text-left p-4 rounded-xl border-2 transition-all ${s.ring}`}
     >
