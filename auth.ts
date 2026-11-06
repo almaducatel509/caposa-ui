@@ -4,7 +4,6 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { authConfig } from "./auth.config";
 import { normalizeRoles } from "@/app/lib/roles";
-//C:\Users\alma2\Documents\Final Project\caposa-ui\auth.ts
 
 // Décode le payload d'un JWT sans dépendance externe (compatible Edge Runtime).
 export function decodeJwt<T = any>(token: string): T {
@@ -60,17 +59,15 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         const payload = decodeJwt<{ user_id?: number; username?: string }>(access);
 
         // 4) Rôles renvoyés par Django au login, normalisés
-        //    ("Trésorier" → "tresorier", accents et casse ignorés)
         const normalizedRoles = normalizeRoles(roles);
 
-        // ⚠️ Temporaire : garde la liste en dur tant que le poste « administrateur »
-        //    n'est pas assigné en base. À supprimer ensuite (isAdmin = rôle).
         const ADMIN_USERNAMES = ["YT1", "Karimc", "Claudin"];
         const finalUsername = payload.username ?? username;
 
         return {
           id: (payload.user_id ?? finalUsername).toString(),
           username: finalUsername,
+          name: finalUsername,
           roles: normalizedRoles,
           isAdmin:
             normalizedRoles.includes("administrateur") ||
@@ -84,7 +81,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.name = (user as any).name;
+        token.name = (user as any).name || (user as any).username;
         token.email = (user as any).email;
         token.username = (user as any).username;
         token.roles = (user as any).roles ?? [];
@@ -101,15 +98,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         (session.user as any).isAdmin = token.isAdmin;
         (session.user as any).accessToken = token.accessToken;
         (session.user as any).refreshToken = token.refreshToken;
-        session.user.name = token.username as string;
+        session.user.name = (token.name as string) || (token.username as string);
       }
       return session;
     },
   },
 });
-// vérifier qu'aucun serializer custom n'ajoute des données sensibles au token.
-// # settings.py
-// SIMPLE_JWT = {
-//     'SIGNING_KEY': SECRET_KEY,  # ← doit venir de .env, jamais hardcodé
-// }
-//  C:\Users\alma2\Documents\Final Project\caposa-ui\auth.ts

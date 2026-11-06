@@ -8,10 +8,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login?callbackUrl=/dashboard");
   }
 
+  const username = (session.user as any).username || session.user.name || undefined;
+  const roles = (session.user as any).roles || [];
+
   return (
     <div className="flex h-screen flex-col md:flex-row bg-white">
       <div className="w-full flex-none md:w-64">
-        <SideNav />
+        <SideNav username={username} roles={roles} />
       </div>
       {/* Zéro padding ici — chaque page gère son propre p-6 md:p-8 */}
       <div className="grow md:overflow-y-auto">
