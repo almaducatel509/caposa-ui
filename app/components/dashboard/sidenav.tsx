@@ -23,20 +23,30 @@ const ROLE_LABELS: Record<string, string> = {
   tresorier:       'Trésorier',
 };
 
-export default function SideNav() {
+interface SideNavProps {
+  username?: string;
+  roles?: string[];
+}
+
+export default function SideNav({ username: propUsername, roles: propRoles }: SideNavProps = {}) {
   const { data: session } = useSession();
-  const { roles, username } = useUserRoles();
+  const { roles: hookRoles, username: hookUsername } = useUserRoles();
   const [isPending, startTransition] = useTransition();
 
+  const roles = propRoles && propRoles.length > 0 ? propRoles : hookRoles;
+  const username = propUsername || hookUsername;
+
   // Rattache le cache des sessions caisse à l'utilisateur connecté :
-  // sur un poste partagé, le cache du caissier précédent est vidé.
+  // si le caissier change sur le même poste, son cache est isolé.
   useEffect(() => {
-    if (username) SessionManager.bindUser(username);
+    if (username) {
+      SessionManager.attachUser(username);
+    }
   }, [username]);
 
   /**
    * Déconnexion complète (action serveur `logout`) :
-   * liste noire du refresh token, suppression des cookies de jetons,
+   * blacklist du refresh token côté Django, suppression des cookies,
    * fin de la session NextAuth, puis redirection vers /login.
    */
   const handleLogout = () => {
@@ -75,8 +85,8 @@ export default function SideNav() {
         </div>
       </Link>
 
-      {/* ── Menu ── */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      {/* ── Navigation ── */}
+      <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-1 overflow-y-auto">
         <NavLinks />
       </div>
 
