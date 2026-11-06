@@ -22,9 +22,8 @@
  */
 
 import { useMemo } from 'react';
-import { useUserRoles } from './useuserroles';
 import type { LoanStatus } from '@/app/components/transactions/validation/loanSchema';
-
+import { useUserRoles } from '@/app/lib/useUserRoles';
 export type LoanAction = 'approve' | 'reject' | 'disburse' | 'repay' | 'delete';
 
 // Plusieurs graphies acceptées : normalizeRole() retire accents et casse,

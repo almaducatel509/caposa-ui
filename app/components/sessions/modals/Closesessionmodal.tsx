@@ -27,8 +27,7 @@ import {
 } from 'lucide-react';
 import { CaisseSession } from '@/types/caisse';
 import AxiosInstance from '@/app/lib/axiosInstance';
-import { useUserRoles } from '@/app/lib/useuserroles';
-
+import { useUserRoles } from '@/app/lib/useUserRoles';
 // ─── Horaires d'agence (format API : "HH:mm-HH:mm" par jour) ──────
 
 interface OpeningHourDetailLike {

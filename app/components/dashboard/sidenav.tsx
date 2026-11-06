@@ -8,7 +8,7 @@ import NavLinks from '@/app/components/dashboard/Navlink';
 import { useSession } from 'next-auth/react';
 import { logout } from '@/app/lib/actions';
 import { SessionManager } from '@/app/lib/api/Sessionmanager';
-import { useUserRoles } from '@/app/lib/useuserroles';
+import { useUserRoles } from '@/app/lib/useUserRoles';
 
 /** Libellés lisibles des rôles Django (déjà normalisés par useUserRoles). */
 const ROLE_LABELS: Record<string, string> = {
