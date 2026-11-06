@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   X, Download, Loader2, CheckCheck,
 } from 'lucide-react';
-import { DepositData } from '@/app/components/transactions/deposits/DepositTable';
+import { DepositData } from '../validation/deposit';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

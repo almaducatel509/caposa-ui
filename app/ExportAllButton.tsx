@@ -121,17 +121,19 @@ export const ExportAllButton = <T extends object>({
       onClick={exportCSV}
       disabled={isDisabled}
       title={!data?.length ? "Aucune donnée à exporter" : `${label} (${data.length})`}
-      className="flex items-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl border font-medium
+        whitespace-nowrap bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm  
+        hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
     >
       {loading ? (
-        <div>
-          <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
-          Export…
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-b-xl animate-spin" />
+          <span>Export...</span>
         </div>
       ) : (
-        <div>
-          <Download className="w-4 h-4" />
-          {label}
+        <div className="flex items-center gap-2">
+          <Download className="w-4 h-4 flex-shrink-0" />
+          <span>{label}</span>
         </div>
       )}
     </button>

@@ -15,8 +15,6 @@ import { MemberOption } from '../../members/validations';
 
 // ─── Mock members (même source que WithdrawalForm) ──────────────────────────
 //   À remplacer par fetch /members/ quand l'endpoint sera dispo.
-
-
 // ─── Props ──────────────────────────────────────────────────────────────────
 interface CreateAccountModalProps {
   isOpen:    boolean;

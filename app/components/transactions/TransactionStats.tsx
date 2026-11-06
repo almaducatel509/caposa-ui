@@ -164,7 +164,7 @@ const TransactionStats: React.FC<TransactionStatsProps> = ({ transactions }) => 
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="date" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Transactions']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [v ?? 0, 'Transactions']} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
                   <Cell key={i} fill={i === 6 ? C.green : C.greenPale} />
@@ -182,7 +182,7 @@ const TransactionStats: React.FC<TransactionStatsProps> = ({ transactions }) => 
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Transactions']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [v ?? 0, 'Transactions']} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {hourlyData.map((entry, i) => (
                   <Cell key={i} fill={entry.count > 3 ? C.blue : entry.count > 1 ? '#7DA5C7' : '#D4E3EF'} />
@@ -206,7 +206,7 @@ const TransactionStats: React.FC<TransactionStatsProps> = ({ transactions }) => 
                   {typeData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle}
-                  formatter={(v: number | undefined, _: string | undefined, props: any) => [`${v ?? 0} (${formatHTG(props.payload.amount)})`, props.payload.name ?? '']} />
+                  formatter={(v: any, _: any, props: any) => [`${v ?? 0} (${formatHTG(props.payload.amount)})`, props.payload.name ?? '']} />
               </PieChart>
             </ResponsiveContainer>
             <div className="flex-1 flex flex-col gap-2">

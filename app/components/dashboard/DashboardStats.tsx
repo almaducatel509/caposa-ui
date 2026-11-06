@@ -172,9 +172,9 @@ export default function DashboardStats({
                   {typeData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle}
-                  formatter={(v, _, props: any) =>
-                    [`${Number(v) || 0} (${formatHTG(props?.payload?.amount ?? 0)})`, props?.payload?.name ?? '']} />
-              </PieChart>
+                    formatter={(v: any, _: any, props: any) =>
+                      [`${v ?? 0} (${formatHTG(props?.payload?.amount ?? 0)})`, props?.payload?.name ?? '']} />
+                  </PieChart>
             </ResponsiveContainer>
             <div className="flex-1 flex flex-col gap-2.5">
               {typeData.map(t => {

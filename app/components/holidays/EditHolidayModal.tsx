@@ -14,6 +14,7 @@ import {
   createHoliday,
 } from "@/app/lib/api/holidays";
 import HolidayFormFields from "./HolidayFormFields";
+import { BranchData } from "../branches/validations";
 
 interface EditHolidayModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface EditHolidayModalProps {
   holiday: HolidayData | null;
   isEditMode: boolean;
   mode?: "create" | "edit";
+  branches?: BranchData[];
 }
 
 const EMPTY_FORM: HolidayFormData = {
@@ -36,7 +38,6 @@ const EMPTY_FORM: HolidayFormData = {
   scope: "national",
   branch_code: "",
   comment: "",
-  pending_assignment: true, // 🎯 brouillon par défaut à la création
 };
 
 export default function EditHolidayModal({
@@ -46,6 +47,8 @@ export default function EditHolidayModal({
   holiday,
   isEditMode,
   mode = "create",
+  branches = [],
+
 }: EditHolidayModalProps) {
   const [formData, setFormData] = useState<HolidayFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<ErrorMessages<HolidayData>>({});
@@ -79,12 +82,7 @@ export default function EditHolidayModal({
     try {
       // 🎯 À la création : pending_assignment = true (brouillon)
       // À l'édition : on garde l'état existant
-      const payload = {
-        ...formData,
-        pending_assignment: isEditMode
-          ? formData.pending_assignment ?? false
-          : true,
-      };
+         const payload = { ...formData };
 
       let createdOrUpdated: HolidayData;
 
@@ -202,6 +200,8 @@ export default function EditHolidayModal({
           isEditMode={isEditMode}
           holiday={holiday}
           mode={mode}
+          branches={branches}
+
         />
 
         {isEditMode && holiday?.id && (
@@ -221,14 +221,7 @@ export default function EditHolidayModal({
                 {new Date(holiday.updated_at).toLocaleDateString("fr-FR")}
               </p>
             )}
-            {holiday.pending_assignment && (
-              <p className="flex items-center gap-1.5 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                <span className="font-semibold text-amber-700">
-                  Statut : Brouillon (en attente d'assignation)
-                </span>
-              </p>
-            )}
+            
           </div>
         )}
       </div>

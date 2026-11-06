@@ -71,7 +71,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [apiError,     setApiError]       = useState<string | null>(null);
   const [successMsg,   setSuccessMsg]     = useState<string | null>(null);
-
+  const [holidayIds, setHolidayIds] = useState<(string | number)[]>([]);
   // ─── Snapshot AVANT modification ──────────────────────────────────────
   // useRef pour stocker la version fraîche de l'API au chargement,
   // sans déclencher de re-render. Utilisé pour le DIFF après update.
@@ -113,27 +113,28 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
         // ═══════════════════════════════════════════════════════════════
         beforeSnapshot.current = data;
 
-        console.group('📥 [EditBranchModal] Données AVANT modification (API)');
-        console.log('🔹 Branch ID    :', branch.id);
-        console.log('🔹 Endpoint     : getBranchById');
-        console.log('🔹 Statut actuel:', data.statusBranche);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📦 Réponse brute API :', data);
-        console.log('📦 JSON formaté      :');
-        console.log(JSON.stringify(data, null, 2));
-        console.groupEnd();
-        // ═══════════════════════════════════════════════════════════════
+        // console.group('📥 [EditBranchModal] Données AVANT modification (API)');
+        // console.log('🔹 Branch ID    :', branch.id);
+        // console.log('🔹 Endpoint     : getBranchById');
+        // console.log('🔹 Statut actuel:', data.statusBranche);
+        // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // console.log('📦 Réponse brute API :', data);
+        // console.log('📦 JSON formaté      :');
+        // console.log(JSON.stringify(data, null, 2));
+        // console.groupEnd();
+        // // ═══════════════════════════════════════════════════════════════
 
-        const holidayIds = Array.isArray(data.holidays)
-          ? data.holidays.map((h: any) => (typeof h === 'object' ? h.id : h))
-          : [];
+       
 
         let openingHourId = data.opening_hour;
         if (mode === 'activate' && !openingHourId && openingHours.length > 0) {
           const defaultHour = openingHours.find((h: any) => h.is_default) ?? openingHours[0];
           openingHourId = defaultHour?.id;
         }
-
+        const ids = Array.isArray(data.holidays)
+          ? data.holidays.map((h: any) => (typeof h === 'object' ? h.id : h))
+          : [];
+        setHolidayIds(ids);
         setFormData({
           branch_name:               data.branch_name,
           branch_address:            data.branch_address,
@@ -143,7 +144,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           city:                      data.city ?? '',
           opening_date:              data.opening_date,
           opening_hour:              openingHourId,
-          holidays:                  holidayIds,
           status:                    data.statusBranche ?? 'inactive',
            // ── Champs backend silencieux ──
           number_of_posts:           data.number_of_posts           ?? 0,
@@ -184,6 +184,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
 
   // ── Submit ──
   const handleSubmit = async () => {
+    
     if (!formData || !branch?.id) return;
 
     setIsSubmitting(true);
@@ -217,7 +218,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       }
 
       const hasHours    = Boolean(formData.opening_hour);
-      const hasHolidays = Array.isArray(formData.holidays) && formData.holidays.length > 0;
+      const hasHolidays = holidayIds.length > 0;
       const computedStatus = hasHours && hasHolidays ? 'active' : 'inactive';
 
       const payload = {
@@ -228,18 +229,18 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       // ═══════════════════════════════════════════════════════════════
       // ─── PAYLOAD ENVOYÉ ────────────────────────────────────────────
       // ═══════════════════════════════════════════════════════════════
-      console.group('🚀 [EditBranchModal] Soumission API');
-      console.log('🔹 Mode             :', mode);
-      console.log('🔹 Branch ID        :', branch.id);
-      console.log('🔹 Endpoint         : updateBranch');
-      console.log('🔹 Statut calculé   :', computedStatus);
-      console.log('🔹 hasHours         :', hasHours);
-      console.log('🔹 hasHolidays      :', hasHolidays, '(', (formData.holidays || []).length, 'sélectionné(s) )');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📦 PAYLOAD envoyé   :', payload);
-      console.log('📦 JSON formaté     :');
-      console.log(JSON.stringify(payload, null, 2));
-      console.groupEnd();
+      // console.group('🚀 [EditBranchModal] Soumission API');
+      // console.log('🔹 Mode             :', mode);
+      // console.log('🔹 Branch ID        :', branch.id);
+      // console.log('🔹 Endpoint         : updateBranch');
+      // console.log('🔹 Statut calculé   :', computedStatus);
+      // console.log('🔹 hasHours         :', hasHours);
+      // console.log('🔹 hasHolidays      :', hasHolidays, '(', holidayIds.length, 'sélectionné(s) )');
+      // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // console.log('📦 PAYLOAD envoyé   :', payload);
+      // console.log('📦 JSON formaté     :');
+      // console.log(JSON.stringify(payload, null, 2));
+      // console.groupEnd();
       // ═══════════════════════════════════════════════════════════════
 
       const updated = await updateBranch(branch.id, payload);
@@ -322,7 +323,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   if (!isOpen || !formData) return null;
 
   const hasHours    = Boolean(formData.opening_hour);
-  const hasHolidays = Array.isArray(formData.holidays) && formData.holidays.length > 0;
+  const hasHolidays = holidayIds.length > 0;
   const willBeActive = hasHours && hasHolidays;
   const missing: string[] = [];
   if (!hasHours)    missing.push('horaires');

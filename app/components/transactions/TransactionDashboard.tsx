@@ -53,7 +53,7 @@ function mapStatus(apiStatus: TransactionData['status']): TransactionDetail['sta
       description:    tx.description,
       member_name:    tx.member_name,
       account_number: tx.account_number,
-    });
+    } as unknown as TransactionDetail);
   };
 
   const handleProcess = (tx: TransactionData) => {

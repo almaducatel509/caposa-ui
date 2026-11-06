@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Download, Loader2, CheckCheck } from 'lucide-react';
-import { TransferData } from './TransferTable';
+import { TransferData } from '../validation/transfert';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ const TransferExportModal: React.FC<TransferExportModalProps> = ({
               {transfers.slice(0, 5).map(t => (
                 <div key={t.id} className="flex items-center justify-between px-4 py-2.5">
                   <div>
-                    <p className="text-xs font-semibold text-gray-800">{t.memberName}</p>
+                    <p className="text-xs font-semibold text-gray-800">{t.member_name}</p>
                     <p className="text-xs text-gray-400 font-mono">{t.reference}</p>
                   </div>
                   <p className="text-xs font-bold text-[#355C7D]">

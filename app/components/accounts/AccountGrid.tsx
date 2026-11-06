@@ -2,8 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Wallet } from 'lucide-react';
-import { activateAccount, closeAccount, fetchAccounts, suspendAccount } from '@/app/lib/api/accounts';
-import { AccountBulkAction } from './AccountBulkActionDropdown';
+import { activateAccount, approveAccount, closeAccount, fetchAccounts, suspendAccount } from '@/app/lib/api/accounts';
 import { AccountData, AccountStatus, MemberData } from './validationsaccount';
 import { MemberOption } from '../members/validations';   // garde cet import pour MemberOption uniquement
 
@@ -20,6 +19,11 @@ import AccountHistoryModal from './modals/AccountHistoryModal';
 
 import CreateAccountModal from './modals/CreateAccountModal';
 import { fetchMembers } from '@/app/lib/api/members';
+import { parseApiError } from '@/app/lib/api/apiErrors';
+import { getRole } from '../AuthGuard';
+import ApproveAccountModal from './modals/Approveaccountmodal';
+import { AccountBulkAction } from '@/app/lib/api/accountRules';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
 //
@@ -75,30 +79,38 @@ const AccountGrid: React.FC = () => {
   const [memberOptions,   setMemberOptions]   = useState<MemberOption[]>([]);
   const [membersLoading,  setMembersLoading]  = useState(false);
   const [allMembers, setAllMembers] = useState<MemberData[]>([]);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [approveTarget, setApproveTarget] = useState<AccountData | null>(null);
 
-  const loadMembers = async () => {
-    setMembersLoading(true);
-    try {
-      const data = await fetchMembers();
-      setAllMembers(data.map(m => ({
-        ...m,
-        id_number:  m.id_number ?? '',
-        created_at: m.created_at ?? undefined,
-        updated_at: m.updated_at ?? undefined,
-        full_name:  `${m.first_name} ${m.last_name}`.trim(),
-      } as MemberData)));
-      setMemberOptions(data.map(m => ({
-        id:           m.id,
-        member_name:  `${m.first_name} ${m.last_name}`.trim(),
-        id_number:    m.id_number ?? '',
-        phone_number: m.phone_number,
-      })));
-    } catch (e) {
-      console.error('Erreur chargement membres:', e);
-    } finally {
-      setMembersLoading(false);
-    }
-  };    
+  // Disparaît tout seul après 5 s
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(t);
+  }, [notice]);
+    const loadMembers = async () => {
+      setMembersLoading(true);
+      try {
+        const data = await fetchMembers();
+        setAllMembers(data.map(m => ({
+          ...m,
+          id_number:  m.id_number ?? '',
+          created_at: m.created_at ?? undefined,
+          updated_at: m.updated_at ?? undefined,
+          full_name:  `${m.first_name} ${m.last_name}`.trim(),
+        } as MemberData)));
+        setMemberOptions(data.map(m => ({
+          id:           m.id,
+          member_name:  `${m.first_name} ${m.last_name}`.trim(),
+          id_number:    m.id_number ?? '',
+          phone_number: m.phone_number,
+        })));
+      } catch (e) {
+        console.error('Erreur chargement membres:', e);
+      } finally {
+        setMembersLoading(false);
+      }
+    };    
 
   const loadAccounts = async () => {
     setLoading(true);
@@ -190,60 +202,33 @@ const AccountGrid: React.FC = () => {
     setShowClose(true);
   };
 
-  // ── Bulk action ────────────────────────────────────────────────────────────
-  // const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
-  //   // Export : autorisé pour tous les comptes
-  //   if (action === 'export') {
-  //     exportToCSV(ids);
-  //     return;
-  //   }
+  const role = getRole(); // ou ta source de rôle actuelle
+  const canApprove = ['superviseur', 'directeur', 'admin'].includes(role);
 
-  //   // Autres actions : retirer les comptes fermés/archivés
-  //   const actionableIds = accounts
-  //     .filter(a => ids.includes(a.id) && canActOn(a))
-  //     .map(a => a.id);
 
-  //   const skipped = ids.length - actionableIds.length;
-  //   if (skipped > 0) {
-  //     console.warn(`${skipped} compte(s) fermé(s)/archivé(s) ignoré(s) pour l'action "${action}".`);
-  //   }
+  const handleApprove = (acc: AccountData) => setApproveTarget(acc);
 
-  //   switch (action) {
-  //     case 'activate': console.log('Débloquer comptes:', actionableIds); break;
-  //     case 'suspend':  console.log('Geler comptes:',     actionableIds); break;
-  //     case 'close':    console.log('Fermer comptes:',    actionableIds); break;
-  //   }
-  //   await loadAccounts();
-  // };
-    const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
-    if (action === 'export') {
-      exportToCSV(ids);
-      return;
-    }
+  const handleBulkAction = async (action: AccountBulkAction, ids: string[]) => {
+    if (action === 'export') { exportToCSV(ids); return; }
 
-    const actionableIds = accounts
-      .filter(a => ids.includes(a.id) && canActOn(a))
-      .map(a => a.id);
+    const run = (id: string) =>
+      action === 'approve'  ? approveAccount(id)
+    : action === 'activate' ? activateAccount(id)
+    : action === 'suspend'  ? suspendAccount(id)
+    :                         closeAccount(id);
 
-    const skipped = ids.length - actionableIds.length;
-    if (skipped > 0) {
-      console.warn(`${skipped} compte(s) fermé(s)/archivé(s) ignoré(s) pour l'action "${action}".`);
-    }
-
-    // Lance toutes les opérations ; un échec n'annule pas les autres
-    const ops = actionableIds.map(id =>
-      action === 'activate' ? activateAccount(id)
-      : action === 'suspend' ? suspendAccount(id)
-      : closeAccount(id)
-    );
-    const results = await Promise.allSettled(ops);
-
-    // Toujours recharger : la table reflète l'état réel du backend
+    const results = await Promise.allSettled(ids.map(run));
     await loadAccounts();
 
-    const failed = results.filter(r => r.status === 'rejected').length;
-    if (failed > 0) {
-      throw new Error(`${failed} compte(s) n'ont pas pu être traités.`);
+    const failures = results
+      .map((r, i) => r.status === 'rejected'
+        ? `• ${accounts.find(a => a.id === ids[i])?.account_number ?? ids[i]} : ${parseApiError(r.reason).message}`
+        : null)
+      .filter(Boolean);
+
+    if (failures.length > 0) {
+      const ok = ids.length - failures.length;
+      throw new Error(`${ok} compte(s) traité(s), ${failures.length} refusé(s) :\n${failures.join('\n')}`);
     }
   };
 
@@ -316,7 +301,18 @@ const AccountGrid: React.FC = () => {
           </button>
         </div>
       )}
-
+      {notice && (
+        <div
+          className={`flex items-start gap-3 p-4 rounded-2xl border text-sm font-medium ${
+            notice.type === 'success'
+              ? 'bg-[#DDEAD5]/50 border-[#81C784] text-[#1B5E20]'
+              : 'bg-red-50 border-red-200 text-red-700'
+          }`}
+        >
+          <span className="flex-1">{notice.text}</span>
+          <button type="button" onClick={() => setNotice(null)} className="opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
       <AccountTable                          
         accounts={filteredAccounts}
         isLoading={loading}
@@ -326,6 +322,8 @@ const AccountGrid: React.FC = () => {
         onViewTransactions={handleViewTransactions}
         onBulkAction={handleBulkAction}
         activeTab={activeAccountTab}
+        canApprove={canApprove}
+        onApprove={handleApprove}
         onTabChange={setActiveAccountTab}
       />
       
@@ -374,6 +372,12 @@ const AccountGrid: React.FC = () => {
           setSelectedAccount(null);
         }}
       />
+      {/* à côté de CloseAccountModal, avant le </div> final */}
+    <ApproveAccountModal
+      account={approveTarget}
+      onClose={() => setApproveTarget(null)}
+      onApproved={loadAccounts}
+    />
     </div>
   );
 };

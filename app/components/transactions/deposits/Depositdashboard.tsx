@@ -1,69 +1,65 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, ArrowDownCircle } from 'lucide-react';
 import DepositForm from './DepositForm';
 import DepositFilterBar, { DepositFilterPeriod, DepositFilterRange } from './DepositFilterBar';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 import { Modal } from '../../ui/Modal';
 import DepositTable from './DepositTable';
-import EditDepositModal from './EditDepositModal';
-import { DepositData, DepositFormData, DepositFormValidated } from '../validation/deposit';
-import DifferedDepositModal from './Differeddepositmodal';
-import { useSession } from 'next-auth/react';
-// ─── Mock ────────────────────────────────────────────────────────
+import { DepositData, DepositFormValidated } from '../validation/deposit';
+import { createDeposit, createTransaction, fetchAccountsByMember, fetchTransactions } from '@/app/lib/api/caisse';
+import type { DepositApiResult } from './DepositReceipt';
+import type { MemberOption, MemberData } from '../../members/validations'; // ← vérifie que MemberData est bien exporté ici
+import { fetchMembers } from '@/app/lib/api/members';
+import { useRef } from 'react';
 
-function generateMockDeposits(daysBack: number): DepositData[] {
-  const subtypes: DepositData['depositSubtype'][] = ['cash', 'check'];
-  const statuses: DepositData['status'][]         = ['encaisse', 'encaisse', 'encaisse', 'en_attente', 'en_cours', 'echoue'];
-  const members  = ['Hudson Joseph', 'Marie Dupont', 'Jean-Pierre Antoine', 'Roseline Pierre', 'Claudette Moreau', 'Réginald Beaumont', 'Nadège Thermidor', 'Wilgens Désir'];
-  const sources  = ['Salaire', 'Remboursement', 'Épargne', 'Vente', 'Envoi diaspora', 'Dividendes'];
-  const employes = ['Josiane Mercier', 'Patrick Dorcélus', 'Nadège Jean-Louis', 'Lionel Préval'];
-  const supers   = ['Marie-Ange Celestin', 'Réginald Toussaint'];
-  const caisses  = [{ id: 'CAI001', numero: '01' }, { id: 'CAI002', numero: '02' }, { id: 'CAI003', numero: '03' }];
+// ─── Mappers (hors composant : pas recréés à chaque rendu) ───────
 
-  const data: DepositData[] = [];
-  let attempts = 0, i = 0;
+/** Membre complet (API) → option réduite attendue par DepositForm */
+const toMemberOption = (m: MemberData): MemberOption => ({
+  id:           String(m.id),
+  member_name:  `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(), // ← vérifie les noms de champs
+  id_number:    m.id_number ?? '',
+  phone_number: m.phone_number,
+});
 
-  while (i < 60 && attempts < 200) {
-    const date = new Date();
-    date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
-    if (date.getDay() === 0 || date.getDay() === 6) { attempts++; continue; }
-    date.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
-    const subtype    = subtypes[Math.floor(Math.random() * subtypes.length)];
-    const amount     = Math.floor(Math.random() * 80000) + 1000;
-    const holdPeriod = subtype === 'check' ? Math.floor(Math.random() * 5) + 1 : 0;
-    const caisse     = caisses[Math.floor(Math.random() * caisses.length)];
-    data.push({
-      id:                 i + 1,
-      idCompte:           `ACC${1000 + i}`,
-      codeAutorisation:   `AUTH${100000 + i}`,
-      montantTransaction: amount,
-      depositSubtype:     subtype,
-      source:             sources[Math.floor(Math.random() * sources.length)],
-      description:        Math.random() > 0.6 ? 'Dépôt régulier' : undefined,
-      holdPeriod,
-      status:             statuses[Math.floor(Math.random() * statuses.length)],
-      created_at:         date.toISOString(),
-      member_name:        members[Math.floor(Math.random() * members.length)],
-      processed_by:       employes[Math.floor(Math.random() * employes.length)],
-      validated_by:       supers[Math.floor(Math.random() * supers.length)],
-      caisse_numero:      caisse.numero,
-      caisse_id:          caisse.id,
-      session_id:         `SES-${1000 + i}`,
-      session_statut:     Math.random() > 0.3 ? 'ouverte' : 'fermée',
-    });
-    i++; attempts++;
-  }
-  return data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-}
+/** Transaction (API Django) → ligne de la table des dépôts.
+ *  Provisoire : clés à confirmer avec un vrai objet de /transactions/ */
+const mapApiToDepositData = (t: any): DepositData => ({
+  id:                 t.id,
+  session_id:         String(t.session ?? t.session_id ?? ''),
+  session_statut:     t.session_statut ?? t.session_status ?? 'ouverte',
+  idCompte:           t.account_number ?? String(t.account ?? ''),
+  codeAutorisation:   t.authorization_code ?? t.reference ?? '',
+  montantTransaction: Number(t.amount ?? 0),
+  depositSubtype:     t.deposit_subtype ?? 'cash',
+  source:             t.source ?? '',
+  description:        t.description ?? undefined,
+  holdPeriod:         t.hold_period ?? 0,
+  status:             t.status ?? 'encaisse',
+  created_at:         t.created_at,
+  member_name:        t.member_name ?? '',
+  processed_by:       t.processed_by ?? t.employee_name ?? '',
+  validated_by:       t.validated_by ?? '',
+  caisse_numero:      t.caisse_numero ?? '',
+  caisse_id:          String(t.caisse ?? t.caisse_id ?? ''),
+});
+
+const isDeposit = (t: any) =>
+  String(t.transaction_type ?? t.type ?? '').toUpperCase() === 'DEPOSIT';
 
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function DepositDashboard() {
-  const [loading,      setLoading]      = useState(false);
-  const [detailTx,     setDetailTx]     = useState<TransactionDetail | null>(null);
-  const [editDeposit,  setEditDeposit]  = useState<DepositData | null>(null);
+  // ── Données ──────────────────────────────────────────────
+  const [deposits,  setDeposits]  = useState<DepositData[]>([]);
+  const [members,   setMembers]   = useState<MemberOption[]>([]);
+  const [loading,   setLoading]   = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // ── Modals ───────────────────────────────────────────────
+  const [detailTx,       setDetailTx]       = useState<TransactionDetail | null>(null);
   const [newDepositOpen, setNewDepositOpen] = useState(false);
 
   // ── Filtres : UNE SEULE source de vérité ─────────────────
@@ -72,16 +68,32 @@ export default function DepositDashboard() {
   const [selectedType,   setSelectedType]   = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRange,  setSelectedRange]  = useState<DepositFilterRange>('all');
-  const [showDiffered, setShowDiffered] = useState(false);
-  // Hardcodé pour l'instant — Django n'est pas prêt
-  // À remplacer par ton contexte auth quand le backend sera prêt
-  const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.isAdmin ?? false;
-  const role    = isAdmin ? 'admin' : 'caissier';  
-  // On génère un dataset large ; le filtrage période se fait dans la table.
-  const deposits = useMemo(() => generateMockDeposits(365), []);
-    console.log(role,isAdmin, "admin et role");
-  // ── Handlers ────────────────────────────────────────────────
+
+  // ── Chargement ───────────────────────────────────────────
+  const loadDeposits = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const txs = await fetchTransactions();
+      setDeposits(txs.filter(isDeposit).map(mapApiToDepositData));
+    } catch {
+      setLoadError('Impossible de charger les dépôts. Vérifiez la connexion au serveur.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Un seul chargement au montage (membres + dépôts)
+  useEffect(() => {
+    loadDeposits();
+    fetchMembers()
+      .then(list => setMembers(list.map(toMemberOption)))
+      .catch(() => setLoadError('Impossible de charger la liste des membres.'));
+  }, [loadDeposits]);
+
+  const fetchMemberAccounts = (memberId: string) => fetchAccountsByMember(memberId);
+
+  // ── Handlers ─────────────────────────────────────────────
   const handleView = (dep: DepositData) => {
     setDetailTx({
       id:                   dep.id,
@@ -105,20 +117,27 @@ export default function DepositDashboard() {
     });
   };
 
-  const handleEdit = (dep: DepositData) => setEditDeposit(dep);
 
   const handleExport = async (ids: number[]) => {
     console.log('Exporter les IDs :', ids);
   };
 
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 800);
+  const handleRefresh = () => loadDeposits();
+
+  // Une clé d'idempotence par ouverture du formulaire :
+  // un double-clic ou un retry ne crée pas deux dépôts
+  const idemKeyRef = useRef<string>('');
+
+  const openNewDeposit = () => {
+    idemKeyRef.current = crypto.randomUUID();
+    setNewDepositOpen(true);
   };
 
-  const handleDepositSubmit = async (data: DepositFormValidated) => {
-    console.log('Mock submit:', data);
-    await new Promise(r => setTimeout(r, 500));
+  const handleDepositSubmit = async (data: DepositFormValidated): Promise<DepositApiResult> => {
+    const result = await createDeposit(data /* ou mapDepositToPayload(data) si trouvé */, idemKeyRef.current);
+    idemKeyRef.current = crypto.randomUUID(); // nouveau dépôt = nouvelle clé
+    await loadDeposits();
+    return result as DepositApiResult;
   };
 
   return (
@@ -137,6 +156,21 @@ export default function DepositDashboard() {
         </div>
       </div>
 
+      {/* ── Erreur de chargement ── */}
+      {loadError && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="flex-1">{loadError}</span>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="text-xs font-semibold underline hover:no-underline"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
       {/* ── Barre de filtres ── */}
       <DepositFilterBar
         filterValue={search}
@@ -152,7 +186,7 @@ export default function DepositDashboard() {
         onTypeChange={setSelectedType}
         onStatusChange={setSelectedStatus}
         onRangeChange={setSelectedRange}
-        onAdd={() => setNewDepositOpen(true)}
+        onAdd={openNewDeposit}
         onRefresh={handleRefresh}
         deposits={deposits}
       />
@@ -162,7 +196,6 @@ export default function DepositDashboard() {
         deposits={deposits}
         loading={loading}
         onView={handleView}
-        onEdit={handleEdit}
         onExport={handleExport}
         search={search}
         selectedType={selectedType}
@@ -191,6 +224,8 @@ export default function DepositDashboard() {
         >
           <div className="p-5 overflow-y-auto max-h-[70vh]">
             <DepositForm
+              members={members}
+              fetchMemberAccounts={fetchMemberAccounts}
               onSubmit={handleDepositSubmit}
               onCancel={() => setNewDepositOpen(false)}
             />
@@ -206,17 +241,7 @@ export default function DepositDashboard() {
         />
       )}
 
-      {editDeposit && (
-        <EditDepositModal
-          deposit={editDeposit}
-          onClose={() => setEditDeposit(null)}
-          onSuccess={(updated) => {
-            // TODO API : rafraîchir la liste depuis le serveur
-            setEditDeposit(null);
-          }}
-        />
-    )}
-    
+
     </div>
   );
 }

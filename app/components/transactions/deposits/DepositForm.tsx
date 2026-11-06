@@ -11,7 +11,8 @@ import {
 import { depositSchema, DepositSubtype, type DepositFormValidated } from '../validation/deposit';
 import DepositReceipt, { DepositApiResult } from './DepositReceipt';
 import { MemberOption } from '../../members/validations';
-
+// en haut de DepositForm.tsx
+import { parseApiError, DEPOSIT_BLOCK_REASON } from '@/app/lib/api/apiErrors';
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 // interface AccountOption {
@@ -57,9 +58,9 @@ function getTypeCfg(raw?: string) {
     ?? { label: raw || 'Compte', bg: 'bg-gray-100', text: 'text-gray-500' };
 }
 
-// Un compte en_attente doit pouvoir recevoir son premier dépôt (qui l'active)
+// Seul un compte actif peut recevoir un dépôt (approbation préalable obligatoire)
 const peutRecevoirDepot = (status?: string) =>
-  ['actif', 'en_attente'].includes(String(status ?? '').toLowerCase());
+  String(status ?? '').toLowerCase() === 'actif';
 
 function formatHTG(n: number) {
   return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
@@ -296,12 +297,13 @@ export default function DepositForm({
       setSubmittedData(result.data);
       setSubmitted(true);
     } catch (err) {
-      // Aucune soumission "silencieuse" : on affiche le vrai problème à l'utilisateur
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : "Une erreur est survenue lors de l'enregistrement du dépôt."
+      const { fieldErrors, message } = parseApiError(
+        err,
+        { account: 'idCompte', amount: 'montantTransaction' },
+        "Une erreur est survenue lors de l'enregistrement du dépôt.",
       );
+      setErrors(fieldErrors);
+      setSubmitError(message);
     } finally {
       setSubmitting(false);
     }
@@ -481,16 +483,24 @@ export default function DepositForm({
                       className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-left transition-all
                         ${isSel  ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
                                  : isAct ? 'border-gray-100 bg-white hover:border-[#2E7D32]/30 hover:bg-[#DDEAD5]/10'
-                                         : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'}`}>
-                      <CreditCard className={`w-4 h-4 shrink-0 ${isSel ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
+                                         : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'}`}><CreditCard className={`w-4 h-4 shrink-0 ${isSel ? 'text-[#2E7D32]' : 'text-gray-400'}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-mono font-semibold text-gray-800">{acc.account_number}</p>
-                        <p className="text-xs text-gray-400">{formatHTG(acc.soldeActuel)}</p>
+                        <p className="text-xs font-mono font-semibold text-gray-800 whitespace-nowrap">
+                          {acc.account_number}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {formatHTG(acc.soldeActuel)}
+                          {!isAct && (
+                            <span className="text-amber-700">
+                              {' · '}{DEPOSIT_BLOCK_REASON[acc.account_status] ?? acc.account_status}
+                            </span>
+                          )}
+                        </p>
                       </div>
-                      <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${tCfg.bg} ${tCfg.text}`}>{tCfg.label}</span>
-                      {/* {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">Suspendu</span>} */}
-                      {!isAct && <span className="px-1.5 py-0.5 rounded-md text-xs bg-gray-100 text-gray-400">{acc.account_status}</span>}
-                      {isSel  && <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />}
+                      <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-xs font-semibold ${tCfg.bg} ${tCfg.text}`}>
+                        {tCfg.label}
+                      </span>
+                      {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32] shrink-0" />}
                     </button>
                   );
                 })}

@@ -470,6 +470,8 @@ export default function HolidayCalendar() {
           holiday={selectedHoliday}
           isEditMode={isEditMode}
           mode={isEditMode ? "edit" : "create"}
+          branches={allBranches}
+
         />
       )}
       {showDeleteModal && selectedHoliday && (

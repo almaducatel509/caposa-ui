@@ -255,15 +255,15 @@ const LoanBulkActionModal: React.FC<Props> = ({ action, loans, onClose, onDone }
     }
 
     const call = (l: LoanData) =>
-      action === 'approve' ? approveLoan(l.id)
-      : action === 'reject' ? rejectLoan(l.id, fullReason)
-      :                       deleteLoan(l.id);
+    action === 'approve' ? approveLoan(l.id)
+    : action === 'reject' ? rejectLoan(l.id, fullReason)
+    :                       deleteLoan(l.id, l.status);
 
     const settled  = await Promise.allSettled(eligible.map(call));
     const failures = settled.flatMap((r, i) =>
-      r.status === 'rejected'
-        ? [{ loan: eligible[i], message: r.reason instanceof Error ? r.reason.message : String(r.reason) }]
-        : [],
+    r.status === 'rejected'
+      ? [{ loan: eligible[i], message: r.reason instanceof Error ? r.reason.message : String(r.reason) }]
+      : [],
     );
 
     setResult({ ok: settled.length - failures.length, failures });

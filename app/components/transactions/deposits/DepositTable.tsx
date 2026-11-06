@@ -18,7 +18,7 @@ interface DepositTableProps {
   deposits:       DepositData[];
   loading:        boolean;
   onView:         (dep: DepositData) => void;
-  onEdit:         (dep: DepositData) => void;
+
   onExport:       (ids: number[]) => Promise<void>;
   selectedType:   string;
   selectedStatus: string;
@@ -118,7 +118,7 @@ function matchesRange(amount: number, range: DepositFilterRange): boolean {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function DepositTable({
-  deposits, loading, onView, onEdit, onExport,
+  deposits, loading, onView, onExport,
   search = '',
   selectedType,
   selectedStatus,
@@ -375,25 +375,6 @@ export default function DepositTable({
                   <EyeIcon />
                 </button>
 
-                {canEdit ? (
-                  <button
-                    title="Modifier ce dépôt"
-                    onClick={() => onEdit(dep)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    title={isLocked
-                      ? 'Dépôt encaissé — modification impossible'
-                      : 'Session fermée — modification non autorisée'}
-                    disabled
-                    className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                )}
 
                 {dep.holdPeriod > 0 && (
                   <span className="px-1.5 py-0.5 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700">

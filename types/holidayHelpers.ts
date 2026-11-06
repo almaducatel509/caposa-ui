@@ -1,16 +1,12 @@
 /**
- * holidayHelpers.ts — v2 avec gestion pending_assignment
+ * holidayHelpers.ts — v3
  *
- * ─────────────────────────────────────────────────────────────────────────
- * MODIFICATIONS apportées à ce fichier :
+ * `pending_assignment` a été supprimé du modèle Holiday côté Django
+ * (migration schedules.0003_remove_holiday_pending_assignment).
+ * Plus de notion de brouillon : un férié s'applique selon son scope.
  *
- * 1. CORRIGÉ : import de `HolidayScope`
- *    AVANT : import depuis "@/app/components/OpeningHours/mock"
- *      → mauvais fichier source, fragile (un nettoyage du mock cassait tout
- *        ce fichier sans raison).
- *    APRÈS : import depuis "@/app/components/holidays/validations"
- *      → source officielle du type, cohérent avec `Holiday`.
- * ─────────────────────────────────────────────────────────────────────────
+ * `isPending` / `pending` / `isPendingAssignment` sont conservés pour ne pas
+ * casser les composants qui les lisent encore ; ils valent toujours false / 0.
  */
 
 import { Holiday, HolidayScope } from "@/app/components/holidays/validations";
@@ -20,9 +16,6 @@ export function isHolidayAppliedToBranch(
   holiday: Holiday,
   branch: Branch
 ): boolean {
-  // Un brouillon ne s'applique à AUCUNE branche
-  if (holiday.pending_assignment) return false;
-
   switch (holiday.scope) {
     case "national":
       return true;
@@ -43,8 +36,9 @@ export function getApplicableBranches(
   return allBranches.filter((b) => isHolidayAppliedToBranch(holiday, b));
 }
 
-export function isPendingAssignment(holiday: Holiday): boolean {
-  return holiday.pending_assignment === true;
+/** @deprecated plus de brouillons — toujours false */
+export function isPendingAssignment(_holiday: Holiday): boolean {
+  return false;
 }
 
 export interface GroupedHoliday {
@@ -54,7 +48,7 @@ export interface GroupedHoliday {
   type: Holiday["type"];
   records: Holiday[];
   effectiveScope: HolidayScope;
-  /** true si TOUS les enregistrements du groupe sont en pending_assignment */
+  /** @deprecated plus de brouillons — toujours false */
   isPending: boolean;
 }
 
@@ -68,7 +62,6 @@ export function groupHolidaysByEvent(holidays: Holiday[]): GroupedHoliday[] {
     if (existing) {
       existing.records.push(h);
       existing.effectiveScope = widerScope(existing.effectiveScope, h.scope);
-      existing.isPending = existing.isPending && h.pending_assignment;
     } else {
       map.set(key, {
         id: h.id,
@@ -77,7 +70,7 @@ export function groupHolidaysByEvent(holidays: Holiday[]): GroupedHoliday[] {
         type: h.type,
         records: [h],
         effectiveScope: h.scope,
-        isPending: h.pending_assignment === true,
+        isPending: false,
       });
     }
   }
@@ -102,19 +95,12 @@ export function getBranchesForGroup(
   group: GroupedHoliday,
   allBranches: Branch[]
 ): Branch[] {
-  if (group.isPending) return [];
-
-  if (
-    group.records.some(
-      (r) => !r.pending_assignment && r.scope === "national"
-    )
-  ) {
+  if (group.records.some((r) => r.scope === "national")) {
     return allBranches;
   }
 
   const concerned = new Set<string>();
   for (const record of group.records) {
-    if (record.pending_assignment) continue;
     for (const branch of allBranches) {
       if (isHolidayAppliedToBranch(record, branch)) {
         concerned.add(branch.branch_code);
@@ -127,9 +113,9 @@ export function getBranchesForGroup(
 export interface HolidayStats {
   total: number;
   upcoming: number;
-  /** Brouillons en attente d'assignation */
+  /** @deprecated plus de brouillons — toujours 0 */
   pending: number;
-  /** Fériés assignés mais sans aucune branche effective (anomalie) */
+  /** Fériés sans aucune branche effective (anomalie) */
   unassigned: number;
   activeBranches: number;
 }
@@ -142,23 +128,17 @@ export function computeHolidayStats(
   today.setHours(0, 0, 0, 0);
 
   let upcoming = 0;
-  let pending = 0;
   let unassigned = 0;
 
   for (const g of groups) {
     if (new Date(g.date) >= today) upcoming++;
-    if (g.isPending) {
-      pending++;
-    } else {
-      const branches = getBranchesForGroup(g, allBranches);
-      if (branches.length === 0) unassigned++;
-    }
+    if (getBranchesForGroup(g, allBranches).length === 0) unassigned++;
   }
 
   return {
     total: groups.length,
     upcoming,
-    pending,
+    pending: 0,
     unassigned,
     activeBranches: allBranches.length,
   };

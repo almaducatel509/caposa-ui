@@ -113,7 +113,7 @@ export async function createDeposit(
     );
     return data;
   } catch (err) {
-    throw new Error(describeError(err, 'Impossible d\u2019enregistrer le dépôt'));
+    throw new Error(describeError(err, 'Impossible d\u2019enregistrer le dépôt'), { cause: err });
   }
 }
 

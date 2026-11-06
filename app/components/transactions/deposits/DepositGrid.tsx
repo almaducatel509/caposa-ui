@@ -7,9 +7,7 @@ import DepositFilterBar, { DepositFilterPeriod, DepositFilterRange } from './Dep
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 import { Modal } from '../../ui/Modal';
 import DepositTable from './DepositTable';
-import EditDepositModal from './EditDepositModal';
 import { DepositData, DepositFormValidated, mapApiTransactionToDeposit, mapDepositFormToPayload } from '../validation/deposit';
-import DifferedDepositModal from './Differeddepositmodal';
 import { useSession } from 'next-auth/react';
 import { formatMemberName, type MemberOption } from '../../members/validations';
 
@@ -274,7 +272,6 @@ export default function DepositDashboard() {
           deposits={depositsAffiches}
           loading={loading}
           onView={handleView}
-          onEdit={handleEdit}
           onExport={handleExport}
           search={search}
           selectedType={selectedType}
@@ -313,36 +310,7 @@ export default function DepositDashboard() {
         </Modal>
       )}
 
-      {/* ── Modal saisie différée ── */}
-      {showDiffered && activeSessionId && (
-        <Modal
-          isOpen
-          onClose={() => setShowDiffered(false)}
-          size="4xl"
-          title={
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-600 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">Saisie différée</p>
-                <p className="text-xs text-gray-400">Enregistrer une transaction a posteriori</p>
-              </div>
-            </div>
-          }
-        >
-          <div className="p-5 overflow-y-auto max-h-[70vh]">
-            <DifferedDepositModal
-              sessionId={activeSessionId}
-              saisiPar={userId}
-              members={members}
-              fetchMemberAccounts={handleFetchMemberAccounts}
-              onSubmit={handleDifferedSubmit}
-              onCancel={() => setShowDiffered(false)}
-            />
-          </div>
-        </Modal>
-      )}
+     
 
       {/* ── Modal détail transaction ── */}
       {detailTx && (
@@ -352,16 +320,6 @@ export default function DepositDashboard() {
         />
       )}
 
-      {editDeposit && (
-        <EditDepositModal
-          deposit={editDeposit}
-          onClose={() => setEditDeposit(null)}
-          onSuccess={() => {
-            setEditDeposit(null);
-            loadDeposits();
-          }}
-        />
-      )}
 
     </div>
   );

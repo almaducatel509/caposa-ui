@@ -403,7 +403,7 @@ const VaultMovementHistory: React.FC = () => {
               <XAxis dataKey="label" stroke="#6b7280" fontSize={12} />
               <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
               <Tooltip 
-                formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''}
+                formatter={(v: any) => v !== undefined ? formatCurrency(v) : ''}
                 contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} 
               />
               <Bar dataKey="amountIn" fill="#81C784" radius={[8, 8, 0, 0]} name="Entrées" />
@@ -424,9 +424,9 @@ const VaultMovementHistory: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number | undefined, name: string | undefined, props: any) => {
-                    if (value === undefined) return ['', ''];
-                    return [`${value} (${formatCurrency(props.payload.amount)})`, name || ''];
+                  formatter={(v: any, name: any, props: any) => {
+                    if (v === undefined) return ['', ''];
+                    return [`${v} (${formatCurrency(props.payload.amount)})`, name || ''];
                   }}
                 />
               </PieChart>

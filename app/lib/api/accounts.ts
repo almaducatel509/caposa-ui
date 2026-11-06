@@ -108,7 +108,6 @@ export const checkMemberEligibility = async (
   }
 };
 
-// ─── WRITE ───────────────────────────────────────────────────────────────────
 
 export const createAccount = async (input: CreateAccountInput): Promise<AccountData> => {
   // 1. Valider l'entrée (format du formulaire)
@@ -149,7 +148,6 @@ export const deleteAccount = async (id: string): Promise<void> => {
   }
 };
 
-// ...........................................................
 
 export const activateAccount = async (id: string): Promise<AccountData> => {
   try {
@@ -196,5 +194,21 @@ export const closeAccount = async (id: string): Promise<AccountData> => {
   } catch (e: any) {
     console.error("Erreur closeAccount:", e);
     throw new Error(parseApiError(e, "Impossible de fermer le compte."));
+  }
+};
+
+export const approveAccount = async (
+  id: string,
+): Promise<{ account_status: string; detail?: string }> => {
+  try {
+    const { data } = await AxiosInstance.post(`/accounts/${id}/approve/`);
+    return data; // réponse courte, pas un compte complet : pas d'enrichOne
+  } catch (e: any) {
+    console.error("Erreur approveAccount:", e);
+    throw new Error(
+      e?.response?.data?.detail
+        ?? `Impossible d'approuver le compte (erreur ${e?.response?.status ?? 'réseau'}).`,
+      { cause: e },
+    );
   }
 };

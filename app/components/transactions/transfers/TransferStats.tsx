@@ -125,7 +125,7 @@ export default function TransferStats({
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [v ?? 0, 'Virements']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [v ?? 0, 'Virements']} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
                   <Cell key={i} fill={i === volumeData.length - 1 ? C.green : C.greenPale} />
@@ -144,7 +144,7 @@ export default function TransferStats({
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false}
                 tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Montant']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={( v: any, _: any, props: any) => [formatHTG(v ?? 0), 'Montant']} />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                 {volumeData.map((_, i) => (
                   <Cell key={i} fill={i === volumeData.length - 1 ? C.blue : '#D4E3EF'} />
@@ -165,7 +165,7 @@ export default function TransferStats({
                   {typeData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle}
-                  formatter={(v: number | undefined, _: string | undefined, props: any) =>
+                  formatter={(v: any, _: any, props: any) =>
                     [`${v ?? 0} (${formatHTG(props?.payload?.amount ?? 0)})`, props?.payload?.name ?? '']} />
               </PieChart>
             </ResponsiveContainer>
@@ -199,7 +199,7 @@ export default function TransferStats({
               <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} tickLine={false} />
               <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false}
                 tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number | undefined) => [formatHTG(v ?? 0), 'Montant']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [formatHTG(v ?? 0), 'Montant']} />
               <Line type="monotone" dataKey="amount" stroke={C.blue} strokeWidth={2.5}
                 dot={{ fill: C.blue, r: 3 }} activeDot={{ r: 5 }} />
             </LineChart>

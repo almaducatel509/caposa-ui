@@ -1,15 +1,12 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import {
-  History, LogIn, LogOut,
-  Banknote, Loader2, RefreshCw, Plus,
-  AlertTriangle,
+  History, LogIn, LogOut, Loader2, RefreshCw, Plus,
 } from 'lucide-react';
 import { Caisse, CaisseSession, OpenSessionPayload } from '@/types/caisse';
 import AxiosInstance from '@/app/lib/axiosInstance';
 import { SessionManager } from '@/app/lib/api/Sessionmanager';
 import { Modal } from '@/app/components/ui/Modal';
-import OpenSessionModal from './modals/Opensessionmodal';
 import CloseSessionModal from './modals/Closesessionmodal';
 import SessionDetailModal from './modals/SessionDetailModal';
 
@@ -23,22 +20,9 @@ import { useRouter } from 'next/navigation';
 import { fetchBranches, fetchHolidays, fetchOpeningHours } from '@/app/lib/api/branche';
 import { BranchData,   } from '../branches/validations';
 import { Holiday } from '../holidays/validations';
-//chemin douteux
 import { OpeningHour } from '@/types/branche';
 import { ExportAllButton } from '@/app/ExportAllButton';
-import DifferedDepositModal from '../transactions/deposits/Differeddepositmodal';
-import { useSession } from 'next-auth/react';
 import { fetchCaisses } from '@/app/lib/api/caisse';
-import { EmployeeData } from '../employees/validations';
-
-// ═══════════════════════════════════════════════════════════════
-// MOCK_SESSIONS — données réalistes pour développement UI
-// À SUPPRIMER quand l'API /sessions/ renvoie les vraies données
-// ═══════════════════════════════════════════════════════════════
-
-const now = Date.now();
-const h = (n: number) => n * 60 * 60 * 1000;
-const d = (n: number) => n * 24 * 60 * 60 * 1000;
 
 // ═══════════════════════════════════════════════════════════════
 // Wrapper Modal — Ouverture de session
@@ -113,8 +97,6 @@ export default function SessionsComponent() {
 
   // Modal fermeture (déclenché par 🚪)
   const [closeSession,  setCloseSession]  = useState<CaisseSession | null>(null);
-  const [showDiffered, setShowDiffered] = useState(false);
-  const { data: authSession } = useSession();
   // 🆕 Vérification horaires + calendrier
   const { rules: openingRules } = useSessionOpeningRules();
   const canOpen = openingRules ? openingRules.canOpen : true;
@@ -259,35 +241,7 @@ if (loading) {
         />
       )}
 
-      {showDiffered && (
-        <Modal
-          isOpen
-          onClose={() => setShowDiffered(false)}     
-          size="3xl"
-          title={
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Saisie différée</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Transaction enregistrée hors délai</p>
-              </div>
-            </div>
-          }
-        >
-          <div className="p-6 max-h-[80vh] overflow-y-auto">
-            <DifferedDepositModal
-              sessionId="SESS-MOCK"
-              saisiPar={(authSession?.user as any)?.username ?? 'inconnu'}                
-              onSubmit={async (data) => {
-                console.log('[Mock] Saisie différée :', data);
-              }}
-              onCancel={() => setShowDiffered(false)}
-            />
-          </div>
-        </Modal>
-      )}
+     
       <div className="w-full min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8">
 
         {/* ── Header ── */}
@@ -304,13 +258,7 @@ if (loading) {
           </div>
 
           <div className="flex items-center gap-2">
-           <button
-            onClick={() => setShowDiffered(true)}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-[#D4AF37] text-white text-sm font-semibold hover:bg-[#b98e01] transition-colors"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            Saisie différée
-          </button>
+           
             <ExportAllButton
               data={exportData}
               filename="sessions"

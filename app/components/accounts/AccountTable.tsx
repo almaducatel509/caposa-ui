@@ -1,17 +1,22 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
+
 import {
   Eye, XCircle, Phone, Mail, Receipt,
   ChevronDown, ChevronUp, ChevronsUpDown,
   Check, CheckCircle2, X, Archive,
   Wallet, ShieldAlert, TrendingUp, TrendingDown, Minus,
   ShieldOff, ShieldCheck,
+  BadgeCheck,
 } from 'lucide-react';
 import { AccountData, AccountStatus } from './validationsaccount';
-import AccountBulkActionDropdown, { AccountBulkAction } from './AccountBulkActionDropdown';
 import AccountBulkActionModal from './modals/AccountBulkActionModal';
 import UserAvatar from '../core/UserAvatar';
+import { getRole } from '@/app/lib/auth';
+import { AccountBulkAction } from '@/app/lib/api/accountRules';
+import AccountBulkActionDropdown from './AccountBulkActionDropdown';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
@@ -46,6 +51,8 @@ interface AccountTableProps {
   onBulkAction: (action: AccountBulkAction, ids: string[],) => Promise<void>;
   activeTab?:         TabId;
   onTabChange?:       (tab: TabId) => void;
+  canApprove?: boolean;
+  onApprove?: (account: AccountData) => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -143,6 +150,8 @@ const AccountTable: React.FC<AccountTableProps> = ({
   onBulkAction,
   activeTab: externalTab,
   onTabChange,
+  
+  onApprove,
 }) => {
   const [localTab, setLocalTab] = useState<TabId>('ouvert');
 const activeTab = externalTab ?? localTab;
@@ -205,6 +214,11 @@ const isArchiveTab = activeTab === 'archive';  // ✅ AJOUTE ICI
     onTabChange?.(tab);
     setSelected(new Set());
   };
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.isAdmin ?? false;
+  const role = getRole();
+  const canApprove =
+    isAdmin || ['superviseur', 'directeur', 'admin', 'administrateur'].includes(role);
 
 return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -274,10 +288,11 @@ return (
           <div className="flex items-center gap-2 ml-auto">
             {!isArchiveTab && (
               <AccountBulkActionDropdown
-                selectedCount={selected.size}
+                selectedAccounts={selectedAccounts}   
                 isOpen={dropdownOpen}
                 onToggle={() => setDropdownOpen(o => !o)}
                 onAction={(action) => setActiveAction(action)}
+                canApprove={canApprove}
               />
             )}
             <button
@@ -460,7 +475,16 @@ return (
                   className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-purple-50 hover:text-purple-500">
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
-
+                  {canApprove && acc.account_status === 'en_attente' && (
+                    <button
+                      type="button"
+                      onClick={() => onApprove?.(acc)}
+                      title="Approuver le compte"
+                      className="p-1.5 rounded-lg text-[#2E7D32] hover:bg-[#DDEAD5] transition-colors"
+                    >
+                      <BadgeCheck className="w-4 h-4" />
+                    </button>
+                )}
                 {(status === 'actif' || status === 'en_attente') && (
                   <>
                     <button title="Geler" onClick={() => onSuspend(acc)}

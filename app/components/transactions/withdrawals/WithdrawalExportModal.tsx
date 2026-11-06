@@ -10,7 +10,7 @@ interface WithdrawalExportModalProps {
   open:        boolean;
   withdrawals: WithdrawalData[];
   onClose:     () => void;
-  onConfirm:   (ids: number[]) => Promise<void>;
+  onConfirm: (ids: string[]) => Promise<void>; 
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
