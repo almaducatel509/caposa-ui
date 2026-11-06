@@ -40,7 +40,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
   // si le caissier change sur le même poste, son cache est isolé.
   useEffect(() => {
     if (username) {
-      SessionManager.attachUser(username);
+      SessionManager.bindUser(username);
     }
   }, [username]);
 
