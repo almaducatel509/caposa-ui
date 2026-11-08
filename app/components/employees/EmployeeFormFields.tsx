@@ -6,9 +6,8 @@ import type { DepartmentCode } from '@/app/data/haitiLocations';
 
 import { BranchData, EmployeeFormData, ErrorMessages } from './validations';
 import { EmailField } from './EmailField';
-import EmployeePhotoField from './EmployeePhotoField';
 import {
-  User, Mail, Lock, Phone, MapPin, Building2,
+  User, Phone, MapPin, Building2,
   Briefcase, CheckCircle2, AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import PhotoSelector from '../core/upload-file';
@@ -200,7 +199,8 @@ const EmployeeFormFields: React.FC<{
             />
           </Field>
 
-          <Field label="Email" required error={errors.email}>
+          {/* Pas de `error` sur Field : EmailField affiche déjà l'erreur (sinon elle apparaît deux fois) */}
+          <Field label="Email" required>
             <EmailField
               value={formData.user.email}
               onChange={value => handleUserFieldChange('email', value)}
@@ -211,70 +211,55 @@ const EmployeeFormFields: React.FC<{
           </Field>
 
           {/* Gestion mot de passe */}
-          {isEditMode ? (
-            <div className="sm:col-span-2 flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setKeepCurrentPassword(p => {
-                    if (!p) {
-                      handleUserFieldChange('password', '');
-                      handleUserFieldChange('confirm_password', '');
-                    }
-                    return !p;
-                  });
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all
-                  ${keepCurrentPassword
-                    ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
-                    : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all
-                  ${keepCurrentPassword ? 'border-[#2E7D32] bg-[#2E7D32]' : 'border-gray-300'}`}>
-                  {keepCurrentPassword && <CheckCircle2 className="w-3 h-3 text-white" />}
-                </div>
-                <div>
-                  <p className={`text-sm font-semibold ${keepCurrentPassword ? 'text-[#1B5E20]' : 'text-gray-700'}`}>
-                    Garder le mot de passe actuel
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">Décocher uniquement pour changer le mot de passe</p>
-                </div>
-              </button>
+          {isEditMode && (
+            <button
+              type="button"
+              onClick={() => {
+                // En repassant à « garder », on vide les deux champs en une seule mise à jour
+                if (!keepCurrentPassword) {
+                  setFormData({ user: { ...formData.user, password: '', confirm_password: '' } });
+                }
+                setKeepCurrentPassword(k => !k);
+              }}
+              className={`sm:col-span-2 w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all
+                ${keepCurrentPassword
+                  ? 'border-[#2E7D32] bg-[#DDEAD5]/40'
+                  : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all
+                ${keepCurrentPassword ? 'border-[#2E7D32] bg-[#2E7D32]' : 'border-gray-300'}`}>
+                {keepCurrentPassword && <CheckCircle2 className="w-3 h-3 text-white" />}
+              </div>
+              <div>
+                <p className={`text-sm font-semibold ${keepCurrentPassword ? 'text-[#1B5E20]' : 'text-gray-700'}`}>
+                  Garder le mot de passe actuel
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Décocher uniquement pour changer le mot de passe</p>
+              </div>
+            </button>
+          )}
 
-              {!keepCurrentPassword && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-orange-50 border border-orange-100 rounded-xl">
-                  <div className="flex items-start gap-2 sm:col-span-2 mb-1">
-                    <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-700 font-medium">Vous êtes en train de changer le mot de passe.</p>
-                  </div>
-                  <Field label="Nouveau mot de passe" required error={errors.password}>
-                    <Input type="password" value={formData.user.password}
-                      onChange={e => handleUserFieldChange('password', e.target.value)}
-                      placeholder="Nouveau mot de passe" hasError={!!errors.password} />
-                  </Field>
-                  <Field label="Confirmer le mot de passe" required error={errors.confirm_password}>
-                    <Input type="password" value={formData.user.confirm_password}
-                      onChange={e => handleUserFieldChange('confirm_password', e.target.value)}
-                      placeholder="Confirmer le mot de passe" hasError={!!errors.confirm_password} />
-                  </Field>
+          {/* Champs mot de passe — un seul bloc pour la création et l'édition */}
+          {(!isEditMode || !keepCurrentPassword) && (
+            <div className={`sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+              isEditMode ? 'p-4 bg-orange-50 border border-orange-100 rounded-xl' : ''
+            }`}>
+              {isEditMode && (
+                <div className="flex items-start gap-2 sm:col-span-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-orange-700 font-medium">Vous êtes en train de changer le mot de passe.</p>
                 </div>
               )}
-            </div>
-          ) : (
-            <div>
-              <Field label="Mot de passe" required error={errors.password}>
-                {/* // Password création */}
-
+              <Field label={isEditMode ? 'Nouveau mot de passe' : 'Mot de passe'} required error={errors.password}>
                 <Input
                   type="password"
                   autoComplete="new-password"
                   value={formData.user.password}
                   onChange={e => handleUserFieldChange('password', e.target.value)}
-                  placeholder="Mot de passe"
+                  placeholder={isEditMode ? 'Nouveau mot de passe' : 'Mot de passe'}
                   hasError={!!errors.password}
                 />
               </Field>
               <Field label="Confirmer le mot de passe" required error={errors.confirm_password}>
-                {/* // Confirm password création   */}
                 <Input
                   type="password"
                   autoComplete="new-password"
@@ -388,7 +373,7 @@ const EmployeeFormFields: React.FC<{
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <SectionHeader step={3} title="Affectation de travail" icon={Building2} />
 
-        <div className="flex flex-col gap-4 bg">
+        <div className="flex flex-col gap-4">
 
           <Field label={`Branche (${branches.length} disponibles)`} required error={errors.branch}>
             <div className="relative">

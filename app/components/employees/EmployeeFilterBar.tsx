@@ -158,16 +158,16 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
             disabled={importLoading}
             className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm font-medium rounded-xl hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {importLoading ? (
-              <div>
+           {importLoading ? (
+              <>
                 <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
                 Import…
-              </div>
+              </>
             ) : (
-              <div>
+              <>
                 <Upload className="w-4 h-4" />
                 Importer
-              </div>
+              </>
             )}
           </button>
           <ExportAllButton

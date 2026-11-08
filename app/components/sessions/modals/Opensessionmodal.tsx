@@ -293,7 +293,7 @@ const responsablesCash = useMemo(
             <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
-              value={caissierUsername || '— non connecté —'}
+              value={caissierUsername || ' non connecté '}
               disabled
               readOnly
               className={inputCls(errors.username) + ' pl-8 bg-gray-100 text-gray-500 cursor-not-allowed'}
@@ -310,7 +310,7 @@ const responsablesCash = useMemo(
               onChange={e => handleBranchChange(e.target.value)}
               className={inputCls(errors.branch) + ' pl-8 pr-4 appearance-none cursor-pointer'}
             >
-              <option value="">-- Sélectionnez une succursale --</option>
+              <option value=""> Sélectionnez une succursale </option>
               {branches
                 .filter(b => getEffectiveStatus(b) === 'active')
                 .map(b => (
@@ -335,7 +335,7 @@ const responsablesCash = useMemo(
               className={inputCls(errors.numero_caisse) + ' pl-8 pr-4 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'}
             >
               <option value="">
-                {form.branch ? '-- Sélectionnez une caisse --' : '-- Choisissez une succursale d\'abord --'}
+                {form.branch ? ' Sélectionnez une caisse ' : ' Choisissez une succursale d\'abord '}
               </option>
               {availableCaisses.map(c => (
                 <option key={c.id} value={c.numero_caisse}>
@@ -357,7 +357,7 @@ const responsablesCash = useMemo(
               className={inputCls(errors.superviseur) + ' pl-8 pr-4 appearance-none cursor-pointer'}
             >
               <option value="">
-                {superviseurs.length === 0 ? '-- Aucun superviseur disponible --' : '-- Sélectionnez un superviseur --'}
+                {superviseurs.length === 0 ? ' Aucun superviseur disponible ' : ' Sélectionnez un superviseur '}
               </option>
               {superviseurs.map(s => (
                 <option key={s.id} value={getUsername(s)}>
@@ -379,7 +379,7 @@ const responsablesCash = useMemo(
               className={inputCls(errors.responsable_cash) + ' pl-8 pr-4 appearance-none cursor-pointer'}
             >
               <option value="">
-                {responsablesCash.length === 0 ? '-- Aucun trésorier disponible --' : '-- Sélectionnez un responsable cash --'}
+                {responsablesCash.length === 0 ? ' Aucun trésorier disponible ' : ' Sélectionnez un responsable cash '}
               </option>
               {responsablesCash.map(r => (
                 <option key={r.id} value={getUsername(r)}>
@@ -427,8 +427,8 @@ const responsablesCash = useMemo(
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
         >
           {loading
-            ? <div><Loader2 size={14} className="animate-spin" />Ouverture…</div>
-            : <div><LogIn size={14} />Démarrer la session</div>
+            ? <><Loader2 size={14} className="animate-spin" />Ouverture…</>
+            : <><LogIn size={14} />Démarrer la session</>
           }
         </button>
       </div>
