@@ -116,7 +116,7 @@ export const EmailField: React.FC<EmailFieldProps> = ({
   value,
   onChange,
   label = "Email",
-  placeholder = "Entrez l'email",
+  placeholder = "employe@gmail.com",
   required = false,
   disabled = false,
   context = 'employee',
@@ -124,44 +124,31 @@ export const EmailField: React.FC<EmailFieldProps> = ({
 }) => {
   const validation = useEmailValidation(value, context);
 
-  // Classes CSS selon état
+  // Classes CSS selon état — alignées sur le composant Input du formulaire
+  // (text-sm, px-3 py-2.5, rounded-xl, couleurs CAPOSA)
   const getInputClasses = () => {
-    const base = "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all duration-200";
-    
-    if (disabled) return `${base} bg-gray-100 cursor-not-allowed border-gray-300`;
-    if (externalError) return `${base} border-red-300 bg-red-50 focus:ring-red-200`;
-    if (validation.isValidating) return `${base} border-blue-300 focus:ring-blue-200`;
-    
+    const base = "w-full pl-3 pr-9 py-2.5 text-sm rounded-xl border outline-none transition-all focus:ring-2";
+
+    if (disabled) return `${base} bg-gray-50 text-gray-400 cursor-not-allowed border-gray-200`;
+    if (externalError) return `${base} border-red-300 bg-red-50/30 focus:ring-red-100 focus:border-red-400`;
+    if (validation.isValidating) return `${base} border-gray-200 bg-white focus:ring-[#DDEAD5] focus:border-[#2E7D32]`;
+
     switch (validation.type) {
-      case 'success': return `${base} border-green-300 bg-green-50 focus:ring-green-200`;
-      case 'warning': return `${base} border-orange-300 bg-orange-50 focus:ring-orange-200`;
-      case 'error': return `${base} border-red-300 bg-red-50 focus:ring-red-200`;
-      default: return `${base} border-gray-300 focus:ring-blue-500`;
+      case 'success': return `${base} border-[#81C784] bg-white focus:ring-[#DDEAD5] focus:border-[#2E7D32]`;
+      case 'warning': return `${base} border-orange-300 bg-orange-50/30 focus:ring-orange-100 focus:border-orange-400`;
+      case 'error':   return `${base} border-red-300 bg-red-50/30 focus:ring-red-100 focus:border-red-400`;
+      default:        return `${base} border-gray-200 bg-white hover:border-gray-300 focus:ring-[#DDEAD5] focus:border-[#2E7D32]`;
     }
   };
 
-  // Icône selon contexte
-  const getIcon = () => {
-    switch (context) {
-      case 'connection': return '🔐';
-      case 'member': return '👥';
-      default: return '📧';
-    }
-  };
+  const message = externalError || validation.message;
+  const messageColor =
+    externalError || validation.type === 'error' ? 'text-red-500' :
+    validation.type === 'warning' ? 'text-orange-600' :
+    'text-[#2E7D32]';
 
   return (
     <div>
-      {/* Label */}
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        <span className="mr-1">{getIcon()}</span>
-        {label} {required && <span className="text-red-500">*</span>}
-        {validation.isValidating && (
-          <span className="ml-2 text-xs text-blue-600">
-            <span className="inline-block animate-spin">⟳</span> Validation...
-          </span>
-        )}
-      </label>
-
       {/* Input */}
       <div className="relative">
         <input
@@ -170,40 +157,32 @@ export const EmailField: React.FC<EmailFieldProps> = ({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
+          required={required}
+          aria-label={label}
           className={getInputClasses()}
         />
-        
+
         {/* Indicateur visuel */}
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           {validation.isValidating && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2E7D32]" />
           )}
-          {!validation.isValidating && validation.type === 'success' && (
-            <span className="text-green-500 text-lg">✓</span>
+          {!validation.isValidating && !externalError && validation.type === 'success' && (
+            <span className="text-[#2E7D32] text-sm">✓</span>
           )}
-          {!validation.isValidating && validation.type === 'warning' && (
-            <span className="text-orange-500 text-lg">⚠</span>
+          {!validation.isValidating && !externalError && validation.type === 'warning' && (
+            <span className="text-orange-500 text-sm">⚠</span>
           )}
           {!validation.isValidating && (validation.type === 'error' || externalError) && (
-            <span className="text-red-500 text-lg">✗</span>
+            <span className="text-red-500 text-sm">✗</span>
           )}
         </div>
       </div>
 
-      {/* Messages */}
-      {externalError ? (
-        <div className="text-sm p-2 rounded border mt-1 text-red-600 bg-red-50 border-red-200">
-          {externalError}
-        </div>
-      ) : validation.message ? (
-        <div className={`text-sm p-2 rounded border mt-1 ${
-          validation.type === 'success' ? 'text-green-600 bg-green-50 border-green-200' :
-          validation.type === 'warning' ? 'text-orange-600 bg-orange-50 border-orange-200' :
-          'text-red-600 bg-red-50 border-red-200'
-        }`}>
-          {validation.message}
-        </div>
-      ) : null}
+      {/* Message — même style que les autres champs du formulaire */}
+      {message && (
+        <p className={`text-xs mt-1.5 ${messageColor}`}>{message}</p>
+      )}
     </div>
   );
 };

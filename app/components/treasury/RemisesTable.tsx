@@ -48,7 +48,7 @@ const exportRemisePDF = async (r: Remise) => {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('CAPOSA -- Remise de Caisse', lm, 8);
+  doc.text('CAPOSA Remise de Caisse', lm, 8);
   doc.setFont('helvetica', 'normal');
   doc.text(`Genere le ${new Date().toLocaleDateString('fr-FR')}`, 192, 8, { align: 'right' });
 
