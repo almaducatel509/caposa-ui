@@ -140,7 +140,6 @@ export default function SessionsComponent() {
 
   // ── Actions groupées (UI only pour l'instant) ──────────────────
   const handleBulkAction = async (action: SessionBulkAction, ids: string[]) => {
-    console.log(`[UI] Bulk action: ${action}`, ids);
 
     if (action === 'export') {
       alert(`[Mock] Export CSV de ${ids.length} session(s) — à implémenter`);

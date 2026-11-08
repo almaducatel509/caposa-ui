@@ -159,24 +159,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
     beforeSnapshot.current = group;
 
     // ─── DEBUG : état au chargement ───────────────────────────────────────
-    console.group("📥 [AssignBranchesModal] État AVANT modification");
-    console.log("🔹 Holiday group ID    :", group.id);
-    console.log("🔹 Description         :", group.description);
-    console.log("🔹 Date                :", group.date);
-    console.log("🔹 Scope effectif      :", group.effectiveScope);
-    console.log("🔹 Records dans groupe :", group.records.length);
-    console.log(
-      "🔹 Branches concernées :",
-      getBranchesForGroup(group, branchesToUse).length,
-      "/",
-      branchesToUse.length
-    );
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("📦 Group complet       :", group);
-    console.log("📦 Branches disponibles:", branchesToUse);
-    console.log("📦 JSON groupe formaté :");
-    console.log(JSON.stringify(group, null, 2));
-    console.groupEnd();
+    
   }, [isOpen, group, branchesToUse]);
 
   const departments = useMemo(() => {
@@ -272,30 +255,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
       // ═════════════════════════════════════════════════════════════════
       // ─── PAYLOAD ENVOYÉ ──────────────────────────────────────────────
       // ═════════════════════════════════════════════════════════════════
-      console.group("🚀 [AssignBranchesModal] Soumission API");
-      console.log("🔹 Holiday ID     :", group.id);
-      console.log("🔹 Endpoint       : assignHolidayToBranches (PATCH)");
-      console.log("🔹 Scope choisi   :", scope);
-      console.log(
-        "🔹 Branches ciblées:",
-        targetBranches.length,
-        "/",
-        branchesToUse.length
-      );
-      // ⚠ Si tu vois des `undefined` ici, c'est que MOCK_BRANCHES n'a pas
-      //   encore de champ `id` (à corriger à l'étape suivante).
-      console.log("🔹 branch_ids     :", branch_ids);
-      const undefinedCount = branch_ids.filter((id) => !id).length;
-      if (undefinedCount > 0) {
-        console.warn(
-          `⚠ ${undefinedCount} branch_id(s) sont undefined — il manque le champ "id" sur les branches !`
-        );
-      }
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📦 PAYLOAD complet:", payload);
-      console.log("📦 JSON formaté   :");
-      console.log(JSON.stringify(payload, null, 2));
-      console.groupEnd();
+      
       // ═════════════════════════════════════════════════════════════════
 
       const result = await assignHolidayToBranches(group.id, payload);
@@ -303,42 +263,10 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
       // ═════════════════════════════════════════════════════════════════
       // ─── RÉPONSE API ─────────────────────────────────────────────────
       // ═════════════════════════════════════════════════════════════════
-      console.group("✅ [AssignBranchesModal] Données APRÈS modification (API)");
-      console.log("🔹 Holiday ID :", group.id);
-      console.log("🔹 Endpoint   : assignHolidayToBranches");
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📦 Réponse brute API :", result);
-      console.log("📦 JSON formaté      :");
-      console.log(JSON.stringify(result, null, 2));
-      console.groupEnd();
+      
 
       // ─── DIFF avant ↔ après ──────────────────────────────────────────
-      if (beforeSnapshot.current && result) {
-        console.group("🔄 [AssignBranchesModal] DIFF avant ↔ après");
-        // On compare le record principal (premier) vs la réponse
-        const before = beforeSnapshot.current.records[0];
-        const diff = computeDiff(before, result);
-        const changedKeys = Object.keys(diff);
-
-        if (changedKeys.length === 0) {
-          console.log("ℹ️ Aucun champ n'a changé entre l'avant et l'après.");
-        } else {
-          console.log(
-            `📊 ${changedKeys.length} champ(s) modifié(s) :`,
-            changedKeys
-          );
-          console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-          console.table(
-            changedKeys.map((key) => ({
-              champ: key,
-              avant: JSON.stringify(diff[key].before),
-              après: JSON.stringify(diff[key].after),
-            }))
-          );
-          console.log("📦 Diff complet :", diff);
-        }
-        console.groupEnd();
-      }
+      
       // ═════════════════════════════════════════════════════════════════
 
       const summary =
@@ -357,11 +285,7 @@ const AssignBranchesModal: React.FC<AssignBranchesModalProps> = ({
         onClose();
       }, 1200);
     } catch (err: any) {
-      console.group("❌ [AssignBranchesModal] Erreur API");
-      console.error("Error object:", err);
-      console.error("Message:", err?.message);
-      console.error("Response:", err?.response);
-      console.groupEnd();
+      console.error("Erreur API:", err);
       setApiError(
         err?.message || "Une erreur est survenue lors de l'assignation."
       );

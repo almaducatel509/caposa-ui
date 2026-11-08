@@ -104,8 +104,8 @@ const membersForExport = members.map((m) => {
   };
 });
   
-  console.log('📊 Données pour export :', membersForExport);
-  console.table(membersForExport);  // ← bonus : vue tableau dans la console
+
+
   
   return (
     <div className="flex flex-col gap-4">

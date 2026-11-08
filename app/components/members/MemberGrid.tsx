@@ -182,7 +182,7 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
         onClear={() => setSearch('')}
         onStatusChange={handleStatusChange}
         onAdd={handleAdd}
-        onImport={() => console.log('Import')}
+        onImport={() => {}}
         totalCount={filteredMembers.length}
         onTypeChange={setSelectedType}
         selectedType={selectedType}

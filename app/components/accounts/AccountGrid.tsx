@@ -282,7 +282,7 @@ const AccountGrid: React.FC = () => {
         onSearchChange={setSearch}
         onClear={() => setSearch('')}
         onTypeChange={setSelectedType}
-        onImport={() => console.log('Import')}
+        onImport={() => {}}
         onAdd={handleAdd}
         members={members}
         accounts={accounts}

@@ -1,22 +1,29 @@
-'use client'
+'use client';
 
-import { SessionProvider } from "next-auth/react"
-import { useSession } from 'next-auth/react'
-import { useEffect } from 'react'
-import { setCookie } from 'cookies-next'
+import { SessionProvider } from "next-auth/react";
+import { useSession } from 'next-auth/react';
+import { useEffect } from 'react';
+import { setCookie } from 'cookies-next';
+
+const ACCESS_COOKIE = process.env.NEXT_PUBLIC_TOKEN_NAME || "auth_token";
+const REFRESH_COOKIE = process.env.NEXT_PUBLIC_REFRESH_TOKEN || "refresh_token";
 
 function TokenSyncer() {
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
   useEffect(() => {
-    const access  = (session?.user as any)?.accessToken
-    const refresh = (session?.user as any)?.refreshToken
+    const access  = (session?.user as any)?.accessToken;
+    const refresh = (session?.user as any)?.refreshToken;
 
-    if (access)  setCookie('caposa_access_token', access, { path: '/', maxAge: 60 * 60 * 24 })
-    if (refresh) setCookie('caposa_refresh_token', refresh, { path: '/', maxAge: 60 * 60 * 24 * 30 })
-  }, [session])
+    if (access) {
+      setCookie(ACCESS_COOKIE, access, { path: '/', maxAge: 60 * 60 * 24 });
+    }
+    if (refresh) {
+      setCookie(REFRESH_COOKIE, refresh, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+    }
+  }, [session]);
 
-  return null
+  return null;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -25,6 +32,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TokenSyncer />
       {children}
     </SessionProvider>
-  )
+  );
 }
-//Documents\Final Project\caposa-ui\app\_providers\providers.tsx

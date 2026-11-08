@@ -269,20 +269,7 @@ const BranchDetailsModal: React.FC<BranchDetailsModalProps> = ({
       return d.toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric" });
     } catch { return dateString; }
   };
-  useEffect(() => {
-  if (branch) {
-    console.log("[BranchDetailsModal] Données affichées :", {
-      branch,
-      openingHours: branchOpeningHours ?? "non configuré",
-      holidays: displayHolidays,
-      employees: branchEmployees,
-      positionCounts,
-      totalStaff,
-      isActive,
-      missingItems,
-    });
-  }
-}, [branch, branchOpeningHours, displayHolidays, branchEmployees, positionCounts, totalStaff, isActive, missingItems]);
+  
   return (
     <div>
       <Modal

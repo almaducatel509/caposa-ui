@@ -58,7 +58,6 @@ function mapStatus(apiStatus: TransactionData['status']): TransactionDetail['sta
 
   const handleProcess = (tx: TransactionData) => {
     // TODO: ouvrir modal de traitement
-    console.log('Traiter transaction:', tx.id);
   };
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -108,7 +107,7 @@ function mapStatus(apiStatus: TransactionData['status']): TransactionDetail['sta
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all">
             <RefreshCw className="w-4 h-4" /> Actualiser
           </button>
-          <button onClick={() => console.log('Importer')}
+          <button onClick={() => {}}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all">
             <Upload className="w-4 h-4" /> Importer
           </button>

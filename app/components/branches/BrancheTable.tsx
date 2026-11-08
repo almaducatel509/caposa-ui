@@ -258,7 +258,6 @@ const BranchTable: React.FC<BranchTableProps> = ({
     }
 
     // Pour les autres actions, on log — le parent doit gérer
-    console.log(`[Bulk] ${action}`, ids);
     alert(`[Mock] Action "${action}" sur ${ids.length} branche(s) — à implémenter côté parent via onBulkAction`);
   };
 

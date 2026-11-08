@@ -115,7 +115,7 @@ export default function ArchiveDetailLoanPage() {
   const isApproved = loanData.decision === 'approuve';
 
   // TODO: handleExportPDF — POST /api/archives/${archive.id}/export-pdf
-  const handleExportPDF = () => { console.log('TODO: Export PDF archive', archive.id); };
+  const handleExportPDF = () => {  };
   const handlePrint     = () => { window.print(); };
 
   return (

@@ -18,7 +18,6 @@ export default function PhotoSelector({ value, onChange, onRemove, variant = 'ci
   const inputRef = useRef<HTMLInputElement>(null)
   const [hoverDelete, setHoverDelete] = useState(false);
   useEffect(() => {
-  console.log("VALUE REÇUE :", value)
 
   if (value && typeof value === "string") {
     setPreview(value)

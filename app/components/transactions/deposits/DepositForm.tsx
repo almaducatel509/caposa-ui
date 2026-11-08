@@ -292,7 +292,6 @@ export default function DepositForm({
 
     try {
       const response = await onSubmit(result.data);
-      console.log('[reçu] réponse API reçue par le formulaire :', response);
       setCreated(response);
       setSubmittedData(result.data);
       setSubmitted(true);

@@ -7,7 +7,6 @@ import AccountGrid from '@/app/components/accounts/AccountGrid';
 
 export default function Accounts() {
   const handleExportReport = () => {
-    console.log('Export rapport');
   };
 
   return (
