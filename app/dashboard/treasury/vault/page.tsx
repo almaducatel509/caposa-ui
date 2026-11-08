@@ -1,5 +1,5 @@
-import CoffreDashboardHeader from '@/app/components/treasury/Coffre/CoffreDashboardHeader';
-import VaultOverview from '@/app/components/treasury/Coffre/VaultOverview';
+import CoffreDashboardHeader from '@/app/components/treasury/coffre/CoffreDashboardHeader';
+import VaultOverview from '@/app/components/treasury/coffre/VaultOverview';
 
 export default function CoffrePage() {
 
