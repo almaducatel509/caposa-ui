@@ -4,8 +4,8 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, Home, ArrowLeft } from 'lucide-react';
-import VaultMovementHistory from '@/app/components/treasury/Coffre/Vault';
-import VaultHistoryHeader from '@/app/components/treasury/Coffre/VaultHistoryHeader';
+import VaultMovementHistory from '@/app/components/treasury/coffre/Vault';
+import VaultHistoryHeader from '@/app/components/treasury/coffre/VaultHistoryHeader';
 
 export default function VaultHistoryPage() {
 

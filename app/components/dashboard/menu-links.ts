@@ -96,15 +96,13 @@ export const links: MainLink[] = [
 
   // { name: 'Archives', href: '/dashboard/archives', icon: LuFolderTree },
   {
-    name: 'Settings',
+    name: 'Paramètres',
     href: '/dashboard/settings',
     icon: FiSettings,
     hasSubmenu: true,
     subLinks: [
-      { name: 'Paramètres bancaires', href: '/dashboard/settings/bank', icon: TbFileSettings  },
       { name: 'Système de Gestion', href: '/dashboard/settings/cash-system', icon: BsShieldCheck },
       { name: 'Sequence Diagram Interactif', href: '/dashboard/settings/sequence-diagram', icon: BsFileEarmarkBarGraph },  
-      { name: 'Design-guidelines', href: '/dashboard/settings/design-guidelines', icon: MdOutlineDesignServices  },
 
     ],
   },

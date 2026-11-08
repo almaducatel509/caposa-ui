@@ -2,7 +2,7 @@
 
 import { Holiday } from "@/app/components/holidays/validations";
 import { DepartmentCode } from "@/app/data/haitiLocations";
-import { OpeningHourDetail } from "@/app/components/OpeningHours/validations";
+import { OpeningHourDetail } from "@/app/components/openingHours/validations";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :

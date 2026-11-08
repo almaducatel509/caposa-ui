@@ -1,5 +1,5 @@
 'use client';
-import ReconciliationPage from '@/app/components/treasury/Audit/ReconciliationPage';
+import ReconciliationPage from '@/app/components/treasury/audit/ReconciliationPage';
 
 export default function ReconciliationDashboardPage() {
   return (

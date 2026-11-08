@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Clock, Calendar, RefreshCw } from "lucide-react";
 // Quand API prete : importer fetchOpeningHours, useState, useEffect, convertToOpeningHours
 import PageHeader from "@/app/components/header";
-import { computeStats, convertToOpeningHours, OpeningHrs } from "@/app/components/OpeningHours/validations";
-import BranchScheduleManager from "@/app/components/OpeningHours/BranchScheduleManager";
+import { computeStats, convertToOpeningHours, OpeningHrs } from "@/app/components/openingHours/validations";
+import BranchScheduleManager from "@/app/components/openingHours/BranchScheduleManager";
 import { fetchOpeningHours } from "@/app/lib/api/branche";
 
 interface OpeningHoursStats {
