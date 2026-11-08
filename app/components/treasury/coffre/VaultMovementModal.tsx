@@ -109,12 +109,7 @@ const VaultMovementModal: React.FC<VaultMovementModalProps> = ({ isOpen, onClose
     }
 
     // TODO: Appel API pour enregistrer le mouvement
-    console.log('💾 Mouvement coffre enregistré:', {
-      ...formData,
-      signatures,
-      timestamp: new Date().toISOString(),
-      status: 'confirmed'
-    });
+    // Mouvement coffre enregistré
 
     // Réinitialiser et fermer
     handleClose();

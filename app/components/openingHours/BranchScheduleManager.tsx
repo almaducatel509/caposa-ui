@@ -64,7 +64,6 @@ export default function BranchScheduleManager() {
       try {
         const data = await fetchBranches();
         const hydrated = (data ?? []).map(hydrateBranch);
-        console.log(`✅ [BranchScheduleManager] ${hydrated.length} branches API chargées`);
         setBranches(hydrated);
       } catch (e) {
         console.error("❌ Erreur fetchBranches:", e);

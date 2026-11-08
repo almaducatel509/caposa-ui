@@ -1,12 +1,6 @@
 // Action
-'use server'
-import axios from 'axios';
+'use server';
 
-export async function create(formData: any) {
-  console.log(formData)
-
-  // axios.post('http://localhost:8000/api/membre/', formData).then(response=>{
-  //   console.log(response);
-  // })
-  //   console.log(formData)
-  }
+export async function create(_formData: any) {
+  // Action placeholder
+}

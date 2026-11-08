@@ -103,12 +103,7 @@ const CashHandoverModal: React.FC<CashHandoverModalProps> = ({ isOpen, onClose }
     }
 
     // TODO: Appel API pour enregistrer la remise
-    console.log('💾 Remise de caisse enregistrée:', {
-      ...formData,
-      signatures,
-      timestamp: new Date().toISOString(),
-      status: 'confirmed'
-    });
+    // Remise de caisse enregistrée
 
     // Réinitialiser et fermer
     handleClose();

@@ -166,7 +166,6 @@ const PostTable: React.FC<PostTableProps> = ({
       return;
     }
 
-    console.log(`[Bulk] ${action}`, ids);
   };
 
   const SORTABLE_COLS: { label: string; field: keyof Post }[] = [

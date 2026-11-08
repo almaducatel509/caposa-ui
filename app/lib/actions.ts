@@ -8,7 +8,12 @@ import { getCookie, setCookie } from 'cookies-next/server';
 import { revalidatePath } from "next/cache";
 import { signOut } from "@/auth";
 import { cookies } from "next/headers";
+import { createLogger } from "./logger";
 
+const log = createLogger("ServerActions");
+
+const ACCESS_COOKIE = process.env.TOKEN_NAME || process.env.NEXT_PUBLIC_TOKEN_NAME || "auth_token";
+const REFRESH_COOKIE = process.env.REFRESH_TOKEN || process.env.NEXT_PUBLIC_REFRESH_TOKEN || "refresh_token";
 
 type CredentialsError = Error & { type?: string };
 
@@ -20,7 +25,7 @@ export async function authenticate(
     const redirectTo = (formData.get("redirectTo") as string) ?? "/dashboard";
     // NextAuth will set the session and redirect server-side
     await signIn("credentials", formData, { redirectTo });  
-  }catch (error) {
+  } catch (error) {
     const e = error as CredentialsError;
     if (e?.type === "CredentialsSignin") return "Invalid credentials.";
     throw error;
@@ -38,12 +43,14 @@ export const findByUsernameOrEmail = async (username: string) => {
       details: resp.data,
     };
   } catch (error) {
+    log.error("Erreur lors de findByUsernameOrEmail:", error);
     return {
       success: false,
       details: error,
     };
   }
 };
+
 export const loginUser = async (username: string, password: string) => {
   // Ne JAMAIS journaliser le mot de passe ni les jetons : ces logs serveur sont conservés en clair.
   try {
@@ -52,18 +59,19 @@ export const loginUser = async (username: string, password: string) => {
       password,
     });
 
-
     const token: Token = resp.data;
-    await setCookie(`${process.env.TOKEN_NAME}`, token.access, {cookies});
-    await setCookie(`${process.env.REFRESH_TOKEN}`, token.refresh, {cookies});
-    await setCookie("roles", JSON.stringify(token.roles), {cookies});
+    await setCookie(ACCESS_COOKIE, token.access, { cookies });
+    await setCookie(REFRESH_COOKIE, token.refresh, { cookies });
+    await setCookie("roles", JSON.stringify(token.roles), { cookies });
+
+    log.info(`Connexion réussie pour l'utilisateur : ${username}`);
 
     return {
       success: true,
       details: resp.data,
     };
   } catch (error) {
-    console.log("Error in loginUser:", axios.isAxiosError(error) ? error.response?.status : error);
+    log.warn(`Échec de connexion pour l'utilisateur : ${username}`, axios.isAxiosError(error) ? error.response?.status : error);
     return {
       success: false,
       details: error,
@@ -71,28 +79,8 @@ export const loginUser = async (username: string, password: string) => {
   }
 };
 
-// export const me = async (accessToken?: string) => {
-//   try {
-//     const token = accessToken ?? await getCookie(`${process.env.TOKEN_NAME}`, { cookies });
-//     if (!token) return { success: false, message: "No token found" };
-
-//     const resp = await axios.get(`${process.env.BASE_URL}users/me/`, {
-//       headers: { Authorization: `Bearer ${token}` },
-//     });
-//      if (resp.status === 200) {
-//       return { success: true, ...resp.data };
-//     }
-//     return { success: false };
-//   } catch (e) {
-//     console.log(e);
-//     return { success: false };
-//   }
-// };
-
-
 export const getToken = async () => {
-
-  const token = await getCookie(`${process.env.TOKEN_NAME}`, {cookies});
+  const token = await getCookie(ACCESS_COOKIE, { cookies });
   return token;
 };
 
@@ -113,14 +101,13 @@ export const deleteMultiple = async (
       }
     );
     if (answer.status === 200) {
-      console.log(answer.status);
       revalidatePath(`/dashboard/${path}`);
       return {
         status: 200,
       };
     }
   } catch (error) {
-    console.log(error);
+    log.error(`Erreur deleteMultiple sur ${path}:`, error);
     return {
       status: 500,
     };
@@ -145,13 +132,12 @@ export const massImport = async (
       },
     });
     revalidatePath(`/dashboard/${path_redirect}`);
-    console.log(resp);
     return {
       data: resp.data,
       status: 201,
     };
   } catch (error) {
-    console.log(error);
+    log.error(`Erreur massImport sur ${path}:`, error);
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         return {
@@ -170,7 +156,6 @@ export const massImport = async (
         };
       }
     } else {
-      console.log("Unexpected error:", error);
       return {
         status: 500,
         data: error,
@@ -178,8 +163,6 @@ export const massImport = async (
     }
   }
 };
-
-
 
 /**
  * Déconnexion complète :
@@ -192,14 +175,10 @@ export const massImport = async (
  * locale : on supprime toujours les cookies.
  */
 export async function logout(tokens?: { access?: string; refresh?: string }) {
-  // Le navigateur supprime ses cookies avant d'appeler cette action et nous
-  // transmet les jetons : on les prend en priorité, sinon on lit les cookies.
-  const access  = tokens?.access  ?? (await getCookie(`${process.env.TOKEN_NAME}`, { cookies }));
-  const refresh = tokens?.refresh ?? (await getCookie(`${process.env.REFRESH_TOKEN}`, { cookies }));
+  log.info("Processus de déconnexion globale initié");
+  const access  = tokens?.access  ?? (await getCookie(ACCESS_COOKIE, { cookies }));
+  const refresh = tokens?.refresh ?? (await getCookie(REFRESH_COOKIE, { cookies }));
 
-  // 1. Liste noire du refresh token (POST /auth/logout/ — utils/views.py AuthLogoutView).
-  //    La vue exige un jeton d'accès valide (IsAuthenticated). Après plus de 30 min
-  //    d'inactivité, il a expiré : on en obtient un neuf avec le refresh, puis on réessaie.
   if (refresh) {
     const callLogout = (accessToken?: string) =>
       axios.post(
@@ -219,20 +198,16 @@ export async function logout(tokens?: { access?: string; refresh?: string }) {
             { timeout: 5000 },
           );
           await callLogout(data.access);
-        } catch (retryError) {
-          console.warn("Logout: refresh token non invalidé côté serveur",
-            axios.isAxiosError(retryError) ? retryError.response?.status : retryError);
+        } catch {
+          log.warn("Impossible d'invalider le refresh token côté serveur, poursuite de la déconnexion locale");
         }
-      } else {
-        console.warn("Logout: refresh token non invalidé côté serveur",
-          axios.isAxiosError(error) ? error.response?.status : error);
       }
     }
   }
 
   // 2. Cookies : API native de Next.js (plus fiable que cookies-next dans une action serveur)
   const store = await cookies();
-  for (const name of [process.env.TOKEN_NAME, process.env.REFRESH_TOKEN, "roles"]) {
+  for (const name of [ACCESS_COOKIE, REFRESH_COOKIE, "roles"]) {
     if (name) store.delete(name);
   }
 
@@ -255,7 +230,7 @@ export async function isAuthenticated() {
   // Vérifier aussi que le token backend existe
   const { getCookie } = await import("cookies-next/server");
   const backendToken = await getCookie(
-    `${process.env.TOKEN_NAME}`, 
+    ACCESS_COOKIE, 
     { cookies }
   );
   

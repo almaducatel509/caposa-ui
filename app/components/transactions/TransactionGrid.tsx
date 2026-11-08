@@ -57,22 +57,18 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
   
   // Gestionnaires d'événements
   const handleView = (transaction: TransactionData) => {
-    console.log('👁️ Voir transaction:', transaction);
     // TODO: Implémenter modal de détails
   };
 
   const handleEdit = (transaction: TransactionData) => {
-    console.log('✏️ Modifier transaction:', transaction);
     // TODO: Implémenter formulaire d'édition
   };
 
   const handleDelete = (transaction: TransactionData) => {
-    console.log('🗑️ Supprimer transaction:', transaction);
     // TODO: Implémenter suppression avec confirmation
   };
 
   const handleProcess = (transaction: TransactionData) => {
-    console.log('⚡ Traiter transaction:', transaction);
     // TODO: Implémenter traitement de transaction
   };
 
@@ -175,8 +171,8 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
           // ✅ APRÈS
           <TransactionTable
             transactions={transactions}
-            onView={(t) => console.log('Voir', t)}
-            onProcess={(t) => console.log('Traiter', t)}
+            onView={() => {}}
+            onProcess={() => {}}
           />
       </div>
     </div>

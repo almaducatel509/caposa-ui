@@ -21,9 +21,9 @@ function parseApiError(error: any, fallback = "Une erreur est survenue.") {
 
 // const enrichOne  = (a: any): AccountData => a as AccountData;
 const enrichOne = (a: any): AccountData => {
-  console.log('🔍 RAW depuis API:', a);
+
   const mapped = mapApiAccountToFormData(a as AccountData);
-  console.log('🔍 APRÈS mapApiAccountToFormData:', mapped);
+
   return mapped;
 };
 

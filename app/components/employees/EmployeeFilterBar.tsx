@@ -115,8 +115,8 @@ const EmployeeFilterBar: React.FC<EmployeeFilterBarProps> = ({
         date_of_birth: e.date_of_birth ?? '—',
       };
     });
-  console.log('📊 Données pour export :', employeesForExport);
-  console.table(employeesForExport);  // ← bonus : vue tableau dans la console
+
+
   
   return (
     <div className="flex flex-col gap-4 ">

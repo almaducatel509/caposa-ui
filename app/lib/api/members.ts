@@ -1,8 +1,5 @@
 // app/lib/api/members.ts
 import AxiosInstance from "@/app/lib/axiosInstance";
-// use the types/helpers from your unified schema file
-
-
 import type { MemberData } from "@/app/components/members/validations";
 
 export type TxType   = 'depot' | 'retrait' | 'interet' | 'frais';
@@ -39,10 +36,6 @@ function mapApiMember(m: any): MemberData {
 export const fetchMembers = async (): Promise<MemberData[]> => {
   try {
     const response = await AxiosInstance.get("/members/");
-    console.group('🌐 API /members/');
-    console.log('1er poste:', response.data?.[0] ?? response.data?.results?.[0]);
-    console.log('Clés:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
-    console.groupEnd();
     return (response.data as any[]).map(mapApiMember);
   } catch (e) {
     console.error("Erreur récupération membres:", e);
@@ -60,8 +53,6 @@ export const fetchMemberAccounts = async (memberId: string): Promise<any[]> => {
   }
 };
 
-
-
 function mapApiTransaction(t: any): Transaction {
   return {
     id:          String(t.id ?? t.id_transaction ?? ''),
@@ -75,17 +66,12 @@ function mapApiTransaction(t: any): Transaction {
 }
 
 /** LIST — historique des transactions d'un compte */
-/** LIST — historique des transactions d'un compte */
 export const fetchAccountTransactions = async (accountId: string | number): Promise<Transaction[]> => {
   try {
     const response = await AxiosInstance.get(`/transactions/`, {
       params: { account_id: accountId },
     });
     const raw = (response.data as any)?.results ?? response.data;
-    console.group('🌐 API /transactions/?account_id=');
-    console.log('1er élément:', raw?.[0]);
-    console.log('Clés:', Object.keys(raw?.[0] ?? {}));
-    console.groupEnd();
     return (raw as any[]).map(mapApiTransaction);
   } catch (e) {
     console.error("❌ Erreur récupération transactions:", e);
@@ -104,7 +90,7 @@ function parseApiError(error: any, fallback = "Une erreur est survenue.") {
 /** CREATE — multipart (photo supported) */
 export const createMember = async (fd: FormData) => {
   try {
-    const { data } = await AxiosInstance.post("/members/", fd); // let browser set boundary
+    const { data } = await AxiosInstance.post("/members/", fd);
     return data;
   } catch (error: any) {
     console.error("❌ Create member error:", {

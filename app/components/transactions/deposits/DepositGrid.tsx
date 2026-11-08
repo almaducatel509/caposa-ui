@@ -64,7 +64,6 @@ export default function DepositDashboard() {
     setDepositsError(null);
     try {
       const response: any = await getDeposits();
-      console.log('[deposits] réponse API :', response);
       // Accepte : tableau direct, réponse Axios, ou pagination DRF
       const raw  = response?.data ?? response;
       const list = Array.isArray(raw) ? raw : raw?.results;
@@ -169,7 +168,6 @@ export default function DepositDashboard() {
 
   const handleExport = async (ids: number[]) => {
     // TODO : brancher sur l'endpoint d'export réel
-    console.log('Exporter les IDs :', ids);
   };
 
   const handleRefresh = () => {

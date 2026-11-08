@@ -66,7 +66,6 @@ export default function RapportsClient() {
   // ── Export PDF d'un rapport enregistré ───────────────────
   // Pour l'instant : log. À brancher sur jsPDF si besoin.
   function handleExportPdf(r: RapportRow) {
-    console.log("Export PDF rapport", r.reference);
     // TODO: générer PDF depuis r.snapshot si tu veux
   }
 

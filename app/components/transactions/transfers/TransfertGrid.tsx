@@ -204,7 +204,6 @@ export default function TransferDashboard() {
 
   const handleExport = async (ids: TransferData['id'][]) => {
     // TODO : appel API export CSV
-    console.log('Exporter les IDs :', ids);
   };
 
   return (

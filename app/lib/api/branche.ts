@@ -21,19 +21,17 @@ function parseApiError(error: any, fallback = "Une erreur est survenue.") {
 }
 
 /* =====================================================
-   HOLIDAYS — non modifié (hors scope du refacto branche)
+   HOLIDAYS
 ===================================================== */
 
 export const fetchHolidays = async () => {
   try {
     const response = await AxiosInstance.get('/holidays/');
-    console.log("Données brutes de l'API Holidays :", response.data);
     const formattedHolidays = response.data.map((item: any) => ({
       id: item.id,
       date: item.date,
       description: item.description,
     }));
-    console.log("Données formatées Holidays :", formattedHolidays);
     return formattedHolidays;
   } catch (error) {
     console.error('Erreur lors de la récupération des jours fériés :', error);
@@ -42,17 +40,14 @@ export const fetchHolidays = async () => {
 };
 
 /* =====================================================
-   OPENING HOURS — non modifié (hors scope du refacto branche)
+   OPENING HOURS
 ===================================================== */
 
 export const fetchOpeningHours = async () => {
   try {
     const response = await AxiosInstance.get('/opening-hours/');
-    console.log("🔍 Opening hours API response:", response.data);
 
     const formattedOpeningHours = response.data.map((item: any) => {
-      console.log("🔍 Traitement de l'item:", item);
-
       const schedule = [
         item.monday && `Lundi: ${item.monday}`,
         item.tuesday && `Mardi: ${item.tuesday}`,
@@ -65,16 +60,12 @@ export const fetchOpeningHours = async () => {
         .filter(Boolean)
         .join('\n');
 
-      const formatted = {
+      return {
         id: item.id,
         schedule,
       };
-
-      console.log("🔍 Item formaté:", formatted);
-      return formatted;
     });
 
-    console.log("✅ Opening Hours formatés:", formattedOpeningHours);
     return formattedOpeningHours;
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des heures d'ouverture :", error);
@@ -83,7 +74,7 @@ export const fetchOpeningHours = async () => {
 };
 
 /* =====================================================
-   BRANCHES — CRUD app\lib\api\branche.ts
+   BRANCHES — CRUD
 ===================================================== */
 
 /** Récupère la liste complète des branches.
@@ -92,12 +83,6 @@ export const fetchOpeningHours = async () => {
 export const fetchBranches = async () => {
   try {
     const response = await AxiosInstance.get('/branches/');
-    // 🔍 DEBUG
-    console.group('🌐 API /branches/');
-    console.log('1ère branche:', response.data?.[0] ?? response.data?.results?.[0]);
-    console.log('Clés:', Object.keys(response.data?.[0] ?? response.data?.results?.[0] ?? {}));
-    console.groupEnd();
-    
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des branches:', error);
@@ -108,9 +93,6 @@ export const fetchBranches = async () => {
 /** Crée une nouvelle branche.
  *  En cas d'erreur, on relance pour que le modal puisse afficher un message clair.
  */
-
-
-// ─── Nouvelle version : throw + parseApiError ──────────────────────────────
 export const createBranch = async (branchData: any) => {
   try {
     const response = await AxiosInstance.post('/branches/', branchData);
@@ -133,52 +115,19 @@ export const createBranch = async (branchData: any) => {
 };
 
 /** Récupère une branche par son ID.
- *  Retourne null en cas d'erreur (et non [] qui aurait été un mensonge :
- *  une branche est un OBJET, pas un tableau).
  */
-
-// ─── Ancienne version (commentée pour référence) ───────────────────────────
-// export const getBranchById = async (id: string) => {
-//   try {
-//     const response = await AxiosInstance.get(`/branches/${id}/`);
-//     return response.data;
-//   } catch (error) {
-//     console.error("Erreur lors de la récupération de la branche :", error);
-//     return [];  // ❌ retournait [] alors qu'on attend un objet
-//   }
-// };
-
-// ─── Nouvelle version : null sur erreur ────────────────────────────────────
 export const getBranchById = async (id: string) => {
   try {
     const response = await AxiosInstance.get(`/branches/${id}/`);
     return response.data;
   } catch (error: any) {
     console.error("Erreur getBranchById:", error?.response?.data);
-    // On retourne null (et non []) pour qu'un test `if (!data)` fonctionne correctement.
-    // Le modal peut alors afficher un message "Branche introuvable".
     return null;
   }
 };
 
 /** Met à jour une branche existante.
- *  PATCH = on n'envoie QUE les champs qui changent (mise à jour partielle).
- *  Aligné avec le branchUpdateSchema où tous les champs sont optionnels.
  */
-
-// ─── Ancienne version (commentée pour référence) ───────────────────────────
-// export const updateBranch = async (id: string, data: any) => {
-//   try {
-//     const response = await AxiosInstance.put(`/branches/${id}/`, data);
-//     // ❌ PUT exigeait l'objet complet
-//     return response.data;
-//   } catch (error) {
-//     console.error("Erreur lors de la mise à jour de la branche :", error);
-//     return [];  // ❌ même problème que ci-dessus
-//   }
-// };
-
-// ─── Nouvelle version : PATCH + throw ──────────────────────────────────────
 export const updateBranch = async (id: string, data: any) => {
   try {
     const response = await AxiosInstance.patch(`/branches/${id}/`, data);
@@ -190,14 +139,6 @@ export const updateBranch = async (id: string, data: any) => {
 };
 
 /** Archive une branche (soft delete).
- *  
- *  On envoie un PATCH avec statusBranche = "archive" au lieu d'un vrai DELETE.
- *  Avantages :
- *    - La branche reste en base (historique préservé)
- *    - Apparaît dans l'onglet "Archive" de la liste
- *    - Réversible (on peut désarchiver via un autre PATCH)
- *  
- *  À utiliser à la place de deleteBranch dans 99% des cas.
  */
 export const archiveBranch = async (id: string) => {
   try {
@@ -212,24 +153,7 @@ export const archiveBranch = async (id: string) => {
 };
 
 /** Suppression définitive d'une branche (hard delete).
- *  
- *  ⚠️ À RÉSERVER aux administrateurs.
- *  Pour les utilisateurs normaux, utiliser archiveBranch() qui est réversible.
- *  Cette fonction supprime DÉFINITIVEMENT la branche en base.
  */
-
-// ─── Ancienne version (commentée pour référence) ───────────────────────────
-// export const deleteBranch = async (id: string) => {
-//   try {
-//     const response = await AxiosInstance.delete(`/branches/${id}/`);
-//     return response.data;
-//   } catch (error) {
-//     console.error("Erreur lors de la suppression de la branche :", error);
-//     throw error;  // ← déjà OK : ça throw, juste pas de message clair
-//   }
-// };
-
-// ─── Nouvelle version : on garde le throw, on ajoute un message clair ─────
 export const deleteBranch = async (id: string) => {
   try {
     const response = await AxiosInstance.delete(`/branches/${id}/`);

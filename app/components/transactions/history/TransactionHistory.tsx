@@ -28,10 +28,8 @@ const TransactionDashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Chargement des transactions...');
       const data = await fetchTransactions();
       setTransactions(data);
-      console.log('✅ Transactions chargées:', data.length);
     } catch (err) {
       console.error('❌ Erreur chargement transactions:', err);
       setError('Erreur lors de la récupération des transactions.');
@@ -45,7 +43,6 @@ const TransactionDashboard: React.FC = () => {
   };
 
   const handleNewTransaction = () => {
-    console.log('💰 Nouvelle transaction');
     // TODO: Ouvrir modal de création
   };
 

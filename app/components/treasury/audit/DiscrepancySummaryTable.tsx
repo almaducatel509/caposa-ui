@@ -128,7 +128,6 @@ const DiscrepancySummaryTable: React.FC = () => {
           }
         : d
     ));
-    console.log('Écart mis à jour:', id, note, status);
     // TODO: API call
   };
 

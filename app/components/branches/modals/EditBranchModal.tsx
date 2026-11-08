@@ -28,30 +28,6 @@ interface EditBranchModalProps {
   holidays?: Holiday[];
 }
 
-// ============= HELPER : calcule le diff entre 2 objets =============
-
-/**
- * Compare deux objets et retourne uniquement les champs qui ont changé.
- * Utilisé pour debug : voir EXACTEMENT ce qui est différent avant/après.
- */
-function computeDiff(before: any, after: any): Record<string, { before: any; after: any }> {
-  const diff: Record<string, { before: any; after: any }> = {};
-  if (!before || !after) return diff;
-
-  const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
-
-  allKeys.forEach(key => {
-    const b = before[key];
-    const a = after[key];
-    // Comparaison stringifiée (gère arrays et objets imbriqués simplement)
-    if (JSON.stringify(b) !== JSON.stringify(a)) {
-      diff[key] = { before: b, after: a };
-    }
-  });
-
-  return diff;
-}
-
 // ============= COMPONENT =============
 
 const EditBranchModal: React.FC<EditBranchModalProps> = ({
@@ -72,9 +48,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
   const [apiError,     setApiError]       = useState<string | null>(null);
   const [successMsg,   setSuccessMsg]     = useState<string | null>(null);
   const [holidayIds, setHolidayIds] = useState<(string | number)[]>([]);
-  // ─── Snapshot AVANT modification ──────────────────────────────────────
-  // useRef pour stocker la version fraîche de l'API au chargement,
-  // sans déclencher de re-render. Utilisé pour le DIFF après update.
   const beforeSnapshot = useRef<any>(null);
 
   // ── Snapshot du statut initial pour message de succès ──
@@ -107,24 +80,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           return;
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // ─── SNAPSHOT AVANT ────────────────────────────────────────────
-        // On stocke la réponse BRUTE de l'API pour comparer plus tard.
-        // ═══════════════════════════════════════════════════════════════
         beforeSnapshot.current = data;
-
-        // console.group('📥 [EditBranchModal] Données AVANT modification (API)');
-        // console.log('🔹 Branch ID    :', branch.id);
-        // console.log('🔹 Endpoint     : getBranchById');
-        // console.log('🔹 Statut actuel:', data.statusBranche);
-        // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        // console.log('📦 Réponse brute API :', data);
-        // console.log('📦 JSON formaté      :');
-        // console.log(JSON.stringify(data, null, 2));
-        // console.groupEnd();
-        // // ═══════════════════════════════════════════════════════════════
-
-       
 
         let openingHourId = data.opening_hour;
         if (mode === 'activate' && !openingHourId && openingHours.length > 0) {
@@ -145,14 +101,14 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           opening_date:              data.opening_date,
           opening_hour:              openingHourId,
           status:                    data.statusBranche ?? 'inactive',
-           // ── Champs backend silencieux ──
+          // ── Champs backend silencieux ──
           number_of_posts:           data.number_of_posts           ?? 0,
           number_of_tellers:         data.number_of_tellers         ?? 0,
           number_of_clerks:          data.number_of_clerks          ?? 0,
           number_of_credit_officers: data.number_of_credit_officers ?? 0,
         });
       } catch (err: any) {
-        console.error('❌ Erreur chargement:', err);
+        console.error('Erreur chargement branche:', err);
         setApiError(err?.message || 'Impossible de charger les données.');
       } finally {
         setIsLoading(false);
@@ -166,8 +122,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
     setFormData(prev => prev ? { ...prev, ...updates } : prev);
     setApiError(null);
   };
-
-  
 
   // ── Détection doublons ──
   const findDuplicate = (): string | null => {
@@ -184,7 +138,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
 
   // ── Submit ──
   const handleSubmit = async () => {
-    
     if (!formData || !branch?.id) return;
 
     setIsSubmitting(true);
@@ -202,12 +155,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           if (e.path[0]) zodErrors[e.path[0] as keyof BranchFormData] = e.message;
         });
         setErrors(zodErrors);
-
-        console.group('⚠️ [EditBranchModal] Validation échouée');
-        console.log('Mode:', mode);
-        console.log('FormData:', formData);
-        console.log('Erreurs Zod:', zodErrors);
-        console.groupEnd();
         return;
       }
 
@@ -226,61 +173,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
         statusBranche: computedStatus,
       };
 
-      // ═══════════════════════════════════════════════════════════════
-      // ─── PAYLOAD ENVOYÉ ────────────────────────────────────────────
-      // ═══════════════════════════════════════════════════════════════
-      // console.group('🚀 [EditBranchModal] Soumission API');
-      // console.log('🔹 Mode             :', mode);
-      // console.log('🔹 Branch ID        :', branch.id);
-      // console.log('🔹 Endpoint         : updateBranch');
-      // console.log('🔹 Statut calculé   :', computedStatus);
-      // console.log('🔹 hasHours         :', hasHours);
-      // console.log('🔹 hasHolidays      :', hasHolidays, '(', holidayIds.length, 'sélectionné(s) )');
-      // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      // console.log('📦 PAYLOAD envoyé   :', payload);
-      // console.log('📦 JSON formaté     :');
-      // console.log(JSON.stringify(payload, null, 2));
-      // console.groupEnd();
-      // ═══════════════════════════════════════════════════════════════
-
       const updated = await updateBranch(branch.id, payload);
-
-      // ═══════════════════════════════════════════════════════════════
-      // ─── SNAPSHOT APRÈS ────────────────────────────────────────────
-      // ═══════════════════════════════════════════════════════════════
-      console.group('✅ [EditBranchModal] Données APRÈS modification (API)');
-      console.log('🔹 Endpoint     : updateBranch');
-      console.log('🔹 Statut final :', updated?.statusBranche);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📦 Réponse brute API :', updated);
-      console.log('📦 JSON formaté      :');
-      console.log(JSON.stringify(updated, null, 2));
-      console.groupEnd();
-
-      // ─── DIFF : qu'est-ce qui a changé ? ───────────────────────────
-      console.group('🔄 [EditBranchModal] DIFF avant ↔ après');
-      const before = beforeSnapshot.current;
-      const diff = computeDiff(before, updated);
-      const changedKeys = Object.keys(diff);
-
-      if (changedKeys.length === 0) {
-        console.log('ℹ️ Aucun champ n\'a changé entre l\'avant et l\'après.');
-        console.log('   (L\'API n\'a peut-être pas appliqué les modifs, ou tu n\'as rien changé.)');
-      } else {
-        console.log(`📊 ${changedKeys.length} champ(s) modifié(s) :`, changedKeys);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        // Affichage en table : très lisible dans la DevTools
-        console.table(
-          changedKeys.map(key => ({
-            champ:  key,
-            avant:  JSON.stringify(diff[key].before),
-            après:  JSON.stringify(diff[key].after),
-          }))
-        );
-        console.log('📦 Diff complet :', diff);
-      }
-      console.groupEnd();
-      // ═══════════════════════════════════════════════════════════════
 
       const isNowActive = computedStatus === 'active';
       const justActivated = !wasActiveBefore && isNowActive;
@@ -295,11 +188,7 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
       }, 1200);
 
     } catch (error: any) {
-      console.group('❌ [EditBranchModal] Erreur API');
-      console.error('Error object:', error);
-      console.error('Message:', error?.message);
-      console.error('Response:', error?.response);
-      console.groupEnd();
+      console.error('Erreur API modification branche:', error);
       setApiError(error.message || 'Erreur lors de la sauvegarde.');
     } finally {
       setIsSubmitting(false);
@@ -383,13 +272,13 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
               : 'bg-amber-50 border-amber-200 text-amber-800'
           }`}>
             <Sparkles className={`w-4 h-4 shrink-0 ${willBeActive ? 'text-[#2E7D32]' : 'text-amber-500'}`} />
-            <p className="text-xs leading-relaxed">
+            <div className="text-xs leading-relaxed">
               {willBeActive ? (
                 <div><strong>Statut prévu : Active</strong> — la branche aura horaires et jours fériés.</div>
               ) : (
                 <div><strong>Statut prévu : Inactive</strong> — il manque encore <strong>{missing.join(' et ')}</strong> pour qu'elle soit active.</div>
               )}
-            </p>
+            </div>
           </div>
         )}
 
@@ -402,8 +291,6 @@ const EditBranchModal: React.FC<EditBranchModalProps> = ({
           isSubmitting={isSubmitting}
           openingHours={openingHours}
         />
-
-        {/* Section Jours fériés retirée — gestion dans /dashboard/holidays. */}
 
       </div>
 

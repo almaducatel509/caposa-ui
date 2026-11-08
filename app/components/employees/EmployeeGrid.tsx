@@ -300,7 +300,7 @@ const EmployeeGrid: React.FC = () => {
         onBranchChange={setSelectedBranch}
         onStatusChange={handleStatusChange}
         onAdd={handleAdd}
-        onImport={() => console.log('Import')}
+        onImport={() => {}}
         totalCount={filteredEmployees.length} 
         posts={posts}                      
       />

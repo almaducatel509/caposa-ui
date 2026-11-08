@@ -49,7 +49,7 @@ export default function ArchiveDetailReconciliation({ archiveId = 'ARC_20260215_
   };
 
   // TODO: handleExportPDF — appel API génération PDF
-  const handleExportPDF = () => { console.log('Export PDF:', archive.id); };
+  const handleExportPDF = () => {  };
   const handlePrint     = () => { window.print(); };
 
   return (

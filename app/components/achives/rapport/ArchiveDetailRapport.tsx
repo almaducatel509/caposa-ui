@@ -67,7 +67,7 @@ export default function ArchiveDetailRapport({ archiveId = 'ARC_20260201_00002' 
   const StatusIcon = sc.icon;
 
   // TODO: handleExportPDF — appel API génération PDF officiel BRH
-  const handleExportPDF = () => { console.log('Export PDF rapport:', archive.id); };
+  const handleExportPDF = () => {  };
   const handlePrint     = () => { window.print(); };
 
   return (

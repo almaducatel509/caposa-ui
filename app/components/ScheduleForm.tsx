@@ -75,7 +75,6 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
 
       // ⏱️ Simulation
       await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Creating schedule for branch:", branchId, formData);
 
       // ✅ Appeler le callback parent avec les données
       await onSuccess(formData);

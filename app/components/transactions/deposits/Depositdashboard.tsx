@@ -119,7 +119,6 @@ export default function DepositDashboard() {
 
 
   const handleExport = async (ids: number[]) => {
-    console.log('Exporter les IDs :', ids);
   };
 
   const handleRefresh = () => loadDeposits();

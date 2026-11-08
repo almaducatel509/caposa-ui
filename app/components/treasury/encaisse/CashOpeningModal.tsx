@@ -21,7 +21,7 @@ const CashOpeningModal: React.FC<CashOpeningModalProps> = ({ isOpen, onClose }) 
 
     // Simulation API call
     setTimeout(() => {
-      console.log('Ouverture de caisse:', formData);
+      
       // TODO: Implémenter l'appel API
       setLoading(false);
       handleClose();

@@ -77,10 +77,8 @@ const DirectorValidationPage: React.FC = () => {
 
   const confirmAction = () => {
     if (action?.type === 'approve') {
-      console.log('✅ Approuver et verrouiller la journée');
       // TODO: API call to approve and lock
     } else if (action?.type === 'reject') {
-      console.log('❌ Demander correction:', rejectionReason);
       // TODO: API call to reject with reason
     }
     setShowConfirmModal(false);
@@ -296,7 +294,7 @@ const DirectorValidationPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Voir le rapport complet */}
           <button
-            onClick={() => console.log('Voir rapport')}
+            onClick={() => {}}
             className="p-6 border-2 border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"
           >
             <FaFileExport className="text-3xl text-gray-400 group-hover:text-blue-600 mb-3" />
