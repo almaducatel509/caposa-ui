@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { FiSearch } from "react-icons/fi";
-import { ChevronDown, Upload, Wallet, X } from "lucide-react";
+import { ChevronDown, Plus, Upload, Wallet, X } from "lucide-react";
 import { CheckCircle } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -105,8 +105,9 @@ const BranchFilterBar: React.FC<BranchFilterBarProps> = ({
         <div className="flex gap-2 w-full lg:w-auto">
           <button
             onClick={onAdd}
-            className="flex-1 lg:flex-none h-11 px-5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold shadow-lg"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-linear-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
+            <Plus className="w-4 h-4" />
             Nouvelle branche
           </button>
 
