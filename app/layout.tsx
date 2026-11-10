@@ -4,8 +4,11 @@ import { Providers } from "./_providers/providers";
 import NextTopLoader from 'nextjs-toploader';
 
 export const metadata: Metadata = {
-  title: "CAPOSA",
-  description: "Plateforme de gestion coopérative CAPOSA",
+  title: {
+    template: "%s | CAPOSA",
+    default: "CAPOSA - Plateforme de Gestion Coopérative",
+  },
+  description: "Plateforme moderne de gestion coopérative et microfinance CAPOSA",
 };
 
 export default function RootLayout({

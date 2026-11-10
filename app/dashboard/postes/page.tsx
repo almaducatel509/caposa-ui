@@ -2,7 +2,7 @@ import PostGrid from "@/app/components/postes/PostGrid";
 import { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 
 export const metadata: Metadata = {
-  title: "Postes | CAPOSA",
+  title: "Gestion des Postes",
   description: "Tout les postes qui utilises le system",
 };
 export default function  PostDashboard() {

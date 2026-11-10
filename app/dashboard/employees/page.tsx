@@ -1,12 +1,11 @@
-'use client';
-
-import { useEffect, useState } from 'react';
+import type { Metadata } from 'next';
 import EmployeeGrid from '@/app/components/employees/EmployeeGrid';
-import { EmployeeData } from '@/app/components/employees/validations';
-import { fetchEmployees } from '@/app/lib/api/employee';
+
+export const metadata: Metadata = {
+  title: 'Gestion des Employés',
+  description: 'Consultez et gérez les employés et le personnel de la coopérative',
+};
 
 export default function EmployeePage() {
-  return (
-    <EmployeeGrid />
-  );
+  return <EmployeeGrid />;
 }

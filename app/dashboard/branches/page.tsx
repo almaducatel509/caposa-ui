@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import BranchesGrid from '@/app/components/branches/branchesGrid';
 
 export const metadata: Metadata = {
-  title: 'Succursales | Caposa',
+  title: 'Gestion des Succursales',
+  description: 'Consultez et gérez les succursales et points de service',
 };
 
 export default function BranchPage() {
