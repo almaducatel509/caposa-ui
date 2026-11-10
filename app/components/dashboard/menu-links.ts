@@ -21,6 +21,7 @@ import {
   Briefcase,
   CalendarDays,
   Settings,
+  ScrollText,
 } from "lucide-react";
 
 export type IconComponent = LucideIcon | ComponentType<{ className?: string }>;
@@ -157,6 +158,21 @@ export const links: MainLink[] = [
     name: 'Paramètres', 
     href: '/dashboard/settings', 
     icon: Settings,
-    roles: ['administrateur', 'admin']
+    roles: ['administrateur', 'admin'],
+    hasSubmenu: true,
+    subLinks: [
+      {
+        name: 'Paramètres',
+        href: '/dashboard/settings',
+        icon: Settings,
+        roles: ['administrateur', 'admin'],
+      },
+      {
+        name: 'Logs système',
+        href: '/dashboard/settings/logs',
+        icon: ScrollText,
+        roles: ['administrateur', 'admin'],
+      },
+    ],
   },
 ];

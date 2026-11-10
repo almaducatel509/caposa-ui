@@ -182,7 +182,10 @@ export default function NavLinks() {
                         const SubIcon = subLink.icon;
                         const isSubActive =
                           pathname === subLink.href ||
-                          (subLink.href !== '/dashboard' && pathname.startsWith(subLink.href + '/'));
+                          (subLink.href !== '/dashboard' &&
+                            subLink.href !== '/dashboard/settings' &&
+                            subLink.href !== '/dashboard/treasury' &&
+                            pathname.startsWith(subLink.href + '/'));
 
                         return (
                           <Link

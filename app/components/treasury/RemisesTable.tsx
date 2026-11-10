@@ -702,7 +702,6 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
           })}
 
         </div>
-      </div>
 
         {/* Footer pagination */}
         {activeList.length > 0 && (
