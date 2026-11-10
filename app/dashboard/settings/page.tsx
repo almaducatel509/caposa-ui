@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldAlert,
-  Settings,
   Database,
   Lock,
   Server,
-  RefreshCw,
   AlertCircle,
 } from 'lucide-react';
+import PageHeader from '@/app/components/header';
 import { RoleGate } from '@/app/components/core/RoleGate';
 import BackupStatsCards from '@/app/components/settings/BackupStatsCards';
 import BackupsTable from '@/app/components/settings/BackupsTable';
@@ -99,45 +98,45 @@ export default function SettingsPage() {
         </div>
       }
     >
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-        {/* En-tête de la page */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-zinc-800">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-              <Settings className="w-4 h-4" />
-              <span>Paramètres & Administration</span>
+      <div className="w-full space-y-6">
+        {/* En-tête standard Caposa (identique à Comptes, Employés, Membres) */}
+        <PageHeader
+          title="Gestion des Sauvegardes"
+          subtitle="Sauvegardes chiffrées AES-256, archivage serveur, planification Celery & instantanée"
+          icon={
+            <div className="w-10 h-10 rounded-xl bg-[#2E7D32]/10 dark:bg-[#4CAF50]/15 flex items-center justify-center text-[#2E7D32] dark:text-[#4CAF50]">
+              <Database className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              Sauvegardes de la Base de Données
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400">
-              Système de chiffrement <span className="font-semibold text-emerald-600 dark:text-emerald-400">AES-256</span>, archivage sécurisé sur le serveur, planification automatique via <span className="font-semibold">Celery / Cron</span> et instantanée.
-            </p>
-          </div>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/40 dark:text-[#81C784] text-xs font-semibold">
+                <Lock className="w-3.5 h-3.5" />
+                Chiffrement AES-256
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-[#355C7D] dark:bg-blue-950/40 dark:text-blue-300 text-xs font-semibold">
+                <Server className="w-3.5 h-3.5" />
+                Stockage Serveur
+              </span>
+            </div>
+          }
+          className="mb-0"
+        />
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 text-xs font-semibold">
-              <Lock className="w-3.5 h-3.5" />
-              Chiffrement Actif
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40 text-xs font-semibold">
-              <Server className="w-3.5 h-3.5" />
-              Stockage Serveur
-            </span>
-          </div>
-        </div>
-
-        {/* Message d'erreur si échec API */}
+        {/* Message d'alerte si échec API */}
         {error && (
-          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-2xl text-sm font-medium text-red-700 dark:text-red-300">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
             <div className="flex-1">
-              <p className="font-semibold">Erreur de chargement</p>
+              <p className="font-semibold">Erreur de communication avec le serveur</p>
               <p className="text-xs mt-0.5">{error}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                Astuce : Vérifiez que Gunicorn a bien été redémarré sur le VPS (ex: <code className="bg-red-100 dark:bg-red-900/40 px-1 py-0.5 rounded font-mono">sudo systemctl restart caposa-backend</code>).
+              </p>
             </div>
             <button
               onClick={loadData}
-              className="px-3 py-1 bg-red-100 dark:bg-red-900/60 hover:bg-red-200 dark:hover:bg-red-800 text-red-800 dark:text-red-200 rounded-lg text-xs font-semibold transition"
+              className="px-3 py-1 bg-red-100 dark:bg-red-900/60 hover:bg-red-200 text-red-800 dark:text-red-200 rounded-lg text-xs font-semibold transition cursor-pointer"
             >
               Réessayer
             </button>
@@ -151,7 +150,7 @@ export default function SettingsPage() {
           onOpenSchedule={() => setIsScheduleOpen(true)}
         />
 
-        {/* Tableau des Sauvegardes & Actions */}
+        {/* Tableau des Sauvegardes & Filtres (Design Caposa) */}
         <BackupsTable
           backups={backups}
           isLoading={isLoading}

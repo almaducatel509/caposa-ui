@@ -315,3 +315,60 @@ html.dark .sidebar-scroll:hover::-webkit-scrollbar-thumb {
 html.dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(161, 161, 170, 0.75);
 }
+
+/* ── Barre de défilement horizontale de tableau : invisible par défaut, visible uniquement au survol ── */
+.table-scroll,
+.overflow-x-auto {
+  scrollbar-width: none; /* Firefox : masqué par défaut */
+  -ms-overflow-style: none; /* Edge/IE */
+}
+
+.table-scroll::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+  height: 5px;
+}
+
+.table-scroll::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* Apparaît uniquement au survol de la table */
+.table-scroll:hover,
+.overflow-x-auto:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.45) transparent;
+}
+
+.table-scroll:hover::-webkit-scrollbar-thumb,
+.overflow-x-auto:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.45);
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.75);
+}
+
+/* Mode sombre pour la scrollbar horizontale */
+html.dark .table-scroll:hover,
+html.dark .overflow-x-auto:hover {
+  scrollbar-color: rgba(113, 113, 122, 0.45) transparent;
+}
+
+html.dark .table-scroll:hover::-webkit-scrollbar-thumb,
+html.dark .overflow-x-auto:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(113, 113, 122, 0.45);
+}
+
+html.dark .table-scroll::-webkit-scrollbar-thumb:hover,
+html.dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(161, 161, 170, 0.75);
+}
