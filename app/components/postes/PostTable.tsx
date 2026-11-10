@@ -91,6 +91,8 @@ const PostTable: React.FC<PostTableProps> = ({
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<PostBulkAction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   /* ── Tri ── */
   const toggleSort = (field: keyof Post) => {
@@ -123,6 +125,11 @@ const PostTable: React.FC<PostTableProps> = ({
   };
 
   /* ── Postes sélectionnés ── */
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
   const selectedPosts = useMemo(
     () => sorted.filter(p => selected.has(p.id)),
     [sorted, selected],
@@ -249,7 +256,7 @@ const PostTable: React.FC<PostTableProps> = ({
           </div>
         )}
 
-        {!isLoading && sorted.map((post) => {
+        {!isLoading && paginated.map((post) => {
           const isSelected = selected.has(post.id);
           const permCount = [post.deposit, post.withdrawal, post.transfer].filter(Boolean).length;
 
@@ -321,7 +328,8 @@ const PostTable: React.FC<PostTableProps> = ({
 
       {/* ── Footer ── */}
       {!isLoading && posts.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+        <>
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
           <p className="text-xs text-gray-400">
             <span className="font-semibold text-gray-600">{sorted.length}</span>{" "}
             poste{sorted.length !== 1 ? "s" : ""}
@@ -333,6 +341,14 @@ const PostTable: React.FC<PostTableProps> = ({
             </button>
           )}
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={sorted.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+        </>
       )}
 
       {/* ── Modal d'action groupée ── */}

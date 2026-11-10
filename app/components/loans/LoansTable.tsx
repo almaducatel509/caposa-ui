@@ -34,6 +34,7 @@ import LoanDetailModal from './modals/LoanDetailModal';
 import ReviewLoanModal from './modals/ReviewLoanModal';
 import RepayLoanModal from './modals/RepayLoanModal';
 import { fetchLoans } from '@/app/lib/api/loans';
+import Pagination from '@/app/components/ui/Pagination';
 import { useLoanPermissions } from '@/app/lib/useLoanPermissions';
 import {
   LoanData, LoanStatus, LoanTab,
@@ -147,6 +148,12 @@ const [notice, setNotice] = useState<string | null>(null);
 
   // ── Filtres, tri, sélection ──
   const [activeTab,      setActiveTab]      = useState<LoanTab>('demandes');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
   const [sortField,      setSortField]      = useState<SortField>('created_at');
   const [sortDir,        setSortDir]        = useState<'asc' | 'desc'>('desc');
   const [search,         setSearch]         = useState('');
@@ -409,7 +416,7 @@ const [notice, setNotice] = useState<string | null>(null);
             </div>
           )}
 
-          {sorted.map((loan, i) => {
+          {paginated.map((loan, i) => {
             const style      = STATUS_STYLE[loan.status];
             const isSelected = selected.has(loan.id);
             const risk       = getRiskLevel(loan.late_days);
@@ -537,12 +544,21 @@ const [notice, setNotice] = useState<string | null>(null);
         </div>
 
         {loans.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-            <p className="text-xs text-gray-400">
-              <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
-            </p>
-            <p className="text-xs text-gray-400">{loans.length} prêt{loans.length !== 1 ? 's' : ''} au total</p>
-          </div>
+          <>
+            <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+              <p className="text-xs text-gray-400">
+                <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
+              </p>
+              <p className="text-xs text-gray-400">{loans.length} prêt{loans.length !== 1 ? 's' : ''} au total</p>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalItems={sorted.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </>
         )}
       </div>
 

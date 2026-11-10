@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/app/components/ui/Pagination';
 import {
   Clock, User, ShieldCheck, Building2, Hash, Banknote,
   ChevronUp, ChevronDown, ChevronsUpDown,
@@ -125,6 +126,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<SessionBulkAction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
   const [openId,       setOpenId]       = useState<string | null>(null);
 
   const activeTab = externalTab ?? localTab;
@@ -178,6 +185,11 @@ const SessionTable: React.FC<SessionTableProps> = ({
   };
 
   const toggleAccordion = (id: string) => setOpenId(prev => (prev === id ? null : id));
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
 
   const selectedSessions = useMemo(
     () => sorted.filter(s => selected.has(s.id)),
@@ -273,7 +285,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
           </div>
         )}
 
-        {!isLoading && sorted.map((session, i) => {
+        {!isLoading && paginated.map((session, i) => {
           const isSelected = selected.has(session.id);
           const isRowOpen  = openId === session.id;
           const ecart      = session.montant_fermeture != null
@@ -429,7 +441,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
       {/* ── Footer ── */}
       {!isLoading && sessions.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+        <>
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
           <p className="text-xs text-gray-400">
             <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
           </p>
@@ -449,6 +462,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
             )}
           </div>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={sorted.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+        </>
       )}
 
       <SessionBulkActionModal

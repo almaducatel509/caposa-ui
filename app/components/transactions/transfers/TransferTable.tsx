@@ -118,6 +118,11 @@ export default function TransferTable({
     }
   }), [transfers, sortField, sortDir]);
 
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
   const someSelected = selected.size > 0 && !allSelected;
   const pendingCount = transfers.filter(t => t.status === 'en_attente').length;
@@ -202,7 +207,7 @@ export default function TransferTable({
           </div>
         )}
 
-        {!loading && sorted.map(t => {
+        {!loading && paginated.map(t => {
           const stCfg       = (t.status && STATUS_CFG[t.status]) || STATUS_FALLBACK;
           const isSel       = selected.has(t.id);
           const memberLbl   = t.member_name ?? t.id_member ?? '—';

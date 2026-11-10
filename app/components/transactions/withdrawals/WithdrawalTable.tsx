@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/app/components/ui/Pagination';
 import {
   Eye, CheckCircle2, Clock, Check, X,
   ChevronDown, ChevronUp, ChevronsUpDown,
@@ -104,6 +105,11 @@ export default function WithdrawalTable({
     return a.member_name.localeCompare(b.member_name) * dir;
   }), [withdrawals, sortField, sortDir]);
 
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
   const someSelected = selected.size > 0 && !allSelected;
   const toggleAll    = () => allSelected ? setSelected(new Set()) : setSelected(new Set(sorted.map(w => w.id)));
@@ -206,7 +212,7 @@ export default function WithdrawalTable({
           </div>
         )}
 
-        {!loading && sorted.map((w, i) => {
+        {!loading && paginated.map((w, i) => {
           const cfg     = STATUS_CFG[w.status] ?? STATUS_CFG.en_attente;
           const sub     = SUBTYPE_CFG[w.withdrawalSubtype] ?? SUBTYPE_CFG.other;
           // const cfg        = STATUS_CFG[w.status];

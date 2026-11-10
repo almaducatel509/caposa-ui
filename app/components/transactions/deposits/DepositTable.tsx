@@ -161,6 +161,11 @@ export default function DepositTable({
   }), [filtered, sortField, sortDir]);
 
   // ── Sélection ──
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
   const allSelected  = selected.size === sorted.length && sorted.length > 0;
   const someSelected = selected.size > 0 && !allSelected;
 
@@ -293,7 +298,7 @@ export default function DepositTable({
         </div>
       )}
 
-        {!loading && sorted.map(dep => {
+        {!loading && paginated.map(dep => {
           const stCfg   = STATUS_CFG[dep.status]         ?? STATUS_CFG['en_attente'];
           const subCfg  = SUBTYPE_CFG[dep.depositSubtype] ?? SUBTYPE_CFG['other'];
           const SubIcon = subCfg.icon;

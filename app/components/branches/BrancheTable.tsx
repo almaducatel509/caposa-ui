@@ -126,6 +126,12 @@ const BranchTable: React.FC<BranchTableProps> = ({
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<BranchBulkAction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   /* ── Compteurs basés sur la liste COMPLÈTE (pas filtrée) ──
      Comme ça les onglets et le footer affichent toujours les vrais totaux,
@@ -186,6 +192,11 @@ const BranchTable: React.FC<BranchTableProps> = ({
   const isInactiveTab = activeTab === 'inactive';
 
   /* ── Branches sélectionnées ── */
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
   const selectedBranches = useMemo(
     () => sorted.filter(b => selected.has(b.id)),
     [sorted, selected],
@@ -448,7 +459,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
           </div>
         )}
 
-        {!isLoading && sorted.map((branch, i) => {
+        {!isLoading && paginated.map((branch, i) => {
           const total =
             branch.number_of_tellers +
             branch.number_of_clerks +
@@ -583,7 +594,8 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
       {/* ── Footer — compteurs (basés sur la liste COMPLÈTE) ── */}
       {!isLoading && sourceForCounts.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+        <>
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
 
           <p className="text-xs text-gray-400">
             <span className="font-semibold text-gray-600">{sorted.length}</span>{" "}
@@ -616,6 +628,14 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
           </div>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={sorted.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+        </>
       )}
 
       {/* ── Modal d'action groupée ── */}

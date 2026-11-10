@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/app/components/ui/Pagination';
 import {
   Eye, Zap, ChevronUp, ChevronDown, ChevronsUpDown,
   ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Landmark,
@@ -93,6 +94,12 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   transactions, isLoading = false, onView, onProcess,
 }) => {
   const [activeTab, setActiveTab] = useState<TabId>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, search]);
   const [search,    setSearch]    = useState('');
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
@@ -139,6 +146,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   const toggleRow = (id: string | number) => {
     const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSelected(s);
   };
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
 
   const COLS = [
     { label: 'Référence', field: 'reference'   },
@@ -270,7 +282,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           </div>
         )}
 
-        {!isLoading && sorted.map(tx => {
+        {!isLoading && paginated.map(tx => {
           const typeCfg   = TYPE_CFG[tx.type]    ?? TYPE_CFG['deposit'];
           const statusCfg = STATUS_CFG[tx.status] ?? STATUS_CFG['pending'];
           const TypeIcon  = typeCfg.icon;
@@ -338,22 +350,31 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 
       {/* ── Footer ── */}
       {!isLoading && transactions.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''}
-            {search && <span> pour « {search} »</span>}
-          </p>
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {counts.pending} en attente
-            </span>
-            {counts.failed > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400" /> {counts.failed} échouée{counts.failed > 1 ? 's' : ''}
+        <>
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''}
+              {search && <span> pour « {search} »</span>}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {counts.pending} en attente
               </span>
-            )}
+              {counts.failed > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" /> {counts.failed} échouée{counts.failed > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sorted.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
       )}
     </div>
   );
