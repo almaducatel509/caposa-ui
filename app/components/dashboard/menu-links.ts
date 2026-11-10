@@ -20,6 +20,7 @@ import {
   Building2,
   Briefcase,
   CalendarDays,
+  Settings,
 } from "lucide-react";
 
 export type IconComponent = LucideIcon | ComponentType<{ className?: string }>;
@@ -151,5 +152,11 @@ export const links: MainLink[] = [
     href: '/dashboard/holidays', 
     icon: CalendarDays,
     roles: ['administrateur', 'admin', 'directeur']
+  },
+  { 
+    name: 'Paramètres', 
+    href: '/dashboard/settings', 
+    icon: Settings,
+    roles: ['administrateur', 'admin']
   },
 ];
