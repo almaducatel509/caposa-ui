@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 export default function Error({
   error,
   reset,
@@ -7,6 +9,10 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("Layout/Page Error caught by error.tsx:", error);
+  }, [error]);
+
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center p-6 text-center">
       <div className="max-w-md rounded-2xl bg-white p-8 shadow border border-gray-100">

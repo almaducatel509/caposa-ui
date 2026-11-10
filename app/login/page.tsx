@@ -5,7 +5,6 @@ import { Loader2 } from "lucide-react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { getCookie } from "cookies-next/server";
 
 export const metadata: Metadata = {
   title: "Connexion",
@@ -16,20 +15,33 @@ interface LoginPageProps {
   searchParams?: Promise<{ expired?: string; callbackUrl?: string }>;
 }
 
-export default async function Home({ searchParams }: LoginPageProps) {
-  const params = await searchParams;
-  const isExpired = params?.expired === "1";
+export default async function Home(props?: LoginPageProps) {
+  try {
+    const searchParams = props?.searchParams ? await props.searchParams : undefined;
+    const isExpired = searchParams?.expired === "1";
 
-  // Si on est redirigé pour cause d'expiration, on ne renvoie JAMAIS vers le dashboard
-  if (!isExpired) {
-    const session = await auth();
-    const tokenName = process.env.TOKEN_NAME || process.env.NEXT_PUBLIC_TOKEN_NAME || "auth_token";
-    const backendToken = await getCookie(tokenName, { cookies });
+    // Si on arrive avec un flag d'expiration, on ne redirige jamais vers /dashboard
+    if (!isExpired) {
+      const session = await auth();
+      if (session?.user) {
+        const cookieStore = await cookies();
+        const tokenName = process.env.TOKEN_NAME || process.env.NEXT_PUBLIC_TOKEN_NAME || "auth_token";
+        const backendToken = cookieStore.get(tokenName)?.value;
 
-    // On ne redirige vers /dashboard que si NextAuth ET le jeton backend sont présents
-    if (session?.user && backendToken) {
-      redirect("/dashboard");
+        // On ne redirige vers /dashboard que si NextAuth ET le jeton backend sont présents
+        if (backendToken) {
+          redirect("/dashboard");
+        }
+      }
     }
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "digest" in err) {
+      const digest = String((err as { digest?: string }).digest || "");
+      if (digest.startsWith("NEXT_REDIRECT")) {
+        throw err;
+      }
+    }
+    // En cas d'erreur de lecture de session ou de cookie, on affiche simplement le formulaire de connexion
   }
 
   return (

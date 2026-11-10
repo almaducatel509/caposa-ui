@@ -2,12 +2,12 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import SideNav from "@/app/components/dashboard/sidenav";
 import { cookies } from "next/headers";
-import { getCookie } from "cookies-next/server";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  const cookieStore = await cookies();
   const tokenName = process.env.TOKEN_NAME || process.env.NEXT_PUBLIC_TOKEN_NAME || "auth_token";
-  const backendToken = await getCookie(tokenName, { cookies });
+  const backendToken = cookieStore.get(tokenName)?.value;
 
   // Si la session NextAuth OU le jeton backend est absent, redirection immédiate vers /login
   if (!session?.user || !backendToken) {
