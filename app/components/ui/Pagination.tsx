@@ -11,6 +11,7 @@ interface PaginationProps {
   onPageSizeChange?: (size: number) => void;
   pageSizeOptions?: number[];
   className?: string;
+  totalPages?: number;
 }
 
 export function Pagination({
@@ -21,8 +22,10 @@ export function Pagination({
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50],
   className = '',
+  totalPages: propTotalPages,
 }: PaginationProps) {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const calculatedTotalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const totalPages = propTotalPages ?? calculatedTotalPages;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(totalItems, currentPage * pageSize);
 
