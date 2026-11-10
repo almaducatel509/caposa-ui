@@ -2,7 +2,8 @@
 
 import { useEffect, useTransition } from 'react';
 import Link from 'next/link';
-import { Landmark, LogOut, Loader2 } from 'lucide-react';
+import { LogOut, Loader2 } from 'lucide-react';
+import { GiReceiveMoney } from 'react-icons/gi';
 import NavLinks from '@/app/components/dashboard/Navlink';
 import { useSession } from 'next-auth/react';
 import { logout } from '@/app/lib/actions';
@@ -67,11 +68,11 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
       {/* ── Logo + Bouton Thème à 3 états ── */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-gray-100 dark:border-zinc-800 shrink-0">
         <Link
-          href="/"
+          href="/dashboard"
           className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
         >
           <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
-            <Landmark className="w-5 h-5 text-white" />
+            <GiReceiveMoney className="w-5 h-5 text-white" />
           </div>
           <div className="hidden md:flex items-baseline gap-1.5">
             <span className="text-[#2E7D32] dark:text-[#4CAF50] text-lg font-bold leading-none">CAPOSA</span>

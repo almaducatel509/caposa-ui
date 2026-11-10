@@ -1,16 +1,29 @@
-"use client";
-import { useEffect, useState } from 'react';
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { ArrowRight, ShieldCheck, TrendingUp, Users, PiggyBank } from 'lucide-react';
 import Link from 'next/link';
 
-export default function Page() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+export default async function Page() {
+  // Redirection immédiate vers /dashboard si l'utilisateur est déjà connecté
+  try {
+    const session = await auth();
+    if (session?.user) {
+      const cookieStore = await cookies();
+      const tokenName = process.env.TOKEN_NAME || process.env.NEXT_PUBLIC_TOKEN_NAME || "auth_token";
+      const backendToken = cookieStore.get(tokenName)?.value;
+      if (backendToken) {
+        redirect("/dashboard");
+      }
+    }
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "digest" in err) {
+      const digest = String((err as { digest?: string }).digest || "");
+      if (digest.startsWith("NEXT_REDIRECT")) {
+        throw err;
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-br from-emerald-50 via-white to-green-50 flex flex-col">
