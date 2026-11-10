@@ -13,6 +13,7 @@ import { BranchData } from "./validations";
 import BranchBulkActionDropdown, { BranchBulkAction } from "./BranchBulkActionDropdown";
 import BranchBulkActionModal from "./modals/BranchBulkActionModal";
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
+import Pagination from "@/app/components/ui/Pagination";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 

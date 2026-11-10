@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Pagination from "@/app/components/ui/Pagination";
 import {
   Eye, Pencil, Trash2,
   ChevronDown, ChevronUp, ChevronsUpDown,
