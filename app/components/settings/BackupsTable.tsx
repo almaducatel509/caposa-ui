@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Database,
   Lock,
@@ -8,14 +8,12 @@ import {
   Trash2,
   RotateCcw,
   Zap,
-  Calendar,
+  Clock,
   Search,
   RefreshCw,
   Archive,
   AlertTriangle,
   CheckCircle2,
-  Clock,
-  HardDrive,
   FileText,
   Loader2,
   ChevronDown,
@@ -28,6 +26,7 @@ import {
   downloadBackup,
   createInstantBackup,
 } from '@/app/lib/api/backups';
+import Pagination from '@/app/components/ui/Pagination';
 
 interface BackupsTableProps {
   backups: DatabaseBackup[];
@@ -53,6 +52,10 @@ export default function BackupsTable({
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Dropdown filter state
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,26 +70,39 @@ export default function BackupsTable({
     return () => document.removeEventListener('mousedown', handler);
   }, [typeDropdownOpen]);
 
+  // Réinitialiser la page quand l'onglet ou le filtre change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, filterType]);
+
   // Séparation Actifs vs Corbeille
   const activeBackups = backups.filter((b) => !b.is_deleted);
   const trashBackups = backups.filter((b) => b.is_deleted);
 
   // Filtrage
   const currentList = activeTab === 'active' ? activeBackups : trashBackups;
-  const filteredBackups = currentList.filter((b) => {
+  const filteredBackups = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      b.filename.toLowerCase().includes(q) ||
-      b.created_at.includes(q);
-    const matchesType =
-      filterType === 'all'
-        ? true
-        : filterType === 'auto'
-        ? b.backup_type === 'auto'
-        : b.backup_type === 'manual';
-    return matchesSearch && matchesType;
-  });
+    return currentList.filter((b) => {
+      const matchesSearch =
+        !q ||
+        b.filename.toLowerCase().includes(q) ||
+        b.created_at.includes(q);
+      const matchesType =
+        filterType === 'all'
+          ? true
+          : filterType === 'auto'
+          ? b.backup_type === 'auto'
+          : b.backup_type === 'manual';
+      return matchesSearch && matchesType;
+    });
+  }, [currentList, searchQuery, filterType]);
+
+  // Données paginées
+  const paginatedBackups = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBackups.slice(start, start + pageSize);
+  }, [filteredBackups, currentPage, pageSize]);
 
   // Déclencher un backup instantané
   const handleInstantBackup = async () => {
@@ -158,19 +174,19 @@ export default function BackupsTable({
     <div className="space-y-4">
       {/* Alertes de confirmation / erreur */}
       {instantSuccessMsg && (
-        <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl text-sm font-medium text-emerald-800 dark:text-emerald-300">
-          <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+        <div className="flex items-center gap-3 p-4 bg-[#DDEAD5]/50 border border-[#81C784] rounded-2xl text-sm font-medium text-[#1B5E20]">
+          <CheckCircle2 className="w-5 h-5 shrink-0 text-[#2E7D32]" />
           <span>{instantSuccessMsg}</span>
         </div>
       )}
       {instantErrorMsg && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-2xl text-sm font-medium text-red-700 dark:text-red-300">
-          <AlertTriangle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400" />
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-sm font-medium text-red-700">
+          <AlertTriangle className="w-5 h-5 shrink-0 text-red-600" />
           <span>{instantErrorMsg}</span>
         </div>
       )}
 
-      {/* ── Ligne 1 : Recherche + Boutons d'action (Design Caposa) ── */}
+      {/* ── Ligne 1 : Recherche + Boutons d'action (1:1 comme AccountFilterBar) ── */}
       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
         {/* Champ de recherche */}
         <div className="relative w-full lg:max-w-md">
@@ -179,13 +195,13 @@ export default function BackupsTable({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Nom de fichier, date..."
-            className="w-full h-11 pl-10 pr-10 text-sm border border-gray-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] placeholder:text-gray-400 transition-all"
+            placeholder="N° sauvegarde, nom de fichier..."
+            className="w-full h-10 pl-10 pr-10 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] placeholder:text-gray-400 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -193,11 +209,11 @@ export default function BackupsTable({
         </div>
 
         {/* Boutons d'action */}
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+        <div className="flex items-center gap-2 shrink-0 w-full lg:w-auto">
           <button
             onClick={handleInstantBackup}
             disabled={isInstantLoading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer disabled:opacity-50"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer disabled:opacity-50"
           >
             {isInstantLoading ? (
               <>
@@ -214,7 +230,7 @@ export default function BackupsTable({
 
           <button
             onClick={onOpenSchedule}
-            className="flex items-center gap-2 h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-sm font-medium text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all cursor-pointer"
           >
             <Clock className="w-4 h-4 text-[#2E7D32]" />
             <span>Planification (Auto)</span>
@@ -223,32 +239,33 @@ export default function BackupsTable({
           <button
             onClick={onRefresh}
             title="Actualiser la liste"
-            className="h-11 w-11 flex items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Actualiser</span>
           </button>
         </div>
       </div>
 
-      {/* ── Ligne 2 : Filtres & Compteurs (Design Caposa) ── */}
-      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 px-4 py-3 shadow-xs">
+      {/* ── Ligne 2 : Filtres (1:1 comme AccountFilterBar) ── */}
+      <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-zinc-400">Résultats</span>
-          <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/40 dark:text-[#81C784]">
+          <span className="text-sm text-gray-500">Résultats</span>
+          <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#DDEAD5] text-[#1B5E20]">
             {filteredBackups.length}
           </span>
         </div>
 
-        <div className="h-5 w-px bg-gray-200 dark:bg-zinc-800" />
+        <div className="h-5 w-px bg-gray-200" />
 
-        {/* Dropdown Filtre Type */}
+        {/* Dropdown Type */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setTypeDropdownOpen(!typeDropdownOpen)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all cursor-pointer ${
               filterType !== 'all'
-                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium dark:bg-[#1B5E20]/30 dark:text-[#81C784]'
-                : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                ? 'bg-[#DDEAD5] border-[#2E7D32]/30 text-[#1B5E20] font-medium'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
             <Database className="w-3.5 h-3.5" />
@@ -257,22 +274,22 @@ export default function BackupsTable({
           </button>
 
           {typeDropdownOpen && (
-            <div className="absolute left-0 mt-2 z-50 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-100 dark:border-zinc-800 py-1 min-w-[190px] animate-in fade-in">
+            <div className="absolute left-0 mt-2 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[190px] animate-in fade-in">
               <button
                 onClick={() => { setFilterType('all'); setTypeDropdownOpen(false); }}
-                className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+                className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 Tous les types
               </button>
               <button
                 onClick={() => { setFilterType('auto'); setTypeDropdownOpen(false); }}
-                className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+                className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 Automatique (Cron / Celery)
               </button>
               <button
                 onClick={() => { setFilterType('manual'); setTypeDropdownOpen(false); }}
-                className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+                className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 Instantané (Manuel)
               </button>
@@ -281,16 +298,16 @@ export default function BackupsTable({
         </div>
       </div>
 
-      {/* ── Tableau Card (Design Caposa) ── */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-        {/* Onglets en haut de tableau avec bordure inférieure active */}
-        <div className="flex items-center gap-1 px-5 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+      {/* ── Tableau Card (1:1 comme AccountTable) ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Onglets en haut de tableau avec bordure verte active */}
+        <div className="flex items-center px-2 border-b border-gray-100 bg-white">
           <button
             onClick={() => setActiveTab('active')}
             className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 cursor-pointer ${
               activeTab === 'active'
-                ? 'border-[#2E7D32] text-[#1B5E20] dark:text-[#81C784] font-semibold'
-                : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
+                ? 'border-[#2E7D32] text-[#1B5E20] font-semibold'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Database className="w-3.5 h-3.5 shrink-0" />
@@ -299,8 +316,8 @@ export default function BackupsTable({
               <span
                 className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
                   activeTab === 'active'
-                    ? 'bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/40 dark:text-[#81C784]'
-                    : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400'
+                    ? 'bg-[#DDEAD5] text-[#1B5E20]'
+                    : 'bg-gray-100 text-gray-500'
                 }`}
               >
                 {activeBackups.length}
@@ -312,8 +329,8 @@ export default function BackupsTable({
             onClick={() => setActiveTab('trash')}
             className={`flex items-center gap-2 px-4 py-3.5 text-sm transition-all -mb-px border-b-2 cursor-pointer ${
               activeTab === 'trash'
-                ? 'border-amber-600 text-amber-700 dark:text-amber-400 font-semibold'
-                : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
+                ? 'border-gray-400 text-gray-600 font-semibold'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Archive className="w-3.5 h-3.5 shrink-0" />
@@ -322,8 +339,8 @@ export default function BackupsTable({
               <span
                 className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
                   activeTab === 'trash'
-                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                    : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400'
+                    ? 'bg-gray-200 text-gray-700'
+                    : 'bg-gray-100 text-gray-500'
                 }`}
               >
                 {trashBackups.length}
@@ -332,25 +349,25 @@ export default function BackupsTable({
           </button>
         </div>
 
-        {/* Bannière Corbeille si on est dans l'onglet corbeille */}
+        {/* Bannière d'information si Corbeille */}
         {activeTab === 'trash' && (
-          <div className="flex items-start gap-3 px-5 py-3 bg-gray-50 dark:bg-zinc-800/40 border-b border-gray-200 dark:border-zinc-800">
+          <div className="flex items-start gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200">
             <Archive className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
-                Corbeille des sauvegardes (Soft delete)
+              <p className="text-xs font-semibold text-gray-600">
+                Corbeille des sauvegardes — Soft delete
               </p>
-              <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-                Les fichiers restent sur le serveur et peuvent être restaurés ou supprimés définitivement du disque.
+              <p className="text-xs text-gray-400 mt-0.5">
+                Ces sauvegardes restent conservées sur le serveur et peuvent être restaurées ou supprimées définitivement du disque.
               </p>
             </div>
           </div>
         )}
 
-        {/* En-tête des colonnes avec gradient Caposa & Scrollbar masquée (hover uniquement) */}
+        {/* En-tête des colonnes avec gradient Caposa & Scrollbar masquée hors survol */}
         <div className="overflow-x-auto table-scroll">
           <table className="w-full text-left">
-            <thead className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] dark:from-zinc-800 dark:to-zinc-800/80 border-b border-gray-200 dark:border-zinc-800 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-zinc-300">
+            <thead className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">
               <tr>
                 <th className="py-3 px-5">Fichier & Sécurité</th>
                 <th className="py-3 px-5">Type</th>
@@ -360,10 +377,10 @@ export default function BackupsTable({
                 <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs sm:text-sm">
+            <tbody className="divide-y divide-gray-50 text-xs sm:text-sm">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-14 text-center text-gray-500 dark:text-zinc-400">
+                  <td colSpan={6} className="py-14 text-center text-gray-500">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-6 h-6 animate-spin text-[#2E7D32]" />
                       <span className="text-sm font-medium">Chargement des sauvegardes...</span>
@@ -374,41 +391,41 @@ export default function BackupsTable({
                 <tr>
                   <td colSpan={6} className="py-14 text-center">
                     <div className="flex flex-col items-center justify-center text-center">
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3 bg-[#DDEAD5] dark:bg-zinc-800 text-[#2E7D32] dark:text-[#4CAF50]">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3 bg-[#DDEAD5] text-[#2E7D32]">
                         <Database className="w-7 h-7" />
                       </div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                        {activeTab === 'active' ? 'Aucune sauvegarde active trouvée' : 'La corbeille est vide'}
+                      <p className="text-sm font-semibold text-gray-900 mb-1">
+                        {activeTab === 'active' ? 'Aucune sauvegarde trouvée' : 'La corbeille est vide'}
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-zinc-500 max-w-sm">
+                      <p className="text-xs text-gray-400 max-w-sm">
                         {activeTab === 'active'
-                          ? 'Cliquez sur "Sauvegarde Instantanée" pour créer un backup maintenant ou planifiez une tâche.'
+                          ? 'Cliquez sur "Sauvegarde Instantanée" pour créer un backup maintenant.'
                           : 'Les sauvegardes mises à la corbeille apparaîtront ici.'}
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredBackups.map((backup) => (
+                paginatedBackups.map((backup) => (
                   <tr
                     key={backup.id}
-                    className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors"
+                    className="hover:bg-gray-50/70 transition-colors"
                   >
-                    {/* Fichier & Chiffrement */}
-                    <td className="py-3.5 px-5">
+                    {/* Fichier & Sécurité */}
+                    <td className="py-4 px-5">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-[#DDEAD5]/60 text-[#1B5E20] dark:bg-[#1B5E20]/30 dark:text-[#81C784]">
+                        <div className="w-9 h-9 rounded-xl bg-[#DDEAD5]/60 text-[#1B5E20] flex items-center justify-center shrink-0">
                           <FileText className="w-4 h-4" />
                         </div>
-                        <div className="space-y-0.5">
+                        <div className="space-y-0.5 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-medium text-gray-900 dark:text-white truncate max-w-[240px] sm:max-w-[320px]">
+                            <span className="font-mono font-medium text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">
                               {backup.filename}
                             </span>
                             {backup.is_encrypted && (
                               <span
                                 title={`Chiffré avec ${backup.encryption_algorithm}`}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/50 dark:text-[#81C784]"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#DDEAD5] text-[#1B5E20]"
                               >
                                 <Lock className="w-2.5 h-2.5" />
                                 AES-256
@@ -416,7 +433,7 @@ export default function BackupsTable({
                             )}
                           </div>
                           {backup.checksum && (
-                            <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-mono">
+                            <p className="text-[10px] text-gray-400 font-mono">
                               SHA256: {backup.checksum.slice(0, 16)}...
                             </p>
                           )}
@@ -424,15 +441,15 @@ export default function BackupsTable({
                       </div>
                     </td>
 
-                    {/* Type */}
-                    <td className="py-3.5 px-5 whitespace-nowrap">
+                    {/* Type (Pill identique à Chèques / Épargne dans AccountTable) */}
+                    <td className="py-4 px-5 whitespace-nowrap">
                       {backup.backup_type === 'auto' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/50 text-[#355C7D] dark:text-blue-300">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-[#355C7D]">
                           <Clock className="w-3 h-3" />
                           Automatique
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#FEF9EC] dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800">
                           <Zap className="w-3 h-3" />
                           Instantané
                         </span>
@@ -440,29 +457,29 @@ export default function BackupsTable({
                     </td>
 
                     {/* Taille */}
-                    <td className="py-3.5 px-5 whitespace-nowrap font-medium text-gray-800 dark:text-zinc-200">
+                    <td className="py-4 px-5 whitespace-nowrap font-mono font-medium text-gray-800">
                       {backup.formatted_size || 'N/A'}
                     </td>
 
                     {/* Date & Heure */}
-                    <td className="py-3.5 px-5 whitespace-nowrap text-gray-600 dark:text-zinc-400">
+                    <td className="py-4 px-5 whitespace-nowrap text-gray-600">
                       {formatDate(backup.created_at)}
                     </td>
 
-                    {/* Statut */}
-                    <td className="py-3.5 px-5 whitespace-nowrap">
+                    {/* Statut (Identique à • Ouvert dans AccountTable) */}
+                    <td className="py-4 px-5 whitespace-nowrap">
                       {backup.status === 'completed' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/40 dark:text-[#81C784]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
                           Succès
                         </span>
                       ) : backup.status === 'in_progress' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#355C7D]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-[#355C7D]">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           En cours
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-600">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                           Échec
                         </span>
@@ -470,7 +487,7 @@ export default function BackupsTable({
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3.5 px-5 whitespace-nowrap text-right">
+                    <td className="py-4 px-5 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
                         {activeTab === 'active' ? (
                           <>
@@ -478,7 +495,7 @@ export default function BackupsTable({
                               onClick={() => handleDownload(backup)}
                               disabled={downloadingId === backup.id}
                               title="Télécharger le fichier chiffré"
-                              className="p-1.5 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-[#2E7D32] hover:bg-[#DDEAD5]/50 transition-all cursor-pointer"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-[#2E7D32] hover:bg-[#DDEAD5]/50 transition-colors cursor-pointer"
                             >
                               {downloadingId === backup.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -490,7 +507,7 @@ export default function BackupsTable({
                             <button
                               onClick={() => onOpenDelete(backup, 'soft')}
                               title="Mettre à la corbeille (Soft delete)"
-                              className="p-1.5 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all cursor-pointer"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -501,7 +518,7 @@ export default function BackupsTable({
                               onClick={() => handleRestore(backup)}
                               disabled={restoringId === backup.id}
                               title="Restaurer la sauvegarde"
-                              className="p-1.5 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-[#2E7D32] hover:bg-[#DDEAD5]/50 transition-all cursor-pointer"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-[#2E7D32] hover:bg-[#DDEAD5]/50 transition-colors cursor-pointer"
                             >
                               {restoringId === backup.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -513,7 +530,7 @@ export default function BackupsTable({
                             <button
                               onClick={() => onOpenDelete(backup, 'hard')}
                               title="Supprimer définitivement du serveur"
-                              className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all cursor-pointer"
+                              className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -527,6 +544,38 @@ export default function BackupsTable({
             </tbody>
           </table>
         </div>
+
+        {/* ── Pied de tableau (1:1 comme AccountTable + Pagination) ── */}
+        {!isLoading && filteredBackups.length > 0 && (
+          <>
+            <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between flex-wrap gap-2">
+              <p className="text-xs text-gray-400">
+                <span className="font-semibold text-gray-600">{filteredBackups.length}</span> résultat{filteredBackups.length !== 1 ? 's' : ''} sur cet onglet
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                {activeTab === 'active' ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" /> {activeBackups.length} Sauvegarde{activeBackups.length !== 1 ? 's' : ''} Active{activeBackups.length !== 1 ? 's' : ''}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {trashBackups.length} Corbeille
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredBackups.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </>
+        )}
       </div>
     </div>
   );

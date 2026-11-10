@@ -172,6 +172,12 @@ const MemberTable: React.FC<MemberTableProps> = ({
   const [selected,     setSelected]     = useState<Set<string | number>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<MemberBulkAction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const activeTab    = externalTab ?? localTab;
   const isArchiveTab = activeTab === 'archive';
@@ -221,6 +227,11 @@ const MemberTable: React.FC<MemberTableProps> = ({
   };
 
   const balances = useMemberBalances(useMemo(() => sorted.map(m => String(m.id)), [sorted]));
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
 
   const selectedMembers = useMemo(
     () => sorted.filter(m => selected.has(m.id)),
@@ -339,7 +350,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
           </div>
         )}
 
-        {!isLoading && sorted.map((member, i) => {
+        {!isLoading && paginated.map((member, i) => {
           const status     = getEffectiveStatus(member);
           const cfg        = STATUS_CFG[status] ?? STATUS_CFG['inactif'];
           const isSelected = selected.has(member.id);

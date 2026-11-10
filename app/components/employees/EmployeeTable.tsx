@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Eye, Edit, Trash2, Receipt, Phone, Mail, MapPin,
   ChevronDown, ChevronUp, ChevronsUpDown,
@@ -146,7 +146,18 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   }), [tabEmployees, sortField, sortDir]);
 
   const [activeAction, setActiveAction] = useState<EmployeeBulkAction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
   
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
   const selectedEmployees = useMemo(
     () => sorted.filter(e => selected.has(e.id as string)),
     [sorted, selected],
@@ -300,7 +311,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </div>
         )}
 
-        {!isLoading && sorted.map((emp, i) => {
+        {!isLoading && paginated.map((emp, i) => {
           const status     = getEffectiveStatus(emp);
           const cfg        = STATUS_CFG[status] ?? STATUS_CFG['active'];
           const isSelected = selected.has(emp.id);

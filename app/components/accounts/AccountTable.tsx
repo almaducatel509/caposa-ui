@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
 import {
@@ -17,6 +17,7 @@ import UserAvatar from '../core/UserAvatar';
 import { getRole } from '@/app/lib/auth';
 import { AccountBulkAction } from '@/app/lib/api/accountRules';
 import AccountBulkActionDropdown from './AccountBulkActionDropdown';
+import Pagination from '@/app/components/ui/Pagination';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
@@ -162,6 +163,12 @@ const isArchiveTab = activeTab === 'archive';  // ✅ AJOUTE ICI
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<AccountBulkAction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   // ── Counts (3 statuts seulement) ──────────────────────────────────────────
   
@@ -193,6 +200,11 @@ const isArchiveTab = activeTab === 'archive';  // ✅ AJOUTE ICI
     if (typeof vb === 'string') vb = vb.toLowerCase();
     return sortDir === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
   }), [tabAccounts, sortField, sortDir]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
 
   const selectedAccounts = useMemo(
     () => sorted.filter(a => selected.has(a.id as string)),
@@ -345,7 +357,7 @@ return (
           </div>
         )}
 
-        {!isLoading && sorted.map((acc, i) => {
+        {!isLoading && paginated.map((acc, i) => {
           const status      = acc.account_status;
           const tab         = getTab(status);
           const solde       = acc.soldeActuel ?? 0;
@@ -523,7 +535,8 @@ return (
 
       {/* ── Footer ── */}
       {!isLoading && accounts.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between flex-wrap gap-2">
+        <>
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-4">
             <p className="text-xs text-gray-400">
               <span className="font-semibold text-gray-600">{sorted.length}</span> résultat{sorted.length !== 1 ? 's' : ''} sur cet onglet
@@ -554,6 +567,14 @@ return (
             )}
           </div>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={sorted.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+        </>
       )}
       <AccountBulkActionModal
         action={activeAction}
