@@ -43,14 +43,23 @@ export interface BackupStats {
   encryption: string;
 }
 
+export interface CreateBackupResponse {
+  message: string;
+  backup: DatabaseBackup;
+}
+
 /**
  * Récupère la liste des sauvegardes (actives ou corbeille).
  */
-export async function fetchBackups(options?: { trash?: boolean; all?: boolean }): Promise<DatabaseBackup[]> {
+export async function fetchBackups(options?: boolean | { trash?: boolean; all?: boolean }): Promise<DatabaseBackup[]> {
   try {
     const params = new URLSearchParams();
-    if (options?.trash) params.set('trash', 'true');
-    if (options?.all) params.set('all', 'true');
+    if (typeof options === 'boolean') {
+      if (options) params.set('all', 'true');
+    } else if (options) {
+      if (options.trash) params.set('trash', 'true');
+      if (options.all) params.set('all', 'true');
+    }
 
     const res = await AxiosInstance.get(`/backups/?${params.toString()}`);
     return Array.isArray(res.data) ? res.data : res.data.results || [];
@@ -102,10 +111,10 @@ export async function updateBackupSchedule(data: Partial<BackupSchedule>): Promi
 /**
  * Déclenche une sauvegarde chiffrée instantanée sur le serveur.
  */
-export async function createInstantBackup(): Promise<DatabaseBackup> {
+export async function createInstantBackup(): Promise<CreateBackupResponse> {
   try {
     const res = await AxiosInstance.post('/backups/create-instant/');
-    return res.data.backup || res.data;
+    return res.data;
   } catch (err) {
     console.error("Erreur lors de la création de la sauvegarde instantanée :", err);
     throw err;
