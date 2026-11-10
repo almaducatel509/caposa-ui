@@ -38,7 +38,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning className="bg-white dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 transition-colors duration-200">
         <NextTopLoader
-          color="#2299DD"
+          color="#2E7D32"
           initialPosition={0.08}
           crawlSpeed={200}
           height={3}
@@ -46,7 +46,7 @@ export default function RootLayout({
           showSpinner={false}
           easing="ease"
           speed={200}
-          shadow="0 0 10px #2299DD,0 0 5px #2299DD"
+          shadow="0 0 10px #2E7D32,0 0 5px #2E7D32"
         />
         <Providers>
           {children}
