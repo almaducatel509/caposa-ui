@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   Globe,
   SlidersHorizontal,
+  Check,
+  X,
 } from 'lucide-react';
 import Pagination from '@/app/components/ui/Pagination';
 import { AuditLog } from '@/app/lib/api/audit';
@@ -36,6 +38,7 @@ export default function SystemLogsTable({
   const [filterModule, setFilterModule] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Filtrage
   const filteredLogs = useMemo(() => {
@@ -86,8 +89,47 @@ export default function SystemLogsTable({
     return filteredLogs.slice(start, start + pageSize);
   }, [filteredLogs, currentPage, pageSize]);
 
+  // Sélection
+  const paginatedIds = useMemo(() => paginatedLogs.map((l) => l.id), [paginatedLogs]);
+  const allOnPageSelected = paginatedIds.length > 0 && paginatedIds.every((id) => selected.has(id));
+  const someOnPageSelected = paginatedIds.some((id) => selected.has(id)) && !allOnPageSelected;
+
+  const toggleAllOnPage = () => {
+    const next = new Set(selected);
+    if (allOnPageSelected) {
+      paginatedIds.forEach((id) => next.delete(id));
+    } else {
+      paginatedIds.forEach((id) => next.add(id));
+    }
+    setSelected(next);
+  };
+
+  const selectAllFiltered = () => {
+    setSelected(new Set(filteredLogs.map((l) => l.id)));
+  };
+
+  const clearSelection = () => {
+    setSelected(new Set());
+  };
+
+  const toggleRow = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelected(next);
+  };
+
   // Export CSV avec BOM UTF-8
-  const handleExportCSV = () => {
+  const handleExportCSV = (onlySelected: boolean = false) => {
+    const logsToExport = onlySelected && selected.size > 0
+      ? filteredLogs.filter((l) => selected.has(l.id))
+      : filteredLogs;
+
+    if (logsToExport.length === 0) return;
+
     const headers = [
       'Date & Heure',
       "Nom d'utilisateur",
@@ -101,7 +143,7 @@ export default function SystemLogsTable({
       'Adresse IP',
     ];
 
-    const rows = filteredLogs.map((log) => [
+    const rows = logsToExport.map((log) => [
       new Date(log.created_at).toLocaleString('fr-FR'),
       log.username || '',
       log.actor_name || '',
@@ -125,7 +167,11 @@ export default function SystemLogsTable({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `caposa_logs_systeme_${new Date().toISOString().slice(0, 10)}.csv`);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute(
+      'download',
+      `caposa_logs_systeme_${onlySelected ? `selection_${logsToExport.length}_` : ''}${dateStr}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -140,7 +186,7 @@ export default function SystemLogsTable({
     return Array.from(set);
   }, [logs]);
 
-  // Formatage des dates
+  // Helpers pour formater les données
   const formatDate = (iso: string) => {
     try {
       const d = new Date(iso);
@@ -167,67 +213,80 @@ export default function SystemLogsTable({
     }
   };
 
-  // Badge action
   const getActionBadge = (action: string, actionDisplay?: string) => {
+    const label = actionDisplay || action;
     const act = (action || '').toUpperCase();
-    let bg = 'bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300';
-    let dot = 'bg-gray-400';
 
     if (act.includes('LOGIN') || act.includes('CONNEXION')) {
-      bg = 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300';
-      dot = 'bg-blue-500';
-    } else if (act.includes('LOGOUT') || act.includes('DECONNEXION')) {
-      bg = 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400';
-      dot = 'bg-zinc-400';
-    } else if (act.includes('CREATE') || act.includes('CREATION')) {
-      bg = 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
-      dot = 'bg-emerald-500';
-    } else if (act.includes('UPDATE') || act.includes('MODIFICATION')) {
-      bg = 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300';
-      dot = 'bg-amber-500';
-    } else if (act.includes('DELETE') || act.includes('SUPPRESSION')) {
-      bg = 'bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-300';
-      dot = 'bg-red-500';
-    } else if (act.includes('DEPOSIT') || act.includes('DEPOT')) {
-      bg = 'bg-teal-50 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300';
-      dot = 'bg-teal-500';
-    } else if (act.includes('WITHDRAWAL') || act.includes('RETRAIT')) {
-      bg = 'bg-orange-50 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300';
-      dot = 'bg-orange-500';
-    } else if (act.includes('SESSION')) {
-      bg = 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300';
-      dot = 'bg-indigo-500';
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          {label}
+        </span>
+      );
+    }
+    if (act.includes('LOGOUT') || act.includes('DECONNEXION')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+          {label}
+        </span>
+      );
+    }
+    if (act.includes('CREATE') || act.includes('CREATION') || act.includes('DEPOSIT')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20] dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
+          {label}
+        </span>
+      );
+    }
+    if (act.includes('DELETE') || act.includes('SUPPRESSION') || act.includes('WITHDRAWAL')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          {label}
+        </span>
+      );
+    }
+    if (act.includes('UPDATE') || act.includes('MODIFICATION') || act.includes('TRANSFER')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          {label}
+        </span>
+      );
     }
 
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${bg}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-        {actionDisplay || action}
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+        {label}
       </span>
     );
   };
 
-  // Badge statut
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, statusDisplay?: string) => {
     const s = (status || '').toUpperCase();
-    if (s === 'SUCCESS') {
+    if (s === 'SUCCESS' || s === 'SUCCES') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/30 dark:text-[#81C784]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
           Succès
         </span>
       );
-    } else if (s === 'FAILED') {
+    }
+    if (s === 'FAILED' || s === 'ECHEC') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300">
+          <XCircle className="w-3 h-3 text-red-600" />
           Échec
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+        <AlertTriangle className="w-3 h-3 text-amber-600" />
         Alerte
       </span>
     );
@@ -236,7 +295,7 @@ export default function SystemLogsTable({
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col">
       {/* ─── Barre de filtre et d'actions (Style Caposa) ─── */}
-      <div className="p-5 border-b border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-4">
+      <div className="p-5 border-b border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-3">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Recherche */}
           <div className="relative flex-1 max-w-md">
@@ -251,16 +310,49 @@ export default function SystemLogsTable({
           </div>
 
           {/* Boutons d'actions */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCSV}
-              disabled={filteredLogs.length === 0}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-[#F9F9F6] dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
-              title="Exporter les logs au format CSV"
-            >
-              <FileDown className="w-3.5 h-3.5 text-[#2E7D32] dark:text-[#81C784]" />
-              Exporter CSV
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {selected.size > 0 ? (
+              <>
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#DDEAD5] text-[#1B5E20] border border-[#2E7D32]/20">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32]" />
+                  <span>{selected.size} sélectionné{selected.size > 1 ? 's' : ''}</span>
+                  <button
+                    onClick={clearSelection}
+                    className="ml-1 hover:text-red-600 transition-colors cursor-pointer"
+                    title="Désélectionner tout"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => handleExportCSV(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-[#2E7D32] hover:bg-[#256628] shadow-sm transition-all cursor-pointer"
+                  title="Exporter uniquement les logs sélectionnés au format CSV"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  Exporter la sélection ({selected.size})
+                </button>
+
+                <button
+                  onClick={() => handleExportCSV(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-[#F9F9F6] transition-all cursor-pointer"
+                  title="Exporter tous les logs filtrés au format CSV"
+                >
+                  Tout exporter ({filteredLogs.length})
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleExportCSV(false)}
+                disabled={filteredLogs.length === 0}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-[#F9F9F6] dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                title="Exporter tous les logs filtrés au format CSV"
+              >
+                <FileDown className="w-3.5 h-3.5 text-[#2E7D32] dark:text-[#81C784]" />
+                Exporter CSV ({filteredLogs.length})
+              </button>
+            )}
 
             <button
               onClick={onRefresh}
@@ -340,13 +432,50 @@ export default function SystemLogsTable({
             </button>
           )}
         </div>
+
+        {/* Bannière d'aide quand toute la page est sélectionnée */}
+        {allOnPageSelected && filteredLogs.length > paginatedLogs.length && (
+          <div className="bg-[#DDEAD5]/50 border border-[#2E7D32]/20 rounded-xl px-4 py-2 text-xs text-[#1B5E20] flex items-center justify-between">
+            <span>
+              Tous les <span className="font-semibold">{paginatedLogs.length}</span> logs de cette page sont sélectionnés.
+            </span>
+            {selected.size < filteredLogs.length ? (
+              <button
+                type="button"
+                onClick={selectAllFiltered}
+                className="font-semibold underline hover:text-[#1B5E20] cursor-pointer"
+              >
+                Sélectionner les {filteredLogs.length} logs filtrés
+              </button>
+            ) : (
+              <span className="font-semibold">
+                Tous les {filteredLogs.length} logs filtrés sont sélectionnés.
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ─── Table scrollable avec scrollbar visible au hover ─── */}
+      {/* ─── Table scrollable ─── */}
       <div className="table-scroll overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[900px]">
+        <table className="w-full text-left border-collapse min-w-[950px]">
           <thead>
             <tr className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] dark:from-zinc-800 dark:to-zinc-800/60 border-b border-gray-200 dark:border-zinc-700 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-zinc-300">
+              <th className="py-3 px-3 w-10 text-center">
+                <button
+                  type="button"
+                  onClick={toggleAllOnPage}
+                  title={allOnPageSelected ? 'Tout désélectionner sur cette page' : 'Tout sélectionner sur cette page'}
+                  className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer ${
+                    allOnPageSelected || someOnPageSelected
+                      ? 'bg-[#2E7D32] border-[#2E7D32]'
+                      : 'bg-white border-gray-300 hover:border-[#2E7D32]'
+                  }`}
+                >
+                  {allOnPageSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                  {someOnPageSelected && !allOnPageSelected && <div className="w-2 h-0.5 bg-white rounded-full" />}
+                </button>
+              </th>
               <th className="py-3 px-4">Date & Heure</th>
               <th className="py-3 px-4">Utilisateur / Acteur</th>
               <th className="py-3 px-4">Action</th>
@@ -359,7 +488,7 @@ export default function SystemLogsTable({
           <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-14 text-center text-gray-400">
+                <td colSpan={8} className="py-14 text-center text-gray-400">
                   <div className="flex flex-col items-center gap-2">
                     <RefreshCw className="w-6 h-6 animate-spin text-[#2E7D32]" />
                     <p className="text-xs">Chargement du journal d&apos;audit...</p>
@@ -368,7 +497,7 @@ export default function SystemLogsTable({
               </tr>
             ) : paginatedLogs.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-16 text-center text-gray-500 dark:text-zinc-400">
+                <td colSpan={8} className="py-16 text-center text-gray-500 dark:text-zinc-400">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <div className="w-12 h-12 rounded-2xl bg-[#DDEAD5]/50 flex items-center justify-center text-[#2E7D32] mb-1">
                       <Activity className="w-6 h-6" />
@@ -376,99 +505,121 @@ export default function SystemLogsTable({
                     <p className="font-semibold text-gray-700 dark:text-zinc-200 text-base">Aucun log enregistré</p>
                     <p className="text-xs text-gray-400 max-w-sm">
                       {searchTerm || filterAction !== 'all' || filterStatus !== 'all' || filterModule !== 'all'
-                        ? "Aucun résultat ne correspond à vos critères de recherche."
-                        : "Les activités système et actions des utilisateurs apparaîtront ici."}
+                        ? 'Aucun résultat ne correspond à vos critères de recherche.'
+                        : 'Les activités système et actions des utilisateurs apparaîtront ici.'}
                     </p>
                   </div>
                 </td>
               </tr>
             ) : (
-              paginatedLogs.map((log, idx) => (
-                <tr
-                  key={log.id}
-                  className={`transition-colors hover:bg-green-50/20 dark:hover:bg-zinc-800/40 ${
-                    idx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/30 dark:bg-zinc-900/40'
-                  }`}
-                >
-                  {/* Date & Heure */}
-                  <td className="py-3 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <div>
-                        <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200">
-                          {formatDate(log.created_at)}
-                        </p>
-                        <p className="text-[11px] text-gray-400 font-mono">
-                          {formatTime(log.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
+              paginatedLogs.map((log, idx) => {
+                const isSelected = selected.has(log.id);
+                return (
+                  <tr
+                    key={log.id}
+                    className={`transition-colors ${
+                      isSelected
+                        ? 'bg-[#DDEAD5]/35 dark:bg-[#2E7D32]/15'
+                        : idx % 2 === 0
+                        ? 'bg-white dark:bg-zinc-900 hover:bg-green-50/20 dark:hover:bg-zinc-800/40'
+                        : 'bg-gray-50/30 dark:bg-zinc-900/40 hover:bg-green-50/20 dark:hover:bg-zinc-800/40'
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(log.id)}
+                        className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#2E7D32] border-[#2E7D32]'
+                            : 'bg-white border-gray-300 hover:border-[#2E7D32]'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                      </button>
+                    </td>
 
-                  {/* Utilisateur / Acteur */}
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {(log.actor_name || log.username || 'S')[0].toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-gray-900 dark:text-zinc-100 truncate">
-                          {log.actor_name || log.username || 'Système'}
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          {log.username && (
-                            <span className="text-[11px] text-gray-400 font-mono">
-                              @{log.username}
-                            </span>
-                          )}
-                          {log.user_role && (
-                            <span className="px-1.5 py-0.2 rounded-md bg-gray-100 dark:bg-zinc-800 text-[10px] text-gray-600 dark:text-zinc-300 font-medium">
-                              {log.user_role}
-                            </span>
-                          )}
+                    {/* Date & Heure */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <div>
+                          <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200">
+                            {formatDate(log.created_at)}
+                          </p>
+                          <p className="text-[11px] text-gray-400 font-mono">
+                            {formatTime(log.created_at)}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Action */}
-                  <td className="py-3 px-4 whitespace-nowrap">
-                    {getActionBadge(log.action, log.action_display)}
-                  </td>
+                    {/* Utilisateur / Acteur */}
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {(log.actor_name || log.username || 'S')[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 dark:text-zinc-100 truncate">
+                            {log.actor_name || log.username || 'Système'}
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            {log.username && (
+                              <span className="text-[11px] text-gray-400 font-mono">
+                                @{log.username}
+                              </span>
+                            )}
+                            {log.user_role && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-gray-100 dark:bg-zinc-800 text-[10px] text-gray-600 dark:text-zinc-300 font-medium">
+                                {log.user_role}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
 
-                  {/* Module */}
-                  <td className="py-3 px-4 whitespace-nowrap">
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 capitalize border border-gray-200 dark:border-zinc-700">
-                      {log.module}
-                    </span>
-                  </td>
+                    {/* Action */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {getActionBadge(log.action, log.action_display)}
+                    </td>
 
-                  {/* Cible & Description */}
-                  <td className="py-3 px-4 max-w-xs">
-                    {log.target_repr && (
-                      <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200 truncate">
-                        {log.target_repr}
+                    {/* Module */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 capitalize border border-gray-200 dark:border-zinc-700">
+                        {log.module}
+                      </span>
+                    </td>
+
+                    {/* Cible & Description */}
+                    <td className="py-3 px-4 max-w-xs">
+                      {log.target_repr && (
+                        <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200 truncate">
+                          {log.target_repr}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-zinc-400 line-clamp-2">
+                        {log.description || '—'}
                       </p>
-                    )}
-                    <p className="text-xs text-gray-500 dark:text-zinc-400 line-clamp-2">
-                      {log.description || (log.target_repr ? '' : '—')}
-                    </p>
-                  </td>
+                    </td>
 
-                  {/* Adresse IP */}
-                  <td className="py-3 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-zinc-400 font-mono">
-                      <Globe className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span>{log.ip_address || '—'}</span>
-                    </div>
-                  </td>
+                    {/* Adresse IP */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 font-mono">
+                        <Globe className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span>{log.ip_address || '—'}</span>
+                      </div>
+                    </td>
 
-                  {/* Statut */}
-                  <td className="py-3 px-4 whitespace-nowrap text-center">
-                    {getStatusBadge(log.status)}
-                  </td>
-                </tr>
-              ))
+                    {/* Statut */}
+                    <td className="py-3 px-4 text-center whitespace-nowrap">
+                      {getStatusBadge(log.status, log.status_display)}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
