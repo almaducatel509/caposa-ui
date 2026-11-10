@@ -209,6 +209,11 @@ const [notice, setNotice] = useState<string | null>(null);
     }
   }), [filtered, sortField, sortDir, isDemandesTab]);
 
+  const paginated = useMemo(
+    () => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [sorted, currentPage, pageSize]
+  );
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortField(field); setSortDir('asc'); }
