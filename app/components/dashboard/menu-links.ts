@@ -23,42 +23,73 @@ import { BsFileEarmarkCheck, BsFileEarmarkBarGraph, BsShieldCheck } from "react-
 import { IconType } from "react-icons";
 import { PiCashRegisterFill, PiVaultFill } from "react-icons/pi";
 import { FiSettings } from "react-icons/fi";
-// Nouveaux imports pour les rapports
 import { Droplet, AlertTriangle, Users, CheckCircle, LayoutGrid } from "lucide-react";
 
-
-interface SubLink {
+export interface SubLink {
   name: string;
   href: string;
   icon?: IconType | string;
   description?: string;
+  /** Rôles autorisés à afficher ce sous-lien. Si non défini, hérite des droits du lien parent. */
+  roles?: string[];
 }
 
-interface MainLink {
+export interface MainLink {
   name: string;
   href: string;
   icon: IconType;
+  /** Rôles autorisés à afficher ce lien. Si non défini, accessible à tous les utilisateurs connectés. */
+  roles?: string[];
   hasSubmenu?: boolean;
   subLinks?: SubLink[];
 }
 
 export const links: MainLink[] = [
-  { name: 'Accueil', href: '/dashboard', icon: AiOutlineHome },
+  { 
+    name: 'Accueil', 
+    href: '/dashboard', 
+    icon: AiOutlineHome 
+  },
 
-  { name: 'Employés', href: '/dashboard/employees', icon: HiOutlineUserGroup },
-  { name: 'Membres', href: '/dashboard/members', icon: TbBrandUbuntu },
+  { 
+    name: 'Employés', 
+    href: '/dashboard/employees', 
+    icon: HiOutlineUserGroup,
+    roles: ['administrateur', 'admin', 'directeur']
+  },
+  { 
+    name: 'Membres', 
+    href: '/dashboard/members', 
+    icon: TbBrandUbuntu,
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'conseiller', 'caissier']
+  },
 
-  { name: 'Comptes', href: '/dashboard/accounts', icon: MdOutlineSupervisorAccount },
-  { name: 'Session', href: '/dashboard/sessions', icon: MdOutlineWorkHistory },
-  { name: 'Terminal', href: '/dashboard/terminal', icon: PiCashRegisterFill  },
+  { 
+    name: 'Comptes', 
+    href: '/dashboard/accounts', 
+    icon: MdOutlineSupervisorAccount,
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'conseiller', 'caissier']
+  },
+  { 
+    name: 'Session', 
+    href: '/dashboard/sessions', 
+    icon: MdOutlineWorkHistory,
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'tresorier', 'caissier']
+  },
+  { 
+    name: 'Terminal', 
+    href: '/dashboard/terminal', 
+    icon: PiCashRegisterFill,
+    roles: ['administrateur', 'admin', 'caissier']
+  },
 
   {
     name: 'Transactions',
     href: '/dashboard/transactions',
     icon: GrTransaction,
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'caissier'],
     hasSubmenu: true,
     subLinks: [
-      // { name: 'Toutes', href: '/dashboard/transactions', icon: FaClipboardList },
       { name: 'Dépôts', href: '/dashboard/transactions/deposits', icon: GiReceiveMoney },
       { name: 'Retraits', href: '/dashboard/transactions/withdrawals', icon: GiPayMoney },
       { name: 'Transferts', href: '/dashboard/transactions/transfers', icon: FaExchangeAlt },
@@ -68,18 +99,27 @@ export const links: MainLink[] = [
     name: 'Prêts',
     href: '/dashboard/loans',
     icon: FaHandHoldingUsd,
-  
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'conseiller', 'caissier'],
   },
   {
     name: 'Trésorerie',
     href: '/dashboard/treasury',
     icon: GiTwoCoins,
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'tresorier', 'caissier'],
     hasSubmenu: true,
     subLinks: [
-      { name: "Remise", href: '/dashboard/treasury', icon: PiVaultFill },
-      // { name: 'Encaisse', href: '/dashboard/treasury/cash', icon: GiReceiveMoney },
-      // { name: 'Coffre', href: '/dashboard/treasury/vault', icon: PiVaultFill },
-      { name: 'Réconciliation', href: '/dashboard/treasury/reconciliation', icon: RiFileList3Line },
+      { 
+        name: "Remise", 
+        href: '/dashboard/treasury', 
+        icon: PiVaultFill,
+        roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'tresorier', 'caissier']
+      },
+      { 
+        name: 'Réconciliation', 
+        href: '/dashboard/treasury/reconciliation', 
+        icon: RiFileList3Line,
+        roles: ['administrateur', 'admin', 'directeur', 'tresorier']
+      },
     ],
   },
   
@@ -87,13 +127,30 @@ export const links: MainLink[] = [
     name: 'Rapports',
     href: '/dashboard/rapports',
     icon: HiOutlineDocumentDuplicate,
+    roles: ['administrateur', 'admin', 'directeur', 'superviseur', 'tresorier'],
   },
-//Terminal
-  { name: 'Horaires', href: '/dashboard/opening-hours', icon: LuCalendarClock  },
-  { name: 'Succursales', href: '/dashboard/branches', icon: AiOutlineBranches },
-  { name: 'Postes', href: '/dashboard/postes', icon: TfiLayoutListPost },
-  { name: 'Calendrier', href: '/dashboard/holidays', icon: AiOutlineSchedule  },
-
- 
-
+  { 
+    name: 'Horaires', 
+    href: '/dashboard/opening-hours', 
+    icon: LuCalendarClock,
+    roles: ['administrateur', 'admin', 'directeur']
+  },
+  { 
+    name: 'Succursales', 
+    href: '/dashboard/branches', 
+    icon: AiOutlineBranches,
+    roles: ['administrateur', 'admin', 'directeur']
+  },
+  { 
+    name: 'Postes', 
+    href: '/dashboard/postes', 
+    icon: TfiLayoutListPost,
+    roles: ['administrateur', 'admin']
+  },
+  { 
+    name: 'Calendrier', 
+    href: '/dashboard/holidays', 
+    icon: AiOutlineSchedule,
+    roles: ['administrateur', 'admin', 'directeur']
+  },
 ];
