@@ -5,6 +5,7 @@ import {
   ArrowLeftRight, CheckCircle2, XCircle, AlertCircle, Download,
 } from 'lucide-react';
 import { TransferData, TransferStatus } from '../validation/transfert';
+import Pagination from '@/app/components/ui/Pagination';
 
 type TransferId = TransferData['id'];
 
@@ -281,15 +282,19 @@ export default function TransferTable({
 
       {/* ── Pied ── */}
       {!loading && sorted.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            <span className="font-semibold text-gray-600">{sorted.length}</span>{' '}
-            virement{sorted.length !== 1 ? 's' : ''}
+        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-gray-500">
+            Affichage de <span className="font-semibold text-gray-700">{Math.min(sorted.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
+            <span className="font-semibold text-gray-700">{Math.min(sorted.length, currentPage * pageSize)}</span> sur{" "}
+            <span className="font-semibold text-gray-700">{sorted.length}</span> virement{sorted.length !== 1 ? 's' : ''}
           </p>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#DDEAD5] text-[#1B5E20]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32]" />
-            {pendingCount} en attente
-          </span>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sorted.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>

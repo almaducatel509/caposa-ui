@@ -96,14 +96,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, search]);
   const [search,    setSearch]    = useState('');
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
   const [selected,  setSelected]  = useState<Set<string | number>>(new Set());
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, search]);
 
   const counts = useMemo(() => ({
     all:     transactions.length,
