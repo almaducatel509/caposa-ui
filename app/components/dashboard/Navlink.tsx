@@ -67,23 +67,23 @@ export default function NavLinks() {
   }, [hasRole, loading]);
 
   const menuSections: MenuSection[] = useMemo(() => {
+    const mainMenuNames = ['Accueil', 'Employés', 'Membres', 'Comptes'];
+    const featuresNames = ['Session', 'Transactions', 'Prêts', 'Trésorerie', 'Rapports'];
+    const generalNames = ['Terminal', 'Horaires', 'Succursales', 'Postes', 'Calendrier', 'Paramètres'];
+
     const sections: MenuSection[] = [
       {
         title: "MAIN MENU",
-        items: visibleLinks.filter((l) =>
-          ['Accueil', 'Employés', 'Membres', 'Comptes'].includes(l.name)
-        ),
+        items: visibleLinks.filter((l) => mainMenuNames.includes(l.name)),
       },
       {
         title: "FEATURES",
-        items: visibleLinks.filter((l) =>
-          ['Session', 'Transactions', 'Prêts', 'Trésorerie', 'Rapports'].includes(l.name)
-        ),
+        items: visibleLinks.filter((l) => featuresNames.includes(l.name)),
       },
       {
         title: "GENERAL",
-        items: visibleLinks.filter((l) =>
-          ['Terminal', 'Horaires', 'Succursales', 'Postes', 'Calendrier'].includes(l.name)
+        items: visibleLinks.filter(
+          (l) => generalNames.includes(l.name) || (!mainMenuNames.includes(l.name) && !featuresNames.includes(l.name))
         ),
       },
     ];
