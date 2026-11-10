@@ -357,7 +357,7 @@ export default function BackupsTable({
 
                   {/* Statut */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    {backup.status === 'success' ? (
+                    {backup.status === 'completed' ? (
                       <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Succès
