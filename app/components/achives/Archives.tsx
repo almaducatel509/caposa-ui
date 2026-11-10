@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Pagination from "@/app/components/ui/Pagination";
 import { useRouter } from 'next/navigation';
 import {
   Archive, Search, Filter, Eye, Trash2, RotateCcw,
@@ -410,7 +411,7 @@ export default function ArchivesPage() {
                 <p className="text-xs text-gray-400">Modifiez les filtres pour voir plus de résultats</p>
               </div>
             ) : (
-              filtered.map((archive, idx) => {
+              paginatedArchives.map((archive, idx) => {
                 const accent = getCategoryAccent(archive.category);
                 return (
                   <div key={archive.id}
@@ -509,15 +510,23 @@ export default function ArchivesPage() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-            <p className="text-xs text-gray-400">
-              <span className="font-semibold text-gray-600">{filtered.length}</span> archive{filtered.length !== 1 ? 's' : ''}
-              {searchTerm && <div> · Recherche : <b>"{searchTerm}"</b></div>}
+          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-gray-500">
+              Affichage de <span className="font-semibold text-gray-700">{Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
+              <span className="font-semibold text-gray-700">{Math.min(filtered.length, currentPage * pageSize)}</span> sur{" "}
+              <span className="font-semibold text-gray-700">{filtered.length}</span> archive{filtered.length !== 1 ? 's' : ''}
             </p>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <Lock className="w-3.5 h-3.5" />
-              Archives immuables — Soft delete direction uniquement
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filtered.length}
+              pageSize={pageSize}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setCurrentPage(1);
+              }}
+            />
           </div>
         </div>
 

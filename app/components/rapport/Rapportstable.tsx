@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Pagination from "@/app/components/ui/Pagination";
 import {
   Eye, FileDown,
   Check, ChevronUp, ChevronDown, ChevronsUpDown,
@@ -151,6 +152,10 @@ export default function RapportsTable({
     }
   }
 
+  // ── Pagination ──
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // ── Liste triée (recalculée seulement si rapports/tri change) ─
   const sorted = useMemo(() => {
     return [...rapports].sort((a, b) => {
@@ -168,6 +173,9 @@ export default function RapportsTable({
     });
   }, [rapports, sortField, sortDir]);
 
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const paginated = useMemo(() => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize), [sorted, currentPage, pageSize]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
@@ -220,7 +228,7 @@ export default function RapportsTable({
         )}
 
         {/* Lignes */}
-        {!loading && sorted.map((r, i) => {
+        {!loading && paginated.map((r, i) => {
           const cfg = STATUT_CFG[r.statut];
 
           return (
@@ -305,11 +313,23 @@ export default function RapportsTable({
 
       {/* ── Footer ── */}
       {!loading && sorted.length > 0 && (
-        <div className="flex items-center border-t border-gray-100 bg-[#F9F9F6] px-5 py-3">
-          <p className="text-xs text-gray-400">
-            <span className="font-semibold text-gray-600">{sorted.length}</span>{" "}
-            rapport{sorted.length !== 1 ? "s" : ""} enregistré{sorted.length !== 1 ? "s" : ""}
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 bg-[#F9F9F6] px-5 py-3 gap-3">
+          <p className="text-xs text-gray-500">
+            Affichage de <span className="font-semibold text-gray-700">{Math.min(sorted.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
+            <span className="font-semibold text-gray-700">{Math.min(sorted.length, currentPage * pageSize)}</span> sur{" "}
+            <span className="font-semibold text-gray-700">{sorted.length}</span> rapport{sorted.length !== 1 ? "s" : ""}
           </p>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={sorted.length}
+            pageSize={pageSize}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       )}
 

@@ -14,6 +14,7 @@ import AnomalieModal from './AnomalieModal';
 import { Remise, Decision, AnomalieDecision } from '@/types/remise';
 import AxiosInstance from '@/app/lib/axiosInstance';
 import { TableSkeleton } from '../ui/TableSkeleton';
+import Pagination from '@/app/components/ui/Pagination';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -321,6 +322,9 @@ function mapHandover(h: any): Remise {
 // ─── Composant principal ──────────────────────────────────────────────────────
 const RemisesTable: React.FC = () => {
   const [tab,      setTab]      = useState<'pending' | 'archived'>('pending');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize,    setPageSize]    = useState(10);
+  useEffect(() => { setCurrentPage(1); }, [tab]);
   const [pending,  setPending]  = useState<Remise[]>([]);
   const [archived, setArchived] = useState<Remise[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -400,6 +404,10 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
     setAnomalieTarget(null);
   } catch { /* message déjà affiché */ }
 };
+  const activeList = tab === 'pending' ? pending : sortedArchived;
+  const totalPages = Math.max(1, Math.ceil(activeList.length / pageSize));
+  const paginatedList = useMemo(() => activeList.slice((currentPage - 1) * pageSize, currentPage * pageSize), [activeList, currentPage, pageSize]);
+
   // ── En-tête triable ───────────────────────────────────────────────────────
   const SortTh: React.FC<{ field: string; label: string }> = ({ field, label }) => (
     <button
@@ -498,7 +506,7 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
           )}
 
           {/* ── En attente ── */}
-          {tab === 'pending' && pending.map(r => (
+          {tab === 'pending' && paginatedList.map(r => (
             <div
               key={r.id}
               className="grid grid-cols-[1.5fr_1.2fr_110px_1fr_110px_160px] gap-3 items-center px-5 py-3.5 hover:bg-[#FAFAF6] transition-colors"
@@ -566,7 +574,7 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
             </div>
           )}
 
-          {tab === 'archived' && sortedArchived.map(r => {
+          {tab === 'archived' && paginatedList.map(r => {
             const isOpen = expandedId === r.id;
             return (
               <div key={r.id} className="border-b border-gray-50 last:border-0">
@@ -694,6 +702,29 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
           })}
 
         </div>
+      </div>
+
+        {/* Footer pagination */}
+        {activeList.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 bg-[#F9F9F6] px-5 py-3 gap-3">
+            <p className="text-xs text-gray-500">
+              Affichage de <span className="font-semibold text-gray-700">{Math.min(activeList.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
+              <span className="font-semibold text-gray-700">{Math.min(activeList.length, currentPage * pageSize)}</span> sur{" "}
+              <span className="font-semibold text-gray-700">{activeList.length}</span> remise{activeList.length !== 1 ? 's' : ''}
+            </p>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={activeList.length}
+              pageSize={pageSize}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modale anomalie */}

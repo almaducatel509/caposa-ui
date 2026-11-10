@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/app/components/ui/Pagination';
 import { Search, Calendar, DollarSign, Users, Lock, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, Cell, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line, PieChart, Pie } from 'recharts';
 import { BiImport, BiExport } from 'react-icons/bi';
@@ -41,6 +42,9 @@ const VaultMovementHistory: React.FC = () => {
   const [minAmount, setMinAmount] = useState<string>('');
   const [maxAmount, setMaxAmount] = useState<string>('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  useEffect(() => { setCurrentPage(1); }, [periodFilter, searchTerm, typeFilter, minAmount, maxAmount]);
 
   // Génération de données échantillon (Lun-Ven, heures variées)
   const generateSampleMovements = (): VaultMovement[] => {
@@ -694,6 +698,27 @@ const VaultMovementHistory: React.FC = () => {
             </div>
             <p className="text-gray-700 text-lg font-semibold mb-2">Aucun mouvement trouvé</p>
             <p className="text-gray-500 text-sm">Essayez de modifier vos filtres pour voir plus de résultats</p>
+          </div>
+        )}
+        {/* Footer avec Pagination */}
+        {filteredMovements.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 bg-[#F9F9F6] px-6 py-4 gap-3">
+            <p className="text-xs text-gray-500">
+              Affichage de <span className="font-semibold text-gray-700">{Math.min(filteredMovements.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
+              <span className="font-semibold text-gray-700">{Math.min(filteredMovements.length, currentPage * pageSize)}</span> sur{" "}
+              <span className="font-semibold text-gray-700">{filteredMovements.length}</span> mouvement{filteredMovements.length !== 1 ? 's' : ''}
+            </p>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredMovements.length}
+              pageSize={pageSize}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setCurrentPage(1);
+              }}
+            />
           </div>
         )}
       </div>
