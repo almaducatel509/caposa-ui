@@ -172,15 +172,15 @@ const MemberTable: React.FC<MemberTableProps> = ({
   const [selected,     setSelected]     = useState<Set<string | number>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<MemberBulkAction | null>(null);
+  const activeTab    = externalTab ?? localTab;
+  const isArchiveTab = activeTab === 'archive';
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab]);
-
-  const activeTab    = externalTab ?? localTab;
-  const isArchiveTab = activeTab === 'archive';
 
   // ── Counts ────────────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
