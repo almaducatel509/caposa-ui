@@ -128,13 +128,13 @@ const SessionTable: React.FC<SessionTableProps> = ({
   const [activeAction, setActiveAction] = useState<SessionBulkAction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [openId,       setOpenId]       = useState<string | null>(null);
+
+  const activeTab = externalTab ?? localTab;
 
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab]);
-  const [openId,       setOpenId]       = useState<string | null>(null);
-
-  const activeTab = externalTab ?? localTab;
 
   // ── Counts ────────────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
