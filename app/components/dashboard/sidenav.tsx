@@ -63,7 +63,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
     .slice(0, 2);
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 shadow-sm transition-colors duration-200">
+    <div className="sidebar-container flex h-full flex-col bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 shadow-sm transition-colors duration-200">
       {/* ── Logo + Bouton Thème à 3 états ── */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-gray-100 dark:border-zinc-800 shrink-0">
         <Link
@@ -83,8 +83,8 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
         <ThemeToggle />
       </div>
 
-      {/* ── Navigation ── */}
-      <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-1 overflow-y-auto">
+      {/* ── Navigation (scroll visible uniquement au survol) ── */}
+      <div className="sidebar-scroll flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-1">
         <NavLinks />
       </div>
 
