@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@variant dark (&:where(.dark, .dark *));
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
   --foreground-rgb: 17, 24, 39;          /* gray-900 */
@@ -10,11 +11,70 @@
   color-scheme: light;
 }
 
-html.dark {
+html.dark,
+html[data-theme="dark"] {
   --foreground-rgb: 243, 244, 246;       /* gray-100 */
   --background-start-rgb: 15, 23, 42;    /* slate-900 */
   --background-end-rgb: 24, 24, 27;      /* zinc-900 */
   color-scheme: dark;
+}
+
+/* Thème sombre global pour le corps, les conteneurs et les cartes */
+html.dark body {
+  background-color: #09090b !important;
+  color: #f4f4f5 !important;
+}
+
+/* Cartes et conteneurs blancs transformés en mode sombre */
+html.dark .bg-white {
+  background-color: #18181b !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .bg-slate-50,
+html.dark .bg-zinc-50,
+html.dark .bg-\[\#F9F9F6\] {
+  background-color: #09090b !important;
+}
+
+html.dark .bg-gray-100,
+html.dark .bg-slate-100 {
+  background-color: #27272a !important;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-slate-200 {
+  border-color: #27272a !important;
+}
+
+html.dark .text-gray-900,
+html.dark .text-slate-900 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .text-gray-800,
+html.dark .text-slate-800 {
+  color: #e4e4e7 !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-slate-700 {
+  color: #d4d4d8 !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-slate-600 {
+  color: #a1a1aa !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-slate-500 {
+  color: #71717a !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #27272a !important;
 }
 
 /* Règle globale : curseur pointer sur tous les boutons interactifs */

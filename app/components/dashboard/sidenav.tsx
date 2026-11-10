@@ -64,32 +64,32 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
 
   return (
     <div className="flex h-full flex-col bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 shadow-sm transition-colors duration-200">
-      {/* ── Logo ── */}
-      <Link
-        href="/"
-        className="flex h-16 items-center gap-3 px-5 border-b border-gray-100 dark:border-zinc-800 shrink-0 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 transition-colors"
-      >
-        <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
-          <Landmark className="w-5 h-5 text-white" />
-        </div>
-        <div className="hidden md:block">
-          <span className="text-[#2E7D32] dark:text-[#4CAF50] text-lg font-bold leading-none">CAPOSA</span>
-          <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium ml-1.5">v1.0</span>
-        </div>
-      </Link>
+      {/* ── Logo + Bouton Thème à 3 états ── */}
+      <div className="flex h-16 items-center justify-between px-4 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+        >
+          <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
+            <Landmark className="w-5 h-5 text-white" />
+          </div>
+          <div className="hidden md:flex items-baseline gap-1.5">
+            <span className="text-[#2E7D32] dark:text-[#4CAF50] text-lg font-bold leading-none">CAPOSA</span>
+            <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium">v1.0</span>
+          </div>
+        </Link>
+
+        {/* Bouton 3 états (Light / Dark / Système) à droite du logo */}
+        <ThemeToggle />
+      </div>
 
       {/* ── Navigation ── */}
       <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-1 overflow-y-auto">
         <NavLinks />
       </div>
 
-      {/* ── Utilisateur + Thème + Déconnexion ── */}
+      {/* ── Utilisateur + Déconnexion ── */}
       <div className="shrink-0 border-t border-gray-100 dark:border-zinc-800">
-        {/* Sélecteur de Thème (Clair / Système / Sombre) */}
-        <div className="p-3 border-b border-gray-100 dark:border-zinc-800">
-          <ThemeToggle />
-        </div>
-
         {/* Profil utilisateur */}
         <div className="p-3 border-b border-gray-100 dark:border-zinc-800">
           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 transition-colors cursor-default">
