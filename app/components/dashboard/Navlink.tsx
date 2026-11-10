@@ -40,7 +40,6 @@ export default function NavLinks() {
 
   // Filtrage RBAC dynamique des liens et de leurs sous-menus
   const visibleLinks = useMemo(() => {
-    // Si la session est en cours de chargement initial, on attend pour éviter le flash
     if (loading) return [];
 
     return links
@@ -56,7 +55,6 @@ export default function NavLinks() {
             (sub) => !sub.roles || sub.roles.length === 0 || hasRole(...sub.roles)
           );
 
-          // Si aucun sous-lien n'est autorisé pour cet utilisateur, on masque le menu parent
           if (allowedSubLinks.length === 0) {
             return null;
           }
@@ -91,18 +89,17 @@ export default function NavLinks() {
       },
     ];
 
-    // Masquer les sections qui n'ont aucun item autorisé pour ce profil
     return sections.filter((section) => section.items.length > 0);
   }, [visibleLinks]);
 
   if (loading) {
     return (
       <div className="space-y-4 p-3 animate-pulse">
-        <div className="h-3 w-20 bg-gray-200 rounded"></div>
+        <div className="h-3 w-20 bg-gray-200 dark:bg-zinc-800 rounded"></div>
         <div className="space-y-2">
-          <div className="h-9 bg-gray-100 rounded-xl"></div>
-          <div className="h-9 bg-gray-100 rounded-xl"></div>
-          <div className="h-9 bg-gray-100 rounded-xl"></div>
+          <div className="h-9 bg-gray-100 dark:bg-zinc-800/50 rounded-xl"></div>
+          <div className="h-9 bg-gray-100 dark:bg-zinc-800/50 rounded-xl"></div>
+          <div className="h-9 bg-gray-100 dark:bg-zinc-800/50 rounded-xl"></div>
         </div>
       </div>
     );
@@ -114,7 +111,7 @@ export default function NavLinks() {
         <div key={section.title}>
           {/* Titre section */}
           <div className="px-3 mb-2">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
               {section.title}
             </p>
           </div>
@@ -138,21 +135,23 @@ export default function NavLinks() {
                       className={clsx(
                         'flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all cursor-pointer',
                         isActive
-                          ? 'bg-[#DDEAD5] text-[#1B5E20]'
-                          : 'text-gray-600 hover:bg-[#F9F9F6] hover:text-gray-900',
+                          ? 'bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/30 dark:text-[#81C784]'
+                          : 'text-gray-600 dark:text-zinc-400 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 hover:text-gray-900 dark:hover:text-zinc-100',
                       )}
                     >
                       <LinkIcon
                         className={clsx(
                           'w-4 h-4 shrink-0',
-                          isActive ? 'text-[#2E7D32]' : 'text-gray-400'
+                          isActive
+                            ? 'text-[#2E7D32] dark:text-[#4CAF50]'
+                            : 'text-gray-400 dark:text-zinc-500'
                         )}
                       />
                       <span className="hidden md:block flex-1 text-left">{link.name}</span>
                       {isExpanded ? (
-                        <FaChevronDown className="w-2.5 h-2.5 hidden md:block shrink-0 text-gray-400" />
+                        <FaChevronDown className="w-2.5 h-2.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500" />
                       ) : (
-                        <FaChevronRight className="w-2.5 h-2.5 hidden md:block shrink-0 text-gray-400" />
+                        <FaChevronRight className="w-2.5 h-2.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500" />
                       )}
                     </button>
                   ) : (
@@ -161,14 +160,16 @@ export default function NavLinks() {
                       className={clsx(
                         'flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all',
                         isActive
-                          ? 'bg-[#DDEAD5] text-[#1B5E20]'
-                          : 'text-gray-600 hover:bg-[#F9F9F6] hover:text-gray-900',
+                          ? 'bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/30 dark:text-[#81C784]'
+                          : 'text-gray-600 dark:text-zinc-400 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 hover:text-gray-900 dark:hover:text-zinc-100',
                       )}
                     >
                       <LinkIcon
                         className={clsx(
                           'w-4 h-4 shrink-0',
-                          isActive ? 'text-[#2E7D32]' : 'text-gray-400'
+                          isActive
+                            ? 'text-[#2E7D32] dark:text-[#4CAF50]'
+                            : 'text-gray-400 dark:text-zinc-500'
                         )}
                       />
                       <span className="hidden md:block flex-1">{link.name}</span>
@@ -177,7 +178,7 @@ export default function NavLinks() {
 
                   {/* Sous-menu accordéon */}
                   {link.hasSubmenu && isExpanded && (
-                    <div className="mt-0.5 ml-7 space-y-0.5 hidden md:block border-l-2 border-[#DDEAD5] pl-3">
+                    <div className="mt-0.5 ml-7 space-y-0.5 hidden md:block border-l-2 border-[#DDEAD5] dark:border-[#1B5E20]/40 pl-3">
                       {link.subLinks?.map((subLink) => {
                         const isSubActive =
                           pathname === subLink.href ||
@@ -190,8 +191,8 @@ export default function NavLinks() {
                             className={clsx(
                               'flex items-center gap-2.5 py-2 px-3 rounded-xl text-sm transition-colors',
                               isSubActive
-                                ? 'bg-[#DDEAD5] text-[#1B5E20] font-semibold'
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-[#F9F9F6]',
+                                ? 'bg-[#DDEAD5] text-[#1B5E20] dark:bg-[#1B5E20]/30 dark:text-[#81C784] font-semibold'
+                                : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60',
                             )}
                           >
                             {subLink.icon &&
@@ -204,7 +205,9 @@ export default function NavLinks() {
                                     <IconComp
                                       className={clsx(
                                         'w-3.5 h-3.5 shrink-0',
-                                        isSubActive ? 'text-[#2E7D32]' : 'text-gray-400'
+                                        isSubActive
+                                          ? 'text-[#2E7D32] dark:text-[#4CAF50]'
+                                          : 'text-gray-400 dark:text-zinc-500'
                                       )}
                                     />
                                   );

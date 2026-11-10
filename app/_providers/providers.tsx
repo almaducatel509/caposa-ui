@@ -3,6 +3,7 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { useEffect } from 'react';
 import { setCookie } from 'cookies-next';
+import { ThemeProvider } from './theme-provider';
 
 const ACCESS_COOKIE = process.env.NEXT_PUBLIC_TOKEN_NAME || process.env.TOKEN_NAME || "auth_token";
 const REFRESH_COOKIE = process.env.NEXT_PUBLIC_REFRESH_TOKEN || process.env.REFRESH_TOKEN || "refresh_token";
@@ -38,8 +39,10 @@ function TokenSyncer() {
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <TokenSyncer />
-      {children}
+      <ThemeProvider>
+        <TokenSyncer />
+        {children}
+      </ThemeProvider>
     </SessionProvider>
   );
 }

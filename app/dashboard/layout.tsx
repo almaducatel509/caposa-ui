@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const roles = (session.user as any).roles || [];
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-white">
+    <div className="flex h-screen flex-col md:flex-row bg-white dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 transition-colors duration-200">
       <div className="w-full flex-none md:w-64">
         <SideNav username={username} roles={roles} />
       </div>

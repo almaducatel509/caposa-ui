@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { logout } from '@/app/lib/actions';
 import { SessionManager } from '@/app/lib/api/Sessionmanager';
 import { useUserRoles } from '@/app/lib/useUserRoles';
+import { ThemeToggle } from '@/app/components/core/ThemeToggle';
 
 /** Libellés lisibles des rôles Django (déjà normalisés par useUserRoles). */
 const ROLE_LABELS: Record<string, string> = {
@@ -36,19 +37,13 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
   const roles = propRoles && propRoles.length > 0 ? propRoles : hookRoles;
   const username = propUsername || hookUsername;
 
-  // Rattache le cache des sessions caisse à l'utilisateur connecté :
-  // si le caissier change sur le même poste, son cache est isolé.
+  // Rattache le cache des sessions caisse à l'utilisateur connecté
   useEffect(() => {
     if (username) {
       SessionManager.bindUser(username);
     }
   }, [username]);
 
-  /**
-   * Déconnexion complète (action serveur `logout`) :
-   * blacklist du refresh token côté Django, suppression des cookies,
-   * fin de la session NextAuth, puis redirection vers /login.
-   */
   const handleLogout = () => {
     SessionManager.clear();
     startTransition(async () => {
@@ -69,19 +64,18 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
     .slice(0, 2);
 
   return (
-    <div className="flex h-full flex-col bg-white border-r border-gray-100 shadow-sm">
-
+    <div className="flex h-full flex-col bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 shadow-sm transition-colors duration-200">
       {/* ── Logo ── */}
       <Link
         href="/"
-        className="flex h-16 items-center gap-3 px-5 border-b border-gray-100 shrink-0 hover:bg-[#F9F9F6] transition-colors"
+        className="flex h-16 items-center gap-3 px-5 border-b border-gray-100 dark:border-zinc-800 shrink-0 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
           <GiReceiveMoney className="w-5 h-5 text-white" />
         </div>
         <div className="hidden md:block">
-          <span className="text-[#2E7D32] text-lg font-bold leading-none">CAPOSA</span>
-          <span className="text-xs text-gray-400 font-medium ml-1.5">v1.0</span>
+          <span className="text-[#2E7D32] dark:text-[#4CAF50] text-lg font-bold leading-none">CAPOSA</span>
+          <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium ml-1.5">v1.0</span>
         </div>
       </Link>
 
@@ -90,27 +84,33 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
         <NavLinks />
       </div>
 
-      {/* ── Utilisateur + Déconnexion ── */}
-      <div className="shrink-0 border-t border-gray-100">
+      {/* ── Utilisateur + Thème + Déconnexion ── */}
+      <div className="shrink-0 border-t border-gray-100 dark:border-zinc-800">
+        {/* Sélecteur de Thème (Clair / Système / Sombre) */}
+        <div className="p-3 border-b border-gray-100 dark:border-zinc-800">
+          <ThemeToggle />
+        </div>
 
-        <div className="p-3 border-b border-gray-100">
-          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F9F9F6] transition-colors cursor-default">
-            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-[#1B5E20]">{initials}</span>
+        {/* Profil utilisateur */}
+        <div className="p-3 border-b border-gray-100 dark:border-zinc-800">
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 transition-colors cursor-default">
+            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] dark:bg-[#1B5E20]/40 flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-[#1B5E20] dark:text-[#81C784]">{initials}</span>
             </div>
             <div className="hidden md:block flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
-              {role && <p className="text-xs text-[#2E7D32] font-medium truncate">{role}</p>}
-              {email && <p className="text-xs text-gray-400 truncate">{email}</p>}
+              <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">{name}</p>
+              {role && <p className="text-xs text-[#2E7D32] dark:text-[#4CAF50] font-medium truncate">{role}</p>}
+              {email && <p className="text-xs text-gray-400 dark:text-zinc-500 truncate">{email}</p>}
             </div>
           </div>
         </div>
 
+        {/* Déconnexion */}
         <div className="p-3">
           <button
             onClick={handleLogout}
             disabled={isPending}
-            className="flex h-10 w-full items-center justify-center gap-3 rounded-xl border border-gray-200 px-3 text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 md:justify-start transition-all disabled:opacity-60"
+            className="flex h-10 w-full items-center justify-center gap-3 rounded-xl border border-gray-200 dark:border-zinc-700 px-3 text-sm font-medium text-gray-600 dark:text-zinc-300 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-900 md:justify-start transition-all disabled:opacity-60 cursor-pointer"
           >
             {isPending
               ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" />

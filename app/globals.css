@@ -1,11 +1,20 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --foreground-rgb: 17, 24, 39;          /* gray-900 */
-  --background-start-rgb: 225, 230, 240;
+  --background-start-rgb: 249, 250, 251; /* gray-50 */
   --background-end-rgb: 255, 255, 255;
   --inter-font: 'Montserrat', sans-serif;
-  color-scheme: light;                    /* CAPOSA n'a pas de mode sombre */
+  color-scheme: light;
+}
+
+html.dark {
+  --foreground-rgb: 243, 244, 246;       /* gray-100 */
+  --background-start-rgb: 15, 23, 42;    /* slate-900 */
+  --background-end-rgb: 24, 24, 27;      /* zinc-900 */
+  color-scheme: dark;
 }
 
 /* Règle globale : curseur pointer sur tous les boutons interactifs */
@@ -25,7 +34,7 @@ input[type="submit"]:disabled {
   cursor: not-allowed;
 }
 
-/* Champs de formulaire toujours lisibles, quel que soit le thème du système */
+/* Champs de formulaire lisibles dans les deux modes */
 select,
 select option,
 input,
@@ -33,8 +42,19 @@ textarea {
   color: #111827;
 }
 
+.dark select,
+.dark select option,
+.dark input,
+.dark textarea {
+  color: #f3f4f6;
+}
+
 select option {
   background-color: #ffffff;
+}
+
+.dark select option {
+  background-color: #18181b;
 }
 
 input::placeholder,
@@ -42,13 +62,13 @@ textarea::placeholder {
   color: #9ca3af;
 }
 
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #71717a;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgb(var(--background-end-rgb))
-  ) rgb(var(--background-start-rgb));
   font-family: var(--inter-font);
   font-size: 16px;
 }
