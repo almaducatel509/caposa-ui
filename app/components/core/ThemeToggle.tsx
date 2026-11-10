@@ -1,7 +1,8 @@
 'use client';
 
 import { useTheme } from '@/app/_providers/theme-provider';
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Moon, Monitor } from 'lucide-react';
+import { FaSun } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
@@ -53,7 +54,7 @@ export function ThemeToggle({ className }: { className?: string }) {
               transition={{ duration: 0.22, ease: "easeOut" }}
               className="flex items-center justify-center"
             >
-              <Sun className="w-4 h-4 text-amber-500 stroke-[2.2]" />
+              <FaSun className="w-4 h-4 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
             </motion.div>
           )}
 
