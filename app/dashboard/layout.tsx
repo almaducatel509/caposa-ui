@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import SideNav from "@/app/components/dashboard/sidenav";
+import DashboardShell from "@/app/components/dashboard/DashboardShell";
 import { cookies } from "next/headers";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -18,14 +18,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const roles = (session.user as any).roles || [];
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-white dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 transition-colors duration-200">
-      <div className="w-full flex-none md:w-64">
-        <SideNav username={username} roles={roles} />
-      </div>
-      {/* Zéro padding ici — chaque page gère son propre p-6 md:p-8 */}
-      <div className="grow md:overflow-y-auto bg-gray-50 dark:bg-zinc-950">
-        {children}
-      </div>
-    </div>
+    <DashboardShell username={username} roles={roles}>
+      {children}
+    </DashboardShell>
   );
 }

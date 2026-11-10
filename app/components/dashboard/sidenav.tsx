@@ -27,9 +27,11 @@ const ROLE_LABELS: Record<string, string> = {
 interface SideNavProps {
   username?: string;
   roles?: string[];
+  onNavigate?: () => void;
+  hideTopHeader?: boolean;
 }
 
-export default function SideNav({ username: propUsername, roles: propRoles }: SideNavProps = {}) {
+export default function SideNav({ username: propUsername, roles: propRoles, onNavigate, hideTopHeader = false }: SideNavProps = {}) {
   const { data: session } = useSession();
   const { roles: hookRoles, username: hookUsername } = useUserRoles();
   const [isPending, startTransition] = useTransition();
@@ -66,6 +68,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
   return (
     <div className="sidebar-container flex h-full flex-col bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 shadow-sm transition-colors duration-200">
       {/* ── Logo + Bouton Thème à 3 états ── */}
+      {!hideTopHeader && (
       <div className="flex h-16 items-center justify-between px-4 border-b border-gray-100 dark:border-zinc-800 shrink-0">
         <Link
           href="/dashboard"
@@ -74,7 +77,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
           <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
             <GiReceiveMoney className="w-5 h-5 text-white" />
           </div>
-          <div className="hidden md:flex items-baseline gap-1.5">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-[#2E7D32] dark:text-[#4CAF50] text-lg font-bold leading-none">CAPOSA</span>
             <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium">v1.0</span>
           </div>
@@ -83,10 +86,11 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
         {/* Bouton 3 états (Light / Dark / Système) à droite du logo */}
         <ThemeToggle />
       </div>
+      )}
 
-      {/* ── Navigation (scroll visible uniquement au survol) ── */}
-      <div className="sidebar-scroll flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-1">
-        <NavLinks />
+      {/* ── Navigation ── */}
+      <div className="sidebar-scroll flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <NavLinks onNavigate={onNavigate} />
       </div>
 
       {/* ── Utilisateur + Déconnexion ── */}
@@ -97,7 +101,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
             <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] dark:bg-[#1B5E20]/40 flex items-center justify-center shrink-0">
               <span className="text-sm font-bold text-[#1B5E20] dark:text-[#81C784]">{initials}</span>
             </div>
-            <div className="hidden md:block flex-1 min-w-0">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">{name}</p>
               {role && <p className="text-xs text-[#2E7D32] dark:text-[#4CAF50] font-medium truncate">{role}</p>}
               {email && <p className="text-xs text-gray-400 dark:text-zinc-500 truncate">{email}</p>}
@@ -115,7 +119,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
             {isPending
               ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
               : <LogOut className="w-4 h-4 shrink-0" />}
-            <span className="hidden md:block">{isPending ? 'Déconnexion…' : 'Déconnexion'}</span>
+            <span>{isPending ? 'Déconnexion…' : 'Déconnexion'}</span>
           </button>
         </div>
       </div>

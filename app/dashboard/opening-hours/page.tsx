@@ -56,7 +56,7 @@ const loadOpeningHours = async () => {
 
 const stats = useMemo(() => computeStats(hours), [hours]);
   return (
-    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 print:bg-white print:p-0 print:m-0 p-6 md:p-8">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 print:bg-white print:p-0 print:m-0 p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto ">
 
         {/* Header */}

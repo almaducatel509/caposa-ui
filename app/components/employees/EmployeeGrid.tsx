@@ -279,7 +279,7 @@ const EmployeeGrid: React.FC = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8 flex flex-col gap-6">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-4 sm:p-6 md:p-8 flex flex-col gap-6">
 
       <PageHeader
         title="Gestion des Employes"

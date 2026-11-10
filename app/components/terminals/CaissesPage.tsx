@@ -244,7 +244,7 @@ export default function TerminalPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-6 md:p-8">
+    <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-4 sm:p-6 md:p-8">
 
       {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">

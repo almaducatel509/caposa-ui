@@ -123,7 +123,7 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
 
   /* ── Render ── */
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen">
+    <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 min-h-screen">
 
       <PageHeader
         title="Gestion des postes"

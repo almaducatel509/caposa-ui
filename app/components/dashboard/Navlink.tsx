@@ -13,7 +13,7 @@ interface MenuSection {
   items: MainLink[];
 }
 
-export default function NavLinks() {
+export default function NavLinks({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
   const { hasRole, loading } = useUserRoles();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
@@ -146,16 +146,16 @@ export default function NavLinks() {
                             : 'text-gray-400 dark:text-zinc-500'
                         )}
                       />
-                      <span className="hidden md:block flex-1 text-left">{link.name}</span>
+                      <span className="flex-1 text-left">{link.name}</span>
                       {isExpanded ? (
-                        <ChevronDown className="w-3.5 h-3.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500 transition-transform duration-200" />
+                        <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-zinc-500 transition-transform duration-200" />
                       ) : (
-                        <ChevronRight className="w-3.5 h-3.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500 transition-transform duration-200" />
+                        <ChevronRight className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-zinc-500 transition-transform duration-200" />
                       )}
                     </button>
                   ) : (
                     <Link
-                      href={link.href}
+                      href={link.href} onClick={onNavigate}
                       className={clsx(
                         'flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all',
                         isActive
@@ -171,13 +171,13 @@ export default function NavLinks() {
                             : 'text-gray-400 dark:text-zinc-500'
                         )}
                       />
-                      <span className="hidden md:block flex-1">{link.name}</span>
+                      <span className="flex-1">{link.name}</span>
                     </Link>
                   )}
 
                   {/* Sous-menu accordéon */}
                   {link.hasSubmenu && isExpanded && (
-                    <div className="mt-0.5 ml-7 space-y-0.5 hidden md:block border-l-2 border-[#DDEAD5] dark:border-[#1B5E20]/40 pl-3">
+                    <div className="mt-0.5 ml-7 space-y-0.5 border-l-2 border-[#DDEAD5] dark:border-[#1B5E20]/40 pl-3">
                       {link.subLinks?.map((subLink) => {
                         const SubIcon = subLink.icon;
                         const isSubActive =
@@ -190,7 +190,7 @@ export default function NavLinks() {
                         return (
                           <Link
                             key={subLink.name}
-                            href={subLink.href}
+                            href={subLink.href} onClick={onNavigate}
                             className={clsx(
                               'flex items-center gap-2.5 py-2 px-3 rounded-xl text-sm transition-colors',
                               isSubActive

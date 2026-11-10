@@ -265,7 +265,7 @@ const BranchesGrid: React.FC = () => {
 
   /* ─── Render ────────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
+    <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 min-h-screen bg-[#F9F9F6]">
       <PageHeader
         title="Gestion des branches"
         subtitle="Gérez toutes les branches et leurs informations"

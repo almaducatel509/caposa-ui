@@ -239,12 +239,12 @@ export default function HolidayCalendar() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen p-3 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ── Header card ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
             <PageHeader
               title="Gestion de calendrier"
               subtitle="Calendrier haïtien — assignez chaque jour aux branches concernées"
