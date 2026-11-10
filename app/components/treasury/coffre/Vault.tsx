@@ -166,6 +166,8 @@ const VaultMovementHistory: React.FC = () => {
     });
   }, [movements, searchTerm, typeFilter, minAmount, maxAmount]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredMovements.length / pageSize));
+
   // Fonctions de sélection
   const handleRowSelect = (id: string) => {
     const newSelected = new Set(selectedRows);
