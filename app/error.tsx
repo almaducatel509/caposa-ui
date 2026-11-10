@@ -47,7 +47,7 @@ export default function Error({
         <div className="flex gap-3 justify-center">
           <button
             onClick={handleRetry}
-            className="rounded-xl bg-[#1B5E20] px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#144717] transition-colors"
+            className="rounded-xl bg-[#1B5E20] px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#144717] transition-colors cursor-pointer"
           >
             Actualiser la page
           </button>

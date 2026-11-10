@@ -8,6 +8,23 @@
   color-scheme: light;                    /* CAPOSA n'a pas de mode sombre */
 }
 
+/* Règle globale : curseur pointer sur tous les boutons interactifs */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
+button:disabled,
+button[disabled],
+[role="button"][aria-disabled="true"],
+input[type="button"]:disabled,
+input[type="submit"]:disabled {
+  cursor: not-allowed;
+}
+
 /* Champs de formulaire toujours lisibles, quel que soit le thème du système */
 select,
 select option,

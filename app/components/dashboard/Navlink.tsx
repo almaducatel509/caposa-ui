@@ -136,7 +136,7 @@ export default function NavLinks() {
                       type="button"
                       onClick={() => toggleExpand(link.name)}
                       className={clsx(
-                        'flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all',
+                        'flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all cursor-pointer',
                         isActive
                           ? 'bg-[#DDEAD5] text-[#1B5E20]'
                           : 'text-gray-600 hover:bg-[#F9F9F6] hover:text-gray-900',

@@ -166,7 +166,7 @@ const LoginForm = () => {
                 <button
                   type="button"
                   onClick={() => setShow(!show)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors cursor-pointer"
                   style={{ color: '#6b7c6e' }}
                 >
                   {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -200,7 +200,7 @@ const LoginForm = () => {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
               style={{ backgroundColor: '#1B5E20', color: '#fff' }}
             >
               <span>{isPending ? 'Connexion en cours...' : 'Se connecter'}</span>
