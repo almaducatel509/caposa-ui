@@ -84,6 +84,12 @@ export default function WithdrawalTable({
   // ── Tri ───────────────────────────────────────────────────────
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize,   setPageSize]   = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortField, sortDir]);
 
   const toggleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -311,10 +317,19 @@ export default function WithdrawalTable({
 
       {/* ── Footer ── */}
       {!loading && sorted.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            <span className="font-semibold text-gray-600">{sorted.length}</span> retrait{sorted.length !== 1 ? 's' : ''} affiché{sorted.length !== 1 ? 's' : ''}
+        <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-gray-500">
+            Affichage de <span className="font-semibold text-gray-700">{Math.min(sorted.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
+            <span className="font-semibold text-gray-700">{Math.min(sorted.length, currentPage * pageSize)}</span> sur{" "}
+            <span className="font-semibold text-gray-700">{sorted.length}</span> retrait{sorted.length !== 1 ? 's' : ''}
           </p>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sorted.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>

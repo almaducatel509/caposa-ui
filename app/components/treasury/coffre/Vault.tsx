@@ -191,7 +191,8 @@ const VaultMovementHistory: React.FC = () => {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    return sorted.reduce((acc, movement) => {
+    const paginated = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    return paginated.reduce((acc, movement) => {
       const date = new Date(movement.created_at);
       let key: string;
       
@@ -219,7 +220,7 @@ const VaultMovementHistory: React.FC = () => {
       acc[key].push(movement);
       return acc;
     }, {} as Record<string, VaultMovement[]>);
-  }, [filteredMovements, periodFilter]);
+  }, [filteredMovements, periodFilter, currentPage, pageSize]);
 
   // Calculs des KPIs
   const totalIn = movements.filter(m => m.type === 'in').reduce((sum, m) => sum + m.amount, 0);

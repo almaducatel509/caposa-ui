@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrowLeftRight, CheckCircle2, XCircle, AlertCircle, Download,
 } from 'lucide-react';
@@ -77,6 +77,12 @@ export default function TransferTable({
   // ── Tri ───────────────────────────────────────────────────────
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize,   setPageSize]   = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortField, sortDir]);
 
   const toggleSort = (field: string) => {
     if (sortField === field) {
