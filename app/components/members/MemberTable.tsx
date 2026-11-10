@@ -243,7 +243,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
       {/* ── Onglets ── */}
-      <div className="flex items-center gap-0 px-2 border-b border-gray-100 bg-white">
+      <div className="flex items-center gap-0 px-2 border-b border-gray-100 bg-white overflow-x-auto">
         {([
           { id: 'actif'   as TabId, label: 'Actifs',   icon: UserCheck, active: 'border-[#2E7D32] text-[#1B5E20]',  badge: 'bg-[#DDEAD5] text-[#1B5E20]',  count: counts.actif   },
           { id: 'inactif' as TabId, label: 'Inactifs', icon: Clock,     active: 'border-yellow-500 text-yellow-700', badge: 'bg-yellow-100 text-yellow-700', count: counts.inactif },
@@ -283,7 +283,7 @@ const MemberTable: React.FC<MemberTableProps> = ({
 
       {/* ── Barre sélection ── */}
       {selected.size > 0 && (
-        <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex items-center gap-4">
+        <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
             <span className="text-sm font-semibold text-[#1B5E20]">
@@ -308,7 +308,10 @@ const MemberTable: React.FC<MemberTableProps> = ({
         </div>
       )}
 
-      {/* ── En-tête colonnes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[900px]">
+          {/* ── En-tête colonnes ── */}
       <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
         style={{ display: 'grid', gridTemplateColumns: GRID }}>
         <div className="flex items-center justify-center">
@@ -458,6 +461,9 @@ const MemberTable: React.FC<MemberTableProps> = ({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Footer ── */}

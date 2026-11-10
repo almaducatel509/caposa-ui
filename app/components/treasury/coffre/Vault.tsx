@@ -524,7 +524,10 @@ const VaultMovementHistory: React.FC = () => {
           />
         </div>
 
-        {/* Header du tableau */}
+        {/* ── Table scrollable container ── */}
+        <div className="table-scroll overflow-x-auto">
+          <div className="min-w-[850px]">
+            {/* Header du tableau */}
         <div className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-6 py-4">
           <div className="grid grid-cols-12 gap-4 items-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
             <div className="col-span-1 flex items-center gap-2">
@@ -703,6 +706,9 @@ const VaultMovementHistory: React.FC = () => {
             <p className="text-gray-500 text-sm">Essayez de modifier vos filtres pour voir plus de résultats</p>
           </div>
         )}
+        </div>
+        </div>
+
         {/* Footer avec Pagination */}
         {filteredMovements.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 bg-[#F9F9F6] px-6 py-4 gap-3">

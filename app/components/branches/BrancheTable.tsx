@@ -278,7 +278,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
 
       {/* ── Onglets ── */}
-      <div className="flex items-center px-2 border-b border-gray-100 bg-white">
+      <div className="flex items-center px-2 border-b border-gray-100 bg-white overflow-x-auto">
         {([
           {
             id: 'active' as TabId,
@@ -379,7 +379,7 @@ const BranchTable: React.FC<BranchTableProps> = ({
 
       {/* ── Barre sélection multiple ── */}
       {selected.size > 0 && (
-        <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex items-center gap-4">
+        <div className="px-5 py-3 bg-[#DDEAD5] border-b border-[#2E7D32]/15 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
             <span className="text-sm font-semibold text-[#1B5E20]">
@@ -406,7 +406,10 @@ const BranchTable: React.FC<BranchTableProps> = ({
         </div>
       )}
 
-      {/* ── En-tête colonnes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[900px]">
+          {/* ── En-tête colonnes ── */}
       <div
         className="bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
         style={{ display: "grid", gridTemplateColumns: "40px 1.6fr 1.2fr 1.4fr 1fr 1fr 130px" }}
@@ -591,6 +594,9 @@ const BranchTable: React.FC<BranchTableProps> = ({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Footer — compteurs (basés sur la liste COMPLÈTE) ── */}

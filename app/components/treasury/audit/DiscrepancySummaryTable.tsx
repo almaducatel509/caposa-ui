@@ -196,7 +196,7 @@ const DiscrepancySummaryTable: React.FC = () => {
       {/* Tableau des écarts */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[750px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Source</th>

@@ -378,7 +378,10 @@ const [notice, setNotice] = useState<string | null>(null);
           </div>
         )}
 
-        {/* En-tête des colonnes */}
+        {/* ── Table scrollable container ── */}
+        <div className="table-scroll overflow-x-auto">
+          <div className="min-w-[950px]">
+            {/* En-tête des colonnes */}
         <div className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
           style={{ display: 'grid', gridTemplateColumns: GRID }}>
           <div className="flex items-center justify-center">
@@ -546,6 +549,9 @@ const [notice, setNotice] = useState<string | null>(null);
               </div>
             );
           })}
+        </div>
+
+        </div>
         </div>
 
         {loans.length > 0 && (

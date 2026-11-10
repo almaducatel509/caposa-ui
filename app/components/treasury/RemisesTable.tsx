@@ -439,7 +439,7 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
         )}
 
         {/* ── Onglets ── */}
-        <div className="flex border-b border-gray-100 px-1">
+        <div className="flex border-b border-gray-100 px-1 overflow-x-auto">
           {[
             { id: 'pending'  as const, label: 'En attente de validation', icon: <Clock   className="w-3.5 h-3.5" />, count: pending.length,  activeClass: 'border-yellow-500 text-yellow-800', badgeClass: 'bg-yellow-100 text-yellow-800' },
             { id: 'archived' as const, label: 'Archive & audit trail',    icon: <Archive className="w-3.5 h-3.5" />, count: archived.length, activeClass: 'border-gray-500 text-gray-700',    badgeClass: 'bg-gray-100 text-gray-600'    },
@@ -474,7 +474,10 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
           </div>
         )}
 
-        {/* ── En-têtes colonnes ── */}
+        {/* ── Table scrollable container ── */}
+        <div className="table-scroll overflow-x-auto">
+          <div className="min-w-[850px]">
+            {/* ── En-têtes colonnes ── */}
         {tab === 'pending' ? (
           <div className={`${headerBase} grid grid-cols-[1.5fr_1.2fr_110px_1fr_110px_160px] gap-3`}>
             <span>Caissière</span>
@@ -701,6 +704,9 @@ const handleAnomalieConfirm = async (id: string, decision: Decision, anomalie: A
             );
           })}
 
+        </div>
+
+        </div>
         </div>
 
         {/* Footer pagination */}

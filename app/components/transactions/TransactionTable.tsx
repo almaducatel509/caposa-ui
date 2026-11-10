@@ -195,11 +195,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             );
           })}
         </div>
-        <div className="relative px-3 py-2">
+        <div className="relative px-3 py-2 w-full sm:w-auto">
           <Search className="w-3.5 h-3.5 text-gray-400 absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Référence, membre, montant…"
-            className="pl-8 pr-8 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] focus:border-[#DDEAD5] w-56 transition-all" />
+            className="pl-8 pr-8 py-1.5 text-xs rounded-xl border border-gray-200 bg-[#F9F9F6] focus:outline-none focus:ring-1 focus:ring-[#DDEAD5] focus:border-[#DDEAD5] w-full sm:w-56 transition-all" />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
               <X className="w-3 h-3" />
@@ -245,7 +245,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       )}
 
-      {/* ── Header colonnes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[850px]">
+          {/* ── Header colonnes ── */}
       <div className="grid items-center px-5 py-3 border-b border-gray-100 bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6]"
         style={{ gridTemplateColumns: GRID }}>
         <div className="flex justify-center">
@@ -346,6 +349,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Footer ── */}

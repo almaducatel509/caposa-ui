@@ -171,7 +171,10 @@ export default function TransferTable({
         </div>
       )}
 
-      {/* ── En-tête colonnes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[850px]">
+          {/* ── En-tête colonnes ── */}
       <div
         className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
         style={{ display: 'grid', gridTemplateColumns: GRID }}
@@ -284,6 +287,9 @@ export default function TransferTable({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Pied ── */}

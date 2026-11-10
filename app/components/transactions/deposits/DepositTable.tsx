@@ -254,7 +254,10 @@ export default function DepositTable({
         </div>
       )}
 
-      {/* ── En-tête colonnes (triable) ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[950px]">
+          {/* ── En-tête colonnes (triable) ── */}
       <div
         className="grid items-center px-5 py-3 border-b border-gray-100 bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6]"
         style={{ gridTemplateColumns: GRID }}
@@ -397,6 +400,9 @@ export default function DepositTable({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Pied ── */}

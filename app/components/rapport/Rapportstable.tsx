@@ -180,7 +180,10 @@ export default function RapportsTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
 
-      {/* ── En-têtes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[850px]">
+          {/* ── En-têtes ── */}
       <div
         className="border-b border-gray-200 bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6] px-5 py-3"
         style={{ display: "grid", gridTemplateColumns: GRID }}
@@ -309,6 +312,9 @@ export default function RapportsTable({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Footer ── */}

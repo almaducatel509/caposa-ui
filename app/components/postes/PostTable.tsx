@@ -209,7 +209,10 @@ const PostTable: React.FC<PostTableProps> = ({
         </div>
       )}
 
-      {/* ── Header colonnes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[800px]">
+          {/* ── Header colonnes ── */}
       <div
         className="grid items-center px-5 py-3 bg-gradient-to-r from-[#DDEAD5] to-[#F9F9F6]"
         style={{ gridTemplateColumns: "40px 2fr 3fr 1fr 120px" }}
@@ -325,6 +328,9 @@ const PostTable: React.FC<PostTableProps> = ({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Footer ── */}

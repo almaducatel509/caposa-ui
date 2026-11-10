@@ -12,7 +12,7 @@ export default function TablePageSkeleton({
   rowCount = 7,
 }: TablePageSkeletonProps) {
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto animate-pulse">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto animate-pulse">
       {/* ── En-tête : Titre & Bouton d'action principal ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-gray-100 dark:border-zinc-800">
         <div className="flex items-center gap-3">
@@ -56,7 +56,9 @@ export default function TablePageSkeleton({
 
       {/* ── Tableau de données Réaliste ── */}
       <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-xs">
-        {/* Entête colonnes */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[750px]">
+            {/* Entête colonnes */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50/70 dark:bg-zinc-800/40 border-b border-gray-100 dark:border-zinc-800">
           <div className="col-span-4 h-3.5 bg-gray-200 dark:bg-zinc-700 rounded w-28" />
           <div className="col-span-3 h-3.5 bg-gray-200 dark:bg-zinc-700 rounded w-20" />
@@ -103,6 +105,9 @@ export default function TablePageSkeleton({
               </div>
             </div>
           ))}
+        </div>
+
+        </div>
         </div>
 
         {/* ── Pied de Tableau : Pagination ── */}

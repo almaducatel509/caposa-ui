@@ -166,7 +166,10 @@ export default function WithdrawalTable({
         </div>
       )}
 
-      {/* ── En-têtes ── */}
+      {/* ── Table scrollable container ── */}
+      <div className="table-scroll overflow-x-auto">
+        <div className="min-w-[950px]">
+          {/* ── En-têtes ── */}
       <div
         className="bg-linear-to-r from-[#DDEAD5] to-[#F9F9F6] border-b border-gray-200 px-5 py-3"
         style={{ display: 'grid', gridTemplateColumns: GRID }}
@@ -313,6 +316,9 @@ export default function WithdrawalTable({
             </div>
           );
         })}
+      </div>
+
+      </div>
       </div>
 
       {/* ── Footer ── */}
