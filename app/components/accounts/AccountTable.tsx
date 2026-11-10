@@ -392,7 +392,7 @@ return (
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isArchiveTab ? 'text-gray-400' : 'text-red-900'}`}>
+                    <p className={`text-sm font-semibold font-mono tracking-wide truncate ${isArchiveTab ? 'text-gray-400' : 'text-red-900 dark:text-rose-400'}`}>
                       {acc.account_number}
                     </p>
                     {isPending && (

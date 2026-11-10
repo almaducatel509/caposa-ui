@@ -20,21 +20,52 @@ html[data-theme="dark"] {
 }
 
 /* Thème sombre global pour le corps, les conteneurs et les cartes */
+html.dark,
 html.dark body {
   background-color: #09090b !important;
   color: #f4f4f5 !important;
 }
 
+/* Neutralisation de tous les gradients clairs de fond de page en mode sombre */
+html.dark [class*="bg-linear-to-br"],
+html.dark [class*="bg-gradient-to-br"],
+html.dark [class*="from-[#F9F9F6]"],
+html.dark [class*="from-green-50"],
+html.dark main,
+html.dark .min-h-screen {
+  background-image: none !important;
+  background-color: #09090b !important;
+}
+
+/* En-tête de tableau (suppression du gradient vert pastel/crème au profit d'un fond zinc sombre) */
+html.dark [class*="from-[#DDEAD5]"],
+html.dark [class*="to-[#F9F9F6]"] {
+  background-image: none !important;
+  background-color: #1e1e23 !important;
+  border-color: #27272a !important;
+}
+
+html.dark [class*="from-[#DDEAD5]"] button,
+html.dark [class*="from-[#DDEAD5]"] span,
+html.dark [class*="to-[#F9F9F6]"] button,
+html.dark [class*="to-[#F9F9F6]"] span {
+  color: #e4e4e7 !important;
+}
+
 /* Cartes et conteneurs blancs transformés en mode sombre */
 html.dark .bg-white {
   background-color: #18181b !important;
+  border-color: #27272a !important;
 }
 
+/* Lignes alternées et fonds gris en mode sombre */
 html.dark .bg-gray-50,
+html.dark .bg-gray-50\/40,
+html.dark .bg-gray-50\/50,
 html.dark .bg-slate-50,
 html.dark .bg-zinc-50,
 html.dark .bg-\[\#F9F9F6\] {
-  background-color: #09090b !important;
+  background-color: #141417 !important;
 }
 
 html.dark .bg-gray-100,
@@ -48,6 +79,7 @@ html.dark .border-slate-200 {
   border-color: #27272a !important;
 }
 
+/* Couleurs de texte adaptées */
 html.dark .text-gray-900,
 html.dark .text-slate-900 {
   color: #f4f4f5 !important;
@@ -70,11 +102,49 @@ html.dark .text-slate-600 {
 
 html.dark .text-gray-500,
 html.dark .text-slate-500 {
+  color: #8e8e93 !important;
+}
+
+html.dark .text-gray-400,
+html.dark .text-slate-400 {
   color: #71717a !important;
 }
 
-html.dark table tbody tr:hover {
+/* N° de compte rouge sombre transformé en rouge clair lisible */
+html.dark .text-red-900,
+html.dark .text-red-800 {
+  color: #f87171 !important;
+}
+
+/* Badges verts Caposa en mode sombre */
+html.dark .bg-\[\#DDEAD5\] {
+  background-color: rgba(46, 125, 50, 0.25) !important;
+  color: #81c784 !important;
+}
+
+html.dark .text-\[\#1B5E20\],
+html.dark .text-\[\#2E7D32\] {
+  color: #81c784 !important;
+}
+
+/* Survol des lignes */
+html.dark table tbody tr:hover,
+html.dark div[class*="divide-y"] > div:hover {
   background-color: #27272a !important;
+}
+
+/* Champs de formulaire en mode sombre */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #71717a !important;
 }
 
 /* Règle globale : curseur pointer sur tous les boutons interactifs */

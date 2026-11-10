@@ -23,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SideNav username={username} roles={roles} />
       </div>
       {/* Zéro padding ici — chaque page gère son propre p-6 md:p-8 */}
-      <div className="grow md:overflow-y-auto">
+      <div className="grow md:overflow-y-auto bg-gray-50 dark:bg-zinc-950">
         {children}
       </div>
     </div>
