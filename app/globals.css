@@ -19,6 +19,25 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
+/* Animation fluide du changement de thème (View Transitions API + CSS) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body,
+aside,
+main,
+nav,
+header,
+div[class*="bg-"],
+div[class*="border-"] {
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Thème sombre global pour le corps, les conteneurs et les cartes */
 html.dark,
 html.dark body {

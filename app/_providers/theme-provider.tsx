@@ -78,8 +78,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       // Ignore
     }
-    const res = applyThemeToDOM(nextTheme);
-    setResolvedTheme(res);
+
+    // Animation de transition visuelle native et fluide (View Transitions API) si disponible
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        const res = applyThemeToDOM(nextTheme);
+        setResolvedTheme(res);
+      });
+    } else {
+      const res = applyThemeToDOM(nextTheme);
+      setResolvedTheme(res);
+    }
   }, []);
 
   const cycleTheme = useCallback(() => {
