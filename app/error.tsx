@@ -18,23 +18,16 @@ export default function Error({
     if (
       msg.includes("Server Action") ||
       msg.includes("Server Reference ID") ||
-      msg.includes("Failed to find Server Action")
+      msg.includes("Failed to find Server Action") ||
+      msg.includes("unexpected response")
     ) {
       window.location.reload();
     }
   }, [error]);
 
   const handleRetry = () => {
-    const msg = error?.message || "";
-    if (
-      msg.includes("Server Action") ||
-      msg.includes("Server Reference ID") ||
-      msg.includes("Failed to find Server Action")
-    ) {
-      window.location.reload();
-    } else {
-      reset();
-    }
+    // Rechargement complet de la page pour forcer la récupération des nouveaux bundles et rétablir la connexion
+    window.location.reload();
   };
 
   return (

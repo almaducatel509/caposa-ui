@@ -2,8 +2,7 @@
 
 import { useEffect, useTransition } from 'react';
 import Link from 'next/link';
-import { GiReceiveMoney } from 'react-icons/gi';
-import { LogOut, Loader2 } from 'lucide-react';
+import { Landmark, LogOut, Loader2 } from 'lucide-react';
 import NavLinks from '@/app/components/dashboard/Navlink';
 import { useSession } from 'next-auth/react';
 import { logout } from '@/app/lib/actions';
@@ -71,7 +70,7 @@ export default function SideNav({ username: propUsername, roles: propRoles }: Si
         className="flex h-16 items-center gap-3 px-5 border-b border-gray-100 dark:border-zinc-800 shrink-0 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-[#2E7D32] flex items-center justify-center shrink-0">
-          <GiReceiveMoney className="w-5 h-5 text-white" />
+          <Landmark className="w-5 h-5 text-white" />
         </div>
         <div className="hidden md:block">
           <span className="text-[#2E7D32] dark:text-[#4CAF50] text-lg font-bold leading-none">CAPOSA</span>

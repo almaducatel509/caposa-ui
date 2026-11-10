@@ -1,10 +1,9 @@
 'use client';
 
-import { FaChevronRight, FaChevronDown } from "react-icons/fa";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { IconType } from 'react-icons';
 import { links, MainLink } from './menu-links';
 import { useState, useEffect, useMemo } from "react";
 import { useUserRoles } from '@/app/lib/useUserRoles';
@@ -141,7 +140,7 @@ export default function NavLinks() {
                     >
                       <LinkIcon
                         className={clsx(
-                          'w-4 h-4 shrink-0',
+                          'w-4 h-4 shrink-0 transition-colors',
                           isActive
                             ? 'text-[#2E7D32] dark:text-[#4CAF50]'
                             : 'text-gray-400 dark:text-zinc-500'
@@ -149,9 +148,9 @@ export default function NavLinks() {
                       />
                       <span className="hidden md:block flex-1 text-left">{link.name}</span>
                       {isExpanded ? (
-                        <FaChevronDown className="w-2.5 h-2.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500" />
+                        <ChevronDown className="w-3.5 h-3.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500 transition-transform duration-200" />
                       ) : (
-                        <FaChevronRight className="w-2.5 h-2.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500" />
+                        <ChevronRight className="w-3.5 h-3.5 hidden md:block shrink-0 text-gray-400 dark:text-zinc-500 transition-transform duration-200" />
                       )}
                     </button>
                   ) : (
@@ -166,7 +165,7 @@ export default function NavLinks() {
                     >
                       <LinkIcon
                         className={clsx(
-                          'w-4 h-4 shrink-0',
+                          'w-4 h-4 shrink-0 transition-colors',
                           isActive
                             ? 'text-[#2E7D32] dark:text-[#4CAF50]'
                             : 'text-gray-400 dark:text-zinc-500'
@@ -180,6 +179,7 @@ export default function NavLinks() {
                   {link.hasSubmenu && isExpanded && (
                     <div className="mt-0.5 ml-7 space-y-0.5 hidden md:block border-l-2 border-[#DDEAD5] dark:border-[#1B5E20]/40 pl-3">
                       {link.subLinks?.map((subLink) => {
+                        const SubIcon = subLink.icon;
                         const isSubActive =
                           pathname === subLink.href ||
                           (subLink.href !== '/dashboard' && pathname.startsWith(subLink.href + '/'));
@@ -195,24 +195,16 @@ export default function NavLinks() {
                                 : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60',
                             )}
                           >
-                            {subLink.icon &&
-                              (typeof subLink.icon === 'string' ? (
-                                <span className="text-sm">{subLink.icon}</span>
-                              ) : (
-                                (() => {
-                                  const IconComp = subLink.icon as IconType;
-                                  return (
-                                    <IconComp
-                                      className={clsx(
-                                        'w-3.5 h-3.5 shrink-0',
-                                        isSubActive
-                                          ? 'text-[#2E7D32] dark:text-[#4CAF50]'
-                                          : 'text-gray-400 dark:text-zinc-500'
-                                      )}
-                                    />
-                                  );
-                                })()
-                              ))}
+                            {SubIcon && (
+                              <SubIcon
+                                className={clsx(
+                                  'w-3.5 h-3.5 shrink-0 transition-colors',
+                                  isSubActive
+                                    ? 'text-[#2E7D32] dark:text-[#4CAF50]'
+                                    : 'text-gray-400 dark:text-zinc-500'
+                                )}
+                              />
+                            )}
                             <span className="truncate">{subLink.name}</span>
                           </Link>
                         );
