@@ -1,30 +1,61 @@
-"use client"
+"use client";
+
 import { Lock, Eye, EyeOff, Loader2, CircleAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { useActionState } from 'react';
-import { authenticate } from '@/app/lib/actions';
+import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
 const LoginForm = () => {
   const [show, setShow] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [errorMessage, formAction, isPending] = useActionState(authenticate, undefined);
+  const [isPending, setIsPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const isExpired = searchParams.get('expired') === '1';
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsPending(true);
+    setErrorMessage(null);
+
+    const formData = new FormData(e.currentTarget);
+    const username = (formData.get('username') as string)?.trim();
+    const password = formData.get('password') as string;
+
+    try {
+      const res = await signIn('credentials', {
+        username,
+        password,
+        redirect: false,
+      });
+
+      if (!res || res.error) {
+        setErrorMessage("Identifiant ou mot de passe incorrect.");
+        setIsPending(false);
+        return;
+      }
+
+      // Redirection après connexion réussie
+      window.location.href = callbackUrl;
+    } catch (err) {
+      console.error("Erreur login :", err);
+      setErrorMessage("Une erreur est survenue lors de la connexion. Veuillez réessayer.");
+      setIsPending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex">
-
       {/* ── Panneau gauche — image de fond ── */}
-     <div
-      className="hidden lg:flex flex-col justify-between p-12.5 flex-[1.1] relative"
-      style={{
-        backgroundImage: "url('/BGlogin.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
+      <div
+        className="hidden lg:flex flex-col justify-between p-12.5 flex-[1.1] relative"
+        style={{
+          backgroundImage: "url('/BGlogin.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         <div className="absolute inset-0 bg-black/25" />
 
         {/* Logo */}
@@ -39,14 +70,14 @@ const LoginForm = () => {
         </div>
 
         {/* Tagline */}
-       <div className="relative z-10">
+        <div className="relative z-10">
           <h2 className="text-white text-2xl font-semibold leading-snug mb-2">
             Votre espace coopératif,<br />Simple et sûr
           </h2>
           <p className="text-white/80 text-sm max-w-xs leading-relaxed">
             Un lieu de confiance pour vos opérations et votre communauté.
           </p>
-       </div>
+        </div>
 
         {/* Badge sécurité */}
         <div className="relative z-10 flex items-center gap-2 text-white/60 text-xs">
@@ -55,12 +86,12 @@ const LoginForm = () => {
         </div>
       </div>
 
-     {/* ── Panneau droit — formulaire ── */}
-      <div className="flex-1 flex flex-col justify-center items-center px-8 py-12 min-w-[320px]"
+      {/* ── Panneau droit — formulaire ── */}
+      <div
+        className="flex-1 flex flex-col justify-center items-center px-8 py-12 min-w-[320px]"
         style={{ backgroundColor: '#F9F9F6' }}
       >
         <div className="w-full max-w-sm">
-
           {/* En-tête */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-1" style={{ color: '#1B5E20' }}>Bon retour</h2>
@@ -74,12 +105,14 @@ const LoginForm = () => {
             </div>
           )}
 
-          <form action={formAction} className="space-y-5">
-
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Identifiant */}
             <div>
-              <label htmlFor="username" className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
-                style={{ color: '#4a6352' }}>
+              <label
+                htmlFor="username"
+                className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
+                style={{ color: '#4a6352' }}
+              >
                 Identifiant
               </label>
               <input
@@ -104,8 +137,11 @@ const LoginForm = () => {
 
             {/* Mot de passe */}
             <div>
-              <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
-                style={{ color: '#4a6352' }}>
+              <label
+                htmlFor="password"
+                className="block text-xs font-semibold uppercase tracking-wide mb-1.5"
+                style={{ color: '#4a6352' }}
+              >
                 Mot de passe
               </label>
               <div className="relative">
@@ -140,22 +176,25 @@ const LoginForm = () => {
 
             {/* Mot de passe oublié */}
             <div className="flex justify-center">
-              <a href="#" className="text-xs font-medium transition-colors"
-                style={{ color: '#b8972a' }}>
+              <a
+                href="#"
+                className="text-xs font-medium transition-colors"
+                style={{ color: '#b8972a' }}
+              >
                 Mot de passe oublié ? Contactez l’administrateur.
               </a>
             </div>
 
             {/* Erreur */}
             {errorMessage && (
-              <div className="flex items-center gap-2 p-3 rounded-xl border"
-                style={{ backgroundColor: '#fdf0f0', borderColor: '#f5c6c6' }}>
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl border"
+                style={{ backgroundColor: '#fdf0f0', borderColor: '#f5c6c6' }}
+              >
                 <CircleAlert className="w-4 h-4 flex-shrink-0" style={{ color: '#c0392b' }} />
                 <p className="text-xs font-medium" style={{ color: '#c0392b' }}>{errorMessage}</p>
               </div>
             )}
-
-            <input type="hidden" name="redirectTo" value={callbackUrl} />
 
             {/* Bouton submit */}
             <button
@@ -183,7 +222,6 @@ const LoginForm = () => {
           </div>
         </div>
       </div>
-
     </div>
   );
 };
