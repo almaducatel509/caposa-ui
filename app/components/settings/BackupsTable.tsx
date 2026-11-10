@@ -84,7 +84,7 @@ export default function BackupsTable({
         ? true
         : filterType === 'auto'
         ? b.backup_type === 'auto'
-        : b.backup_type === 'manual' || b.backup_type === 'instant';
+        : b.backup_type === 'manual';
     return matchesSearch && matchesType;
   });
 
