@@ -11,6 +11,7 @@ const LoginForm = () => {
   const [errorMessage, formAction, isPending] = useActionState(authenticate, undefined);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const isExpired = searchParams.get('expired') === '1';
 
   return (
     <div className="min-h-screen flex">
@@ -65,6 +66,13 @@ const LoginForm = () => {
             <h2 className="text-2xl font-bold mb-1" style={{ color: '#1B5E20' }}>Bon retour</h2>
             <p className="text-sm" style={{ color: '#6b7c6e' }}>Connectez-vous à votre compte</p>
           </div>
+
+          {isExpired && (
+            <div className="mb-6 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2.5">
+              <CircleAlert className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>Votre session a expiré. Veuillez vous reconnecter.</span>
+            </div>
+          )}
 
           <form action={formAction} className="space-y-5">
 

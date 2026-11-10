@@ -207,7 +207,21 @@ export async function logout(tokens?: { access?: string; refresh?: string }) {
 
   // 2. Cookies : API native de Next.js (plus fiable que cookies-next dans une action serveur)
   const store = await cookies();
-  for (const name of [ACCESS_COOKIE, REFRESH_COOKIE, "roles"]) {
+  const allAuthCookies = [
+    ACCESS_COOKIE,
+    REFRESH_COOKIE,
+    "roles",
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "authjs.csrf-token",
+    "__Host-authjs.csrf-token",
+    "authjs.callback-url",
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+    "next-auth.csrf-token",
+    "next-auth.callback-url",
+  ];
+  for (const name of allAuthCookies) {
     if (name) store.delete(name);
   }
 
