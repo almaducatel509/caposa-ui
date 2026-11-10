@@ -255,6 +255,18 @@ export default function ArchivesPage() {
     deleted:        archives.filter(a => a.isDeleted).length,
   }), [archives]);
 
+  // ─── Pagination ────────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, showDeleted, searchTerm]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedArchives = useMemo(
+    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filtered, currentPage, pageSize]
+  );
+
   // ─── Routing vers la page de détail selon le type ─────────────────────────
   const handleViewDetails = (archive: ArchiveType) => {
     if      (archive.type === 'reconciliation_caisse')                           router.push(`/dashboard/archives/reconciliation/${archive.id}`);
