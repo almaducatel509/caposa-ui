@@ -60,9 +60,9 @@ export const loginUser = async (username: string, password: string) => {
     });
 
     const token: Token = resp.data;
-    await setCookie(ACCESS_COOKIE, token.access, { cookies });
-    await setCookie(REFRESH_COOKIE, token.refresh, { cookies });
-    await setCookie("roles", JSON.stringify(token.roles), { cookies });
+    await setCookie(ACCESS_COOKIE, token.access, { cookies, path: "/", maxAge: 60 * 60 * 24 });
+    await setCookie(REFRESH_COOKIE, token.refresh, { cookies, path: "/", maxAge: 60 * 60 * 24 * 30 });
+    await setCookie("roles", JSON.stringify(token.roles), { cookies, path: "/", maxAge: 60 * 60 * 24 * 30 });
 
     log.info(`Connexion réussie pour l'utilisateur : ${username}`);
 

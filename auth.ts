@@ -72,8 +72,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           isAdmin:
             normalizedRoles.includes("administrateur") ||
             ADMIN_USERNAMES.includes(finalUsername),
-          accessToken: access,
-          refreshToken: refresh,
         };
       },
     }),
@@ -86,8 +84,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         token.username = (user as any).username;
         token.roles = (user as any).roles ?? [];
         token.isAdmin = (user as any).isAdmin;
-        token.accessToken = (user as any).accessToken;
-        token.refreshToken = (user as any).refreshToken;
       }
       return token;
     },
@@ -96,8 +92,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         (session.user as any).username = token.username;
         (session.user as any).roles = token.roles ?? [];
         (session.user as any).isAdmin = token.isAdmin;
-        (session.user as any).accessToken = token.accessToken;
-        (session.user as any).refreshToken = token.refreshToken;
         session.user.name = (token.name as string) || (token.username as string);
       }
       return session;
