@@ -1,3 +1,4 @@
+import AxiosInstance from '@/app/lib/axiosInstance';
 import { z } from 'zod';
 
 /* ─────────────────────────────────────────────
@@ -177,34 +178,6 @@ export function mapDepositFormToPayload(input: DepositFormValidated, sessionId: 
       : {}),
   };
 }
-
-// export function mapDepositFormToPayload(input: DepositFormValidated, sessionId: string) {
-//   return {
-//     idCompte:           input.idCompte,
-//     session:            sessionId,
-//     montantTransaction: input.montantTransaction,
-//     // codeAutorisation:   input.codeAutorisation,
-//     depositSubtype:     input.depositSubtype,
-//     source:             input.source,
-//     description:        input.description || null,
-//     ...(input.depositSubtype === 'check'
-//       ? {
-//           checkNumber:       input.checkNumber,
-//           issuingBank:       input.issuingBank,
-//           checkIssuerName:   input.checkIssuerName,
-//           checkDate:         input.checkDate,
-//           micrSequence:      input.micrSequence,
-//           bankCode:          input.bankCode,
-//           accountNumberMicr: input.accountNumberMicr,
-//           branchCode:        input.branchCode,
-//           productCode:       input.productCode,
-//           beneficiary:       input.beneficiary,
-//           amountWords:       input.amountWords,
-//           issuePlace:        input.issuePlace,
-//         }
-//       : {}),
-//   };
-// }
 
 export function mapApiTransactionToDeposit(t: any): DepositData {
   const method = String(t.method ?? '').toLowerCase();

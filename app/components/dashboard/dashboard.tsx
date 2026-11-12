@@ -451,7 +451,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
             <GreetIcon className="w-5 h-5" />
             <span className="text-sm font-medium">{greeting.text}, {currentUser.name}</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard Caissier</h1>
+          <h1 className="text-2xl font-bold text-gray-900 capitalize">Tableau de bord</h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">{getDate()} · {time}</p>
         </div>
           {FEATURES.alerts && alerts && <AlertsBell alerts={alerts} />}

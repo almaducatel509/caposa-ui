@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   X, ArrowDownCircle, TrendingDown, ArrowLeftRight, Landmark,
   User, CreditCard, Hash, FileText, Clock, ShieldCheck,
@@ -11,9 +10,8 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
-import { getDepositAudit } from '@/app/lib/api/deposit';
+import {  fetchEmployeeById } from '@/app/lib/api/deposit';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type TransactionKind = 'deposit' | 'withdrawal' | 'transfer' | 'loan';
 
@@ -135,9 +133,10 @@ function formatHTG(n?: number) {
 function formatDateTime(iso?: string) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('fr-FR', {
+  const s = d.toLocaleDateString('fr-FR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   }) + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // ─── Row simple ───────────────────────────────────────────────────────────────
@@ -202,6 +201,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function useEmployeeName(raw?: string, id?: string) {
+  const isUuid = !!raw && UUID_RE.test(raw);
+  const employeeId = id ?? (isUuid ? raw : undefined);
+  const [name, setName] = React.useState<string | undefined>(isUuid ? undefined : raw);
+
+  useEffect(() => {
+    if (!isUuid || !employeeId) { setName(raw); return; }
+    let cancelled = false;
+    fetchEmployeeById(employeeId)
+      .then((emp: any) => {
+        if (cancelled) return;
+        const full = [emp.prenom ?? emp.first_name, emp.nom ?? emp.last_name]
+          .filter(Boolean).join(' ').trim();
+        setName(full || emp.user?.username || 'Employé introuvable');
+      })
+      .catch(() => { if (!cancelled) setName('Employé introuvable'); });
+    return () => { cancelled = true; };
+  }, [raw, employeeId, isUuid]);
+
+  return { name, employeeId };
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 interface TransactionDetailModalProps {
   transaction: TransactionDetail | null;
@@ -209,7 +232,11 @@ interface TransactionDetailModalProps {
 }
 
 export default function TransactionDetailModal({ transaction, onClose }: TransactionDetailModalProps) {
+  const processedBy = useEmployeeName(transaction?.processed_by, transaction?.processed_by_id);
+  const validatedBy = useEmployeeName(transaction?.validated_by, transaction?.validated_by_id);
+
   if (!transaction) return null;
+  // ...
 
   const kindCfg   = KIND_CFG[transaction.kind];
   const statusCfg = STATUS_CFG[transaction.status] ?? STATUS_CFG['en_attente'];
@@ -397,12 +424,8 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               <LinkRow
                 icon={Cpu}
                 label="Effectué par"
-                value={transaction.processed_by}
-                href={
-                  transaction.processed_by_id
-                    ? `/dashboard/employees/${transaction.processed_by_id}`
-                    : `#`
-                }
+                value={processedBy.name ?? 'Chargement…'}
+                href={processedBy.employeeId ? `/dashboard/employees/${processedBy.employeeId}` : '#'}
                 tooltip="Voir la fiche de l'employé"
                 accent="#2E7D32"
               />

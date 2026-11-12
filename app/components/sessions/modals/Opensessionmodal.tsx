@@ -339,7 +339,7 @@ const responsablesCash = useMemo(
               </option>
               {availableCaisses.map(c => (
                 <option key={c.id} value={c.numero_caisse}>
-                  {c.numero_caisse} — {c.nom_caisse}
+                  {c.numero_caisse}  {c.nom_caisse}
                 </option>
               ))}
             </select>

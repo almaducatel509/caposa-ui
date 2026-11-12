@@ -207,3 +207,7 @@ export async function createTransaction(payload: {
     body:   JSON.stringify(body),
   });
 }
+export async function fetchEmployeeById(id: string) {
+  const { data } = await AxiosInstance.get(`/employees/${id}/`);
+  return data;
+}
