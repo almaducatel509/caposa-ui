@@ -59,17 +59,20 @@ function formatTime(iso?: string): string {
     hour: '2-digit', minute: '2-digit',
   });
 }
-
 function duree(ouverture?: string, fermeture?: string): string {
   if (!ouverture) return '—';
   const fin   = fermeture ? new Date(fermeture) : new Date();
   const debut = new Date(ouverture);
-  const diff  = Math.floor((fin.getTime() - debut.getTime()) / 60000);
-  const h = Math.floor(diff / 60);
-  const m = diff % 60;
-  return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}min`;
-}
+  const diff  = Math.max(0, Math.floor((fin.getTime() - debut.getTime()) / 60000));
 
+  const j = Math.floor(diff / 1440);          // 1440 min = 1 jour
+  const h = Math.floor((diff % 1440) / 60);
+  const m = diff % 60;
+
+  if (j > 0) return h > 0 ? `${j} j ${h} h` : `${j} j`;
+  if (h > 0) return `${h}h${m.toString().padStart(2, '0')}`;
+  return `${m}min`;
+}
 function getInitials(name?: string): string {
   if (!name) return '??';
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();

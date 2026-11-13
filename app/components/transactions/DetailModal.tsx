@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import {
-  X, ArrowDownCircle, TrendingDown, ArrowLeftRight, Landmark,
-  User, CreditCard, Hash, FileText, Clock, ShieldCheck,
+  ArrowDownCircle, TrendingDown, ArrowLeftRight, Landmark,
+  User, CreditCard, Hash, FileText, Clock,
   CheckCircle2, AlertTriangle, XCircle, Loader2,
   Banknote, Building2, Calendar, Tag, ExternalLink,
   UserCheck, Cpu, Receipt,
-  ArrowUpRight,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
-import {  fetchEmployeeById } from '@/app/lib/api/deposit';
+import { fetchEmployeeById } from '@/app/lib/api/deposit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type TransactionKind = 'deposit' | 'withdrawal' | 'transfer' | 'loan';
@@ -69,9 +69,9 @@ export interface WithdrawalDetail extends TransactionBase {
 // ─── Virement ────────────────────────────────────────────────────────────────
 export interface TransferDetail extends TransactionBase {
   kind:   'transfer';
-  status: 'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
+  status: 'approuve' | 'decaisse' | 'en_attente' | 'en_cours' | 'echoue' | 'annule';
 
-  transferType?:      'internal' | 'supplier' | 'loan_payment';
+  transferType?:      'interne' | 'externe' | 'internal' | 'supplier' | 'loan_payment';
   compteSource?:      string;
   compteDestination?: string;
   supplierName?:      string;
@@ -106,6 +106,7 @@ const KIND_CFG: Record<TransactionKind, { label: string; icon: React.ElementType
 
 const STATUS_CFG: Record<string, { label: string; bg: string; text: string; dot: string; icon: React.ElementType }> = {
   decaisse:   { label: 'Décaissé',    bg: '#DDEAD5', text: '#1B5E20', dot: '#2E7D32', icon: CheckCircle2 },
+  approuve:   { label: 'Approuvé',    bg: '#DDEAD5', text: '#1B5E20', dot: '#2E7D32', icon: CheckCircle2 },
   rembourse:  { label: 'Remboursé',   bg: '#F0FDF4', text: '#166534', dot: '#22C55E', icon: CheckCircle2 },
   en_attente: { label: 'En attente',  bg: '#FEF9EC', text: '#B45309', dot: '#F59E0B', icon: Clock        },
   en_cours:   { label: 'En cours',    bg: '#EBF2F8', text: '#355C7D', dot: '#355C7D', icon: Loader2      },
@@ -121,15 +122,17 @@ const WITHDRAWAL_SUBTYPE: Record<string, string> = {
   counter: 'Comptoir', check: 'Chèque', loan_disbursement: 'Décaissement prêt', other: 'Autre',
 };
 const TRANSFER_TYPE: Record<string, string> = {
+  interne: 'Interne (même membre)', externe: 'Vers un autre membre',
   internal: 'Entre comptes', supplier: 'Fournisseur', loan_payment: 'Remboursement prêt',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatHTG(n?: number) {
-  if (n == null) return '—';
-  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+function formatHTG(n?: number | string | null) {
+  if (n == null || n === '') return '—';
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(Number(n)) + ' HTG';
 }
 
+// « Jeudi 12 novembre 2026 à 17:23:23 » — seule la 1re lettre en majuscule
 function formatDateTime(iso?: string) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -140,9 +143,9 @@ function formatDateTime(iso?: string) {
 }
 
 // ─── Row simple ───────────────────────────────────────────────────────────────
-function Row({ icon: Icon, label, value, mono, accent }: {
+function Row({ icon: Icon, label, value, mono, accent, capitalize }: {
   icon: React.ElementType; label: string; value?: string | number | null;
-  mono?: boolean; accent?: string;
+  mono?: boolean; accent?: string; capitalize?: boolean;
 }) {
   if (!value && value !== 0) return null;
   return (
@@ -152,7 +155,7 @@ function Row({ icon: Icon, label, value, mono, accent }: {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-        <p className={`text-sm font-semibold break-all ${mono ? 'font-mono' : ''}`}
+        <p className={`text-sm font-semibold break-all ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''}`}
           style={{ color: accent ?? '#1f2937' }}>
           {value}
         </p>
@@ -162,28 +165,30 @@ function Row({ icon: Icon, label, value, mono, accent }: {
 }
 
 // ─── Row cliquable (lien interne) ─────────────────────────────────────────────
-function LinkRow({ icon: Icon, label, value, href, tooltip, mono, accent }: {
+// Sans href → s'affiche comme une Row simple (pas de faux lien vers "#")
+function LinkRow({ icon: Icon, label, value, href, tooltip, mono, accent, capitalize }: {
   icon: React.ElementType; label: string; value?: string | null;
-  href: string; tooltip: string; mono?: boolean; accent?: string;
+  href?: string; tooltip: string; mono?: boolean; accent?: string; capitalize?: boolean;
 }) {
   if (!value) return null;
+  if (!href) return <Row icon={Icon} label={label} value={value} mono={mono} capitalize={capitalize} />;
   return (
-    <div className=" capitalize flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
+    <div className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
       <div className="w-7 h-7 rounded-lg bg-[#F9F9F6] flex items-center justify-center shrink-0 mt-0.5">
         <Icon className="w-3.5 h-3.5 text-gray-400" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-        <a
+        <Link
           href={href}
           title={tooltip}
           className={`group inline-flex items-center gap-1.5 text-sm font-semibold break-all underline underline-offset-2 decoration-dotted
-            hover:decoration-solid transition-all ${mono ? 'font-mono' : ''}`}
+            hover:decoration-solid transition-all ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''}`}
           style={{ color: accent ?? '#355C7D' }}
         >
           {value}
           <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -201,28 +206,96 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// ─── Employé (Effectué par / Validé par) ──────────────────────────────────────
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function useEmployeeName(raw?: string, id?: string) {
-  const isUuid = !!raw && UUID_RE.test(raw);
+type EmployeeStatus = 'text' | 'loading' | 'found' | 'notfound';
+
+interface EmployeeState {
+  name?:       string;
+  employeeId?: string;
+  status:      EmployeeStatus;
+}
+
+function useEmployee(raw?: string, id?: string): EmployeeState {
+  const isUuid     = !!raw && UUID_RE.test(raw);
   const employeeId = id ?? (isUuid ? raw : undefined);
-  const [name, setName] = React.useState<string | undefined>(isUuid ? undefined : raw);
+
+  const [state, setState] = React.useState<EmployeeState>(
+    isUuid ? { employeeId, status: 'loading' } : { name: raw, employeeId, status: employeeId ? 'found' : 'text' },
+  );
 
   useEffect(() => {
-    if (!isUuid || !employeeId) { setName(raw); return; }
+    // Le backend envoie déjà un nom → rien à chercher
+    if (!isUuid) {
+      setState({ name: raw, employeeId, status: employeeId ? 'found' : 'text' });
+      return;
+    }
+    if (!employeeId) return;
+
     let cancelled = false;
+    setState({ employeeId, status: 'loading' });
+
     fetchEmployeeById(employeeId)
       .then((emp: any) => {
         if (cancelled) return;
-        const full = [emp.prenom ?? emp.first_name, emp.nom ?? emp.last_name]
+        const full = [emp?.prenom ?? emp?.first_name, emp?.nom ?? emp?.last_name]
           .filter(Boolean).join(' ').trim();
-        setName(full || emp.user?.username || 'Employé introuvable');
+        const name = full || emp?.user?.username;
+        setState(name
+          ? { name, employeeId, status: 'found' }
+          : { employeeId, status: 'notfound' });
       })
-      .catch(() => { if (!cancelled) setName('Employé introuvable'); });
+      .catch(() => { if (!cancelled) setState({ employeeId, status: 'notfound' }); });
+
     return () => { cancelled = true; };
   }, [raw, employeeId, isUuid]);
 
-  return { name, employeeId };
+  return state;
+}
+
+function EmployeeRow({ icon: Icon, label, employee, tooltip, accent }: {
+  icon: React.ElementType; label: string; employee: EmployeeState; tooltip: string; accent: string;
+}) {
+  // Trouvé + id → lien vers la fiche
+  if (employee.status === 'found' && employee.employeeId) {
+    return (
+      <LinkRow
+        icon={Icon} label={label} value={employee.name}
+        href={`/dashboard/employees/${employee.employeeId}`}
+        tooltip={tooltip} accent={accent} capitalize
+      />
+    );
+  }
+
+  // Nom simple sans id → texte, sans lien
+  if (employee.status === 'text') {
+    return <Row icon={Icon} label={label} value={employee.name} capitalize />;
+  }
+
+  // Chargement ou introuvable → texte gris, sans lien
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
+      <div className="w-7 h-7 rounded-lg bg-[#F9F9F6] flex items-center justify-center shrink-0 mt-0.5">
+        <Icon className="w-3.5 h-3.5 text-gray-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+        {employee.status === 'loading' ? (
+          <p className="text-sm text-gray-400 inline-flex items-center gap-1.5">
+            <Loader2 className="w-3 h-3 animate-spin" /> Chargement…
+          </p>
+        ) : (
+          <p className="text-sm text-gray-400 italic" title={employee.employeeId}>
+            Utilisateur inconnu
+            {employee.employeeId && (
+              <span className="font-mono not-italic"> · {employee.employeeId.slice(0, 8)}…</span>
+            )}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -232,11 +305,10 @@ interface TransactionDetailModalProps {
 }
 
 export default function TransactionDetailModal({ transaction, onClose }: TransactionDetailModalProps) {
-  const processedBy = useEmployeeName(transaction?.processed_by, transaction?.processed_by_id);
-  const validatedBy = useEmployeeName(transaction?.validated_by, transaction?.validated_by_id);
+  const processedBy = useEmployee(transaction?.processed_by, transaction?.processed_by_id);
+  const validatedBy = useEmployee(transaction?.validated_by, transaction?.validated_by_id);
 
   if (!transaction) return null;
-  // ...
 
   const kindCfg   = KIND_CFG[transaction.kind];
   const statusCfg = STATUS_CFG[transaction.status] ?? STATUS_CFG['en_attente'];
@@ -255,44 +327,35 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
     transaction.kind === 'withdrawal' ? '#DC2626'  :
     transaction.kind === 'transfer'   ? '#355C7D'  : '#D4AF37';
 
-  // Liens de navigation
-  const memberHref  = transaction.member_id
+  // Liens de navigation (undefined = pas de lien)
+  const memberHref = transaction.member_id
     ? `/dashboard/members/${transaction.member_id}`
     : transaction.member_name
     ? `/dashboard/members?search=${encodeURIComponent(transaction.member_name)}`
-    : '#';
-  const accountHref = account
-    ? `/dashboard/accounts/${account}`
-    : '#';
-    // une fonction dédiée pour récupérer l’audit d’un dépôt 
-// useEffect(() => {
-//   async function loadAudit() {
-//     const data = await getDepositAudit(id);
-//     setAudit(data);
-//   }
-//   loadAudit();
-// }, [id]);
+    : undefined;
+  const accountHref = account ? `/dashboard/accounts/${account}` : undefined;
+  const caisseHref  = transaction.caisse_id ? `/dashboard/caisses/${transaction.caisse_id}` : undefined;
 
   return (
     <Modal
-    isOpen
-    onClose={onClose}
-    size="3xl"
-        title={
-      <div className=" capitalize flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl bg-linear-to-br ${kindCfg.gradient} flex items-center justify-center`}>
-          <ArrowUpRight  className="w-4 h-4 text-white" />
+      isOpen
+      onClose={onClose}
+      size="3xl"
+      title={
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-xl bg-linear-to-br ${kindCfg.gradient} flex items-center justify-center`}>
+            <KindIcon className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-900">Détail {kindCfg.label.toLowerCase()}</p>
+            <p className="text-xs text-gray-400 font-mono">
+              {transaction.reference ?? `#${transaction.id}`}
+            </p>
+          </div>
         </div>
-        <div className='capitalize'>
-          <p className="text-sm font-bold text-gray-900">Détail {kindCfg.label}</p>
-          <p className="text-xs text-gray-400 font-mono">
-            {transaction.reference ?? `#${transaction.id}`}
-          </p>
-        </div>
-      </div>
-    }
-  >
-    <div className="overflow-y-auto max-h-[75vh] bg-[#F9F9F6]">
+      }
+    >
+      <div className="overflow-y-auto max-h-[75vh] bg-[#F9F9F6]">
         {/* ── Bandeau montant + statut ── */}
         <div className="px-5 py-5 bg-white border-b border-gray-100 flex items-center justify-between gap-4">
           <div>
@@ -316,8 +379,8 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
         {/* ── Corps ── */}
         <div className="p-4 flex flex-col gap-3">
 
-          {/* ── Membre & Compte — liens cliquables ── */}
-          <Section   title="Membre et compte">
+          {/* ── Membre & Compte ── */}
+          <Section title="Membre et compte">
             <LinkRow
               icon={User}
               label="Membre"
@@ -325,6 +388,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               href={memberHref}
               tooltip="Voir la fiche du membre"
               accent="#355C7D"
+              capitalize
             />
             <LinkRow
               icon={CreditCard}
@@ -336,7 +400,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               accent="#355C7D"
             />
             {transaction.member_id && (
-              <Row  icon={Hash} label="N° membre" value={transaction.member_id} mono />
+              <Row icon={Hash} label="N° membre" value={transaction.member_id} mono />
             )}
           </Section>
 
@@ -348,7 +412,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
               {transaction.depositSubtype === 'transfer' && (
                 <div>
                   <Row icon={Hash} label="Référence virement" value={transaction.transferReference} mono />
-                  <Row icon={User} label="Émetteur"            value={transaction.senderName} />
+                  <Row icon={User} label="Émetteur"            value={transaction.senderName} capitalize />
                 </div>
               )}
               {(transaction.holdPeriod ?? 0) > 0 && (
@@ -397,8 +461,8 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
 
           {transaction.kind === 'loan' && (
             <Section title="Détails du prêt">
-              <Row icon={Landmark} label="Objet"        value={transaction.loanPurpose} />
-              <Row icon={Banknote} label="Mensualité"   value={formatHTG(transaction.monthlyPayment)} />
+              <Row icon={Landmark} label="Objet"         value={transaction.loanPurpose} />
+              <Row icon={Banknote} label="Mensualité"    value={formatHTG(transaction.monthlyPayment)} />
               <Row icon={Banknote} label="Solde restant" value={formatHTG(transaction.remainingBalance)} accent="#355C7D" />
             </Section>
           )}
@@ -406,81 +470,48 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
           {/* ── Traçabilité ── */}
           <Section title="Traçabilité">
 
-            {/* Date et heure */}
-            <div className="flex items-start gap-3 py-2.5 border-b border-gray-50">
-              <div className="w-7 h-7 rounded-lg bg-[#F9F9F6] flex items-center justify-center shrink-0 mt-0.5">
-                <Calendar className="w-3.5 h-3.5 text-gray-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Date et heure</p>
-                <p className="text-sm font-semibold text-gray-800 capitalize">
-                  {formatDateTime(transaction.created_at)}
-                </p>
-              </div>
-            </div>
+            <Row icon={Calendar} label="Date et heure" value={formatDateTime(transaction.created_at)} />
 
-            {/* Effectué par */}
             {transaction.processed_by && (
-              <LinkRow
+              <EmployeeRow
                 icon={Cpu}
                 label="Effectué par"
-                value={processedBy.name ?? 'Chargement…'}
-                href={processedBy.employeeId ? `/dashboard/employees/${processedBy.employeeId}` : '#'}
+                employee={processedBy}
                 tooltip="Voir la fiche de l'employé"
                 accent="#2E7D32"
               />
             )}
 
-            {/* Validé par */}
             {transaction.validated_by && (
-              <LinkRow
+              <EmployeeRow
                 icon={UserCheck}
                 label="Validé par"
-                value={transaction.validated_by}
-                href={
-                  transaction.validated_by_id
-                    ? `/dashboard/employees/${transaction.validated_by_id}`
-                    : `#`
-                }
+                employee={validatedBy}
                 tooltip="Voir la fiche du superviseur"
                 accent="#355C7D"
               />
             )}
 
-            {/* Caisse */}
             {transaction.caisse_numero && (
               <LinkRow
                 icon={Receipt}
                 label="Caisse"
                 value={`Caisse n° ${transaction.caisse_numero}`}
-                href={
-                  transaction.caisse_id
-                    ? `/dashboard/caisses/${transaction.caisse_id}`
-                    : `#`
-                }
+                href={caisseHref}
                 tooltip="Voir le détail de la caisse"
                 mono
                 accent="#D4AF37"
               />
             )}
 
-            {/* Session */}
             {transaction.session_id && (
-              <Row
-                icon={Hash}
-                label="Session caisse"
-                value={transaction.session_id}
-                mono
-                accent="#6E6E6E"
-              />
+              <Row icon={Hash} label="Session caisse" value={transaction.session_id} mono accent="#6E6E6E" />
             )}
 
-            {/* Référence */}
             {transaction.reference && (
               <Row icon={Hash} label="Référence" value={transaction.reference} mono />
             )}
           </Section>
-
 
           {/* ── Avertissements ── */}
           {transaction.requiresVerification && (
@@ -501,6 +532,7 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
           )}
         </div>
       </div>
+
       {/* Footer — fixe en bas, jamais dans le scroll */}
       <div className="px-5 py-4 bg-white border-t border-gray-100 flex justify-end shrink-0 rounded-2xl">
         <button onClick={onClose}
@@ -508,6 +540,6 @@ export default function TransactionDetailModal({ transaction, onClose }: Transac
           Fermer
         </button>
       </div>
-  </Modal>
+    </Modal>
   );
 }
