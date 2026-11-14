@@ -319,24 +319,17 @@ export default function RapportsTable({
 
       {/* ── Footer ── */}
       {!loading && sorted.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 bg-[#F9F9F6] px-5 py-3 gap-3">
-          <p className="text-xs text-gray-500">
-            Affichage de <span className="font-semibold text-gray-700">{Math.min(sorted.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
-            <span className="font-semibold text-gray-700">{Math.min(sorted.length, currentPage * pageSize)}</span> sur{" "}
-            <span className="font-semibold text-gray-700">{sorted.length}</span> rapport{sorted.length !== 1 ? "s" : ""}
-          </p>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={sorted.length}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={sorted.length}
+          pageSize={pageSize}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setCurrentPage(1);
+          }}
+        />
       )}
 
     </div>

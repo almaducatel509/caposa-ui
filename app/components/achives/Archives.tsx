@@ -522,24 +522,17 @@ export default function ArchivesPage() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-gray-100 bg-[#F9F9F6] flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-gray-500">
-              Affichage de <span className="font-semibold text-gray-700">{Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}</span> à{" "}
-              <span className="font-semibold text-gray-700">{Math.min(filtered.length, currentPage * pageSize)}</span> sur{" "}
-              <span className="font-semibold text-gray-700">{filtered.length}</span> archive{filtered.length !== 1 ? 's' : ''}
-            </p>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={filtered.length}
-              pageSize={pageSize}
-              onPageSizeChange={(s) => {
-                setPageSize(s);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Info */}

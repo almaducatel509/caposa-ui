@@ -12,6 +12,7 @@ interface PaginationProps {
   pageSizeOptions?: number[];
   className?: string;
   totalPages?: number;
+  children?: React.ReactNode;
 }
 
 export function Pagination({
@@ -23,6 +24,7 @@ export function Pagination({
   pageSizeOptions = [10, 25, 50],
   className = '',
   totalPages: propTotalPages,
+  children,
 }: PaginationProps) {
   const calculatedTotalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const totalPages = propTotalPages ?? calculatedTotalPages;
@@ -74,6 +76,12 @@ export function Pagination({
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {children && (
+          <div className="flex items-center gap-1.5 ml-2">
+            {children}
           </div>
         )}
       </div>

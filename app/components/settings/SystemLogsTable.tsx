@@ -627,24 +627,17 @@ export default function SystemLogsTable({
 
       {/* ─── Footer avec Pagination (Harmonisé Caposa) ─── */}
       {!isLoading && filteredLogs.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 dark:border-zinc-800 bg-[#F9F9F6] dark:bg-zinc-800/40 px-5 py-3 gap-3">
-          <p className="text-xs text-gray-500 dark:text-zinc-400">
-            Affichage de <span className="font-semibold text-gray-700 dark:text-zinc-200">{Math.min(filteredLogs.length, (currentPage - 1) * pageSize + 1)}</span> à{' '}
-            <span className="font-semibold text-gray-700 dark:text-zinc-200">{Math.min(filteredLogs.length, currentPage * pageSize)}</span> sur{' '}
-            <span className="font-semibold text-gray-700 dark:text-zinc-200">{filteredLogs.length}</span> log{filteredLogs.length !== 1 ? 's' : ''}
-          </p>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={filteredLogs.length}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredLogs.length}
+          pageSize={pageSize}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setCurrentPage(1);
+          }}
+        />
       )}
     </div>
   );
