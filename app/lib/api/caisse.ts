@@ -358,8 +358,8 @@ export async function fetchDashboard(): Promise<{
 export async function fetchTransactions(): Promise<TransactionData[]> {
   try {
     const { data } = await AxiosInstance.get<TransactionData[]>('/caisse-transactions/');
-    const list = Array.isArray(data) ? data : (data as any)?.results ?? [];
-    return list.map(tx => ({
+    const list: any[] = Array.isArray(data) ? data : (data as any)?.results ?? [];
+    return list.map((tx: any): TransactionData => ({
       ...tx,
       amount: Number(tx.amount) || 0,
     }));
