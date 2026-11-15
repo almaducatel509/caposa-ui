@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Vault, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight,
   AlertTriangle, CheckCircle, Clock, ChevronRight,
@@ -7,6 +7,8 @@ import {
   Package, Lock, Banknote, BarChart2, ShieldCheck,
   ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
+import { useDashboardRefresh } from '@/app/lib/dashboard-refresh';
+import DashboardRefreshControl from '@/app/components/dashboard/DashboardRefreshControl';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Period = 'jour' | 'semaine' | 'mois';
@@ -155,6 +157,22 @@ function PrevisionBar({ label, montant, reçu }: { label: string; montant: numbe
 export default function DashboardTresorier() {
   const [period, setPeriod] = useState<Period>('jour');
 
+  const handleRefresh = useCallback(async () => {
+    // Rechargement trésorerie
+    await new Promise((r) => setTimeout(r, 400));
+  }, []);
+
+  const {
+    isRefreshing,
+    secondsLeft,
+    lastRefreshed,
+    config: refreshConfig,
+    triggerRefresh,
+    updateConfig: updateRefreshConfig,
+  } = useDashboardRefresh({
+    onRefresh: handleRefresh,
+  });
+
   const montantCoffre = 142050;
   const remisesReçues  = REMISES.filter(r => r.statut === 'reçue');
   const remisesEnAttente = REMISES.filter(r => r.statut !== 'reçue');
@@ -187,9 +205,14 @@ export default function DashboardTresorier() {
               <span className="text-xs font-semibold text-red-700">Coffre sous seuil</span>
             </div>
           )}
-          <button className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
-            <RefreshCw className="w-4 h-4 text-gray-500" />
-          </button>
+          <DashboardRefreshControl
+            isRefreshing={isRefreshing}
+            secondsLeft={secondsLeft}
+            lastRefreshed={lastRefreshed}
+            config={refreshConfig}
+            onRefreshNow={triggerRefresh}
+            onUpdateConfig={updateRefreshConfig}
+          />
         </div>
       </div>
 

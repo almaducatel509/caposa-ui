@@ -21,7 +21,7 @@ export default function BackupScheduleModal({
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'custom'>('daily');
   const [time, setTime] = useState('02:00');
   const [cronExpression, setCronExpression] = useState('0 2 * * *');
-  const [retentionDays, setRetentionDays] = useState(30);
+  const [retentionDays, setRetentionDays] = useState<number | ''>(30);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +77,7 @@ export default function BackupScheduleModal({
         frequency,
         time: `${time}:00`,
         cron_expression: cronExpression,
-        retention_days: retentionDays,
+        retention_days: typeof retentionDays === 'number' && retentionDays > 0 ? retentionDays : 30,
       });
       onSuccess(updated);
       onClose();
@@ -211,7 +211,20 @@ export default function BackupScheduleModal({
                   min={1}
                   max={365}
                   value={retentionDays}
-                  onChange={(e) => setRetentionDays(parseInt(e.target.value, 10) || 30)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setRetentionDays('');
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      setRetentionDays(isNaN(parsed) ? '' : parsed);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (retentionDays === '' || Number(retentionDays) < 1) {
+                      setRetentionDays(30);
+                    }
+                  }}
                   className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
                 />
                 <span className="text-xs text-gray-400 dark:text-zinc-500 mt-1 block">Nettoyage automatique</span>

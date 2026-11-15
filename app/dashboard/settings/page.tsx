@@ -13,6 +13,7 @@ import BackupsTable from '@/app/components/settings/BackupsTable';
 import BackupScheduleModal from '@/app/components/settings/BackupScheduleModal';
 import DeleteBackupModal from '@/app/components/settings/DeleteBackupModal';
 import CaisseScheduleModal from '@/app/components/sessions/modals/CaisseScheduleModal';
+import DashboardRefreshSettingsCard from '@/app/components/settings/DashboardRefreshSettingsCard';
 import {
   DatabaseBackup,
   BackupSchedule,
@@ -128,6 +129,9 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
+
+        {/* Configuration du rafraîchissement automatique du Dashboard */}
+        <DashboardRefreshSettingsCard />
 
         {/* Tableau des Sauvegardes & Filtres (Structure identique à AccountTable) */}
         <BackupsTable

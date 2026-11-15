@@ -1,11 +1,13 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   TrendingUp, TrendingDown, BarChart2, Users, AlertTriangle,
   CheckCircle, XCircle, Calendar, ChevronRight, RefreshCw,
   FileText, ShieldAlert, Globe, Briefcase, Activity,
   ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
+import { useDashboardRefresh } from '@/app/lib/dashboard-refresh';
+import DashboardRefreshControl from '@/app/components/dashboard/DashboardRefreshControl';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Period = 'jour' | 'semaine' | 'mois' | 'trimestre' | 'annee';
@@ -149,6 +151,22 @@ export default function DashboardDirecteur() {
   const data = KPI_DATA[period];
   const prev = PREV_DATA[period];
 
+  const handleRefresh = useCallback(async () => {
+    // Simulation / appel de rechargement des indicateurs
+    await new Promise((r) => setTimeout(r, 400));
+  }, []);
+
+  const {
+    isRefreshing,
+    secondsLeft,
+    lastRefreshed,
+    config: refreshConfig,
+    triggerRefresh,
+    updateConfig: updateRefreshConfig,
+  } = useDashboardRefresh({
+    onRefresh: handleRefresh,
+  });
+
   const statusCounts = useMemo(() => {
     const checks = [
       data.recouvrement >= 95,
@@ -190,9 +208,14 @@ export default function DashboardDirecteur() {
             <Calendar className="w-3.5 h-3.5 text-gray-400" />
             <span className="text-xs text-gray-600 font-medium">Décembre 2024</span>
           </div>
-          <button className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
-            <RefreshCw className="w-4 h-4 text-gray-500" />
-          </button>
+          <DashboardRefreshControl
+            isRefreshing={isRefreshing}
+            secondsLeft={secondsLeft}
+            lastRefreshed={lastRefreshed}
+            config={refreshConfig}
+            onRefreshNow={triggerRefresh}
+            onUpdateConfig={updateRefreshConfig}
+          />
         </div>
       </div>
 

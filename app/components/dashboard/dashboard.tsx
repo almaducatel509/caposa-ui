@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
   TrendingUp, Lock, Unlock, Sun, Sunset, ChevronRight,
@@ -32,6 +32,8 @@ import { Holiday } from '../holidays/validations';
 import { Modal } from '../ui/Modal';
 import OpenSessionModal from '../sessions/modals/Opensessionmodal';
 import CloseSessionModal from '../sessions/modals/Closesessionmodal';
+import { useDashboardRefresh } from '@/app/lib/dashboard-refresh';
+import DashboardRefreshControl from './DashboardRefreshControl';
 
 // ─────────────────────────────────────────────────────────────────
 // Constantes
@@ -267,62 +269,100 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
   const { data: session } = useSession();
   const [dashError, setDashError] = useState<string | null>(null);
 
-  // Chargement des dernières transactions (bloc "Actions rapides").
-  // Indépendant du chargement principal ci-dessous car il alimente
-  // une autre partie de l'écran et n'a pas besoin de bloquer isLoading.
-  useEffect(() => {
-    fetchRecentTransactions().then((data) => {
-      setRecentTx(data);
-      setTxLoading(false);
-    });
-  }, []);
-
-  // Dernière transaction connue pour un type donné (Actions rapides).
-  const last = (type: string) =>
-    recentTx.find((t) => t.transaction_type === type);
-
   // Horloge de l'en-tête, rafraîchie chaque minute.
   useEffect(() => {
     const t = setInterval(() => setTime(getNow()), 60000);
     return () => clearInterval(t);
   }, []);
 
-  // Chargement initial de toutes les données du dashboard en parallèle.
-  // fetchDashboard a son propre fallback pour ne pas faire échouer
-  // tout le Promise.all si le endpoint dashboard tombe.
-  useEffect(() => {
-  Promise.all([
-    fetchDashboard().catch((err: Error) => {
-      setDashError(err.message);
-      return { sessions: [], transactions: [], alerts: null, montant_caisse: 0 };
-    }),
-    // force : on ignore tout cache, le serveur dit si CET utilisateur a une caisse ouverte
-    SessionManager.fetchActive({ force: true }).catch(() => null),
-    fetchBranches(),
-    fetchOpeningHours(),
-    fetchHolidays(),
-    fetchCaisses(),
-    fetchEmployees(),
-    fetchPosts(),
-  ]).then(([dash, active, b, oh, h, c, emp, p]) => {
-    setActiveSession(active);
-    setTransactions(dash.transactions);
-    setAlerts(dash.alerts);
+  // Dernière transaction connue pour un type donné (Actions rapides).
+  const last = (type: string) =>
+    recentTx.find((t) => t.transaction_type === type);
 
-    setBranches(Array.isArray(b) ? b : (b?.results ?? []));
-    setOpeningHours(Array.isArray(oh) ? oh : (oh?.results ?? []));
-    setHolidays(Array.isArray(h) ? h : (h?.results ?? []));
-    setCaisses(Array.isArray(c) ? c : []);
-    setEmployees(Array.isArray(emp) ? emp : (emp?.results ?? []));
-    setPosts(Array.isArray(p) ? p : (p?.results ?? []));
-  }).finally(() => setIsLoading(false));
-}, []);
+  // Fonction centrale de chargement et de rafraîchissement des données
+  const loadData = useCallback(async (isInitial = false) => {
+    try {
+      if (isInitial) {
+        const [dash, active, recent, b, oh, h, c, emp, p] = await Promise.all([
+          fetchDashboard().catch((err: Error) => {
+            setDashError(err.message);
+            return { sessions: [], transactions: [], alerts: null, montant_caisse: 0 };
+          }),
+          SessionManager.fetchActive({ force: true }).catch(() => null),
+          fetchRecentTransactions().catch(() => []),
+          fetchBranches().catch(() => []),
+          fetchOpeningHours().catch(() => []),
+          fetchHolidays().catch(() => []),
+          fetchCaisses().catch(() => []),
+          fetchEmployees().catch(() => []),
+          fetchPosts().catch(() => []),
+        ]);
+
+        setActiveSession(active);
+        setTransactions(dash.transactions);
+        setAlerts(dash.alerts);
+        setRecentTx(recent);
+        setTxLoading(false);
+
+        setBranches(Array.isArray(b) ? b : (b?.results ?? []));
+        setOpeningHours(Array.isArray(oh) ? oh : (oh?.results ?? []));
+        setHolidays(Array.isArray(h) ? h : (h?.results ?? []));
+        setCaisses(Array.isArray(c) ? c : []);
+        setEmployees(Array.isArray(emp) ? emp : (emp?.results ?? []));
+        setPosts(Array.isArray(p) ? p : (p?.results ?? []));
+      } else {
+        // Rafraîchissement périodique fluide sans recharger les données de référence statiques
+        const [dash, active, recent] = await Promise.all([
+          fetchDashboard().catch((err: Error) => {
+            setDashError(err.message);
+            return null;
+          }),
+          SessionManager.fetchActive({ force: true }).catch(() => null),
+          fetchRecentTransactions().catch(() => null),
+        ]);
+
+        if (dash) {
+          setTransactions(dash.transactions);
+          setAlerts(dash.alerts);
+          setDashError(null);
+        }
+        if (active !== undefined) {
+          setActiveSession(active);
+        }
+        if (recent) {
+          setRecentTx(recent);
+        }
+      }
+    } finally {
+      if (isInitial) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  // Chargement initial
+  useEffect(() => {
+    loadData(true);
+  }, [loadData]);
+
+  // Mécanisme d'actualisation automatique périodique paramétrable
+  const {
+    isRefreshing,
+    secondsLeft,
+    lastRefreshed,
+    config: refreshConfig,
+    triggerRefresh,
+    updateConfig: updateRefreshConfig,
+  } = useDashboardRefresh({
+    onRefresh: () => loadData(false),
+  });
 
   const handleOpenSession = async (payload: OpenSessionPayload) => {
     const s = await openSession(payload);
     SessionManager.set(s);
     setActiveSession(s);
     setShowOpenModal(false);
+    triggerRefresh();
   };
 
   const handleCloseSession = async (payload: {
@@ -336,6 +376,8 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
     SessionManager.invalidate(activeSession.id);
     setActiveSession(null);
     setShowCloseModal(false);
+    triggerRefresh();
+  };
   };
 
   const currentUser = {
@@ -460,7 +502,17 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
           <h1 className="text-2xl font-bold text-gray-900 capitalize">Tableau de bord</h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">{getDate()} · {time}</p>
         </div>
+        <div className="flex items-center gap-2.5">
+          <DashboardRefreshControl
+            isRefreshing={isRefreshing}
+            secondsLeft={secondsLeft}
+            lastRefreshed={lastRefreshed}
+            config={refreshConfig}
+            onRefreshNow={triggerRefresh}
+            onUpdateConfig={updateRefreshConfig}
+          />
           {FEATURES.alerts && alerts && <AlertsBell alerts={alerts} />}
+        </div>
       </div>
       {/* juste sous le header */}
       {dashError && (

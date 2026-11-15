@@ -1,11 +1,13 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   AlertTriangle, CheckCircle, Clock, Eye, Users, TrendingUp,
   XCircle, ChevronRight, Bell, RefreshCw, Search, Filter,
   FileText, Lock, Unlock, ArrowLeftRight, Check, X,
   ShieldAlert, Activity, BarChart2, Calendar
 } from 'lucide-react';
+import { useDashboardRefresh } from '@/app/lib/dashboard-refresh';
+import DashboardRefreshControl from '@/app/components/dashboard/DashboardRefreshControl';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type CaisseState = 'ouverte' | 'fermée' | 'en retard';
@@ -217,6 +219,22 @@ export default function DashboardSuperviseur() {
   const approveValidation = (id: string) =>
     setValidations(v => v.filter(x => x.id !== id));
 
+  const handleRefresh = useCallback(async () => {
+    // Rechargement superviseur
+    await new Promise((r) => setTimeout(r, 400));
+  }, []);
+
+  const {
+    isRefreshing,
+    secondsLeft,
+    lastRefreshed,
+    config: refreshConfig,
+    triggerRefresh,
+    updateConfig: updateRefreshConfig,
+  } = useDashboardRefresh({
+    onRefresh: handleRefresh,
+  });
+
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-4 sm:p-6 md:p-8">
 
@@ -239,9 +257,14 @@ export default function DashboardSuperviseur() {
               </span>
             </div>
           )}
-          <button className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
-            <RefreshCw className="w-4 h-4 text-gray-500" />
-          </button>
+          <DashboardRefreshControl
+            isRefreshing={isRefreshing}
+            secondsLeft={secondsLeft}
+            lastRefreshed={lastRefreshed}
+            config={refreshConfig}
+            onRefreshNow={triggerRefresh}
+            onUpdateConfig={updateRefreshConfig}
+          />
         </div>
       </div>
 

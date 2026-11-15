@@ -28,8 +28,8 @@ export default function CaisseScheduleModal({
   const [time, setTime] = useState('22:00');
   const [cronExpression, setCronExpression] = useState('0 22 * * *');
   const [frequency, setFrequency] = useState<'daily' | 'workdays' | 'custom'>('daily');
-  const [maxDuration, setMaxDuration] = useState(24);
-  const [idleTimeout, setIdleTimeout] = useState(2);
+  const [maxDuration, setMaxDuration] = useState<number | ''>(24);
+  const [idleTimeout, setIdleTimeout] = useState<number | ''>(2);
   const [forceCloseAtEod, setForceCloseAtEod] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
@@ -41,20 +41,43 @@ export default function CaisseScheduleModal({
       setError(null);
       try {
         const config = await fetchCaisseScheduleConfig();
-        setAutoCloseEnabled(config.auto_close_enabled ?? true);
-        setCronExpression(config.cron_expression || '0 22 * * *');
-        setMaxDuration(config.max_session_duration_hours ?? 24);
-        setIdleTimeout(config.idle_timeout_hours ?? 2);
-        setForceCloseAtEod(config.force_close_at_eod ?? true);
+        setAutoCloseEnabled(config.auto_close_enabled ?? (config as any).is_active ?? true);
+        const expr = config.cron_expression || '0 22 * * *';
+        setCronExpression(expr);
+
+        const loadedMaxDuration = config.max_session_duration_hours ?? (config as any).max_duration_hours;
+        if (loadedMaxDuration !== undefined && loadedMaxDuration !== null) {
+          setMaxDuration(Number(loadedMaxDuration) || 24);
+        }
+
+        const loadedIdleTimeout = config.idle_timeout_hours ?? (config as any).inactivity_threshold_hours;
+        if (loadedIdleTimeout !== undefined && loadedIdleTimeout !== null) {
+          setIdleTimeout(Number(loadedIdleTimeout) || 2);
+        }
+
+        setForceCloseAtEod(config.force_close_at_eod ?? (config as any).auto_interrupt ?? true);
 
         // Déduit l'heure depuis l'expression cron
-        const parts = (config.cron_expression || '0 22 * * *').trim().split(/\s+/);
+        const parts = expr.trim().split(/\s+/);
         if (parts.length >= 2) {
           const m = parts[0].padStart(2, '0');
           const h = parts[1].padStart(2, '0');
           if (!isNaN(Number(h)) && !isNaN(Number(m))) {
             setTime(`${h}:${m}`);
           }
+        }
+
+        // Déduit la fréquence
+        if (parts.length === 5) {
+          if (parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
+            setFrequency('daily');
+          } else if (parts[2] === '*' && parts[3] === '*' && (parts[4] === '1-5' || parts[4] === 'MON-FRI')) {
+            setFrequency('workdays');
+          } else {
+            setFrequency('custom');
+          }
+        } else {
+          setFrequency('custom');
         }
 
         if (config.updated_at) {
@@ -75,9 +98,12 @@ export default function CaisseScheduleModal({
 
   const handleTimeChange = (newTime: string) => {
     setTime(newTime);
+    if (!newTime || !newTime.includes(':')) return;
     const [h, m] = newTime.split(':');
-    const hour = parseInt(h || '22', 10);
-    const minute = parseInt(m || '0', 10);
+    if (h === '' || m === '') return;
+    const hour = parseInt(h, 10);
+    const minute = parseInt(m, 10);
+    if (isNaN(hour) || isNaN(minute)) return;
 
     if (frequency === 'daily') {
       setCronExpression(`${minute} ${hour} * * *`);
@@ -88,7 +114,8 @@ export default function CaisseScheduleModal({
 
   const handleFrequencyChange = (newFreq: 'daily' | 'workdays' | 'custom') => {
     setFrequency(newFreq);
-    const [h, m] = time.split(':');
+    if (newFreq === 'custom') return;
+    const [h, m] = (time || '22:00').split(':');
     const hour = parseInt(h || '22', 10);
     const minute = parseInt(m || '0', 10);
 
@@ -99,19 +126,43 @@ export default function CaisseScheduleModal({
     }
   };
 
+  const handleCronChange = (newCron: string) => {
+    setCronExpression(newCron);
+    setFrequency('custom');
+    const parts = newCron.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      const m = parts[0];
+      const h = parts[1];
+      if (!isNaN(Number(h)) && !isNaN(Number(m)) && Number(h) >= 0 && Number(h) < 24 && Number(m) >= 0 && Number(m) < 60) {
+        setTime(`${h.padStart(2, '0')}:${m.padStart(2, '0')}`);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
 
+    const finalMaxDuration = typeof maxDuration === 'number' && maxDuration > 0 ? maxDuration : 24;
+    const finalIdleTimeout = typeof idleTimeout === 'number' && idleTimeout > 0 ? idleTimeout : 2;
+    const finalCron = cronExpression.trim() || '0 22 * * *';
+    const finalTime = time || '22:00';
+
     try {
       const updated = await updateCaisseScheduleConfig({
         auto_close_enabled: autoCloseEnabled,
-        cron_expression: cronExpression,
-        max_session_duration_hours: maxDuration,
-        idle_timeout_hours: idleTimeout,
+        cron_expression: finalCron,
+        max_session_duration_hours: finalMaxDuration,
+        idle_timeout_hours: finalIdleTimeout,
         force_close_at_eod: forceCloseAtEod,
-      });
+        // Compatibilité avec les champs backend Django
+        is_active: autoCloseEnabled,
+        auto_interrupt: forceCloseAtEod,
+        max_duration_hours: finalMaxDuration,
+        inactivity_threshold_hours: finalIdleTimeout,
+        closing_time: finalTime.length === 5 ? `${finalTime}:00` : finalTime,
+      } as any);
 
       if (onSuccess) onSuccess(updated);
       onClose();
@@ -233,6 +284,16 @@ export default function CaisseScheduleModal({
                     type="time"
                     value={time}
                     onChange={(e) => handleTimeChange(e.target.value)}
+                    onBlur={() => {
+                      if (!time) {
+                        setTime('22:00');
+                        if (frequency === 'daily') {
+                          setCronExpression('0 22 * * *');
+                        } else if (frequency === 'workdays') {
+                          setCronExpression('0 22 * * 1-5');
+                        }
+                      }
+                    }}
                     className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
                   />
                   <span className="text-xs text-gray-400 dark:text-zinc-500 mt-1 block">Heure de clôture quotidienne</span>
@@ -249,7 +310,20 @@ export default function CaisseScheduleModal({
                       min={1}
                       max={24}
                       value={idleTimeout}
-                      onChange={(e) => setIdleTimeout(parseInt(e.target.value, 10) || 2)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setIdleTimeout('');
+                        } else {
+                          const parsed = parseInt(val, 10);
+                          setIdleTimeout(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (idleTimeout === '' || Number(idleTimeout) < 1) {
+                          setIdleTimeout(2);
+                        }
+                      }}
                       className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
                     />
                     <span className="text-sm font-medium text-gray-500">heures</span>
@@ -271,7 +345,20 @@ export default function CaisseScheduleModal({
                       min={1}
                       max={72}
                       value={maxDuration}
-                      onChange={(e) => setMaxDuration(parseInt(e.target.value, 10) || 24)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setMaxDuration('');
+                        } else {
+                          const parsed = parseInt(val, 10);
+                          setMaxDuration(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (maxDuration === '' || Number(maxDuration) < 1) {
+                          setMaxDuration(24);
+                        }
+                      }}
                       className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
                     />
                     <span className="text-sm font-medium text-gray-500">heures</span>
@@ -308,7 +395,13 @@ export default function CaisseScheduleModal({
                     id="caisse-cron-input"
                     type="text"
                     value={cronExpression}
-                    onChange={(e) => setCronExpression(e.target.value)}
+                    onChange={(e) => handleCronChange(e.target.value)}
+                    onBlur={() => {
+                      if (!cronExpression.trim()) {
+                        setCronExpression('0 22 * * *');
+                        setFrequency('daily');
+                      }
+                    }}
                     placeholder="0 22 * * *"
                     className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-all"
                   />
