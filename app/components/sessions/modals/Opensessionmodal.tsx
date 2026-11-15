@@ -57,6 +57,20 @@ interface Props {
 // Field helper
 // ─────────────────────────────────────────────────────────────────
 
+function formatLabel(label: string) {
+  if (label.includes('*')) {
+    const parts = label.split('*');
+    return (
+      <>
+        {parts[0].trimEnd()}{' '}
+        <span className="text-red-500 font-bold text-sm leading-none">*</span>
+        {parts.slice(1).join('*')}
+      </>
+    );
+  }
+  return label;
+}
+
 function Field({ label, hint, error, children }: {
   label:    string;
   hint?:    string;
@@ -67,7 +81,7 @@ function Field({ label, hint, error, children }: {
     <div className="flex flex-col">
       <div className="min-h-[38px] flex flex-col justify-start mb-1.5">
         <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-          {label}
+          {formatLabel(label)}
         </label>
         {hint ? (
           <p className="text-xs text-gray-400 mt-0.5">{hint}</p>

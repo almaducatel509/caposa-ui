@@ -19,13 +19,27 @@ const inputCls = (err?: string) =>
       : 'border-gray-200 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20'
   }`;
 
+function formatLabel(label: string) {
+  if (label.includes('*')) {
+    const parts = label.split('*');
+    return (
+      <>
+        {parts[0].trimEnd()}{' '}
+        <span className="text-red-500 font-bold ml-0.5">*</span>
+        {parts.slice(1).join('*')}
+      </>
+    );
+  }
+  return label;
+}
+
 function Field({ label, hint, error, children }: {
   label: string; hint?: string; error?: string; children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-        {label}
+        {formatLabel(label)}
       </label>
       {hint && <p className="text-xs text-gray-400 -mt-1">{hint}</p>}
       {children}

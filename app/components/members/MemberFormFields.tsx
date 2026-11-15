@@ -62,7 +62,7 @@ function Field({ label, required, error, full, children }: {
   return (
     <div className={full ? 'md:col-span-2' : ''}>
       <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+        {label} {required && <span className="text-red-500 font-bold ml-0.5">*</span>}
       </label>
       {children}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}

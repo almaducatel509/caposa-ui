@@ -74,7 +74,7 @@ function Field({ label, required, error, hint, children }: {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1">
-        {label} {required && <span className="text-red-400">*</span>}
+        {label} {required && <span className="text-red-500 font-bold ml-0.5">*</span>}
       </label>
       {children}
       {hint  && !error && <p className="text-xs text-gray-400">{hint}</p>}

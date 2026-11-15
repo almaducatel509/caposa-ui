@@ -116,7 +116,7 @@ export default function GenerateStatementModal({ onClose, onGenerated }: Props) 
           {/* Compte */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
-              <CreditCard className="w-3.5 h-3.5" /> Numéro de compte <span className="text-red-400">*</span>
+              <CreditCard className="w-3.5 h-3.5" /> Numéro de compte <span className="text-red-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
               <input

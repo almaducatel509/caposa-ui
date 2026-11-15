@@ -57,6 +57,20 @@ function formatHTG(n: number) {
 
 // ─── Sub-components ───────────────────────────────────────────────
 
+function formatLabel(label: string) {
+  if (label.includes('*')) {
+    const parts = label.split('*');
+    return (
+      <>
+        {parts[0].trimEnd()}{' '}
+        <span className="text-red-500 font-bold ml-0.5">*</span>
+        {parts.slice(1).join('*')}
+      </>
+    );
+  }
+  return label;
+}
+
 function Field({ label, error, hint, children }: {
   label:    string;
   error?:   string;
@@ -66,7 +80,7 @@ function Field({ label, error, hint, children }: {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-        {label}
+        {formatLabel(label)}
       </label>
       {children}
       {hint && !error && <p className="text-xs text-gray-400">{hint}</p>}

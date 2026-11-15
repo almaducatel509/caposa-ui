@@ -82,7 +82,7 @@ export default function MemberPicker({
 
       {/* Label */}
       <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-        {label} {isRequired && <span className="text-red-400">*</span>}
+        {label} {isRequired && <span className="text-red-500 font-bold ml-0.5">*</span>}
       </p>
 
       {!selectedMember ? (

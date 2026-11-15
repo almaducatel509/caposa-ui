@@ -263,7 +263,7 @@ export default function CompteAutocomplete({
     <div ref={wrapperRef} className={`flex flex-col gap-1.5 ${className}`}>
       {/* Label */}
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-1">
-        {label} {isRequired && <span className="text-red-400">*</span>}
+        {label} {isRequired && <span className="text-red-500 font-bold ml-0.5">*</span>}
       </label>
 
       {/* Champ */}

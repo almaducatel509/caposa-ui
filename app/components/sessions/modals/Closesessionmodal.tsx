@@ -347,7 +347,9 @@ export default function CloseSessionModal({ session, onClose, onConfirm, schedul
 
       {/* ── Montant compté ── */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Montant compté ({devise}) *</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+          Montant compté ({devise}) <span className="text-red-500 font-bold ml-0.5">*</span>
+        </p>
         <div className="relative">
           <Wallet size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
@@ -387,7 +389,7 @@ export default function CloseSessionModal({ session, onClose, onConfirm, schedul
       {/* ── Note ── */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
-          Note de fermeture {hasEcart || ouverteDepuisLongtemps ? '*' : '(optionnel)'}
+          Note de fermeture {hasEcart || ouverteDepuisLongtemps ? <span className="text-red-500 font-bold ml-0.5">*</span> : <span className="text-gray-400 font-normal lowercase">(optionnel)</span>}
         </p>
         {hasEcart && (
           <p className="text-xs text-orange-600 mb-1.5 flex items-center gap-1">
@@ -415,7 +417,9 @@ export default function CloseSessionModal({ session, onClose, onConfirm, schedul
       {/* ── Motif de retard (hors horaire) ── */}
       {isOvertime && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Motif de la fermeture tardive *</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+            Motif de la fermeture tardive <span className="text-red-500 font-bold ml-0.5">*</span>
+          </p>
           <div className="relative">
             <Clock size={14} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
             <textarea

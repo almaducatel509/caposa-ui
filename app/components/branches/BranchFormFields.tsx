@@ -56,7 +56,7 @@ function Section({ number, icon: Icon, title, badge, children }: {
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-      {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      {label} {required && <span className="text-red-500 font-bold ml-0.5">*</span>}
     </label>
   );
 }

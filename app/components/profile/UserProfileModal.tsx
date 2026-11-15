@@ -317,32 +317,40 @@ export default function UserProfileModal({
               {/* ── Sexe / Genre (Modifiable) ── */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-400 mb-2">
-                  Sexe / Genre <span className="text-[#2E7D32]">*</span>
+                  Sexe / Genre <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setGender('M')}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
                       gender === 'M'
-                        ? 'bg-[#DDEAD5] border-[#2E7D32]/50 text-[#1B5E20] dark:bg-[#1B5E20]/50 dark:text-[#81C784] shadow-xs'
+                        ? 'bg-[#DDEAD5] border-[#2E7D32]/50 text-[#1B5E20] dark:bg-[#1B5E20]/50 dark:text-[#81C784] shadow-xs ring-1 ring-[#2E7D32]/30'
                         : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-base">👨</span>
+                    <svg className={`w-4 h-4 shrink-0 transition-colors ${gender === 'M' ? 'text-[#1B5E20] dark:text-[#81C784]' : 'text-blue-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="10" cy="14" r="5" />
+                      <path d="M13.5 10.5L20 4" />
+                      <path d="M15 4h5v5" />
+                    </svg>
                     <span>Masculin (M)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setGender('F')}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
                       gender === 'F'
-                        ? 'bg-[#DDEAD5] border-[#2E7D32]/50 text-[#1B5E20] dark:bg-[#1B5E20]/50 dark:text-[#81C784] shadow-xs'
+                        ? 'bg-[#DDEAD5] border-[#2E7D32]/50 text-[#1B5E20] dark:bg-[#1B5E20]/50 dark:text-[#81C784] shadow-xs ring-1 ring-[#2E7D32]/30'
                         : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-base">👩</span>
+                    <svg className={`w-4 h-4 shrink-0 transition-colors ${gender === 'F' ? 'text-[#1B5E20] dark:text-[#81C784]' : 'text-rose-500'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="9" r="5" />
+                      <path d="M12 14v7" />
+                      <path d="M9 18h6" />
+                    </svg>
                     <span>Féminin (F)</span>
                   </button>
                 </div>
@@ -404,7 +412,7 @@ export default function UserProfileModal({
                     {/* Nouveau mot de passe */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 dark:text-zinc-400 mb-1">
-                        Nouveau mot de passe <span className="text-[#2E7D32]">*</span>
+                        Nouveau mot de passe <span className="text-red-500 font-bold ml-0.5">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -427,7 +435,7 @@ export default function UserProfileModal({
                     {/* Confirmer nouveau mot de passe */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 dark:text-zinc-400 mb-1">
-                        Confirmer le nouveau mot de passe <span className="text-[#2E7D32]">*</span>
+                        Confirmer le nouveau mot de passe <span className="text-red-500 font-bold ml-0.5">*</span>
                       </label>
                       <div className="relative">
                         <input
