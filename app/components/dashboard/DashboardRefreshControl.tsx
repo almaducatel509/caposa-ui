@@ -102,7 +102,7 @@ export default function DashboardRefreshControl({
 
       {/* ── Popover de configuration ── */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-100 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-100 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
