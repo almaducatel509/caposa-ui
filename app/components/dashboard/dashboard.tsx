@@ -92,10 +92,12 @@ const TX_ROW_CFG: Record<TransactionData['type'], {
 // Helpers
 // ─────────────────────────────────────────────────────────────────
 
-function formatHTG(v: number) {
+function formatHTG(v: number | string | null | undefined) {
+  const val = Number(v);
+  const num = Number.isFinite(val) ? val : 0;
   return new Intl.NumberFormat('fr-CA', {
     style: 'currency', currency: 'HTG', minimumFractionDigits: 0,
-  }).format(v);
+  }).format(num);
 }
 
 function getNow() {
@@ -357,11 +359,15 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
   // renvoyé par le dashboard, d'où 2 000 HTG à côté de 0 dépôt.)
   const deposits          = filteredTx.filter(t => t.type === 'deposit');
   const completed         = deposits.filter(t => t.status === 'completed');
-  const totalAmount       = completed.reduce((s, t) => s + t.amount, 0);
+  const totalAmount       = completed.reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const transactionCount  = deposits.length;
   const completedCount    = completed.length;
   const avgAmount         = completed.length ? totalAmount / completed.length : 0;
-  const uniqueMembers     = new Set(deposits.map(t => t.member_name).filter(Boolean)).size;
+  const uniqueMembers     = new Set(
+    deposits
+      .map(t => t.member_name || (t as any).client)
+      .filter(Boolean)
+  ).size;
   const pendingCount      = deposits.filter(t => t.status === 'pending').length;
   const completionRate    = deposits.length
     ? (completedCount / deposits.length) * 100
@@ -407,7 +413,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
       );
       if (idx >= 0) {
         days[idx].count++;
-        days[idx].amount += tx.amount;
+        days[idx].amount += Number(tx.amount) || 0;
       }
     });
 
@@ -422,7 +428,7 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
         key,
         name:   TX_TYPE_META[key].label,
         value:  items.length,
-        amount: items.reduce((s, t) => s + t.amount, 0),
+        amount: items.reduce((s, t) => s + (Number(t.amount) || 0), 0),
         color:  TX_TYPE_META[key].color,
       };
     }).filter(t => t.value > 0), // cache les types absents (évite les parts à 0 dans le donut)

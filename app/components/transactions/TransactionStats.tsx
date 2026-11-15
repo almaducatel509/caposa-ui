@@ -26,8 +26,10 @@ const C = {
   page:      '#F9F9F6',
 };
 
-function formatHTG(n: number) {
-  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' HTG';
+function formatHTG(n: number | string | null | undefined) {
+  const val = Number(n);
+  if (!Number.isFinite(val)) return '0 HTG';
+  return new Intl.NumberFormat('fr-HT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val) + ' HTG';
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
@@ -56,7 +58,7 @@ const TransactionStats: React.FC<TransactionStatsProps> = ({ transactions }) => 
 
   const stats = {
     total:          transactions.length,
-    totalAmount:    transactions.reduce((s, t) => s + (t.amount || 0), 0),
+    totalAmount:    transactions.reduce((s, t) => s + (Number(t.amount) || 0), 0),
     pendingCount:   transactions.filter(t => t.status === 'pending').length,
     completedToday: transactions.filter(t => {
       const today = new Date().toDateString();
@@ -72,7 +74,7 @@ const TransactionStats: React.FC<TransactionStatsProps> = ({ transactions }) => 
     return {
       date: d.toLocaleDateString('fr-FR', { weekday: 'short' }),
       count: day.length,
-      montant: day.reduce((s, t) => s + (t.amount || 0), 0),
+      montant: day.reduce((s, t) => s + (Number(t.amount) || 0), 0),
     };
   });
 
@@ -85,7 +87,7 @@ const TransactionStats: React.FC<TransactionStatsProps> = ({ transactions }) => 
   ].map(t => ({
     ...t,
     value: transactions.filter(tx => tx.type === t.key).length,
-    amount: transactions.filter(tx => tx.type === t.key).reduce((s, tx) => s + (tx.amount || 0), 0),
+    amount: transactions.filter(tx => tx.type === t.key).reduce((s, tx) => s + (Number(tx.amount) || 0), 0),
   }));
 
   // Activité horaire

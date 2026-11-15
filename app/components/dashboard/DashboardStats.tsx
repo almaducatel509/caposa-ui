@@ -74,8 +74,10 @@ function formatTick(v: number) {
   return `${Number.isInteger(k) ? k : k.toFixed(1).replace('.', ',')}k`;
 }
 
-function formatHTG(n: number) {
-  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+function formatHTG(n: number | string | null | undefined) {
+  const val = Number(n);
+  if (!Number.isFinite(val)) return '0 HTG';
+  return new Intl.NumberFormat('fr-HT').format(val) + ' HTG';
 }
 
 // ─── KPI Card ────────────────────────────────────────────────────
@@ -117,7 +119,7 @@ export default function DashboardStats({
         <KPICard icon={TrendingUp}      label="Nombre de dépôts"   value={depositCount} sub={`${completedCount} complétés`} accent={C.blue} />
         <KPICard icon={CalendarDays}    label="Moyenne / dépôt"    value={formatHTG(avgAmount)}                accent={C.gold}  />
         <KPICard icon={Users}           label="Membres actifs"     value={uniqueMembers} sub="déposants"       accent={C.green} />
-        <KPICard icon={ShieldCheck}     label="Taux de complétion" value={`${completionRate.toFixed(1)}%`}     accent={C.green} />
+        <KPICard icon={ShieldCheck}     label="Taux de complétion" value={`${(Number.isFinite(completionRate) ? completionRate : 0).toFixed(1)}%`}     accent={C.green} />
         <KPICard icon={Clock}           label="En attente"         value={pendingCount}  sub="à traiter"       accent={C.gold}  />
       </div>
 

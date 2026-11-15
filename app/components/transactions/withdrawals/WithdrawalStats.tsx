@@ -65,8 +65,10 @@ const tooltipStyle = {
   boxShadow:       '0 4px 16px rgba(0,0,0,0.06)',
 };
 
-function formatHTG(n: number) {
-  return new Intl.NumberFormat('fr-HT').format(n) + ' HTG';
+function formatHTG(n: number | string | null | undefined) {
+  const val = Number(n);
+  if (!Number.isFinite(val)) return '0 HTG';
+  return new Intl.NumberFormat('fr-HT').format(val) + ' HTG';
 }
 
 // ─── KPI Card ────────────────────────────────────────────────────

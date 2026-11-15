@@ -339,12 +339,13 @@ export async function fetchDashboard(): Promise<{
   ]);
 
   const montant_caisse = transactions.reduce((sum, tx) => {
+    const amt = Number(tx.amount) || 0;
     if (tx.status !== 'completed') return sum;
-    if (tx.type === 'deposit')    return sum + tx.amount;
-    if (tx.type === 'withdrawal') return sum - tx.amount;
+    if (tx.type === 'deposit')    return sum + amt;
+    if (tx.type === 'withdrawal') return sum - amt;
     if (tx.type === 'loan') {
       const ls = tx.loan_info?.status;
-      if (ls === 'active' || ls === 'approved') return sum - tx.amount;
+      if (ls === 'active' || ls === 'approved') return sum - amt;
     }
     return sum;
   }, 0);
@@ -357,7 +358,11 @@ export async function fetchDashboard(): Promise<{
 export async function fetchTransactions(): Promise<TransactionData[]> {
   try {
     const { data } = await AxiosInstance.get<TransactionData[]>('/caisse-transactions/');
-    return data;
+    const list = Array.isArray(data) ? data : (data as any)?.results ?? [];
+    return list.map(tx => ({
+      ...tx,
+      amount: Number(tx.amount) || 0,
+    }));
   } catch (err) {
     throw new Error(describeError(err, 'Impossible de charger les transactions'));
   }
