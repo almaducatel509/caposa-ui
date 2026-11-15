@@ -378,7 +378,6 @@ const [posts, setPosts] = useState<any[]>([]); // remplace `any` par PostData si
     setShowCloseModal(false);
     triggerRefresh();
   };
-  };
 
   const currentUser = {
     name: session?.user?.name ?? 'Utilisateur',
