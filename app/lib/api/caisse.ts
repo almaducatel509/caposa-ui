@@ -446,3 +446,37 @@ export async function closeSession(
 ): Promise<CaisseSession> {
   return SessionManager.close(sessionId, payload);
 }
+
+// ─── Planification Cron & Clôture Automatique ────────────────────
+
+export interface CaisseScheduleConfig {
+  auto_close_enabled: boolean;
+  cron_expression: string;
+  max_session_duration_hours: number;
+  idle_timeout_hours: number;
+  force_close_at_eod: boolean;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+/** GET /sessions/schedule/ — récupère la configuration du cron de caisse */
+export async function fetchCaisseScheduleConfig(): Promise<CaisseScheduleConfig> {
+  try {
+    const { data } = await AxiosInstance.get<CaisseScheduleConfig>('/sessions/schedule/');
+    return data;
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible de récupérer la planification des caisses'));
+  }
+}
+
+/** PATCH /sessions/schedule/ — met à jour la configuration du cron de caisse */
+export async function updateCaisseScheduleConfig(
+  payload: Partial<CaisseScheduleConfig>,
+): Promise<CaisseScheduleConfig> {
+  try {
+    const { data } = await AxiosInstance.patch<CaisseScheduleConfig>('/sessions/schedule/', payload);
+    return data;
+  } catch (err) {
+    throw new Error(describeError(err, 'Impossible d’enregistrer la planification des caisses'));
+  }
+}

@@ -5,12 +5,14 @@ import {
   ShieldAlert,
   Database,
   AlertCircle,
+  Clock,
 } from 'lucide-react';
 import PageHeader from '@/app/components/header';
 import { RoleGate } from '@/app/components/core/RoleGate';
 import BackupsTable from '@/app/components/settings/BackupsTable';
 import BackupScheduleModal from '@/app/components/settings/BackupScheduleModal';
 import DeleteBackupModal from '@/app/components/settings/DeleteBackupModal';
+import CaisseScheduleModal from '@/app/components/sessions/modals/CaisseScheduleModal';
 import {
   DatabaseBackup,
   BackupSchedule,
@@ -26,6 +28,7 @@ export default function SettingsPage() {
 
   // Modals state
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isCaisseScheduleOpen, setIsCaisseScheduleOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [targetBackup, setTargetBackup] = useState<DatabaseBackup | null>(null);
   const [deleteMode, setDeleteMode] = useState<'soft' | 'hard'>('soft');
@@ -92,12 +95,22 @@ export default function SettingsPage() {
     >
       <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-3 sm:p-6 md:p-8 flex flex-col gap-6">
         {/* En-tête standard Caposa (100% identique à Gestion des Comptes) */}
-        <PageHeader
-          title="Gestion des Sauvegardes"
-          subtitle="Consultez et gérez les sauvegardes de la base de données"
-          icon={<Database className="w-6 h-6 text-[#2E7D32]" />}
-          className="mb-0"
-        />
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <PageHeader
+            title="Gestion des Sauvegardes & Automatisation"
+            subtitle="Sauvegardes de la base de données et planification des tâches système"
+            icon={<Database className="w-6 h-6 text-[#2E7D32]" />}
+            className="mb-0"
+          />
+          <button
+            type="button"
+            onClick={() => setIsCaisseScheduleOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-700 shadow-xs transition-all cursor-pointer"
+          >
+            <Clock className="w-4 h-4 text-[#2E7D32]" />
+            <span>Cron Sessions de Caisse</span>
+          </button>
+        </div>
 
         {/* Message d'alerte si échec API */}
         {error && (
@@ -140,6 +153,12 @@ export default function SettingsPage() {
           backup={targetBackup}
           mode={deleteMode}
           onSuccess={handleDeleteSuccess}
+        />
+
+        {/* Modal de Planification Cron Caisse */}
+        <CaisseScheduleModal
+          isOpen={isCaisseScheduleOpen}
+          onClose={() => setIsCaisseScheduleOpen(false)}
         />
       </div>
     </RoleGate>

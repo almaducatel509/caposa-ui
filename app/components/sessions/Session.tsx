@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import {
-  History, LogIn, LogOut, Loader2, RefreshCw, Plus,
+  History, LogIn, LogOut, Loader2, RefreshCw, Plus, Clock,
 } from 'lucide-react';
 import { Caisse, CaisseSession, OpenSessionPayload } from '@/types/caisse';
 import AxiosInstance from '@/app/lib/axiosInstance';
@@ -9,6 +9,7 @@ import { SessionManager } from '@/app/lib/api/Sessionmanager';
 import { Modal } from '@/app/components/ui/Modal';
 import CloseSessionModal from './modals/Closesessionmodal';
 import SessionDetailModal from './modals/SessionDetailModal';
+import CaisseScheduleModal from './modals/CaisseScheduleModal';
 
 // 🆕 Règles d'ouverture (horaires + calendrier)
 import SessionClosedBanner from '@/app/components/sessions/SessionClosedBanner';
@@ -97,6 +98,8 @@ export default function SessionsComponent() {
 
   // Modal fermeture (déclenché par 🚪)
   const [closeSession,  setCloseSession]  = useState<CaisseSession | null>(null);
+  // Modal planification cron (administrateur)
+  const [showSchedule,  setShowSchedule]  = useState(false);
   // 🆕 Vérification horaires + calendrier
   const { rules: openingRules } = useSessionOpeningRules();
   const canOpen = openingRules ? openingRules.canOpen : true;
@@ -240,6 +243,15 @@ if (loading) {
         />
       )}
 
+      {/* Modal planification cron (audit et auto-close) */}
+      {showSchedule && (
+        <CaisseScheduleModal
+          isOpen={showSchedule}
+          onClose={() => setShowSchedule(false)}
+          onSuccess={() => load(true)}
+        />
+      )}
+
      
       <div className="w-full min-h-screen bg-gradient-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-4 sm:p-6 md:p-8">
 
@@ -257,6 +269,15 @@ if (loading) {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSchedule(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-colors cursor-pointer shadow-xs"
+              title="Configurer la planification Cron et clôture automatique"
+            >
+              <Clock className="w-4 h-4 text-[#2E7D32]" />
+              <span className="hidden sm:inline">Planification Cron</span>
+            </button>
            
             <ExportAllButton
               data={exportData}
