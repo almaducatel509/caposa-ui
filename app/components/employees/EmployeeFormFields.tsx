@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
 import type { DepartmentCode } from '@/app/data/haitiLocations';
+import SearchableSelect from '@/app/components/ui/SearchableSelect';
 
 import { BranchData, EmployeeFormData, ErrorMessages } from './validations';
 import { EmailField } from './EmailField';
@@ -331,32 +332,35 @@ const EmployeeFormFields: React.FC<{
 
           {/* Adresse Haïti */}
           <Field label="Département" required>
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Select value={departmentCode}
-                onChange={e => {
-                  setDepartmentCode(e.target.value as DepartmentCode);
-                  setCity('');
-                  clearFieldError('address');
-                }}
-                className="pl-9">
-                <option value="">Sélectionner un département</option>
-                {HAITI_DEPARTMENTS.map(d => (
-                  <option key={d.code} value={d.code}>{d.name}</option>
-                ))}
-              </Select>
-            </div>
+            <SearchableSelect
+              options={HAITI_DEPARTMENTS.map(d => ({ value: d.code, label: d.name }))}
+              value={departmentCode}
+              onChange={val => {
+                setDepartmentCode(val as DepartmentCode);
+                setCity('');
+                clearFieldError('address');
+              }}
+              placeholder="Sélectionner un département"
+              searchPlaceholder="Rechercher un département..."
+              icon={<MapPin className="w-4 h-4 text-gray-400" />}
+            />
           </Field>
 
           <Field label="Ville" required>
-            <Select value={city}
-              onChange={e => { setCity(e.target.value); clearFieldError('address'); }}
-              disabled={!departmentCode}>
-              <option value="">Sélectionner une ville</option>
-              {departmentCode && getCitiesByDepartment(departmentCode)?.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              options={(departmentCode ? getCitiesByDepartment(departmentCode) ?? [] : []).map(c => ({
+                value: c,
+                label: c,
+              }))}
+              value={city}
+              onChange={val => {
+                setCity(val);
+                clearFieldError('address');
+              }}
+              disabled={!departmentCode}
+              placeholder={departmentCode ? "Sélectionner une ville" : "Choisissez un département d'abord"}
+              searchPlaceholder="Rechercher une ville..."
+            />
           </Field>
 
           <Field label="Rue / Numéro de maison" required error={errors.address}

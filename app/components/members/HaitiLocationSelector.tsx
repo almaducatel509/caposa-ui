@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { HAITI_DEPARTMENTS, getCitiesByDepartment, type DepartmentCode } from "@/app/data/haitiLocations";
+import SearchableSelect from "@/app/components/ui/SearchableSelect";
 
 type Props = {
   departmentCode: DepartmentCode | "";
@@ -31,29 +32,25 @@ export const HaitiLocationSelector: React.FC<Props> = ({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-2">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Département *</label>
-        <select
+        <SearchableSelect
+          options={HAITI_DEPARTMENTS.map(d => ({ value: d.code, label: d.name }))}
           value={departmentCode}
-          onChange={(e) => onDepartmentChange(e.target.value as DepartmentCode | "")}
-          className="w-full p-2 border rounded"
-        >
-          <option value="">Sélectionnez un département</option>
-          {HAITI_DEPARTMENTS.map(d => (
-            <option key={d.code} value={d.code}>{d.name}</option>
-          ))}
-        </select>
+          onChange={(val) => onDepartmentChange(val as DepartmentCode | "")}
+          placeholder="Sélectionnez un département"
+          searchPlaceholder="Rechercher un département..."
+        />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Ville *</label>
-        <select
+        <SearchableSelect
+          options={cities.map(c => ({ value: c, label: c }))}
           value={city}
-          onChange={(e) => onCityChange(e.target.value)}
+          onChange={(val) => onCityChange(val)}
           disabled={!departmentCode}
-          className="w-full p-2 border rounded disabled:bg-gray-100"
-        >
-          <option value="">{departmentCode ? "Sélectionnez une ville" : "Choisissez d'abord un département"}</option>
-          {cities.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+          placeholder={departmentCode ? "Sélectionnez une ville" : "Choisissez d'abord un département"}
+          searchPlaceholder="Rechercher une ville..."
+        />
       </div>
     </div>
   );

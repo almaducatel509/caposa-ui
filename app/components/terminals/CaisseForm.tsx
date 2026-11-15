@@ -9,6 +9,7 @@ import { fetchBranches } from '@/app/lib/api/branche';
 import { createCaisse } from '@/app/lib/api/caisse';
 import { Branch } from '@/types/branche';
 import { CaisseCreateValues, validateCaisseForm } from './validation';
+import SearchableSelect from '@/app/components/ui/SearchableSelect';
 
 // ─── Helpers UI ──────────────────────────────────────────────────
 const inputCls = (err?: string) =>
@@ -124,19 +125,18 @@ export default function CaisseForm({ onSuccess, onCancel }: Props) {
 
         {/* Agence */}
         <Field label="Agence *" error={errors.branch}>
-          <div className="relative">
-            <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <select
-              value={form.branch ?? ''}
-              onChange={e => set('branch', e.target.value)}
-              className={inputCls(errors.branch) + ' pl-8'}
-            >
-              <option value="">Sélectionner une agence</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.branch_name}</option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            options={branches.map(b => ({
+              value: b.id,
+              label: b.branch_name,
+            }))}
+            value={form.branch ?? ''}
+            onChange={val => set('branch', val)}
+            placeholder="Sélectionner une agence"
+            searchPlaceholder="Rechercher une agence..."
+            icon={<Building2 size={14} />}
+            error={!!errors.branch}
+          />
         </Field>
 
         {/* Poste (optionnel) */}

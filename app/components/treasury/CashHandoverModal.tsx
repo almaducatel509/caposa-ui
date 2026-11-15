@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import SearchableSelect from '@/app/components/ui/SearchableSelect';
 
 interface Employee {
   id: string;
@@ -198,18 +199,16 @@ const CashHandoverModal: React.FC<CashHandoverModalProps> = ({ isOpen, onClose }
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Remis par <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={employees.map(emp => ({
+                      value: emp.id,
+                      label: `${emp.name} (${emp.role})`,
+                    }))}
                     value={formData.handedBy}
-                    onChange={(e) => setFormData({ ...formData, handedBy: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 outline-none transition-colors"
-                  >
-                    <option value="">Sélectionner un employé</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, handedBy: val })}
+                    placeholder="Sélectionner un employé"
+                    searchPlaceholder="Rechercher un employé..."
+                  />
                 </div>
 
                 {/* Vérifié par */}
@@ -217,18 +216,16 @@ const CashHandoverModal: React.FC<CashHandoverModalProps> = ({ isOpen, onClose }
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vérifié par <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={employees.map(emp => ({
+                      value: emp.id,
+                      label: `${emp.name} (${emp.role})`,
+                    }))}
                     value={formData.verifiedBy}
-                    onChange={(e) => setFormData({ ...formData, verifiedBy: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 outline-none transition-colors"
-                  >
-                    <option value="">Sélectionner un employé</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, verifiedBy: val })}
+                    placeholder="Sélectionner un employé"
+                    searchPlaceholder="Rechercher un employé..."
+                  />
                 </div>
 
                 {/* Reçu par */}
@@ -236,18 +233,16 @@ const CashHandoverModal: React.FC<CashHandoverModalProps> = ({ isOpen, onClose }
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Reçu par <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={employees.map(emp => ({
+                      value: emp.id,
+                      label: `${emp.name} (${emp.role})`,
+                    }))}
                     value={formData.receivedBy}
-                    onChange={(e) => setFormData({ ...formData, receivedBy: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 outline-none transition-colors"
-                  >
-                    <option value="">Sélectionner un employé</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, receivedBy: val })}
+                    placeholder="Sélectionner un employé"
+                    searchPlaceholder="Rechercher un employé..."
+                  />
                 </div>
 
                 {/* Notes optionnelles */}

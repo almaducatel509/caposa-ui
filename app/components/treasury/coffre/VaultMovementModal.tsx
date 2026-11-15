@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import { BiImport, BiExport } from 'react-icons/bi';
+import SearchableSelect from '@/app/components/ui/SearchableSelect';
 
 interface Employee {
   id: string;
@@ -219,18 +220,19 @@ const VaultMovementModal: React.FC<VaultMovementModalProps> = ({ isOpen, onClose
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Effectué par (Trésorier) <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={employees
+                      .filter(e => e.role === 'Trésorier' || e.role === 'Gestionnaire')
+                      .map(emp => ({
+                        value: emp.id,
+                        label: `${emp.name} (${emp.role})`,
+                      }))
+                    }
                     value={formData.performedBy}
-                    onChange={(e) => setFormData({ ...formData, performedBy: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 outline-none transition-colors"
-                  >
-                    <option value="">Sélectionner un employé</option>
-                    {employees.filter(e => e.role === 'Trésorier' || e.role === 'Gestionnaire').map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, performedBy: val })}
+                    placeholder="Sélectionner un employé"
+                    searchPlaceholder="Rechercher un trésorier..."
+                  />
                 </div>
 
                 {/* Vérifié par (Superviseur) */}
@@ -238,18 +240,19 @@ const VaultMovementModal: React.FC<VaultMovementModalProps> = ({ isOpen, onClose
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vérifié par (Superviseur) <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={employees
+                      .filter(e => e.role === 'Superviseur' || e.role === 'Gestionnaire')
+                      .map(emp => ({
+                        value: emp.id,
+                        label: `${emp.name} (${emp.role})`,
+                      }))
+                    }
                     value={formData.verifiedBy}
-                    onChange={(e) => setFormData({ ...formData, verifiedBy: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 outline-none transition-colors"
-                  >
-                    <option value="">Sélectionner un employé</option>
-                    {employees.filter(e => e.role === 'Superviseur' || e.role === 'Gestionnaire').map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, verifiedBy: val })}
+                    placeholder="Sélectionner un employé"
+                    searchPlaceholder="Rechercher un superviseur..."
+                  />
                 </div>
 
                 {/* Caissier concerné (optionnel pour les sorties) */}
@@ -258,18 +261,21 @@ const VaultMovementModal: React.FC<VaultMovementModalProps> = ({ isOpen, onClose
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Caissier concerné (optionnel)
                     </label>
-                    <select
-                      value={formData.relatedCashier}
-                      onChange={(e) => setFormData({ ...formData, relatedCashier: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 outline-none transition-colors"
-                    >
-                      <option value="">Aucun</option>
-                      {employees.filter(e => e.role === 'Caissier').map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      options={[
+                        { value: '', label: 'Aucun' },
+                        ...employees
+                          .filter(e => e.role === 'Caissier')
+                          .map(emp => ({
+                            value: emp.id,
+                            label: emp.name,
+                          })),
+                      ]}
+                      value={formData.relatedCashier || ''}
+                      onChange={(val) => setFormData({ ...formData, relatedCashier: val })}
+                      placeholder="Sélectionner un caissier (optionnel)"
+                      searchPlaceholder="Rechercher un caissier..."
+                    />
                     <p className="text-xs text-gray-500 mt-1">
                       Indiquer le caissier si c'est un fonds de caisse
                     </p>

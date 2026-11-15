@@ -28,6 +28,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Phone, Banknote, Users, ShieldCheck } from 'lucide-react';
 import { HAITI_DEPARTMENTS, getCitiesByDepartment } from '@/app/data/haitiLocations';
 import type { DepartmentCode } from '@/app/data/haitiLocations';
+import SearchableSelect from '@/app/components/ui/SearchableSelect';
 import type { MemberUiForm, FieldErrors } from './validations';
 import PhotoSelector from '../core/upload-file';
 import SignatureField from './SignatureField';
@@ -310,32 +311,32 @@ const MemberFormFields: React.FC<{
         </Field>
 
         <Field label="Département" required error={errors.department_code}>
-          <Select
+          <SearchableSelect
+            options={HAITI_DEPARTMENTS.map(d => ({ value: d.code, label: d.name }))}
             value={formData.department_code ?? ''}
-            onChange={e => {
-              setFormData({ department_code: e.target.value as DepartmentCode, city: '' });
+            onChange={val => {
+              setFormData({ department_code: val as DepartmentCode, city: '' });
               clear('department_code'); clear('city');
             }}
+            placeholder="Sélectionner un département"
+            searchPlaceholder="Rechercher un département..."
             error={errors.department_code}
-          >
-            <option value="" disabled>— Sélectionner —</option>
-            {HAITI_DEPARTMENTS.map(d => (
-              <option key={d.code} value={d.code}>{d.name}</option>
-            ))}
-          </Select>
+          />
         </Field>
 
         <Field label="Ville" required error={errors.city}>
-          <Select
+          <SearchableSelect
+            options={(getCitiesByDepartment(formData.department_code as DepartmentCode) ?? []).map(c => ({
+              value: c,
+              label: c,
+            }))}
             value={formData.city}
-            onChange={e => { setFormData({ city: e.target.value }); clear('city'); }}
+            onChange={val => { setFormData({ city: val }); clear('city'); }}
+            disabled={!formData.department_code}
+            placeholder={formData.department_code ? "Sélectionner une ville" : "Choisissez un département d'abord"}
+            searchPlaceholder="Rechercher une ville..."
             error={errors.city}
-          >
-            <option value="" disabled>— Sélectionner —</option>
-            {(getCitiesByDepartment(formData.department_code as DepartmentCode) ?? []).map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </Select>
+          />
         </Field>
 
         <Field label="Rue / Quartier" required error={errors.address} full>

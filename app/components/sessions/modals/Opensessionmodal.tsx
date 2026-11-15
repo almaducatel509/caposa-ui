@@ -13,6 +13,7 @@ import { Holiday } from '../../holidays/validations';
 import { OpeningHour } from '@/types/branche';
 import { Caisse } from '@/types/caisse';
 import { getEffectiveStatus } from '@/app/utils/branchStatus';
+import SearchableSelect from '@/app/components/ui/SearchableSelect';
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -63,14 +64,20 @@ function Field({ label, hint, error, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-        {label}
-      </label>
-      {hint && <p className="text-xs text-gray-400 -mt-1">{hint}</p>}
+    <div className="flex flex-col">
+      <div className="min-h-[38px] flex flex-col justify-start mb-1.5">
+        <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+          {label}
+        </label>
+        {hint ? (
+          <p className="text-xs text-gray-400 mt-0.5">{hint}</p>
+        ) : (
+          <p className="text-xs text-transparent select-none mt-0.5" aria-hidden="true">&nbsp;</p>
+        )}
+      </div>
       {children}
       {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
+        <p className="text-xs text-red-500 flex items-center gap-1 mt-1.5">
           <AlertCircle size={11} />{error}
         </p>
       )}
@@ -79,7 +86,7 @@ function Field({ label, hint, error, children }: {
 }
 
 const inputCls = (err?: string) =>
-  `w-full h-10 px-4 rounded-xl border-2 text-sm bg-[#F9F9F6] outline-none transition-colors ${
+  `w-full h-[42px] px-4 rounded-xl border-2 text-sm bg-[#F9F9F6] outline-none transition-colors ${
     err
       ? 'border-red-400 ring-2 ring-red-100'
       : 'border-gray-200 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20'
@@ -286,9 +293,90 @@ const responsablesCash = useMemo(
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-        {/* Caissier — lecture seule, dérivé de la session NextAuth */}
-        <Field label="Caissier" error={errors.username}
-          hint="Identifiant de la session en cours">
+        {/* ── Ligne 1 : Succursale & Numéro de caisse (Selects Caisse sur le même niveau) ── */}
+        <Field label="Succursale *" error={errors.branch} hint="Branche rattachée à la session">
+          <SearchableSelect
+            options={branches
+              .filter(b => getEffectiveStatus(b) === 'active')
+              .map(b => ({
+                value: b.id,
+                label: `${b.branch_name} (${b.branch_code})`,
+              }))
+            }
+            value={form.branch}
+            onChange={handleBranchChange}
+            placeholder="Sélectionnez une succursale"
+            searchPlaceholder="Rechercher une succursale..."
+            icon={<Building2 size={14} />}
+            error={!!errors.branch}
+          />
+        </Field>
+
+        <Field
+          label="Numéro de caisse *"
+          error={errors.numero_caisse}
+          hint={!form.branch ? "Sélectionnez d'abord une succursale" : "Poste de caisse à ouvrir"}
+        >
+          <SearchableSelect
+            options={availableCaisses.map(c => ({
+              value: c.numero_caisse,
+              label: `${c.numero_caisse} · ${c.nom_caisse}`,
+            }))}
+            value={form.numero_caisse}
+            onChange={val => set('numero_caisse', val)}
+            disabled={!form.branch}
+            placeholder={form.branch ? "Sélectionnez une caisse" : "Choisissez une succursale d'abord"}
+            searchPlaceholder="Rechercher une caisse..."
+            icon={<Hash size={14} />}
+            error={!!errors.numero_caisse}
+          />
+        </Field>
+
+        {/* ── Ligne 2 : Superviseur & Responsable cash (Selects Personnel sur le même niveau) ── */}
+        <Field
+          label="Superviseur *"
+          error={errors.superviseur}
+          hint="Employé qui autorise l'ouverture"
+        >
+          <SearchableSelect
+            options={superviseurs.map(s => ({
+              value: getUsername(s),
+              label: `${s.first_name} ${s.last_name} (${getUsername(s)})`,
+            }))}
+            value={form.superviseur}
+            onChange={val => set('superviseur', val)}
+            placeholder={superviseurs.length === 0 ? "Aucun superviseur disponible" : "Sélectionnez un superviseur"}
+            searchPlaceholder="Rechercher un superviseur..."
+            icon={<User size={14} />}
+            error={!!errors.superviseur}
+          />
+        </Field>
+
+        <Field
+          label="Responsable cash *"
+          error={errors.responsable_cash}
+          hint="Trésorier qui remet le fond de caisse"
+        >
+          <SearchableSelect
+            options={responsablesCash.map(r => ({
+              value: getUsername(r),
+              label: `${r.first_name} ${r.last_name} (${getUsername(r)})`,
+            }))}
+            value={form.responsable_cash}
+            onChange={val => set('responsable_cash', val)}
+            placeholder={responsablesCash.length === 0 ? "Aucun trésorier disponible" : "Sélectionnez un responsable cash"}
+            searchPlaceholder="Rechercher un responsable cash..."
+            icon={<User size={14} />}
+            error={!!errors.responsable_cash}
+          />
+        </Field>
+
+        {/* ── Ligne 3 : Caissier & Montant d'ouverture (Infos Session sur le même niveau) ── */}
+        <Field
+          label="Caissier"
+          error={errors.username}
+          hint="Identifiant de la session en cours"
+        >
           <div className="relative">
             <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -301,115 +389,26 @@ const responsablesCash = useMemo(
           </div>
         </Field>
 
-        {/* Succursale — en premier, filtre le numéro de caisse ci-dessous */}
-        <Field label="Succursale *" error={errors.branch}>
+        <Field
+          label="Montant d'ouverture *"
+          error={errors.montant_ouverture}
+          hint="Fond de caisse remis physiquement"
+        >
           <div className="relative">
-            <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <select
-              value={form.branch}
-              onChange={e => handleBranchChange(e.target.value)}
-              className={inputCls(errors.branch) + ' pl-8 pr-4 appearance-none cursor-pointer'}
-            >
-              <option value=""> Sélectionnez une succursale </option>
-              {branches
-                .filter(b => getEffectiveStatus(b) === 'active')
-                .map(b => (
-                  <option key={b.id} value={b.id}>
-                    {b.branch_name} ({b.branch_code})
-                  </option>
-                ))
-              }
-            </select>
+            <Banknote size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="number"
+              min={0}
+              value={form.montant_ouverture}
+              onChange={e => set('montant_ouverture', e.target.value)}
+              placeholder="0.00"
+              className={inputCls(errors.montant_ouverture) + ' pl-8 pr-12'}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+              {form.devise}
+            </span>
           </div>
         </Field>
-
-        {/* Numéro de caisse — dépend de la succursale */}
-        <Field label="Numéro de caisse *" error={errors.numero_caisse}
-          hint={!form.branch ? "Sélectionnez d'abord une succursale" : undefined}>
-          <div className="relative">
-            <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <select
-              value={form.numero_caisse}
-              onChange={e => set('numero_caisse', e.target.value)}
-              disabled={!form.branch}
-              className={inputCls(errors.numero_caisse) + ' pl-8 pr-4 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'}
-            >
-              <option value="">
-                {form.branch ? ' Sélectionnez une caisse ' : ' Choisissez une succursale d\'abord '}
-              </option>
-              {availableCaisses.map(c => (
-                <option key={c.id} value={c.numero_caisse}>
-                  {c.numero_caisse}  {c.nom_caisse}
-                </option>
-              ))}
-            </select>
-          </div>
-        </Field>
-
-        {/* Superviseur — employés ayant le poste "Superviseur" */}
-        <Field label="Superviseur *" error={errors.superviseur}
-          hint="Employé qui autorise l'ouverture">
-          <div className="relative">
-            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <select
-              value={form.superviseur}
-              onChange={e => set('superviseur', e.target.value)}
-              className={inputCls(errors.superviseur) + ' pl-8 pr-4 appearance-none cursor-pointer'}
-            >
-              <option value="">
-                {superviseurs.length === 0 ? ' Aucun superviseur disponible ' : ' Sélectionnez un superviseur '}
-              </option>
-              {superviseurs.map(s => (
-                <option key={s.id} value={getUsername(s)}>
-                  {s.first_name} {s.last_name} ({getUsername(s)})
-                </option>
-              ))}
-            </select>
-          </div>
-        </Field>
-
-        {/* Responsable cash — employés ayant le poste "Trésorier" */}
-        <Field label="Responsable cash *" error={errors.responsable_cash}
-          hint="Trésorier qui remet le fond de caisse">
-          <div className="relative">
-            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <select
-              value={form.responsable_cash}
-              onChange={e => set('responsable_cash', e.target.value)}
-              className={inputCls(errors.responsable_cash) + ' pl-8 pr-4 appearance-none cursor-pointer'}
-            >
-              <option value="">
-                {responsablesCash.length === 0 ? ' Aucun trésorier disponible ' : ' Sélectionnez un responsable cash '}
-              </option>
-              {responsablesCash.map(r => (
-                <option key={r.id} value={getUsername(r)}>
-                  {r.first_name} {r.last_name} ({getUsername(r)})
-                </option>
-              ))}
-            </select>
-          </div>
-        </Field>
-
-        {/* Montant d'ouverture — pleine largeur */}
-        <div className="sm:col-span-2">
-          <Field label="Montant d'ouverture *" error={errors.montant_ouverture}
-            hint="Fond de caisse remis physiquement par le responsable cash">
-            <div className="relative">
-              <Banknote size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <input
-                type="number"
-                min={0}
-                value={form.montant_ouverture}
-                onChange={e => set('montant_ouverture', e.target.value)}
-                placeholder="0.00"
-                className={inputCls(errors.montant_ouverture) + ' pl-8'}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
-                {form.devise}
-              </span>
-            </div>
-          </Field>
-        </div>
 
       </div>
 
