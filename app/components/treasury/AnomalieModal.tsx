@@ -69,7 +69,6 @@ const AnomalieModal: React.FC<AnomalieModalProps> = ({ remise, onClose, onConfir
     /* Overlay */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
 

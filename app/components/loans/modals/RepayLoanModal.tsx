@@ -153,9 +153,8 @@ export default function RepayLoanModal({ loan, onClose, onDone }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden max-h-[92vh] flex flex-col"
-        onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden max-h-[92vh] flex flex-col">
 
         {/* En-tête */}
         <div className="flex items-start justify-between p-5 border-b border-gray-100 bg-[#DDEAD5] shrink-0">

@@ -106,8 +106,7 @@ function SoftDeleteModal({ archive, onConfirm, onClose }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
         <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -181,8 +180,7 @@ function RestoreModal({ archive, onConfirm, onClose }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
         <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

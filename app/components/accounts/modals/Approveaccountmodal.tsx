@@ -61,13 +61,11 @@ export default function ApproveAccountModal({ account, onClose, onApproved }: Ap
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={() => step !== 'loading' && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
-        onClick={e => e.stopPropagation()}
       >
         {/* ── Succès ───────────────────────────────────────────── */}
         {step === 'success' && (

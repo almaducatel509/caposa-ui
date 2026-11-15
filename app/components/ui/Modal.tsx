@@ -24,7 +24,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       <div className={`relative w-full ${sizeClasses[size]} bg-white rounded-2xl shadow-2xl`}>
 
         {/* Header — s'affiche SEULEMENT si title est fourni */}

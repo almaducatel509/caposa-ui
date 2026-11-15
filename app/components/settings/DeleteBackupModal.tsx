@@ -53,7 +53,7 @@ export default function DeleteBackupModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in" />
 
       {/* Modal Container */}
       <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden z-10 animate-in zoom-in-95 duration-200">

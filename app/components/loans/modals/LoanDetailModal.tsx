@@ -91,10 +91,8 @@ export default function LoanDetailModal({ loan, onClose }: Props) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10"
-      onClick={onClose}>
-      <div className="w-full max-w-xl bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
-        onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 backdrop-blur-sm p-4 pt-10">
+      <div className="w-full max-w-xl bg-[#F9F9F6] rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
 
         <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3">
