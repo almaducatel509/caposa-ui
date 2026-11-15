@@ -15,7 +15,7 @@ interface LoginPageProps {
   searchParams?: Promise<{ expired?: string; callbackUrl?: string }>;
 }
 
-export default async function Home(props?: LoginPageProps) {
+export default async function Home(props: LoginPageProps) {
   try {
     const searchParams = props?.searchParams ? await props.searchParams : undefined;
     const isExpired = searchParams?.expired === "1";
