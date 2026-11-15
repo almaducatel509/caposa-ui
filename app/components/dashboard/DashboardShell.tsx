@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import SideNav from './sidenav';
 import { ThemeToggle } from '@/app/components/core/ThemeToggle';
 import { useSession } from 'next-auth/react';
+import UserProfileModal from '@/app/components/profile/UserProfileModal';
 
 interface DashboardShellProps {
   username?: string;
@@ -21,6 +22,7 @@ export default function DashboardShell({
   children,
 }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -86,13 +88,24 @@ export default function DashboardShell({
 
         <div className="flex items-center gap-2.5">
           <ThemeToggle />
-          <div className="w-8 h-8 rounded-lg bg-[#DDEAD5] dark:bg-[#1B5E20]/40 flex items-center justify-center shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(true)}
+            title="Mon profil"
+            className="w-8 h-8 rounded-lg bg-[#DDEAD5] dark:bg-[#1B5E20]/40 flex items-center justify-center shrink-0 cursor-pointer hover:ring-2 hover:ring-[#2E7D32]/30 transition-all"
+          >
             <span className="text-xs font-bold text-[#1B5E20] dark:text-[#81C784]">
               {initials}
             </span>
-          </div>
+          </button>
         </div>
       </header>
+
+      {/* Modal Mon Profil (Mobile) */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
 
       {/* ─── Drawer Mobile (< md) ─── */}
       {mobileOpen && (

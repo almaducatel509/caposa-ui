@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { LogOut, Loader2 } from 'lucide-react';
+import { LogOut, Loader2, Settings } from 'lucide-react';
 import { GiReceiveMoney } from 'react-icons/gi';
 import NavLinks from '@/app/components/dashboard/Navlink';
 import { useSession } from 'next-auth/react';
@@ -10,6 +10,8 @@ import { logout } from '@/app/lib/actions';
 import { SessionManager } from '@/app/lib/api/Sessionmanager';
 import { useUserRoles } from '@/app/lib/useUserRoles';
 import { ThemeToggle } from '@/app/components/core/ThemeToggle';
+import UserProfileModal from '@/app/components/profile/UserProfileModal';
+import { fetchMyProfile } from '@/app/lib/api/profile';
 
 /** Libellés lisibles des rôles Django (déjà normalisés par useUserRoles). */
 const ROLE_LABELS: Record<string, string> = {
@@ -35,6 +37,16 @@ export default function SideNav({ username: propUsername, roles: propRoles, onNa
   const { data: session } = useSession();
   const { roles: hookRoles, username: hookUsername } = useUserRoles();
   const [isPending, startTransition] = useTransition();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMyProfile()
+      .then((p) => {
+        if (p.photo_profil) setUserPhoto(p.photo_profil);
+      })
+      .catch(() => {});
+  }, []);
 
   const roles = propRoles && propRoles.length > 0 ? propRoles : hookRoles;
   const username = propUsername || hookUsername;
@@ -95,18 +107,32 @@ export default function SideNav({ username: propUsername, roles: propRoles, onNa
 
       {/* ── Utilisateur + Déconnexion ── */}
       <div className="shrink-0 border-t border-gray-100 dark:border-zinc-800">
-        {/* Profil utilisateur */}
+        {/* Profil utilisateur — Cliquable pour modifier profil (photo, sexe, mot de passe) */}
         <div className="p-3 border-b border-gray-100 dark:border-zinc-800">
-          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F9F9F6] dark:hover:bg-zinc-800/60 transition-colors cursor-default">
-            <div className="w-9 h-9 rounded-xl bg-[#DDEAD5] dark:bg-[#1B5E20]/40 flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-[#1B5E20] dark:text-[#81C784]">{initials}</span>
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(true)}
+            title="Modifier mon profil"
+            className="w-full flex items-center gap-3 p-2 rounded-2xl hover:bg-emerald-50/60 dark:hover:bg-zinc-800/80 transition-all text-left cursor-pointer group border border-transparent hover:border-[#2E7D32]/20"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-[#DDEAD5] dark:bg-[#1B5E20]/40 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform overflow-hidden shadow-xs">
+              {userPhoto ? (
+                <img src={userPhoto} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-sm font-bold text-[#1B5E20] dark:text-[#81C784]">{initials}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">{name}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate group-hover:text-[#2E7D32] dark:group-hover:text-[#81C784] transition-colors">
+                  {name}
+                </p>
+                <Settings className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#2E7D32] dark:group-hover:text-[#81C784] transition-colors shrink-0 ml-1" />
+              </div>
               {role && <p className="text-xs text-[#2E7D32] dark:text-[#4CAF50] font-medium truncate">{role}</p>}
-              {email && <p className="text-xs text-gray-400 dark:text-zinc-500 truncate">{email}</p>}
+              {email && <p className="text-[11px] text-gray-400 dark:text-zinc-500 truncate">{email}</p>}
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Déconnexion */}
@@ -123,6 +149,19 @@ export default function SideNav({ username: propUsername, roles: propRoles, onNa
           </button>
         </div>
       </div>
+
+      {/* Modal Mon Profil */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onProfileUpdated={(updated) => {
+          if (updated.photo_profil) {
+            setUserPhoto(updated.photo_profil);
+          } else {
+            setUserPhoto(null);
+          }
+        }}
+      />
     </div>
   );
 }
