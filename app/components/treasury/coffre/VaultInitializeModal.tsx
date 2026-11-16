@@ -191,7 +191,7 @@ export const VaultInitializeModal: React.FC<VaultInitializeModalProps> = ({
                 <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
                 <div>
                   <p className="font-semibold mb-0.5">Opération unique et inaltérable</p>
-                  Ce solde initial servira de base inviolable à tous les mouvements coffre $\leftrightarrow$ caisse. Il sera verrouillé dès validation par le superviseur.
+                  Ce solde initial servira de base inviolable à tous les mouvements coffre ↔ caisse. Il sera verrouillé dès validation par le superviseur.
                 </div>
               </div>
 
