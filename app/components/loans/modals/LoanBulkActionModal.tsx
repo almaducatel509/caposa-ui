@@ -34,6 +34,7 @@ interface Props {
   onClose: () => void;
   /** Appelé après exécution (succès total ou partiel) — le parent recharge. */
   onDone:  () => void;
+  isCreatorOf?: (loan: LoanData) => boolean;
 }
 
 // ─── Motifs de rejet ──────────────────────────────────────────────
@@ -123,14 +124,19 @@ function refusalReason(action: LoanBulkAction, status: LoanStatus): string {
   }
 }
 
-function checkEligibility(action: LoanBulkAction, loans: LoanData[]) {
+function checkEligibility(action: LoanBulkAction, loans: LoanData[], isCreatorOf?: (loan: LoanData) => boolean) {
   const allowed = ELIGIBLE[action];
   if (!allowed) return { eligible: loans, refused: [] as { loan: LoanData; reason: string }[] };   // export
   const eligible: LoanData[] = [];
   const refused: { loan: LoanData; reason: string }[] = [];
   for (const loan of loans) {
-    if (allowed.includes(loan.status)) eligible.push(loan);
-    else refused.push({ loan, reason: refusalReason(action, loan.status) });
+    if (action === 'approve' && isCreatorOf && isCreatorOf(loan)) {
+      refused.push({ loan, reason: 'Séparation des tâches — vous ne pouvez pas approuver un prêt que vous avez vous-même créé' });
+    } else if (allowed.includes(loan.status)) {
+      eligible.push(loan);
+    } else {
+      refused.push({ loan, reason: refusalReason(action, loan.status) });
+    }
   }
   return { eligible, refused };
 }
@@ -192,7 +198,7 @@ const formatHTG = (n: number) =>
 
 // ─── Composant ────────────────────────────────────────────────────
 
-const LoanBulkActionModal: React.FC<Props> = ({ action, loans, onClose, onDone }) => {
+const LoanBulkActionModal: React.FC<Props> = ({ action, loans, onClose, onDone, isCreatorOf }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetail, setRejectDetail] = useState('');
   const [running,      setRunning]      = useState(false);
@@ -202,8 +208,8 @@ const LoanBulkActionModal: React.FC<Props> = ({ action, loans, onClose, onDone }
 
   const cfg = action ? AVAILABLE[action] : undefined;
   const { eligible, refused } = useMemo(
-    () => (action ? checkEligibility(action, loans) : { eligible: [], refused: [] }),
-    [action, loans],
+    () => (action ? checkEligibility(action, loans, isCreatorOf) : { eligible: [], refused: [] }),
+    [action, loans, isCreatorOf],
   );
 
   if (!action) return null;

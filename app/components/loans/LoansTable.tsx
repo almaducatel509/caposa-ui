@@ -118,7 +118,7 @@ function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: 
 export default function LoansTable() {
   // Rôle réel lu dans la session (plus de rôle codé en dur)
   const {
-    canApprove: canDecide, canDelete, canDisburse, canRepay, canCreate,
+    canApprove: canDecide, canApproveLoan, isCreatorOf, canDelete, canDisburse, canRepay, canCreate,
   } = useLoanPermissions();
 
   // Actions masquées selon le rôle (le backend revérifie de toute façon)
@@ -519,10 +519,17 @@ const [notice, setNotice] = useState<string | null>(null);
                   </button>
 
                   {canDecide && loan.status === 'pending' && (
-                    <button title="Approuver" onClick={() => setBulk({ action: 'approve', loans: [loan] })}
-                      className="p-1.5 rounded-lg text-[#2E7D32] hover:bg-[#DDEAD5]">
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
+                    canApproveLoan(loan) ? (
+                      <button title="Approuver" onClick={() => setBulk({ action: 'approve', loans: [loan] })}
+                        className="p-1.5 rounded-lg text-[#2E7D32] hover:bg-[#DDEAD5]">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <span title="Séparation des tâches : vous ne pouvez pas approuver un prêt que vous avez vous-même créé"
+                        className="p-1.5 rounded-lg text-gray-300 cursor-not-allowed">
+                        <Check className="w-3.5 h-3.5" />
+                      </span>
+                    )
                   )}
 
                   {canDecide && (loan.status === 'pending' || loan.status === 'approved') && (
@@ -604,6 +611,7 @@ const [notice, setNotice] = useState<string | null>(null);
           loans={bulk.loans}
           onClose={() => setBulk(null)}
           onDone={handleBulkDone}
+          isCreatorOf={isCreatorOf}
         />
       )}
     </div>

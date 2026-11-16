@@ -55,20 +55,31 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         };
         if (!access) return null;
 
-        // 3) Le JWT SimpleJWT ne contient que user_id (+ exp, iat…)
-        const payload = decodeJwt<{ user_id?: number; username?: string }>(access);
+        // 3) Le JWT SimpleJWT contient user_id, username, roles, employee_id...
+        const payload = decodeJwt<{
+          user_id?: number;
+          username?: string;
+          employee_id?: string;
+        }>(access);
 
         // 4) Rôles renvoyés par Django au login, normalisés
         const normalizedRoles = normalizeRoles(roles);
 
         const ADMIN_USERNAMES = ["YT1", "Karimc", "Claudin"];
         const finalUsername = payload.username ?? username;
+        const detailsObj = result.details as any;
+        const employeeId =
+          payload.employee_id ||
+          detailsObj?.user?.employee_id ||
+          detailsObj?.employee_id ||
+          undefined;
 
         return {
           id: (payload.user_id ?? finalUsername).toString(),
           username: finalUsername,
           name: finalUsername,
           roles: normalizedRoles,
+          employee_id: employeeId,
           isAdmin:
             normalizedRoles.includes("administrateur") ||
             ADMIN_USERNAMES.includes(finalUsername),
@@ -83,6 +94,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         token.email = (user as any).email;
         token.username = (user as any).username;
         token.roles = (user as any).roles ?? [];
+        token.employee_id = (user as any).employee_id;
         token.isAdmin = (user as any).isAdmin;
       }
       return token;
@@ -91,6 +103,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       if (session.user) {
         (session.user as any).username = token.username;
         (session.user as any).roles = token.roles ?? [];
+        (session.user as any).employee_id = token.employee_id;
         (session.user as any).isAdmin = token.isAdmin;
         session.user.name = (token.name as string) || (token.username as string);
       }

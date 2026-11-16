@@ -23,4 +23,5 @@ export type UserSession = {
   email: string;
   username: string;
   roles: string[];
+  employee_id?: string;
 };

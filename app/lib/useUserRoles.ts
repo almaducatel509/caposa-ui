@@ -27,6 +27,16 @@ export function useUserRoles() {
     [session],
   );
 
+  const username = useMemo<string>(
+    () => ((session?.user as { username?: string } | undefined)?.username ?? ''),
+    [session],
+  );
+
+  const employeeId = useMemo<string>(
+    () => ((session?.user as { employee_id?: string } | undefined)?.employee_id ?? ''),
+    [session],
+  );
+
   /** Vrai si l'utilisateur a AU MOINS UN des rôles donnés (accents et casse ignorés). */
   const hasRole = useCallback(
     (...wanted: string[]) => wanted.some(w => roles.includes(normalizeRole(w))),
@@ -37,6 +47,7 @@ export function useUserRoles() {
     roles,
     hasRole,
     loading: status === 'loading',
-    username: (session?.user as { username?: string } | undefined)?.username ?? '',
+    username,
+    employeeId,
   };
 }

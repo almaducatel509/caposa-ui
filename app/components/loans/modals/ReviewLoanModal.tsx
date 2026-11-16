@@ -114,7 +114,7 @@ const ReviewLoanModal: React.FC<ReviewLoanModalProps> = ({
 
   const availableActions = useMemo<ReviewAction[]>(() => {
     if (!loan) return [];
-    return actionsFor(loan.status).filter((a): a is ReviewAction =>
+    return actionsFor(loan).filter((a): a is ReviewAction =>
       (REVIEW_ACTIONS as string[]).includes(a));
   }, [loan, actionsFor]);
 

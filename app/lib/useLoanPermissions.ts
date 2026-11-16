@@ -13,6 +13,7 @@
  *   - agent de crédit : crée et suit les demandes
  *   - superviseur / directeur : approuvent ou rejettent, ne manipulent pas l'argent
  *   - caissier : décaisse et encaisse, ne valide jamais une demande
+ *   - créateur du prêt : ne peut JAMAIS approuver son propre prêt (séparation des tâches / principe des 4 yeux)
  *   - directeur / admin : seuls à pouvoir supprimer (pending ou rejected uniquement)
  *
  * Django vérifie aussi chaque action (403 sinon). Ces règles servent
@@ -22,7 +23,7 @@
  */
 
 import { useMemo } from 'react';
-import type { LoanStatus } from '@/app/components/transactions/validation/loanSchema';
+import type { LoanData, LoanStatus } from '@/app/components/transactions/validation/loanSchema';
 import { useUserRoles } from '@/app/lib/useUserRoles';
 export type LoanAction = 'approve' | 'reject' | 'disburse' | 'repay' | 'delete';
 
@@ -34,7 +35,7 @@ const CREATORS   = ['agent_credit', 'agent_de_credit', 'conseiller', 'superviseu
 const DELETERS   = ['directeur', 'administrateur', 'admin'];
 
 export function useLoanPermissions() {
-  const { hasRole, loading, roles } = useUserRoles();
+  const { hasRole, loading, roles, employeeId, username } = useUserRoles();
 
   return useMemo(() => {
     const canApprove  = hasRole(...APPROVERS);
@@ -43,11 +44,35 @@ export function useLoanPermissions() {
     const canCreate   = hasRole(...CREATORS);
     const canDelete   = hasRole(...DELETERS);
 
+    /** Vérifie si l'utilisateur connecté est le créateur de CE prêt */
+    const isCreatorOf = (loan?: Pick<LoanData, 'employee'> | null): boolean => {
+      if (!loan || !loan.employee) return false;
+      if (employeeId && String(loan.employee).toLowerCase() === String(employeeId).toLowerCase()) {
+        return true;
+      }
+      return false;
+    };
+
+    /** Vérifie si l'utilisateur a le droit d'approuver CE prêt (principe des 4 yeux) */
+    const canApproveLoan = (loan?: Pick<LoanData, 'employee'> | null): boolean => {
+      if (!canApprove) return false;
+      if (isCreatorOf(loan)) return false; // Ne peut pas s'auto-approuver
+      return true;
+    };
+
     /** Actions possibles pour CE prêt, selon son statut ET le rôle connecté. */
-    const actionsFor = (status: LoanStatus): LoanAction[] => {
+    const actionsFor = (statusOrLoan: LoanStatus | Pick<LoanData, 'status' | 'employee'>): LoanAction[] => {
+      const isObj = typeof statusOrLoan === 'object' && statusOrLoan !== null;
+      const status: LoanStatus = isObj ? statusOrLoan.status : statusOrLoan;
+      const loan = isObj ? statusOrLoan : null;
+
       const out: LoanAction[] = [];
       if (status === 'pending') {
-        if (canApprove) out.push('approve', 'reject');
+        // Approbation : permise seulement si l'utilisateur ne l'a pas lui-même créé
+        if (canApprove && (!loan || canApproveLoan(loan))) {
+          out.push('approve');
+        }
+        if (canApprove) out.push('reject');
         if (canDelete)  out.push('delete');
       }
       if (status === 'approved') {
@@ -62,7 +87,10 @@ export function useLoanPermissions() {
     return {
       loading,
       roles,
+      employeeId,
       canApprove,
+      canApproveLoan,
+      isCreatorOf,
       canDisburse,
       canRepay,
       canCreate,
@@ -71,5 +99,5 @@ export function useLoanPermissions() {
       canBulkDecide: canApprove,
       actionsFor,
     };
-  }, [hasRole, loading, roles]);
+  }, [hasRole, loading, roles, employeeId, username]);
 }

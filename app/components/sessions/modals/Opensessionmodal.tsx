@@ -216,9 +216,13 @@ const responsablesCash = useMemo(
 
     if (!form.superviseur.trim())
       e.superviseur = 'Le superviseur est requis';
+    else if (caissierUsername && form.superviseur.trim().toLowerCase() === caissierUsername.toLowerCase())
+      e.superviseur = 'Séparation des tâches : un caissier ne peut pas être son propre superviseur';
 
     if (!form.responsable_cash.trim())
       e.responsable_cash = "Le responsable cash est requis";
+    else if (caissierUsername && form.responsable_cash.trim().toLowerCase() === caissierUsername.toLowerCase())
+      e.responsable_cash = 'Séparation des tâches : un caissier ne peut pas être son propre responsable cash';
 
     if (!form.branch.trim()) {
       e.branch = "La succursale est requise";
