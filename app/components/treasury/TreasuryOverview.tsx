@@ -5,6 +5,7 @@ import { FiBell } from 'react-icons/fi';
 
 import PageHeader from '../header';
 import RemisesTable from './RemisesTable';
+import { VaultInitializeModal } from './coffre/VaultInitializeModal';
 import { TreasuryDashboard, CurrencyCode } from '@/types/tresorerie';
 import { useEffect, useState } from 'react';
 import AxiosInstance from '@/app/lib/axiosInstance';
@@ -29,25 +30,36 @@ const formatTime = (iso: string) =>
 const TreasuryOverview: React.FC = () => {
   const [dashboard, setDashboard] = useState<TreasuryDashboard | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [currentBranchId, setCurrentBranchId] = useState<string>('');
+  const [isInitModalOpen, setIsInitModalOpen] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const { data: bList } = await AxiosInstance.get('/branches/');
+      const formatted = (bList || []).map((b: any) => ({
+        id: String(b.id),
+        name: b.branch_name || b.name,
+      }));
+      setBranches(formatted);
+
+      const branchId = currentBranchId || formatted[0]?.id;
+      if (!branchId) return;
+      setCurrentBranchId(branchId);
+
+      const { data: dashData } = await AxiosInstance.get(`/treasury/dashboard/?branch=${branchId}`);
+      setDashboard(dashData);
+
+      const { data: pending } = await AxiosInstance.get('/treasury/handovers/?status=pending');
+      setPendingCount(pending.length);
+    } catch (e) {
+      console.error('Erreur chargement trésorerie:', e);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const { data: branches } = await AxiosInstance.get('/branches/');
-        const branchId = branches[0]?.id;
-        if (!branchId) return;
-
-        const { data: dashData } = await AxiosInstance.get(`/treasury/dashboard/?branch=${branchId}`);
-        setDashboard(dashData);
-
-        const { data: pending } = await AxiosInstance.get('/treasury/handovers/?status=pending');
-        setPendingCount(pending.length);
-      } catch (e) {
-        console.error('Erreur chargement trésorerie:', e);
-      }
-    }
     loadData();
-  }, []);
+  }, [currentBranchId]);
 
   if (!dashboard) {
     return (
@@ -111,20 +123,32 @@ const TreasuryOverview: React.FC = () => {
           subtitle={`${dashboard.branch_name} · Mis à jour à ${formatTime(dashboard.generated_at)}`}
         />
  
-        {/* Cloche remises en attente */}
-        <div className="relative">
+        {/* Boutons d'action Trésorerie */}
+        <div className="flex items-center gap-3">
           <button
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
-            title="Remises en attente de validation"
+            onClick={() => setIsInitModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all cursor-pointer"
+            title="Initialiser le solde de départ du coffre de l'agence"
           >
-            <FiBell className="w-4 h-4" />
-            Remises en attente
+            <FaLock className="w-3.5 h-3.5" />
+            Initialiser le coffre
           </button>
-          {pendingCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
-              {pendingCount}
-            </span>
-          )}
+
+          {/* Cloche remises en attente */}
+          <div className="relative">
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-all cursor-pointer"
+              title="Remises en attente de validation"
+            >
+              <FiBell className="w-4 h-4" />
+              Remises en attente
+            </button>
+            {pendingCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                {pendingCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
  
@@ -158,6 +182,35 @@ const TreasuryOverview: React.FC = () => {
                 dashboard.cash_balance.reference_currency,
               )}
             </p>
+            <div className="mt-2.5 space-y-1 text-xs text-white/80 border-t border-white/15 pt-2">
+              <div className="flex justify-between items-center">
+                <span>Au coffre :</span>
+                <span className="font-semibold text-white">
+                  {formatCurrency(
+                    dashboard.cash_balance.vault_cash ?? 0,
+                    dashboard.cash_balance.reference_currency,
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>En caisses ouvertes :</span>
+                <span className="font-semibold text-white">
+                  {formatCurrency(
+                    dashboard.cash_balance.open_cashboxes ?? 0,
+                    dashboard.cash_balance.reference_currency,
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>En transit (remises) :</span>
+                <span className="font-semibold text-white">
+                  {formatCurrency(
+                    dashboard.cash_balance.transit_cash ?? 0,
+                    dashboard.cash_balance.reference_currency,
+                  )}
+                </span>
+              </div>
+            </div>
           </div>
  
           <div className="md:pl-6">

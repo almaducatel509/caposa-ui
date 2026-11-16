@@ -14,6 +14,7 @@ import { OpeningHour } from '@/types/branche';
 import { Caisse } from '@/types/caisse';
 import { getEffectiveStatus } from '@/app/utils/branchStatus';
 import SearchableSelect from '@/app/components/ui/SearchableSelect';
+import AxiosInstance from '@/app/lib/axiosInstance';
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -180,6 +181,33 @@ const responsablesCash = useMemo(
   const [errors,  setErrors]  = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [done,    setDone]    = useState(false);
+  const [vaultBalance, setVaultBalance] = useState<number | null>(null);
+  const [vaultLoading, setVaultLoading] = useState(false);
+
+  useEffect(() => {
+    if (!form.branch) {
+      setVaultBalance(null);
+      return;
+    }
+    let isSubscribed = true;
+    setVaultLoading(true);
+    AxiosInstance.get(`/treasury/vault/?branch=${form.branch}&currency=HTG`)
+      .then(res => {
+        if (!isSubscribed) return;
+        const b = parseFloat(res.data?.vault?.balance);
+        setVaultBalance(isNaN(b) ? 0 : b);
+      })
+      .catch(() => {
+        if (!isSubscribed) return;
+        setVaultBalance(0);
+      })
+      .finally(() => {
+        if (isSubscribed) setVaultLoading(false);
+      });
+    return () => {
+      isSubscribed = false;
+    };
+  }, [form.branch]);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -234,8 +262,11 @@ const responsablesCash = useMemo(
     }
 
     const m = parseFloat(form.montant_ouverture);
-    if (isNaN(m) || m <= 0)
+    if (isNaN(m) || m <= 0) {
       e.montant_ouverture = 'Montant invalide — doit être supérieur à 0';
+    } else if (vaultBalance !== null && m > vaultBalance) {
+      e.montant_ouverture = `Fonds disponibles au coffre insuffisants (${new Intl.NumberFormat('fr-HT').format(vaultBalance)} HTG disponible). Le trésorier doit approvisionner le coffre.`;
+    }
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -265,18 +296,16 @@ const responsablesCash = useMemo(
       await onConfirm(payload);
       setDone(true);
     } catch (err: any) {
-      // `SessionManager.open()` lance parfois un Error "nu" (pas un objet
-      // Axios) — err.response n'existe alors jamais. On lit donc d'abord
-      // err.message (le cas courant), puis on retombe sur err.response.data
-      // pour les erreurs Axios non re-wrappées, puis un message générique.
+      const responseData = err?.response?.data;
       const message =
+        responseData?.message ??
+        responseData?.detail ??
+        (responseData && typeof responseData === 'object' && Object.values(responseData)[0]) ??
         err?.message ??
-        err?.response?.data?.message ??
-        err?.response?.data?.detail ??
         "Erreur lors de l'ouverture. Réessayez.";
 
       console.error('❌ Erreur ouverture session:', message);
-      setErrors({ montant_ouverture: message });
+      setErrors({ montant_ouverture: typeof message === 'string' ? message : JSON.stringify(message) });
     } finally {
       setLoading(false);
     }
@@ -338,7 +367,9 @@ const responsablesCash = useMemo(
           <SearchableSelect
             options={availableCaisses.map(c => ({
               value: c.numero_caisse,
-              label: `${c.numero_caisse} · ${c.nom_caisse}`,
+              label: c.session_active
+                ? `${c.numero_caisse} · ${c.nom_caisse} (Occupée par ${c.session_active.caissier_nom || c.session_active.caissier})`
+                : `${c.numero_caisse} · ${c.nom_caisse}`,
             }))}
             value={form.numero_caisse}
             onChange={val => set('numero_caisse', val)}
@@ -425,6 +456,23 @@ const responsablesCash = useMemo(
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
               {form.devise}
             </span>
+          </div>
+          <div className="flex items-center justify-between mt-1.5 px-0.5 text-xs">
+            <span className="text-gray-400">Disponible au coffre :</span>
+            {vaultLoading ? (
+              <span className="text-gray-400 italic">Vérification...</span>
+            ) : vaultBalance !== null ? (
+              <span
+                className={`font-semibold ${
+                  vaultBalance <= 0 ? 'text-red-600' : 'text-[#2E7D32]'
+                }`}
+              >
+                {new Intl.NumberFormat('fr-HT').format(vaultBalance)} HTG
+                {vaultBalance <= 0 && ' (Coffre vide)'}
+              </span>
+            ) : (
+              <span className="text-gray-400">—</span>
+            )}
           </div>
         </Field>
 
