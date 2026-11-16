@@ -78,6 +78,9 @@ export interface AccountSummary {
 // ─── Sections du dashboard ───────────────────────────────────────
 
 export interface CashBalance {
+  vault_cash?: number;
+  open_cashboxes?: number;
+  transit_cash?: number;
   cash_physical: number;
   bank_accounts: number;
   total_consolidated: number;

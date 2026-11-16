@@ -39,6 +39,13 @@ export interface Caisse {
   created_at?:      string;        // ISO — auto_now_add Django
   nb_sessions?:     number;        // Count annoté dans le queryset Django
   derniere_session?: string;       // Max(ouverture_at) annoté dans le queryset
+  session_active?: {
+    id: string;
+    caissier: string;
+    caissier_nom?: string;
+    ouverte_le: string | null;
+    montant_ouverture?: number;
+  } | null;
 }
 
 // ─── Session de caisse ───────────────────────────────────────────
