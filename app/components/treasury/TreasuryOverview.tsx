@@ -233,6 +233,15 @@ const TreasuryOverview: React.FC = () => {
  
       {/* ── Tableau remises ── */}
       <RemisesTable />
+
+      {/* ── Modal Initialisation Coffre ── */}
+      <VaultInitializeModal
+        isOpen={isInitModalOpen}
+        onClose={() => setIsInitModalOpen(false)}
+        branches={branches}
+        currentBranchId={currentBranchId}
+        onSuccess={loadData}
+      />
  
     </div>
   );

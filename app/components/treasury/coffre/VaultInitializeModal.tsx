@@ -47,6 +47,14 @@ export const VaultInitializeModal: React.FC<VaultInitializeModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  React.useEffect(() => {
+    if (currentBranchId) {
+      setBranchId(currentBranchId);
+    } else if (branches.length > 0) {
+      setBranchId(branches[0].id);
+    }
+  }, [currentBranchId, branches]);
+
   if (!isOpen) return null;
 
   // Calcul du total issu du billetage
