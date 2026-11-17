@@ -23,7 +23,7 @@ import type { Branch, OpeningHour } from "@/types/branche";
 import { BranchData } from "./validations";
 import BrancheTable from "./BrancheTable";
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
-import { exportToCSVFile } from "@/app/utils/csvExport";
+import { exportToXLSXFile } from "@/app/utils/excelExport";
 import { Holiday, HolidayData } from "../holidays/validations";
 import { Loader2 } from "lucide-react";
 import { EmployeeData, PostData } from "../employees/validations";
@@ -212,11 +212,11 @@ const BranchesGrid: React.FC = () => {
       getEffectiveStatus(b),
     ]);
 
-    exportToCSVFile({
-      filename: "branches",
+    exportToXLSXFile({
+      filename: "succursales",
+      documentTitle: "LISTE DES SUCCURSALES",
       headers,
       rows,
-      separator: ";",
     });
   }, [filteredBranches]);
 

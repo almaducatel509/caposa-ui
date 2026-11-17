@@ -10,7 +10,7 @@ import UserAvatar from '@/app/components/core/UserAvatar';
 import { MemberData, accountTypeLabel } from '../validations';
 import { fetchAccountTransactions, fetchMemberAccounts, type Transaction, type TxType } from "@/app/lib/api/members";
 import { downloadStatement, savePdf } from '@/app/lib/api/reports';
-import { exportToCSVFile } from '@/app/utils/csvExport';
+import { exportToXLSXFile } from '@/app/utils/excelExport';
 
 interface MemberTransactionModalProps {
   isOpen:   boolean;
@@ -159,11 +159,11 @@ const MemberTransactionModal: React.FC<MemberTransactionModalProps> = ({
     });
 
     const accNum = currentAccount?.account_number ?? member.id_member ?? 'compte';
-    exportToCSVFile({
+    exportToXLSXFile({
       filename: `transactions_${accNum}`,
+      documentTitle: `HISTORIQUE DES TRANSACTIONS — ${accNum}`,
       headers,
       rows,
-      separator: ';',
     });
   };
 

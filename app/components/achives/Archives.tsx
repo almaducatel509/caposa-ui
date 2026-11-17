@@ -13,7 +13,7 @@ import {
   getCategoryLabel, getTypeLabel, getCategoryAccent,
   estDesactivable, getRaisonVerrouillage,
 } from '@/types/archives';
-import { exportToCSVFile } from '@/app/utils/csvExport';
+import { exportToXLSXFile } from '@/app/utils/excelExport';
 
 // ─── Palette CAPOSA ───────────────────────────────────────────────────────────
 const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
@@ -305,11 +305,11 @@ export default function ArchivesPage() {
       formatDate(a.date), a.employeeName, a.summary,
       a.isDeleted ? 'Désactivé' : 'Actif',
     ]);
-    exportToCSVFile({
+    exportToXLSXFile({
       filename: 'archives',
+      documentTitle: 'REGISTRE DES ARCHIVES',
       headers,
       rows,
-      separator: ';',
     });
   };
 

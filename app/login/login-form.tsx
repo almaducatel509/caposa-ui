@@ -1,6 +1,7 @@
 "use client";
 
 import { Lock, Eye, EyeOff, Loader2, CircleAlert, ShieldCheck } from 'lucide-react';
+import { GiReceiveMoney } from 'react-icons/gi';
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
@@ -60,8 +61,8 @@ const LoginForm = () => {
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-11 h-11 bg-white/20 border border-white/30 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-xl">C</span>
+          <div className="w-11 h-11 bg-[#2E7D32] border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
+            <GiReceiveMoney className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-white font-semibold text-lg">CAPOSA</h1>

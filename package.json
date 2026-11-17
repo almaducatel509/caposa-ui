@@ -31,6 +31,7 @@
     "clsx": "^2.1.1",
     "cookies-next": "^6.1.1",
     "eslint-config-next": "^16.4.6",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.43.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.541.0",

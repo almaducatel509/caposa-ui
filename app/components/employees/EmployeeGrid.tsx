@@ -22,7 +22,7 @@ import EmployeeTransactionModal from '@/app/components/employees/modals/Employee
 import { EmployeeData, PostData, BranchData } from '@/app/components/employees/validations';
 import EmployeeTable  from './EmployeeTable';
 import { EmployeeBulkAction } from './BulkActionDropdown';
-import { exportToCSVFile } from '@/app/utils/csvExport';
+import { exportToXLSXFile } from '@/app/utils/excelExport';
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 const EmployeeGrid: React.FC = () => {
@@ -255,7 +255,7 @@ const EmployeeGrid: React.FC = () => {
 };
 
 
-  // ── Export CSV / Excel direct ─────────────────────────────────────────────
+  // ── Export Excel / XLSX direct ────────────────────────────────────────────
   const exportToCSV = (ids: string[]) => {
     const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Succursale', 'Statut', 'Depuis'];
     const selectedEmployees = filteredEmployees.filter(e => ids.includes(e.id));
@@ -269,11 +269,11 @@ const EmployeeGrid: React.FC = () => {
       e.created_at ? new Date(e.created_at).toLocaleDateString('fr-FR') : '',
     ]);
 
-    exportToCSVFile({
+    exportToXLSXFile({
       filename: 'employes',
+      documentTitle: 'LISTE DES EMPLOYÉS',
       headers,
       rows,
-      separator: ';',
     });
   };
 

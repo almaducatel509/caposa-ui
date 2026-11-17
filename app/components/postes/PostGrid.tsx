@@ -13,7 +13,7 @@ import { fetchPosts, archivePost } from "@/app/lib/api/post";
 
 
 import PostTable, { Post } from "./PostTable";
-import { exportToCSVFile } from "@/app/utils/csvExport";
+import { exportToXLSXFile } from "@/app/utils/excelExport";
 
 import PostFilterBar from "./PostFilterBar";
 
@@ -183,16 +183,11 @@ const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
 
 
 
-    exportToCSVFile({
-
+    exportToXLSXFile({
       filename: "postes",
-
+      documentTitle: "LISTE DES POSTES",
       headers,
-
       rows,
-
-      separator: ";",
-
     });
 
   }, [filteredPosts]);

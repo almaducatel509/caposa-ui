@@ -23,7 +23,7 @@ import { parseApiError } from '@/app/lib/api/apiErrors';
 import { getRole } from '../AuthGuard';
 import ApproveAccountModal from './modals/Approveaccountmodal';
 import { AccountBulkAction } from '@/app/lib/api/accountRules';
-import { exportToCSVFile } from '@/app/utils/csvExport';
+import { exportToXLSXFile } from '@/app/utils/excelExport';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
@@ -233,7 +233,7 @@ const AccountGrid: React.FC = () => {
     }
   };
 
-  // ── Export CSV / Excel ────────────────────────────────────────────────────
+  // ── Export Excel / XLSX ───────────────────────────────────────────────────
   const exportToCSV = (ids: string[]) => {
     const selectedAccounts = filteredAccounts.filter(a => ids.includes(a.id));
     const headers = ['Numéro de compte', 'Membre', 'Email', 'Type', 'Solde', 'Statut', 'Depuis'];
@@ -248,11 +248,11 @@ const AccountGrid: React.FC = () => {
       a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '',
     ]);
 
-    exportToCSVFile({
+    exportToXLSXFile({
       filename: 'comptes',
+      documentTitle: 'LISTE DES COMPTES',
       headers,
       rows,
-      separator: ';',
     });
   };
 

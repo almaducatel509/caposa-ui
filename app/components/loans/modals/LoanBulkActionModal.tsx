@@ -43,7 +43,7 @@ import {
 import { LoanBulkAction } from '../LoanBulkActionDropdown';
 
 import { approveLoan, rejectLoan, deleteLoan } from '@/app/lib/api/loans';
-import { exportToCSVFile } from '@/app/utils/csvExport';
+import { exportToXLSXFile } from '@/app/utils/excelExport';
 
 import {
 
@@ -335,16 +335,11 @@ function exportLoansCsv(loans: LoanData[]) {
 
 
 
-  exportToCSVFile({
-
-    filename: 'prets',
-
+  exportToXLSXFile({
+    filename: 'prets_selection',
+    documentTitle: 'SÉLECTION DES PRÊTS',
     headers,
-
     rows,
-
-    separator: ';',
-
   });
 
 }

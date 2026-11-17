@@ -16,7 +16,7 @@ import { MemberData, normalizeMemberStatus } from '@/app/components/members/vali
 import MemberTable from './MemberTable';
 import { MemberBulkAction } from './MemberBulkActionDropdown';
 import MemberTransactionModal from './modals/MemberTransactionModal';
-import { exportToCSVFile } from '@/app/utils/csvExport';
+import { exportToXLSXFile } from '@/app/utils/excelExport';
 
 // ─── Main Grid ──────────────────────────────────────────────────────────────────
 const MemberGrid: React.FC = () => {
@@ -139,10 +139,10 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
     await loadMembers();
   };
 
-  // ── Export CSV / Excel ────────────────────────────────────────────────────
+  // ── Export Excel / XLSX ───────────────────────────────────────────────────
   const exportToCSV = (ids: string[]) => {
     const selected = filteredMembers.filter(m => ids.includes(m.id));
-    const headers  = ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Ville', 'Département', 'Statut', 'Créé le'];
+    const headers  = ['ID Membre', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Ville', 'Département', 'Statut', 'Créé le'];
     const rows     = selected.map(m => [
       m.id_member ?? m.id,
       m.first_name ?? '',
@@ -155,11 +155,11 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
       m.created_at ?? '',
     ]);
 
-    exportToCSVFile({
+    exportToXLSXFile({
       filename: 'membres',
+      documentTitle: 'LISTE DES MEMBRES',
       headers,
       rows,
-      separator: ';',
     });
   };
 

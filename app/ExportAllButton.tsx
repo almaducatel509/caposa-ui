@@ -1,75 +1,43 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { exportToXLSXFile } from "./utils/excelExport";
 
 interface ExportAllButtonProps<T extends object> {
   /** Données à exporter */
   data: T[];
   /** Nom du fichier (sans extension, sans date) */
   filename?: string;
+  /** Titre affiché dans l'en-tête du fichier Excel */
+  documentTitle?: string;
   /** Texte du bouton */
   label?: string;
   /** Colonnes à exporter (clés). Si omis, toutes les clés du premier objet. */
   columns?: (keyof T)[];
   /** Renommage des en-têtes : { email: "Adresse e-mail" } */
   headerLabels?: Partial<Record<keyof T, string>>;
-  /** Séparateur. ";" recommandé pour Excel en français. Défaut: ";" */
+  /** Séparateur (gardé pour compatibilité descendante) */
   separator?: "," | ";";
   /** Callback après succès (toast, analytics, etc.) */
   onSuccess?: (count: number) => void;
   /** Callback en cas d'erreur */
   onError?: (error: Error) => void;
-  /** Ajoute "sep=" pour Excel. Désactivé par défaut car provoque un basculement ANSI dans Excel et corrompt les accents. */
+  /** Option compatibilité */
   excelSepHint?: boolean;
 }
-
-/**
- * Échappe une valeur pour CSV selon RFC 4180 + protection injection de formule.
- * 
- * Préviens 4 catégories de bugs :
- * 1. Virgules / points-virgules dans les valeurs
- * 2. Guillemets dans les valeurs
- * 3. Retours à la ligne dans les valeurs
- * 4. Injection de formule (=, +, -, @, tab, CR) — CVE CSV injection
- */
-const escapeCSVValue = (val: unknown): string => {
-  // Null, undefined → champ vide
-  if (val === null || val === undefined) return '""';
-
-  // Sérialisation propre selon le type
-  let str: string;
-  if (val instanceof Date) {
-    str = val.toISOString();
-  } else if (typeof val === "object") {
-    str = JSON.stringify(val);
-  } else {
-    str = String(val);
-  }
-
-  // Protection contre l'injection de formule (CSV injection / CWE-1236)
-  // Si la valeur commence par =, +, -, @, tab ou CR, Excel l'interprète comme formule.
-  // On préfixe d'une apostrophe pour neutraliser.
-  if (/^[=+\-@\t\r]/.test(str)) {
-    str = `'${str}`;
-  }
-
-  // RFC 4180 : doubler les guillemets internes et entourer de guillemets
-  return `"${str.replace(/"/g, '""')}"`;
-};
 
 export const ExportAllButton = <T extends object>({
   data,
   filename = "export",
+  documentTitle,
   label = "Exporter",
   columns,
   headerLabels,
-  separator = ";",
   onSuccess,
   onError,
-  excelSepHint = false,
 }: ExportAllButtonProps<T>) => {
   const [loading, setLoading] = useState(false);
 
-  const exportCSV = () => {
+  const handleExport = async () => {
     if (!data?.length) return;
 
     setLoading(true);
@@ -78,36 +46,23 @@ export const ExportAllButton = <T extends object>({
       const keys = columns ?? (Object.keys(data[0]) as (keyof T)[]);
 
       // 2. En-têtes (avec labels custom si fournis)
-      const headerRow = keys
-        .map(k => escapeCSVValue(headerLabels?.[k] ?? String(k)))
-        .join(separator);
+      const headers = keys.map((k) => headerLabels?.[k] ?? String(k));
 
       // 3. Lignes de données
-      const dataRows = data.map(row =>
-        keys.map(k => escapeCSVValue(row[k])).join(separator)
-      );
+      const rows = data.map((row) => keys.map((k) => row[k]));
 
-      // 4. Assemblage avec CRLF (RFC 4180, meilleure compat Windows/Excel)
-      const csv = [headerRow, ...dataRows].join("\r\n");
-
-      const sepHint = excelSepHint ? `sep=${separator}\r\n` : "";
-      const blob = new Blob(["\uFEFF" + sepHint + csv], {
-        type: "text/csv;charset=utf-8;",
+      // 4. Génération du fichier XLSX avec en-tête complet et auto-dimensionnement
+      await exportToXLSXFile({
+        filename,
+        documentTitle: documentTitle || filename.replace(/[_-]/g, " ").toUpperCase(),
+        headers,
+        rows,
       });
-      // 6. Téléchargement
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
 
       onSuccess?.(data.length);
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Export échoué");
-      console.error("Export CSV:", error);
+      console.error("Export XLSX:", error);
       onError?.(error);
     } finally {
       setLoading(false);
@@ -118,21 +73,21 @@ export const ExportAllButton = <T extends object>({
 
   return (
     <button
-      onClick={exportCSV}
+      onClick={handleExport}
       disabled={isDisabled}
       title={!data?.length ? "Aucune donnée à exporter" : `${label} (${data.length})`}
       className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl border font-medium
         whitespace-nowrap bg-white border-2 border-[#2E7D32] text-[#2E7D32] text-sm  
-        hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        hover:bg-[#DDEAD5] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     >
       {loading ? (
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-b-xl animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
           <span>Export...</span>
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <Download className="w-4 h-4 flex-shrink-0" />
+          <Download className="w-4 h-4 shrink-0" />
           <span>{label}</span>
         </div>
       )}

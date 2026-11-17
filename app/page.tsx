@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { ArrowRight, ShieldCheck, TrendingUp, Users, PiggyBank } from 'lucide-react';
+import { ArrowRight, ShieldCheck, TrendingUp, Users } from 'lucide-react';
+import { GiReceiveMoney } from 'react-icons/gi';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -37,8 +38,8 @@ export default async function Page() {
       <header className="border-b border-emerald-100/60 bg-white/70 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-700 flex items-center justify-center text-white shadow-md shadow-emerald-700/20">
-              <PiggyBank className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#2E7D32] flex items-center justify-center text-white shadow-md shadow-[#2E7D32]/20">
+              <GiReceiveMoney className="w-6 h-6" />
             </div>
             <div>
               <span className="text-xl font-bold tracking-tight text-gray-900">CAPOSA</span>
