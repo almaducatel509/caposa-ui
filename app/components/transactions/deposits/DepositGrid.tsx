@@ -49,9 +49,21 @@ export default function DepositDashboard() {
   // ── Filtres : UNE SEULE source de vérité ─────────────────
   const [search,         setSearch]         = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<DepositFilterPeriod>('all');
+  const [startDate,      setStartDate]      = useState('');
+  const [endDate,        setEndDate]        = useState('');
   const [selectedType,   setSelectedType]   = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRange,  setSelectedRange]  = useState<DepositFilterRange>('all');
+
+  const handleClear = () => {
+    setSearch('');
+    setSelectedPeriod('all');
+    setStartDate('');
+    setEndDate('');
+    setSelectedType('all');
+    setSelectedStatus('all');
+    setSelectedRange('all');
+  };
 
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.isAdmin ?? false;
@@ -243,14 +255,20 @@ export default function DepositDashboard() {
       <DepositFilterBar
         filterValue={search}
         selectedPeriod={selectedPeriod}
+        startDate={startDate}
+        endDate={endDate}
         selectedType={selectedType}
         selectedStatus={selectedStatus}
         selectedRange={selectedRange}
         totalCount={deposits.length}
         loading={loading}
         onSearchChange={setSearch}
-        onClear={() => setSearch('')}
+        onClear={handleClear}
         onPeriodChange={setSelectedPeriod}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         onTypeChange={setSelectedType}
         onStatusChange={setSelectedStatus}
         onRangeChange={setSelectedRange}
@@ -275,6 +293,8 @@ export default function DepositDashboard() {
           selectedType={selectedType}
           selectedStatus={selectedStatus}
           selectedPeriod={selectedPeriod}
+          startDate={startDate}
+          endDate={endDate}
           selectedRange={selectedRange}
         />
       )}

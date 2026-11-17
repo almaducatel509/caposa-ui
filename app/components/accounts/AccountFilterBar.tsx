@@ -10,14 +10,20 @@ import {
 import { ExportAllButton } from '@/app/ExportAllButton';
 import { MemberData } from '../members/validations';
 import { AccountData } from './validationsaccount';
+import { DatePeriodFilter } from '@/app/components/common/DatePeriodFilter';
 
 interface AccountFilterBarProps {
   filterValue:    string;
   selectedType:   string;
+  selectedPeriod?: string;
+  startDate?: string;
+  endDate?: string;
   totalCount:     number;
   onSearchChange: (v: string) => void;
   onClear:        () => void;
   onTypeChange:   (v: string) => void;
+  onPeriodChange?: (v: string) => void;
+  onDateRangeChange?: (start: string, end: string) => void;
   onImport?:      () => void;
   importLoading?: boolean;
   onAdd:          () => void;
@@ -52,8 +58,8 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
-  filterValue, selectedType, totalCount,
-  onSearchChange, onClear, onTypeChange, onAdd,
+  filterValue, selectedType, selectedPeriod = 'all', startDate = '', endDate = '', totalCount,
+  onSearchChange, onClear, onTypeChange, onPeriodChange = () => {}, onDateRangeChange = () => {}, onAdd,
   onImport, importLoading = false, members, accounts,
 }) => {
 
@@ -65,7 +71,9 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
   ];
 
   const typeLabel   = TYPE_OPTIONS.find(o => o.key === selectedType)?.label ?? 'Tous les types';
-  const activeCount = selectedType !== 'all' ? 1 : 0;
+  const isPeriodActive = selectedPeriod !== 'all' || !!startDate || !!endDate;
+  const isTypeActive = selectedType !== 'all';
+  const activeCount = (isPeriodActive ? 1 : 0) + (isTypeActive ? 1 : 0) + (filterValue.trim() ? 1 : 0);
 
   // ── Export : transforme les comptes en lignes prêtes pour CSV ──
   const accountsForExport = accounts.map(acc => {
@@ -196,16 +204,25 @@ const AccountFilterBar: React.FC<AccountFilterBarProps> = ({
           })}
         </Dropdown>
 
+        {/* Filtre Période avec Date début & Date fin */}
+        <DatePeriodFilter
+          selectedPeriod={selectedPeriod}
+          startDate={startDate}
+          endDate={endDate}
+          onPeriodChange={onPeriodChange}
+          onDateRangeChange={onDateRangeChange}
+        />
+
         {/* Réinitialiser */}
         {activeCount > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-px bg-gray-200" />
+          <div className="flex items-center gap-2 ml-auto sm:ml-0">
             <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
-              Filtre actif
+              {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
             </span>
             <button
-              onClick={() => { onTypeChange('all'); }}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all"
+              type="button"
+              onClick={onClear}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all cursor-pointer"
             >
               <X className="w-3 h-3" /> Effacer
             </button>

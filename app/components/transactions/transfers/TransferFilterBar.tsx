@@ -10,19 +10,23 @@ import {
 } from 'lucide-react';
 import { ExportAllButton } from '@/app/ExportAllButton';
 import type { TransferData } from '../validation/transfert';
+import { DatePeriodFilter } from '@/app/components/common/DatePeriodFilter';
 
 interface TransferFilterBarProps {
   filterValue:    string;
   selectedType:   string;
   selectedStatus: string;
-  selectedPeriod: 'day' | 'week' | 'month';
+  selectedPeriod: string;
+  startDate?:     string;
+  endDate?:       string;
   totalCount:     number;
   loading?:       boolean;
   onSearchChange: (v: string) => void;
   onClear:        () => void;
   onTypeChange:   (v: string) => void;
   onStatusChange: (v: string) => void;
-  onPeriodChange: (v: 'day' | 'week' | 'month') => void;
+  onPeriodChange: (v: string) => void;
+  onDateRangeChange?: (start: string, end: string) => void;
   onAdd:          () => void;
   onRefresh:      () => void;
   transfers:      TransferData[];
@@ -55,8 +59,8 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 const TransferFilterBar: React.FC<TransferFilterBarProps> = ({
-  filterValue, selectedType, selectedStatus, selectedPeriod, totalCount, loading = false,
-  onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange,
+  filterValue, selectedType, selectedStatus, selectedPeriod, startDate = '', endDate = '', totalCount, loading = false,
+  onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange, onDateRangeChange = () => {},
   onAdd, onRefresh, transfers,
 }) => {
 
@@ -196,22 +200,14 @@ const TransferFilterBar: React.FC<TransferFilterBarProps> = ({
 
         <div className="h-5 w-px bg-gray-200" />
 
-        {/* Filtre période */}
-        <div className="flex gap-1">
-          {(['day', 'week', 'month'] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => onPeriodChange(p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                selectedPeriod === p
-                  ? 'bg-[#2E7D32] text-white shadow-sm'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {p === 'day' ? "Aujourd'hui" : p === 'week' ? '7 jours' : '30 jours'}
-            </button>
-          ))}
-        </div>
+        {/* Filtre Période avec Date début & Date fin */}
+        <DatePeriodFilter
+          selectedPeriod={selectedPeriod}
+          startDate={startDate}
+          endDate={endDate}
+          onPeriodChange={onPeriodChange}
+          onDateRangeChange={onDateRangeChange}
+        />
 
         <div className="h-5 w-px bg-gray-200" />
 

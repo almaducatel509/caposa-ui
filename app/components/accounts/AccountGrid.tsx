@@ -24,6 +24,7 @@ import { getRole } from '../AuthGuard';
 import ApproveAccountModal from './modals/Approveaccountmodal';
 import { AccountBulkAction } from '@/app/lib/api/accountRules';
 import { exportToXLSXFile } from '@/app/utils/excelExport';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
@@ -60,10 +61,13 @@ const AccountGrid: React.FC = () => {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
 
-  // ── Filters (recherche + type uniquement) ──
+  // ── Filters ──
   const [search,          setSearch]          = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedType,    setSelectedType]    = useState('all');
+  const [selectedPeriod,  setSelectedPeriod]  = useState('all');
+  const [startDate,       setStartDate]       = useState('');
+  const [endDate,         setEndDate]         = useState('');
 
   // ── Tab actif (géré par AccountTable) ──
   const [activeAccountTab, setActiveAccountTab] = useState<TabId>('ouvert');
@@ -151,21 +155,53 @@ const AccountGrid: React.FC = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  // ── Filtrage : recherche + type seulement (le statut = onglets du tableau)
+  // ── Filtrage : recherche + type + date
   const filteredAccounts = useMemo(() => {
-    return accounts.filter(acc => {
-      const matchSearch =
-        !debouncedSearch ||
-        acc.account_number?.toLowerCase().includes(debouncedSearch) ||
-        acc.member_details?.full_name?.toLowerCase().includes(debouncedSearch) ||
-        acc.member_details?.email?.toLowerCase().includes(debouncedSearch);
+    return accountsWithMembers.filter(acc => {
+      let matchSearch = true;
+      if (debouncedSearch) {
+        const q = debouncedSearch;
+        const cleanQ = q.replace(/\D/g, '');
+
+        const accNum = (acc.account_number ?? '').toLowerCase();
+        const m = acc.member_details;
+        const fn = (m?.first_name ?? '').toLowerCase();
+        const ln = (m?.last_name ?? '').toLowerCase();
+        const full1 = `${fn} ${ln}`.trim();
+        const full2 = `${ln} ${fn}`.trim();
+        const email = (m?.email ?? '').toLowerCase();
+        const phone = (m?.phone_number ?? '').toLowerCase();
+        const cleanPhone = phone.replace(/\D/g, '');
+        const memberId = String((m as any)?.member_number ?? (m as any)?.id_member ?? m?.id ?? '').toLowerCase();
+
+        matchSearch =
+          accNum.includes(q) ||
+          full1.includes(q) ||
+          full2.includes(q) ||
+          fn.includes(q) ||
+          ln.includes(q) ||
+          email.includes(q) ||
+          phone.includes(q) ||
+          (cleanQ.length >= 3 && cleanPhone.includes(cleanQ)) ||
+          memberId.includes(q);
+      }
 
       const matchType =
         selectedType === 'all' || acc.typeCompte === selectedType;
 
-      return matchSearch && matchType;
+      const matchDate = matchesDateFilter(acc.created_at, selectedPeriod, startDate, endDate);
+
+      return matchSearch && matchType && matchDate;
     });
-  }, [accounts, debouncedSearch, selectedType]);
+  }, [accountsWithMembers, debouncedSearch, selectedType, selectedPeriod, startDate, endDate]);
+
+  const handleClear = () => {
+    setSearch('');
+    setSelectedType('all');
+    setSelectedPeriod('all');
+    setStartDate('');
+    setEndDate('');
+  };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdd = () => {
@@ -278,14 +314,22 @@ const AccountGrid: React.FC = () => {
      <AccountFilterBar
         filterValue={search}
         selectedType={selectedType}
+        selectedPeriod={selectedPeriod}
+        startDate={startDate}
+        endDate={endDate}
         totalCount={filteredAccounts.length}
         onSearchChange={setSearch}
-        onClear={() => setSearch('')}
+        onClear={handleClear}
         onTypeChange={setSelectedType}
+        onPeriodChange={setSelectedPeriod}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         onImport={() => {}}
         onAdd={handleAdd}
         members={members}
-        accounts={accounts}
+        accounts={accountsWithMembers}
       />
 
       {error && (

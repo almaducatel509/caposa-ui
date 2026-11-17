@@ -7,6 +7,7 @@ import TransferTable from './TransferTable';
 import TransferForm, { TransferSubmitInput } from './TransferForm';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
 import TransferFilterBar from './TransferFilterBar';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 import type { TransferData, TransferStatus } from '../validation/transfert';
 import type { MemberOption } from '../../members/validations';
 import type { AccountOption } from '../../accounts/validationsaccount';
@@ -97,7 +98,9 @@ export default function TransferDashboard() {
   const [members,   setMembers]   = useState<MemberOption[]>([]);
   const [loadError, setLoadError] = useState('');
 
-  const [period,         setPeriod]         = useState<'day' | 'week' | 'month'>('week');
+  const [period,         setPeriod]         = useState<string>('all');
+  const [startDate,      setStartDate]      = useState('');
+  const [endDate,        setEndDate]        = useState('');
   const [loading,        setLoading]        = useState(true);
   const [search,         setSearch]         = useState('');
   const [selectedType,   setSelectedType]   = useState('all');
@@ -161,24 +164,32 @@ export default function TransferDashboard() {
 
   // ── Filtrage ──────────────────────────────────────────────────
   const filteredTransfers = useMemo(() => {
-    const q     = search.trim().toLowerCase();
-    const since = periodStart(period).getTime();
+    const q = search.trim().toLowerCase();
 
     return transfers.filter(t => {
-      const date = new Date(t.created_at ?? t.dateTransfert ?? 0).getTime();
-      if (date < since) return false;
+      const dateVal = t.created_at ?? t.dateTransfert;
+      if (!matchesDateFilter(dateVal, period, startDate, endDate)) return false;
       if (selectedType   !== 'all' && t.typeTransfert !== selectedType)   return false;
       if (selectedStatus !== 'all' && t.status        !== selectedStatus) return false;
       if (q) {
         const haystack = [
           t.id, t.reference, t.account_source, t.account_destination,
-          t.member_name, t.destination_name,
+          t.member_name, t.destination_name, t.montant?.toString(),
         ].filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [transfers, search, selectedType, selectedStatus, period]);
+  }, [transfers, search, selectedType, selectedStatus, period, startDate, endDate]);
+
+  const handleClear = () => {
+    setSearch('');
+    setPeriod('all');
+    setStartDate('');
+    setEndDate('');
+    setSelectedType('all');
+    setSelectedStatus('all');
+  };
 
   // ── Handlers ──────────────────────────────────────────────────
   const handleView = (t: TransferData) => {
@@ -239,13 +250,19 @@ export default function TransferDashboard() {
         selectedType={selectedType}
         selectedStatus={selectedStatus}
         selectedPeriod={period}
+        startDate={startDate}
+        endDate={endDate}
         totalCount={filteredTransfers.length}
         loading={loading}
         onSearchChange={setSearch}
-        onClear={() => setSearch('')}
+        onClear={handleClear}
         onTypeChange={setSelectedType}
         onStatusChange={setSelectedStatus}
         onPeriodChange={setPeriod}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         onAdd={() => setModalOpen(true)}
         onRefresh={load}
         transfers={filteredTransfers}

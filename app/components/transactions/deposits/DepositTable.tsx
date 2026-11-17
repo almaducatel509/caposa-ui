@@ -8,6 +8,7 @@ import {
   ArrowDownLeft,
 } from 'lucide-react';
 import { DepositFilterPeriod, DepositFilterRange } from './DepositFilterBar';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 import { DepositData } from '../validation/deposit';
 import { ExportAllButton } from '@/app/ExportAllButton';
 import Pagination from '@/app/components/ui/Pagination';
@@ -24,6 +25,8 @@ interface DepositTableProps {
   selectedPeriod: DepositFilterPeriod;
   selectedRange:  DepositFilterRange;
   search?:        string;
+  startDate?:     string;
+  endDate?:       string;
 }
 
 // ─── Config statut & type ─────────────────────────────────────────────────────
@@ -127,6 +130,8 @@ export default function DepositTable({
   selectedStatus,
   selectedPeriod,
   selectedRange,
+  startDate = '',
+  endDate = '',
 }: DepositTableProps) {
 
   const [selected,    setSelected]    = useState<Set<number>>(new Set());
@@ -139,7 +144,7 @@ export default function DepositTable({
   useEffect(() => {
     setCurrentPage(1);
     setSelected(new Set());
-  }, [deposits, search, selectedType, selectedStatus, selectedPeriod, selectedRange, sortField, sortDir, pageSize]);
+  }, [deposits, search, selectedType, selectedStatus, selectedPeriod, selectedRange, startDate, endDate, sortField, sortDir, pageSize]);
 
   // ── Filtrage ──
   const filtered = useMemo(() => {
@@ -154,10 +159,10 @@ export default function DepositTable({
       const matchType    = selectedType   === 'all' || d.depositSubtype === selectedType;
       const matchStatus  = selectedStatus === 'all' || d.status         === selectedStatus;
       const matchRange_  = matchesRange(Number(d.montantTransaction), selectedRange);
-      const matchPeriod_ = matchesPeriod(d.created_at, selectedPeriod);
+      const matchPeriod_ = matchesDateFilter(d.created_at, selectedPeriod, startDate, endDate);
       return matchSearch && matchType && matchStatus && matchRange_ && matchPeriod_;
     });
-  }, [deposits, search, selectedType, selectedStatus, selectedRange, selectedPeriod]);
+  }, [deposits, search, selectedType, selectedStatus, selectedRange, selectedPeriod, startDate, endDate]);
 
   // ── Tri ──
   const sorted = useMemo(() => [...filtered].sort((a, b) => {

@@ -27,6 +27,7 @@ import {
 
 import PageHeader from '../header';
 import LoanFilterBar, { LoanFilterPeriod, LoanFilterType, LoanFilterRange } from './LoanFilterBar';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 import NewLoanModal from './modals/NewLoanModal';
 import LoanBulkActionDropdown, { LoanBulkAction } from './LoanBulkActionDropdown';
 import LoanBulkActionModal from './modals/LoanBulkActionModal';
@@ -160,6 +161,8 @@ const [notice, setNotice] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<LoanFilterPeriod>('all');
   const [selectedType,   setSelectedType]   = useState<LoanFilterType>('all');
   const [selectedRange,  setSelectedRange]  = useState<LoanFilterRange>('all');
+  const [startDate,      setStartDate]      = useState('');
+  const [endDate,        setEndDate]        = useState('');
   const [selected,       setSelected]       = useState<Set<string>>(new Set());
 
   // ── Modals ──
@@ -184,16 +187,29 @@ const [notice, setNotice] = useState<string | null>(null);
     const q = search.trim().toLowerCase();
     return loans.filter(l => {
       if (getLoanTab(l) !== activeTab) return false;
+      const typeLabel = (LOAN_TYPE_LABELS[l.loan_type] ?? '').toLowerCase();
       const matchSearch = q === ''
         || l.member_name.toLowerCase().includes(q)
         || l.account_number.toLowerCase().includes(q)
-        || l.id.toLowerCase().includes(q);
+        || l.id.toLowerCase().includes(q)
+        || typeLabel.includes(q)
+        || String(l.loan_amount).includes(q);
       const matchType = selectedType === 'all' || l.loan_type === selectedType;
+      const matchDate = matchesDateFilter(l.created_at, selectedPeriod, startDate, endDate);
       return matchSearch && matchType
         && matchesRange(l.loan_amount, selectedRange)
-        && matchesPeriod(l.created_at, selectedPeriod);
+        && matchDate;
     });
-  }, [loans, activeTab, search, selectedType, selectedRange, selectedPeriod]);
+  }, [loans, activeTab, search, selectedType, selectedRange, selectedPeriod, startDate, endDate]);
+
+  const handleClear = () => {
+    setSearch('');
+    setSelectedPeriod('all');
+    setStartDate('');
+    setEndDate('');
+    setSelectedType('all');
+    setSelectedRange('all');
+  };
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -281,9 +297,15 @@ const [notice, setNotice] = useState<string | null>(null);
         selectedPeriod={selectedPeriod}
         selectedType={selectedType}
         selectedRange={selectedRange}
+        startDate={startDate}
+        endDate={endDate}
         onSearchChange={v => setSearch(v ?? '')}
-        onClear={() => setSearch('')}
+        onClear={handleClear}
         onPeriodChange={setSelectedPeriod}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         onTypeChange={setSelectedType}
         onRangeChange={setSelectedRange}
         onAdd={() => {

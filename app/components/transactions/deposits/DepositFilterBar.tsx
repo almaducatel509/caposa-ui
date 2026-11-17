@@ -12,13 +12,17 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { DepositData } from '../validation/deposit';
+import { DatePeriodFilter } from '@/app/components/common/DatePeriodFilter';
+
 export type DepositFilterRange  = 'all' | 'small' | 'medium' | 'large' | 'xlarge';
 export type DepositFiltertype = 'all' | 'cash'| 'check';
 
-export type DepositFilterPeriod = 'all' | 'today' | 'week' | 'month' | 'year';
+export type DepositFilterPeriod = 'all' | 'today' | 'week' | 'month' | 'year' | 'recent' | 'thisMonth' | 'thisYear' | 'custom' | string;
 
 interface DepositFilterBarProps {
   selectedPeriod: DepositFilterPeriod;
+  startDate?:     string;
+  endDate?:       string;
   filterValue:    string;
   selectedType:   string;
   selectedStatus: string;
@@ -29,6 +33,7 @@ interface DepositFilterBarProps {
   onTypeChange:   (v: string) => void;
   onStatusChange: (v: string) => void;
   onPeriodChange: (v: DepositFilterPeriod)=> void;
+  onDateRangeChange?: (start: string, end: string) => void;
   onAdd:          () => void;
   onRefresh:      () => void;
   deposits:       DepositData[];
@@ -63,10 +68,9 @@ function Dropdown({ trigger, children }: { trigger: React.ReactNode; children: R
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
-  filterValue,onRangeChange, selectedType,selectedRange, selectedStatus, selectedPeriod, totalCount, loading = false,
-  onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange,
+  filterValue, onRangeChange, selectedType, selectedRange, selectedStatus, selectedPeriod, startDate = '', endDate = '', totalCount, loading = false,
+  onSearchChange, onClear, onTypeChange, onStatusChange, onPeriodChange, onDateRangeChange = () => {},
   onAdd, onRefresh, deposits, 
-
 }) => {
 
 
@@ -157,22 +161,14 @@ const DepositFilterBar: React.FC<DepositFilterBarProps> = ({
 
         <div className="h-5 w-px bg-gray-200" />
 
-        {/* Filtre période */}
-          <div className="flex gap-1">
-            {PERIOD_OPTIONS.map(p => (
-              <button
-                key={p.key}
-                onClick={() => onPeriodChange(p.key as DepositFilterPeriod)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                  selectedPeriod === p.key
-                    ? 'bg-[#2E7D32] text-white shadow-sm'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+        {/* Filtre Période avec Date début & Date fin */}
+        <DatePeriodFilter
+          selectedPeriod={selectedPeriod}
+          startDate={startDate}
+          endDate={endDate}
+          onPeriodChange={onPeriodChange}
+          onDateRangeChange={onDateRangeChange}
+        />
 
         <div className="h-5 w-px bg-gray-200" />
 

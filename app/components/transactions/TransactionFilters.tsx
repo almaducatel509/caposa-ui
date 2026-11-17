@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { FiSearch } from 'react-icons/fi';
-import { FaCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+import { X } from 'lucide-react';
+import { DatePeriodFilter } from '@/app/components/common/DatePeriodFilter';
 
 /* ================= TYPES ================= */
 
@@ -11,6 +12,8 @@ export interface TransactionFiltersState {
   type: string;
   status: string;
   dateRange: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface TransactionFiltersProps {
@@ -21,7 +24,7 @@ interface TransactionFiltersProps {
 /* ================= OPTIONS ================= */
 
 const TYPE_OPTIONS = [
-  { key: 'all', label: 'Tous' },
+  { key: 'all', label: 'Tous les types' },
   { key: 'deposit', label: 'Dépôts' },
   { key: 'withdrawal', label: 'Retraits' },
   { key: 'transfer', label: 'Virements' },
@@ -35,20 +38,13 @@ const STATUS_OPTIONS = [
   { key: 'failed', label: 'Échoué' },
 ];
 
-const DATE_OPTIONS = [
-  { key: 'all', label: 'Toutes les périodes' },
-  { key: 'today', label: "Aujourd’hui" },
-  { key: 'week', label: 'Cette semaine' },
-  { key: 'month', label: 'Ce mois' },
-];
-
 /* ================= COMPONENT ================= */
 
 const TransactionFilters: React.FC<TransactionFiltersProps> = ({
   filters,
   onFiltersChange,
 }) => {
-  const update = (key: keyof TransactionFiltersState, value: string) => {
+  const update = (key: keyof TransactionFiltersState, value: any) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 
@@ -58,88 +54,96 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
       type: 'all',
       status: 'all',
       dateRange: 'all',
+      startDate: '',
+      endDate: '',
     });
   };
 
+  const isPeriodActive = filters.dateRange !== 'all' || !!filters.startDate || !!filters.endDate;
   const activeCount = [
     filters.type !== 'all',
     filters.status !== 'all',
-    filters.dateRange !== 'all',
+    isPeriodActive,
+    !!filters.search.trim(),
   ].filter(Boolean).length;
 
   return (
     <div className="space-y-4">
-
       {/* 🔍 SEARCH */}
       <div className="relative max-w-xl">
         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           value={filters.search}
           onChange={(e) => update('search', e.target.value)}
-          placeholder="Rechercher une transaction (référence, montant, note...)"
-          className="
-            w-full h-12 pl-12 pr-4 rounded-xl
-            bg-white shadow-sm
-            border-2 border-transparent
-            hover:border-violet-200
-            focus:border-violet-500 focus:outline-none
-          "
+          placeholder="Rechercher par référence, montant, description..."
+          className="w-full h-11 pl-11 pr-10 rounded-xl bg-white border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32] shadow-xs"
         />
+        {filters.search && (
+          <button
+            type="button"
+            onClick={() => update('search', '')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* 🎛 FILTER BAR */}
-      <div className="bg-violet-50 rounded-xl p-4 shadow-sm border border-violet-100">
-        <div className="flex flex-wrap gap-3 items-center">
+      <div className="bg-white rounded-2xl p-3 shadow-xs border border-gray-100 flex flex-wrap gap-3 items-center">
+        {/* TYPE */}
+        <select
+          value={filters.type}
+          onChange={(e) => update('type', e.target.value)}
+          className="h-10 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 cursor-pointer"
+        >
+          {TYPE_OPTIONS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
 
-          {/* TYPE */}
-          <select
-            value={filters.type}
-            onChange={(e) => update('type', e.target.value)}
-            className="h-10 px-4 rounded-lg border bg-white"
-          >
-            {TYPE_OPTIONS.map(o => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
+        {/* STATUS */}
+        <select
+          value={filters.status}
+          onChange={(e) => update('status', e.target.value)}
+          className="h-10 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 cursor-pointer"
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
 
-          {/* STATUS */}
-          <select
-            value={filters.status}
-            onChange={(e) => update('status', e.target.value)}
-            className="h-10 px-4 rounded-lg border bg-white"
-          >
-            {STATUS_OPTIONS.map(o => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
+        {/* DATE PERIOD & CUSTOM DATES */}
+        <DatePeriodFilter
+          selectedPeriod={filters.dateRange}
+          startDate={filters.startDate}
+          endDate={filters.endDate}
+          onPeriodChange={(p) => update('dateRange', p)}
+          onDateRangeChange={(start, end) => {
+            onFiltersChange({
+              ...filters,
+              startDate: start,
+              endDate: end,
+              dateRange: start || end ? 'custom' : filters.dateRange,
+            });
+          }}
+        />
 
-          {/* DATE */}
-          <select
-            value={filters.dateRange}
-            onChange={(e) => update('dateRange', e.target.value)}
-            className="h-10 px-4 rounded-lg border bg-white"
-          >
-            {DATE_OPTIONS.map(o => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-
-          {/* ACTIVE BADGE */}
-          {activeCount > 0 && (
-            <div>
-              <span className="px-3 py-1 rounded-lg bg-yellow-100 text-yellow-800 text-sm font-semibold">
-                {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
-              </span>
-              <button
-                onClick={reset}
-                className="text-red-600 hover:text-red-700 text-sm font-medium"
-              >
-                Réinitialiser
-              </button>
-            </div>
-          )}
-
-        </div>
+        {/* ACTIVE BADGE & RESET */}
+        {activeCount > 0 && (
+          <div className="flex items-center gap-2 ml-auto sm:ml-0">
+            <span className="px-2.5 py-0.5 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200 text-xs font-semibold">
+              {activeCount} filtre{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={reset}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all cursor-pointer"
+            >
+              <X className="w-3 h-3" /> Effacer
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

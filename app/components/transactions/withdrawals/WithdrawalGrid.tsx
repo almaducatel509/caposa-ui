@@ -7,6 +7,7 @@ import WithdrawalTable, { WithdrawalData } from './WithdrawalTable';
 import WithdrawalFilterBar from './WithdrawalFilterBar';
 import WithdrawalForm from './WithdrawalForm';
 import TransactionDetailModal, { TransactionDetail } from '../DetailModal';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 import { WithdrawalFormValidated } from '../validation/withdrawal';
 import { fetchMembers, fetchMemberAccounts } from '@/app/lib/api/members';
 // import { fetchMembers } from '@/app/lib/api/members';
@@ -62,7 +63,9 @@ function periodStart(period: 'day' | 'week' | 'month'): Date {
 // ─── Main ────────────────────────────────────────────────────────
 
 export default function WithdrawalDashboard() {
-  const [period,    setPeriod]    = useState<'day' | 'week' | 'month'>('week');
+  const [period,    setPeriod]    = useState<string>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate,   setEndDate]   = useState('');
   const [data,      setData]      = useState<WithdrawalData[]>([]);
   const [members,   setMembers]   = useState<any[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -110,20 +113,28 @@ export default function WithdrawalDashboard() {
 
   // ── Filtrage ────────────────────────────────────────────────
   const filteredWithdrawals = useMemo(() => {
-    const q     = search.trim().toLowerCase();
-    const start = periodStart(period).getTime();
+    const q = search.trim().toLowerCase();
     return data.filter(w => {
-      if (new Date(w.created_at).getTime() < start)                            return false;
+      if (!matchesDateFilter(w.created_at, period, startDate, endDate))    return false;
       if (selectedType   !== 'all' && w.withdrawalSubtype !== selectedType)   return false;
       if (selectedStatus !== 'all' && w.status            !== selectedStatus) return false;
       if (q) {
-        const haystack = [w.codeAutorisation, w.idCompte, w.member_name, w.motif]
+        const haystack = [w.codeAutorisation, w.idCompte, w.member_name, w.motif, String(w.montantTransaction)]
           .filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [data, period, search, selectedType, selectedStatus]);
+  }, [data, period, startDate, endDate, search, selectedType, selectedStatus]);
+
+  const handleClear = () => {
+    setSearch('');
+    setPeriod('all');
+    setStartDate('');
+    setEndDate('');
+    setSelectedType('all');
+    setSelectedStatus('all');
+  };
 
   // ── Handlers ────────────────────────────────────────────────
   const handleView = (w: WithdrawalData) => {
@@ -206,13 +217,19 @@ export default function WithdrawalDashboard() {
         selectedType={selectedType}
         selectedStatus={selectedStatus}
         selectedPeriod={period}
+        startDate={startDate}
+        endDate={endDate}
         totalCount={filteredWithdrawals.length}
         loading={loading}
         onSearchChange={setSearch}
-        onClear={() => setSearch('')}
+        onClear={handleClear}
         onTypeChange={setSelectedType}
         onStatusChange={setSelectedStatus}
         onPeriodChange={setPeriod}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         onAdd={() => setModalOpen(true)}
         onRefresh={loadWithdrawals}
         withdrawals={filteredWithdrawals}

@@ -6,8 +6,9 @@ import {
   Banknote, X, ChevronDown, TrendingUp, Lock,
 } from 'lucide-react';
 import { LoanData, LoanType, LOAN_TYPE_LABELS } from '../transactions/validation/loanSchema';
+import { DatePeriodFilter } from '@/app/components/common/DatePeriodFilter';
 
-export type LoanFilterPeriod = 'all' | 'today' | 'week' | 'month' | 'year';
+export type LoanFilterPeriod = 'all' | 'today' | 'week' | 'month' | 'year' | 'recent' | 'thisMonth' | 'thisYear' | 'custom' | string;
 /** Types de prêt Django (loans/models.py) + « tous ». */
 export type LoanFilterType   = 'all' | LoanType;
 export type LoanFilterRange  = 'all' | 'small' | 'medium' | 'large' | 'xlarge';
@@ -17,10 +18,13 @@ interface LoanFilterBarProps {
   selectedPeriod: LoanFilterPeriod;
   selectedType:   LoanFilterType;
   selectedRange:  LoanFilterRange;
+  startDate?:     string;
+  endDate?:       string;
 
   onSearchChange: (value?: string) => void;
   onClear:        () => void;
   onPeriodChange: (key: LoanFilterPeriod) => void;
+  onDateRangeChange?: (start: string, end: string) => void;
   onTypeChange:   (key: LoanFilterType) => void;
   onRangeChange:  (key: LoanFilterRange) => void;
 
@@ -113,9 +117,12 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
   selectedPeriod,
   selectedType,
   selectedRange,
+  startDate = '',
+  endDate = '',
   onSearchChange,
   onClear,
   onPeriodChange,
+  onDateRangeChange = () => {},
   onTypeChange,
   onRangeChange,
   onAdd,
@@ -128,15 +135,18 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
     opts.find(o => o.key === key)?.label ?? fallback;
 
   const activeCount = [
-    selectedPeriod !== 'all',
+    selectedPeriod !== 'all' || !!startDate || !!endDate,
     selectedType   !== 'all',
     selectedRange  !== 'all',
+    !!filterValue.trim(),
   ].filter(Boolean).length;
 
   const handleReset = () => {
     onPeriodChange('all');
+    onDateRangeChange('', '');
     onTypeChange('all');
     onRangeChange('all');
+    onClear();
   };
 
   return (
@@ -212,22 +222,14 @@ const LoanFilterBar: React.FC<LoanFilterBarProps> = ({
 
         <div className="h-6 w-px bg-gray-200 hidden sm:block" />
 
-        <CustomDropdown
-          trigger={
-            <button className={triggerClass(selectedPeriod !== 'all')}>
-              <Calendar className="w-3.5 h-3.5" />
-              {label(PERIOD_OPTIONS, selectedPeriod, 'Période')}
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          }
-        >
-          {PERIOD_OPTIONS.map(o => (
-            <button key={o.key} onClick={() => onPeriodChange(o.key)} className={optionClass(selectedPeriod === o.key)}>
-              <o.icon className="w-3.5 h-3.5 text-[#2E7D32]" />
-              {o.label}
-            </button>
-          ))}
-        </CustomDropdown>
+        {/* Filtre Période avec Date début & Date fin */}
+        <DatePeriodFilter
+          selectedPeriod={selectedPeriod}
+          startDate={startDate}
+          endDate={endDate}
+          onPeriodChange={onPeriodChange}
+          onDateRangeChange={onDateRangeChange}
+        />
 
         <CustomDropdown
           trigger={

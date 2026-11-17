@@ -17,6 +17,7 @@ import MemberTable from './MemberTable';
 import { MemberBulkAction } from './MemberBulkActionDropdown';
 import MemberTransactionModal from './modals/MemberTransactionModal';
 import { exportToXLSXFile } from '@/app/utils/excelExport';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 
 // ─── Main Grid ──────────────────────────────────────────────────────────────────
 const MemberGrid: React.FC = () => {
@@ -29,9 +30,10 @@ const MemberGrid: React.FC = () => {
   // ── Filters ──
   const [search,          setSearch]          = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedType,    setSelectedType]    = useState('all');
-  const [selectedStatus,  setSelectedStatus]  = useState('all');
   const [selectedFilter,  setSelectedFilter]  = useState('all');
+  const [selectedStatus,  setSelectedStatus]  = useState('all');
+  const [startDate,       setStartDate]       = useState('');
+  const [endDate,         setEndDate]         = useState('');
 
   // ── Tab ──
   const [activeMemberTab, setActiveMemberTab] = useState<'actif' | 'inactif' | 'archive'>('actif');
@@ -71,41 +73,58 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
   // ── Filter ─────────────────────────────────────────────────────────────────
   const filteredMembers = useMemo(() => {
     return members.filter(m => {
-      const matchSearch =
-        !debouncedSearch ||
-        m.first_name?.toLowerCase().includes(debouncedSearch)   ||
-        m.last_name?.toLowerCase().includes(debouncedSearch)    ||
-        m.email?.toLowerCase().includes(debouncedSearch)        ||
-        m.phone_number?.toLowerCase().includes(debouncedSearch) ||
-        m.city?.toLowerCase().includes(debouncedSearch)         ||
-        m.department?.toLowerCase().includes(debouncedSearch)   ||
-        m.accounts?.[0]?.account_number?.toLowerCase().includes(debouncedSearch);
+      // 1. Recherche exhaustive
+      let matchSearch = true;
+      if (debouncedSearch) {
+        const q = debouncedSearch;
+        const cleanQ = q.replace(/\D/g, '');
 
-      const matchType = selectedType === 'all' || m.account_type === selectedType;
+        const firstName = m.first_name?.toLowerCase() ?? '';
+        const lastName = m.last_name?.toLowerCase() ?? '';
+        const fullName1 = `${firstName} ${lastName}`.trim();
+        const fullName2 = `${lastName} ${firstName}`.trim();
+        const email = m.email?.toLowerCase() ?? '';
+        const phone = (m.phone_number ?? '').toLowerCase();
+        const cleanPhone = phone.replace(/\D/g, '');
+        const city = m.city?.toLowerCase() ?? '';
+        const department = m.department?.toLowerCase() ?? '';
+        const memberNum = (m.member_number ?? m.id_member ?? m.id ?? '').toLowerCase();
+        const idNum = (m.id_number ?? '').toLowerCase();
 
-      // ← normalizeMemberStatus garantit que 'active' → 'actif', 'inactive' → 'inactif', etc.
-      const effectiveStatus = normalizeMemberStatus(m.status);
+        const matchAccounts = (m.accounts ?? []).some(acc =>
+          acc.account_number?.toLowerCase().includes(q)
+        );
 
-      // ← clés alignées avec MemberFilterBar : 'actif' | 'inactif' | 'suspended'
-      const matchStatus =
-        selectedStatus === 'all'                                            ||
-        (selectedStatus === 'actif'    && effectiveStatus === 'actif')     ||
-        (selectedStatus === 'inactif'  && effectiveStatus === 'inactif')   ||
-        (selectedStatus === 'suspended'&& effectiveStatus === 'suspendu');
+        matchSearch =
+          fullName1.includes(q) ||
+          fullName2.includes(q) ||
+          firstName.includes(q) ||
+          lastName.includes(q) ||
+          email.includes(q) ||
+          phone.includes(q) ||
+          (cleanQ.length >= 3 && cleanPhone.includes(cleanQ)) ||
+          city.includes(q) ||
+          department.includes(q) ||
+          memberNum.includes(q) ||
+          idNum.includes(q) ||
+          matchAccounts;
+      }
 
-      const now = new Date();
-      const matchDate =
-        selectedFilter === 'all'       ? true :
-        selectedFilter === 'recent'    ? (!!m.created_at && (now.getTime() - new Date(m.created_at).getTime()) / 86400000 <= 30) :
-        selectedFilter === 'thisMonth' ? (!!m.created_at && new Date(m.created_at).getMonth() === now.getMonth() && new Date(m.created_at).getFullYear() === now.getFullYear()) :
-        selectedFilter === 'thisYear'  ? (!!m.created_at && new Date(m.created_at).getFullYear() === now.getFullYear()) :
-        true;
+      // 2. Filtre par date / période (avec support date début seule ou début + fin)
+      const matchDate = matchesDateFilter(m.created_at, selectedFilter, startDate, endDate);
 
-      return matchSearch && matchStatus && matchDate && matchType;
+      return matchSearch && matchDate;
     }).sort((a, b) =>
       new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
     );
-  }, [members, debouncedSearch, selectedStatus, selectedType, selectedFilter]);
+  }, [members, debouncedSearch, selectedFilter, startDate, endDate]);
+
+  const handleClear = () => {
+    setSearch('');
+    setSelectedFilter('all');
+    setStartDate('');
+    setEndDate('');
+  };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdd              = () => { setSelectedMember(null); setShowEditModal(true); };
@@ -164,6 +183,16 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  const displayedCount = useMemo(() => {
+    return filteredMembers.filter(m => {
+      const s = normalizeMemberStatus(m.status);
+      if (activeMemberTab === 'actif') return s === 'actif';
+      if (activeMemberTab === 'inactif') return s === 'inactif';
+      if (activeMemberTab === 'archive') return s === 'suspendu';
+      return true;
+    }).length;
+  }, [filteredMembers, activeMemberTab]);
+
   return (
     <div className="w-full min-h-screen bg-linear-to-br from-[#F9F9F6] via-white to-[#DDEAD5]/20 p-4 sm:p-6 md:p-8 flex flex-col gap-6">
 
@@ -177,15 +206,19 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
       <MemberFilterBar
         members={members}
         filterValue={search}
-        selectedStatus={selectedStatus}
+        selectedFilter={selectedFilter}
+        startDate={startDate}
+        endDate={endDate}
         onSearchChange={setSearch}
-        onClear={() => setSearch('')}
-        onStatusChange={handleStatusChange}
+        onFilterChange={setSelectedFilter}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
+        onClear={handleClear}
         onAdd={handleAdd}
         onImport={() => {}}
-        totalCount={filteredMembers.length}
-        onTypeChange={setSelectedType}
-        selectedType={selectedType}
+        totalCount={displayedCount}
       />
 
       {error && (

@@ -23,6 +23,7 @@ import { EmployeeData, PostData, BranchData } from '@/app/components/employees/v
 import EmployeeTable  from './EmployeeTable';
 import { EmployeeBulkAction } from './BulkActionDropdown';
 import { exportToXLSXFile } from '@/app/utils/excelExport';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 const EmployeeGrid: React.FC = () => {
@@ -43,6 +44,8 @@ const EmployeeGrid: React.FC = () => {
   const [selectedBranch, setSelectedBranch] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [startDate,      setStartDate]      = useState('');
+  const [endDate,        setEndDate]        = useState('');
 
   // ── Tab ───────────────────────────────────────────────────────────────────
   const [activeEmplTab, setActiveEmplTab] = useState<'actif' | 'archive'>('actif');
@@ -131,40 +134,43 @@ const EmployeeGrid: React.FC = () => {
 
     if (debouncedValue) {
       const v = debouncedValue.toLowerCase();
-      list = list.filter(e =>
-        e.first_name?.toLowerCase().includes(v)   ||
-        e.last_name?.toLowerCase().includes(v)    ||
-        e.user?.email?.toLowerCase().includes(v)  ||
-        e.phone_number?.toLowerCase().includes(v) 
-      );
+      const cleanV = v.replace(/\D/g, '');
+      list = list.filter(e => {
+        const fn = e.first_name?.toLowerCase() ?? '';
+        const ln = e.last_name?.toLowerCase() ?? '';
+        const full1 = `${fn} ${ln}`.trim();
+        const full2 = `${ln} ${fn}`.trim();
+        const email = e.user?.email?.toLowerCase() ?? '';
+        const phone = (e.phone_number ?? '').toLowerCase();
+        const cleanPhone = phone.replace(/\D/g, '');
+        const empId = (e.id ?? '').toLowerCase();
+        const branchName = e.branch_details?.branch_name?.toLowerCase() ?? '';
+
+        return (
+          full1.includes(v) ||
+          full2.includes(v) ||
+          fn.includes(v) ||
+          ln.includes(v) ||
+          email.includes(v) ||
+          phone.includes(v) ||
+          (cleanV.length >= 3 && cleanPhone.includes(cleanV)) ||
+          empId.includes(v) ||
+          branchName.includes(v)
+        );
+      });
     }
 
     if (selectedBranch !== 'all')
       list = list.filter(e => e.branch === selectedBranch);
 
-    list = list.filter(e => e.is_active !== false === (activeEmplTab === 'actif'));
+    list = list.filter(e => (e.is_active !== false) === (activeEmplTab === 'actif'));
 
-    const now = new Date();
-    if (selectedFilter === 'recent') {
-      list = list.filter(e => e.created_at &&
-        (now.getTime() - new Date(e.created_at).getTime()) / 86400000 <= 30);
-    }
-    if (selectedFilter === 'thisMonth') {
-      list = list.filter(e => {
-        if (!e.created_at) return false;
-        const d = new Date(e.created_at);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
-    }
-    if (selectedFilter === 'thisYear') {
-      list = list.filter(e => e.created_at &&
-        new Date(e.created_at).getFullYear() === now.getFullYear());
-    }
+    list = list.filter(e => matchesDateFilter(e.created_at, selectedFilter, startDate, endDate));
 
     return list.sort((a, b) =>
       new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
     );
-  }, [employees, debouncedValue, selectedBranch, activeEmplTab, selectedFilter]);
+  }, [employees, debouncedValue, selectedBranch, activeEmplTab, selectedFilter, startDate, endDate]);
 
 
   // ── 2. Hydrater UNIQUEMENT la liste filtrée ───────────────────────────────
@@ -189,7 +195,13 @@ const EmployeeGrid: React.FC = () => {
   const handleDelete           = (e: EmployeeData) => { setSelectedEmployee(e); setShowDeleteModal(true); };
   const handleViewTransactions = (e: EmployeeData) => { setSelectedEmployee(e); setShowTransactionModal(true); };
   const onSearchChange         = useCallback((v?: string) => setFilterValue(v ?? ''), []);
-  const onClear                = useCallback(() => setFilterValue(''), []);
+  const onClear = useCallback(() => {
+    setFilterValue('');
+    setSelectedFilter('all');
+    setSelectedBranch('all');
+    setStartDate('');
+    setEndDate('');
+  }, []);
   // ── Sync filtre statut ↔ tab ───────────────────────────────────────────────
  const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
@@ -292,16 +304,22 @@ const EmployeeGrid: React.FC = () => {
         filterValue={filterValue}
         selectedFilter={selectedFilter}
         selectedBranch={selectedBranch}
+        startDate={startDate}
+        endDate={endDate}
         branches={branches}
-        employees={employees} // ← AJOUTER (les données complètes)
+        employees={employees}
         onSearchChange={onSearchChange}
         onClear={onClear}
         onFilterChange={setSelectedFilter}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         onBranchChange={setSelectedBranch}
         onStatusChange={handleStatusChange}
         onAdd={handleAdd}
         onImport={() => {}}
-        totalCount={filteredEmployees.length} 
+        totalCount={hydratedEmployees.length} 
         posts={posts}                      
       />
 

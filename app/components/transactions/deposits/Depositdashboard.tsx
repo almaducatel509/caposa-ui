@@ -65,6 +65,8 @@ export default function DepositDashboard() {
   // ── Filtres : UNE SEULE source de vérité ─────────────────
   const [search,         setSearch]         = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<DepositFilterPeriod>('all');
+  const [startDate,      setStartDate]      = useState('');
+  const [endDate,        setEndDate]        = useState('');
   const [selectedType,   setSelectedType]   = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRange,  setSelectedRange]  = useState<DepositFilterRange>('all');
@@ -174,13 +176,27 @@ export default function DepositDashboard() {
       <DepositFilterBar
         filterValue={search}
         selectedPeriod={selectedPeriod}
+        startDate={startDate}
+        endDate={endDate}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
         selectedType={selectedType}
         selectedStatus={selectedStatus}
         selectedRange={selectedRange}
         totalCount={deposits.length}
         loading={loading}
         onSearchChange={setSearch}
-        onClear={() => setSearch('')}
+        onClear={() => {
+          setSearch('');
+          setSelectedPeriod('all');
+          setSelectedType('all');
+          setSelectedStatus('all');
+          setSelectedRange('all');
+          setStartDate('');
+          setEndDate('');
+        }}
         onPeriodChange={setSelectedPeriod}
         onTypeChange={setSelectedType}
         onStatusChange={setSelectedStatus}
@@ -200,6 +216,8 @@ export default function DepositDashboard() {
         selectedType={selectedType}
         selectedStatus={selectedStatus}
         selectedPeriod={selectedPeriod}
+        startDate={startDate}
+        endDate={endDate}
         selectedRange={selectedRange}
       />
 

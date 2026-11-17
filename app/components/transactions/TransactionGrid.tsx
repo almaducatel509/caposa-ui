@@ -2,6 +2,7 @@
 import React from 'react';
 import { TransactionData } from './types';
 import TransactionTable from './TransactionTable';
+import { matchesDateFilter } from '@/app/components/common/DatePeriodFilter';
 
 interface TransactionGridProps {
   transactions: TransactionData[];
@@ -10,6 +11,8 @@ interface TransactionGridProps {
     type: string;
     status: string;
     dateRange: string;
+    startDate?: string;
+    endDate?: string;
   };
 }
 
@@ -17,10 +20,13 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
   // Fonction de filtrage
   const filteredTransactions = transactions.filter(transaction => {
     // Filtre de recherche
-    const matchesSearch = filters.search === '' || 
-      transaction.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-      transaction.reference?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      transaction.amount?.toString().includes(filters.search);
+    const q = filters.search.trim().toLowerCase();
+    const matchesSearch = !q || 
+      transaction.description?.toLowerCase().includes(q) ||
+      transaction.reference?.toLowerCase().includes(q) ||
+      transaction.member_name?.toLowerCase().includes(q) ||
+      transaction.account_number?.toLowerCase().includes(q) ||
+      transaction.amount?.toString().includes(q);
 
     // Filtre par type
     const matchesType = filters.type === 'all' || transaction.type === filters.type;
@@ -29,30 +35,14 @@ const TransactionGrid: React.FC<TransactionGridProps> = ({ transactions, filters
     const matchesStatus = filters.status === 'all' || transaction.status === filters.status;
 
     // Filtre par date
-    const matchesDate = () => {
-      if (filters.dateRange === 'all') return true;
-      
-      const transactionDate = new Date(transaction.created_at || '');
-      const now = new Date();
-      
-      switch (filters.dateRange) {
-        case 'today':
-          return transactionDate.toDateString() === now.toDateString();
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return transactionDate >= weekAgo;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return transactionDate >= monthAgo;
-        case 'quarter':
-          const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          return transactionDate >= quarterAgo;
-        default:
-          return true;
-      }
-    };
+    const matchesDate = matchesDateFilter(
+      transaction.created_at,
+      filters.dateRange,
+      filters.startDate,
+      filters.endDate
+    );
 
-    return matchesSearch && matchesType && matchesStatus && matchesDate();
+    return matchesSearch && matchesType && matchesStatus && matchesDate;
   });
   
   // Gestionnaires d'événements
