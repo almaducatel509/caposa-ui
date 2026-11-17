@@ -23,6 +23,7 @@ import type { Branch, OpeningHour } from "@/types/branche";
 import { BranchData } from "./validations";
 import BrancheTable from "./BrancheTable";
 import { getEffectiveStatus } from "@/app/utils/branchStatus";
+import { exportToCSVFile } from "@/app/utils/csvExport";
 import { Holiday, HolidayData } from "../holidays/validations";
 import { Loader2 } from "lucide-react";
 import { EmployeeData, PostData } from "../employees/validations";
@@ -191,37 +192,32 @@ const BranchesGrid: React.FC = () => {
     else    setActiveTab("active"); // "all" ou "active" → onglet par défaut
   };
 
-  /* ─── Export CSV ─────────────────────────────────────────────────────── */
+  /* ─── Export CSV / Excel ─────────────────────────────────────────────── */
   const handleExport = useCallback(() => {
-    const rows = [
-      "Code,Nom,Ville,Département,Téléphone,Email,Caissiers,Commis,Agents,Ouverture,Statut",
-      ...filteredBranches.map((b) =>
-        [
-          b.branch_code,
-          b.branch_name,
-          b.city,
-          b.department_code,
-          b.branch_phone_number,
-          b.branch_email,
-          b.number_of_tellers,
-          b.number_of_clerks,
-          b.number_of_credit_officers,
-          b.opening_date,
-          getEffectiveStatus(b),
-        ]
-          .map((v) => `"${v}"`)
-          .join(",")
-      ),
-    ].join("\n");
+    const headers = [
+      "Code", "Nom", "Ville", "Département", "Téléphone", "Email",
+      "Caissiers", "Commis", "Agents", "Ouverture", "Statut"
+    ];
+    const rows = filteredBranches.map((b) => [
+      b.branch_code ?? "",
+      b.branch_name ?? "",
+      b.city ?? "",
+      b.department_code ?? "",
+      b.branch_phone_number ?? "",
+      b.branch_email ?? "",
+      b.number_of_tellers ?? "",
+      b.number_of_clerks ?? "",
+      b.number_of_credit_officers ?? "",
+      b.opening_date ?? "",
+      getEffectiveStatus(b),
+    ]);
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(
-      new Blob([rows], { type: "text/csv;charset=utf-8;" })
-    );
-    link.download = `branches_${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportToCSVFile({
+      filename: "branches",
+      headers,
+      rows,
+      separator: ";",
+    });
   }, [filteredBranches]);
 
   /* ─── Handlers actions ──────────────────────────────────────────────── */

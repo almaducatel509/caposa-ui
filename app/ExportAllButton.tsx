@@ -12,14 +12,14 @@ interface ExportAllButtonProps<T extends object> {
   columns?: (keyof T)[];
   /** Renommage des en-têtes : { email: "Adresse e-mail" } */
   headerLabels?: Partial<Record<keyof T, string>>;
-  /** Séparateur. ";" recommandé pour Excel en français. Défaut: "," */
+  /** Séparateur. ";" recommandé pour Excel en français. Défaut: ";" */
   separator?: "," | ";";
   /** Callback après succès (toast, analytics, etc.) */
   onSuccess?: (count: number) => void;
   /** Callback en cas d'erreur */
   onError?: (error: Error) => void;
-    /** Ajoute "sep=" pour Excel. À désactiver pour Google Sheets/LibreOffice. Défaut: true */
-  excelSepHint?: boolean;   // ← TU AJOUTES ICI
+  /** Ajoute "sep=" pour Excel. Désactivé par défaut car provoque un basculement ANSI dans Excel et corrompt les accents. */
+  excelSepHint?: boolean;
 }
 
 /**
@@ -62,10 +62,10 @@ export const ExportAllButton = <T extends object>({
   label = "Exporter",
   columns,
   headerLabels,
-  separator = ",",
+  separator = ";",
   onSuccess,
   onError,
-  excelSepHint = true,        // ← TU AJOUTES ICI
+  excelSepHint = false,
 }: ExportAllButtonProps<T>) => {
   const [loading, setLoading] = useState(false);
 

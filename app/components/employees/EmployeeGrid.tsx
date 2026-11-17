@@ -22,6 +22,7 @@ import EmployeeTransactionModal from '@/app/components/employees/modals/Employee
 import { EmployeeData, PostData, BranchData } from '@/app/components/employees/validations';
 import EmployeeTable  from './EmployeeTable';
 import { EmployeeBulkAction } from './BulkActionDropdown';
+import { exportToCSVFile } from '@/app/utils/csvExport';
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 const EmployeeGrid: React.FC = () => {
@@ -254,9 +255,9 @@ const EmployeeGrid: React.FC = () => {
 };
 
 
-  // ── Export CSV direct ──────────────────────────────────────────────────────
+  // ── Export CSV / Excel direct ─────────────────────────────────────────────
   const exportToCSV = (ids: string[]) => {
-    const headers = ['Prenom', 'Nom', 'Email', 'Telephone', 'Succursale', 'Statut', 'Depuis'];
+    const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Succursale', 'Statut', 'Depuis'];
     const selectedEmployees = filteredEmployees.filter(e => ids.includes(e.id));
     const rows    = selectedEmployees.map(e => [
       e.first_name  ?? '',
@@ -267,14 +268,13 @@ const EmployeeGrid: React.FC = () => {
       e.is_active === false ? 'Archivé' : 'Actif',
       e.created_at ? new Date(e.created_at).toLocaleDateString('fr-FR') : '',
     ]);
-    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `employes_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    exportToCSVFile({
+      filename: 'employes',
+      headers,
+      rows,
+      separator: ';',
+    });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

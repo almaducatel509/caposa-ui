@@ -23,6 +23,7 @@ import { parseApiError } from '@/app/lib/api/apiErrors';
 import { getRole } from '../AuthGuard';
 import ApproveAccountModal from './modals/Approveaccountmodal';
 import { AccountBulkAction } from '@/app/lib/api/accountRules';
+import { exportToCSVFile } from '@/app/utils/csvExport';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFICATIONS apportées à ce fichier :
@@ -232,10 +233,10 @@ const AccountGrid: React.FC = () => {
     }
   };
 
-  // ── Export CSV ─────────────────────────────────────────────────────────────
+  // ── Export CSV / Excel ────────────────────────────────────────────────────
   const exportToCSV = (ids: string[]) => {
     const selectedAccounts = filteredAccounts.filter(a => ids.includes(a.id));
-    const headers = ['Numero de compte', 'Membre', 'Email', 'Type', 'Solde', 'Statut', 'Depuis'];
+    const headers = ['Numéro de compte', 'Membre', 'Email', 'Type', 'Solde', 'Statut', 'Depuis'];
     const rows = selectedAccounts.map(a => [
       a.account_number ?? '',
       a.member_details?.full_name
@@ -246,14 +247,13 @@ const AccountGrid: React.FC = () => {
       a.account_status ?? '',
       a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '',
     ]);
-    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `comptes_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    exportToCSVFile({
+      filename: 'comptes',
+      headers,
+      rows,
+      separator: ';',
+    });
   };
 
   // ── Liste des membres (extraite des comptes pour l'export) ────────────────

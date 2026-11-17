@@ -13,6 +13,7 @@ import {
   getCategoryLabel, getTypeLabel, getCategoryAccent,
   estDesactivable, getRaisonVerrouillage,
 } from '@/types/archives';
+import { exportToCSVFile } from '@/app/utils/csvExport';
 
 // ─── Palette CAPOSA ───────────────────────────────────────────────────────────
 const C = { green: '#2E7D32', greenDark: '#1B5E20', greenPale: '#DDEAD5', blue: '#355C7D', gold: '#D4AF37' };
@@ -304,12 +305,12 @@ export default function ArchivesPage() {
       formatDate(a.date), a.employeeName, a.summary,
       a.isDeleted ? 'Désactivé' : 'Actif',
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url; link.download = `archives_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    exportToCSVFile({
+      filename: 'archives',
+      headers,
+      rows,
+      separator: ';',
+    });
   };
 
   const selectCls = "px-4 py-2 rounded-xl border border-gray-200 bg-[#F9F9F6] text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 focus:border-[#2E7D32]";

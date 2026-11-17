@@ -16,6 +16,7 @@ import { MemberData, normalizeMemberStatus } from '@/app/components/members/vali
 import MemberTable from './MemberTable';
 import { MemberBulkAction } from './MemberBulkActionDropdown';
 import MemberTransactionModal from './modals/MemberTransactionModal';
+import { exportToCSVFile } from '@/app/utils/csvExport';
 
 // ─── Main Grid ──────────────────────────────────────────────────────────────────
 const MemberGrid: React.FC = () => {
@@ -138,7 +139,7 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
     await loadMembers();
   };
 
-  // ── Export CSV ─────────────────────────────────────────────────────────────
+  // ── Export CSV / Excel ────────────────────────────────────────────────────
   const exportToCSV = (ids: string[]) => {
     const selected = filteredMembers.filter(m => ids.includes(m.id));
     const headers  = ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Ville', 'Département', 'Statut', 'Créé le'];
@@ -153,14 +154,13 @@ const [showTransactionModal, setShowTransactionModal] = useState(false);
       m.status ?? '',
       m.created_at ?? '',
     ]);
-    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href     = url;
-    link.download = `membres_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+
+    exportToCSVFile({
+      filename: 'membres',
+      headers,
+      rows,
+      separator: ';',
+    });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

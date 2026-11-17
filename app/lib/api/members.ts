@@ -2,7 +2,7 @@
 import AxiosInstance from "@/app/lib/axiosInstance";
 import type { MemberData } from "@/app/components/members/validations";
 
-export type TxType   = 'depot' | 'retrait' | 'interet' | 'frais';
+export type TxType   = 'depot' | 'retrait' | 'transfert' | 'remboursement' | 'decaissement' | 'interet' | 'frais' | string;
 export type TxStatus = 'completed' | 'pending' | 'cancelled';
 
 export interface Transaction {
@@ -46,7 +46,14 @@ export const fetchMembers = async (): Promise<MemberData[]> => {
 export const fetchMemberAccounts = async (memberId: string): Promise<any[]> => {
   try {
     const response = await AxiosInstance.get(`/members/${memberId}/accounts/`);
-    return response.data;
+    const data = response.data;
+    const list = Array.isArray(data) ? data : data?.results ?? [];
+    if (list.length > 0) return list;
+
+    // Fallback via endpoint global accounts
+    const fallback = await AxiosInstance.get('/accounts/', { params: { member: memberId } });
+    const rawFallback = Array.isArray(fallback.data) ? fallback.data : fallback.data?.results ?? [];
+    return rawFallback.filter((a: any) => String(a.member) === String(memberId));
   } catch (e) {
     console.error("Erreur récupération comptes:", e);
     return [];
@@ -54,14 +61,24 @@ export const fetchMemberAccounts = async (memberId: string): Promise<any[]> => {
 };
 
 function mapApiTransaction(t: any): Transaction {
+  let txType = String(t.type ?? t.transaction_type ?? 'depot').toLowerCase();
+  if (txType === 'deposit') txType = 'depot';
+  if (txType === 'withdrawal') txType = 'retrait';
+  if (txType === 'transfer') txType = 'transfert';
+  if (txType === 'loan_repayment') txType = 'remboursement';
+  if (txType === 'loan_disbursement') txType = 'decaissement';
+
+  const desc = t.description ?? t.note ?? t.reason ?? t.transaction_type_display ?? t.reference ?? 'Transaction';
+  const createdBy = t.created_by_name ?? t.created_by_username ?? t.created_by ?? t.createdBy ?? t.agent ?? 'Système';
+
   return {
     id:          String(t.id ?? t.id_transaction ?? ''),
-    type:        t.type ?? t.transaction_type ?? 'depot',
+    type:        txType as TxType,
     amount:      Number(t.amount ?? t.montant ?? 0),
-    description: t.description ?? t.libelle ?? '',
+    description: desc,
     date:        t.date ?? t.created_at ?? t.date_transaction ?? '',
     status:      t.status ?? 'completed',
-    createdBy:   t.created_by ?? t.createdBy ?? t.agent ?? 'Système',
+    createdBy:   String(createdBy),
   };
 }
 
@@ -75,6 +92,18 @@ export const fetchAccountTransactions = async (accountId: string | number): Prom
     return (raw as any[]).map(mapApiTransaction);
   } catch (e) {
     console.error("❌ Erreur récupération transactions:", e);
+    return [];
+  }
+};
+
+/** LIST — toutes les transactions d'un membre */
+export const fetchMemberTransactions = async (memberId: string): Promise<Transaction[]> => {
+  try {
+    const response = await AxiosInstance.get(`/members/${memberId}/transactions/`);
+    const raw = (response.data as any)?.results ?? response.data;
+    return (raw as any[]).map(mapApiTransaction);
+  } catch (e) {
+    console.error("❌ Erreur récupération transactions membre:", e);
     return [];
   }
 };
