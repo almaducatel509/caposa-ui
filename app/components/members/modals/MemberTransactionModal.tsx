@@ -123,8 +123,14 @@ const MemberTransactionModal: React.FC<MemberTransactionModalProps> = ({
     if (!currentAccount?.account_number) return;
     setIsExportingPdf(true);
     try {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const startOfYearStr = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+
       const pdf = await downloadStatement({
         account_number: currentAccount.account_number,
+        start_date: startOfYearStr,
+        end_date: todayStr,
       });
       savePdf(pdf);
     } catch (err: any) {

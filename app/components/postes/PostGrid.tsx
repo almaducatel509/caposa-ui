@@ -1,199 +1,398 @@
-"use client";
-
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { GoWorkflow } from "react-icons/go";
-
-import { fetchPosts, archivePost } from "@/app/lib/api/post";
-
-import PostTable, { Post } from "./PostTable";
-import PostFilterBar from "./PostFilterBar";
-import PageHeader from "../header";
-import DeletePostModal from "./modals/DeletePostModal";
-import EditPostModal from "./modals/EditPostModal";
-
-interface PostGridProps {
-  posts?: Post[];
-}
-
-const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
-  /* ── Data ── */
-  const [posts,     setPosts]     = useState<Post[]>(initialPosts || []);
-  const [isLoading, setIsLoading] = useState(!initialPosts);
-  const [error,     setError]     = useState<string | null>(null);
-
-  /* ── Filtres ── */
-  const [search,          setSearch]          = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  /* ── Modals ── */
-  const [selectedPost,   setSelectedPost]   = useState<Post | null>(null);
-  const [showEditModal,  setShowEditModal]  = useState(false);
-  const [showDeleteModal,setShowDeleteModal]= useState(false);
-  const [isEditMode,     setIsEditMode]     = useState(false);
-  const [selectedType, setSelectedType] = useState("all");
-  /* ── Chargement ── */
-  const loadPosts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchPosts();
-      setPosts(data);
-    } catch {
-      setError("Impossible de charger les postes. Veuillez réessayer.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!initialPosts) loadPosts();
-  }, [initialPosts, loadPosts]);
-
-  /* ── Debounce ── */
-  useEffect(() => {
-    const t = setTimeout(
-      () => setDebouncedSearch(search.trim().toLowerCase()),
-      300
-    );
-    return () => clearTimeout(t);
-  }, [search]);
-
-  /* ── Filtrage ── */
- const filteredPosts = useMemo(() => {
-  return posts.filter((p) => {
-
-    // 🔍 Recherche (inchangé)
-    const matchSearch =
-      !debouncedSearch ||
-      p.name.toLowerCase().includes(debouncedSearch) ||
-      p.description.toLowerCase().includes(debouncedSearch);
-
-    // 🎯 Type (nouveau)
-    const matchType =
-      selectedType === "all" ||
-      (selectedType === "deposit" && p.deposit) ||
-      (selectedType === "withdrawal" && p.withdrawal) ||
-      (selectedType === "transfer" && p.transfer);
-
-    return matchSearch && matchType;
-  });
-}, [posts, debouncedSearch, selectedType]);
-
-  /* ── Export CSV / Excel ── */
-  const handleExport = useCallback(() => {
-    const headers = ["Nom", "Description", "Dépôt", "Retrait", "Transfert"];
-    const rows = filteredPosts.map((p) => [
-      p.name ?? "",
-      p.description ?? "",
-      p.deposit ? "Oui" : "Non",
-      p.withdrawal ? "Oui" : "Non",
-      p.transfer ? "Oui" : "Non",
-    ]);
-
-    exportToCSVFile({
-      filename: "postes",
-      headers,
-      rows,
-      separator: ";",
-    });
-  }, [filteredPosts]);
-
-  /* ── Handlers ── */
-  const handleCreate = () => {
-    setSelectedPost(null);
-    setIsEditMode(false);
-    setShowEditModal(true);
-  };
-
-  const handleEdit = (post: Post) => {
-    setSelectedPost(post);
-    setIsEditMode(true);
-    setShowEditModal(true);
-  };
-
-  const handleDelete = (post: Post) => {
-    setSelectedPost(post);
-    setShowDeleteModal(true);
-  };
-
-  const handleSuccess = () => {
-    setShowEditModal(false);
-    setShowDeleteModal(false);
-    setSelectedPost(null);
-    setIsEditMode(false);
-    loadPosts();
-  };
-
-  /* ── Render ── */
-  return (
-    <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 min-h-screen">
-
-      <PageHeader
-        title="Gestion des postes"
-        subtitle="Gérez tous les postes et leurs permissions"
-        icon={<GoWorkflow  className="w-8 h-8 text-[#2E7D32]" />}
-      />
-
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
-          <p className="text-sm text-red-700">{error}</p>
-          <button onClick={loadPosts}
-            className="text-sm font-medium text-red-600 hover:text-red-800 underline">
-            Réessayer
-          </button>
-        </div>
-      )}
-
-      <PostFilterBar
-        filterValue={search}
-        selectedType={selectedType}
-        totalCount={filteredPosts.length}
-
-        onSearchChange={setSearch}
-        onClear={() => setSearch("")}
-        onTypeChange={setSelectedType}
-
-        onAdd={handleCreate}
-        onExport={handleExport}
-      />
-
-      <PostTable
-        posts={filteredPosts}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
-
-      {showEditModal && (
-        <EditPostModal
-          isOpen={showEditModal}
-          onClose={() => { setShowEditModal(false); setSelectedPost(null); setIsEditMode(false); }}
-          onSuccess={handleSuccess}
-          post={selectedPost}
-          isEditMode={isEditMode}
-          mode={isEditMode ? "edit" : "create"}
-        />
-      )}
-
-      {showDeleteModal && selectedPost && (
-//         POST /api/posts/:id/archive
-// body: { employeeId: "EMP-001" }
-
-// → Vérifie que employees[employeeId].role === "directeur" || "maintenance"
-// → Si oui : post.status = "inactive", post.archivedBy = employeeId
-// → Si non : 403 Forbidden avec message d'erreur
-        <DeletePostModal
-          isOpen={showDeleteModal}
-          onClose={() => { setShowDeleteModal(false); setSelectedPost(null); }}
-          onSuccess={handleSuccess}
-          post={selectedPost}
-          onArchive={async (postId, employeeId) => {
-            await archivePost(postId, employeeId);
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
+"use client";
+
+
+
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+
+import { GoWorkflow } from "react-icons/go";
+
+
+
+import { fetchPosts, archivePost } from "@/app/lib/api/post";
+
+
+
+import PostTable, { Post } from "./PostTable";
+import { exportToCSVFile } from "@/app/utils/csvExport";
+
+import PostFilterBar from "./PostFilterBar";
+
+import PageHeader from "../header";
+
+import DeletePostModal from "./modals/DeletePostModal";
+
+import EditPostModal from "./modals/EditPostModal";
+
+
+
+interface PostGridProps {
+
+  posts?: Post[];
+
+}
+
+
+
+const PostGrid: React.FC<PostGridProps> = ({ posts: initialPosts }) => {
+
+  /* ── Data ── */
+
+  const [posts,     setPosts]     = useState<Post[]>(initialPosts || []);
+
+  const [isLoading, setIsLoading] = useState(!initialPosts);
+
+  const [error,     setError]     = useState<string | null>(null);
+
+
+
+  /* ── Filtres ── */
+
+  const [search,          setSearch]          = useState("");
+
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+
+
+  /* ── Modals ── */
+
+  const [selectedPost,   setSelectedPost]   = useState<Post | null>(null);
+
+  const [showEditModal,  setShowEditModal]  = useState(false);
+
+  const [showDeleteModal,setShowDeleteModal]= useState(false);
+
+  const [isEditMode,     setIsEditMode]     = useState(false);
+
+  const [selectedType, setSelectedType] = useState("all");
+
+  /* ── Chargement ── */
+
+  const loadPosts = useCallback(async () => {
+
+    try {
+
+      setIsLoading(true);
+
+      setError(null);
+
+      const data = await fetchPosts();
+
+      setPosts(data);
+
+    } catch {
+
+      setError("Impossible de charger les postes. Veuillez réessayer.");
+
+    } finally {
+
+      setIsLoading(false);
+
+    }
+
+  }, []);
+
+
+
+  useEffect(() => {
+
+    if (!initialPosts) loadPosts();
+
+  }, [initialPosts, loadPosts]);
+
+
+
+  /* ── Debounce ── */
+
+  useEffect(() => {
+
+    const t = setTimeout(
+
+      () => setDebouncedSearch(search.trim().toLowerCase()),
+
+      300
+
+    );
+
+    return () => clearTimeout(t);
+
+  }, [search]);
+
+
+
+  /* ── Filtrage ── */
+
+ const filteredPosts = useMemo(() => {
+
+  return posts.filter((p) => {
+
+
+
+    // 🔍 Recherche (inchangé)
+
+    const matchSearch =
+
+      !debouncedSearch ||
+
+      p.name.toLowerCase().includes(debouncedSearch) ||
+
+      p.description.toLowerCase().includes(debouncedSearch);
+
+
+
+    // 🎯 Type (nouveau)
+
+    const matchType =
+
+      selectedType === "all" ||
+
+      (selectedType === "deposit" && p.deposit) ||
+
+      (selectedType === "withdrawal" && p.withdrawal) ||
+
+      (selectedType === "transfer" && p.transfer);
+
+
+
+    return matchSearch && matchType;
+
+  });
+
+}, [posts, debouncedSearch, selectedType]);
+
+
+
+  /* ── Export CSV / Excel ── */
+
+  const handleExport = useCallback(() => {
+
+    const headers = ["Nom", "Description", "Dépôt", "Retrait", "Transfert"];
+
+    const rows = filteredPosts.map((p) => [
+
+      p.name ?? "",
+
+      p.description ?? "",
+
+      p.deposit ? "Oui" : "Non",
+
+      p.withdrawal ? "Oui" : "Non",
+
+      p.transfer ? "Oui" : "Non",
+
+    ]);
+
+
+
+    exportToCSVFile({
+
+      filename: "postes",
+
+      headers,
+
+      rows,
+
+      separator: ";",
+
+    });
+
+  }, [filteredPosts]);
+
+
+
+  /* ── Handlers ── */
+
+  const handleCreate = () => {
+
+    setSelectedPost(null);
+
+    setIsEditMode(false);
+
+    setShowEditModal(true);
+
+  };
+
+
+
+  const handleEdit = (post: Post) => {
+
+    setSelectedPost(post);
+
+    setIsEditMode(true);
+
+    setShowEditModal(true);
+
+  };
+
+
+
+  const handleDelete = (post: Post) => {
+
+    setSelectedPost(post);
+
+    setShowDeleteModal(true);
+
+  };
+
+
+
+  const handleSuccess = () => {
+
+    setShowEditModal(false);
+
+    setShowDeleteModal(false);
+
+    setSelectedPost(null);
+
+    setIsEditMode(false);
+
+    loadPosts();
+
+  };
+
+
+
+  /* ── Render ── */
+
+  return (
+
+    <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 min-h-screen">
+
+
+
+      <PageHeader
+
+        title="Gestion des postes"
+
+        subtitle="Gérez tous les postes et leurs permissions"
+
+        icon={<GoWorkflow  className="w-8 h-8 text-[#2E7D32]" />}
+
+      />
+
+
+
+      {error && (
+
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
+
+          <p className="text-sm text-red-700">{error}</p>
+
+          <button onClick={loadPosts}
+
+            className="text-sm font-medium text-red-600 hover:text-red-800 underline">
+
+            Réessayer
+
+          </button>
+
+        </div>
+
+      )}
+
+
+
+      <PostFilterBar
+
+        filterValue={search}
+
+        selectedType={selectedType}
+
+        totalCount={filteredPosts.length}
+
+
+
+        onSearchChange={setSearch}
+
+        onClear={() => setSearch("")}
+
+        onTypeChange={setSelectedType}
+
+
+
+        onAdd={handleCreate}
+
+        onExport={handleExport}
+
+      />
+
+
+
+      <PostTable
+
+        posts={filteredPosts}
+
+        isLoading={isLoading}
+
+        onEdit={handleEdit}
+
+        onDelete={handleDelete}
+
+      />
+
+
+
+      {showEditModal && (
+
+        <EditPostModal
+
+          isOpen={showEditModal}
+
+          onClose={() => { setShowEditModal(false); setSelectedPost(null); setIsEditMode(false); }}
+
+          onSuccess={handleSuccess}
+
+          post={selectedPost}
+
+          isEditMode={isEditMode}
+
+          mode={isEditMode ? "edit" : "create"}
+
+        />
+
+      )}
+
+
+
+      {showDeleteModal && selectedPost && (
+
+//         POST /api/posts/:id/archive
+
+// body: { employeeId: "EMP-001" }
+
+
+
+// → Vérifie que employees[employeeId].role === "directeur" || "maintenance"
+
+// → Si oui : post.status = "inactive", post.archivedBy = employeeId
+
+// → Si non : 403 Forbidden avec message d'erreur
+
+        <DeletePostModal
+
+          isOpen={showDeleteModal}
+
+          onClose={() => { setShowDeleteModal(false); setSelectedPost(null); }}
+
+          onSuccess={handleSuccess}
+
+          post={selectedPost}
+
+          onArchive={async (postId, employeeId) => {
+
+            await archivePost(postId, employeeId);
+
+          }}
+
+        />
+
+      )}
+
+    </div>
+
+  );
+
+};
+
+
+
 export default PostGrid;
